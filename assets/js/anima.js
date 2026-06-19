@@ -29,12 +29,12 @@ function shade(hex,p){ hex=hex||"#111111"; const n=parseInt(hex.slice(1),16); le
 /* ---------- Personalización (mostrar/ocultar) ---------- */
 const cfgKey = a => "anima_cfg_"+(a.almaId||a.id);
 function getCfg(a){
-  const def={ modules:{trayectoria:true,portafolio:true,proyectos:true,finanzas:true,cotizador:true,agenda:true,memoria:true,biblioteca:true},
+  const def={ modules:{trayectoria:true,portafolio:true,proyectos:true,finanzas:true,clientes:true,cotizador:true,agenda:true,memoria:true,biblioteca:true},
               cards:{constelacion:true,kpis:true,camino:true,hoy:true,memoria:true} };
   try{ const c=JSON.parse(localStorage.getItem(cfgKey(a))); if(c){ return { modules:{...def.modules,...c.modules}, cards:{...def.cards,...c.cards} }; } }catch(e){}
   return def;
 }
-function setCfg(a,c){ localStorage.setItem(cfgKey(a), JSON.stringify(c)); }
+function setCfg(a,c){ localStorage.setItem(cfgKey(a), JSON.stringify(c)); if(a.live){ Cloud.savePrefs(a.almaId,c).catch(()=>{}); } }
 function toggleCfg(path){ const a=me(); const c=getCfg(a); const [g,k]=path.split(":"); c[g][k]=(c[g][k]===false); setCfg(a,c); renderAll(); }
 
 /* ---------- Navegación ---------- */
@@ -43,6 +43,7 @@ const MODULES = [
   {v:"portafolio", ico:"▦",t:"Portafolio"},
   {v:"proyectos",  ico:"◷",t:"Proyectos"},
   {v:"finanzas",   ico:"$",t:"Finanzas"},
+  {v:"clientes",   ico:"☺",t:"Clientes"},
   {v:"cotizador",  ico:"₵",t:"Cotizador"},
   {v:"agenda",     ico:"☰",t:"Agenda"},
   {v:"memoria",    ico:"✦",t:"Memorias"},
@@ -71,6 +72,7 @@ const TITLES = {
   portafolio:["Portafolio","Las obras que te representan."],
   proyectos:["Proyectos","Lo que está vivo ahora mismo."],
   finanzas:["Finanzas","Ingresos, egresos y ganancia — privado."],
+  clientes:["Clientes","Tu cartera de clientes y contactos."],
   cotizador:["Cotizador","Crea presupuestos profesionales y expórtalos en PDF."],
   agenda:["Agenda","Tu día, ordenado."],
   memoria:["Memorias","Ideas, frases y referencias que no quieres perder."],
@@ -125,7 +127,7 @@ function acts(kind,i){ return `<span class="acts"><button class="ia" data-edit="
    =========================================================== */
 function renderView(){
   const fn = { mialma:vMiAlma, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
-    finanzas:vFinanzas, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
+    finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
     config:vConfig, comunidad:vComunidad, santuario:vSantuario }[state.view] || vMiAlma;
   document.getElementById("view").innerHTML = fn(me());
 }
@@ -226,9 +228,11 @@ function vPortafolio(a){
 function vProyectos(a){
   return `<div class="grid"><div class="card s12">
     <div class="section-title"><h2>Proyectos</h2><div class="spacer"></div><button class="btn sm" data-add="proyecto">+ Nuevo proyecto</button></div>
-    ${a.projects.map((p,i)=>{ const cls=p.st==="En curso"?"ok":(p.st==="Planificado"?"warn":""); return `<div class="row">
-      <div class="grow"><b>${esc(p.t)}</b><br><small>${esc(p.client)}</small></div>
-      <div style="width:160px"><div class="bar"><span style="width:${p.pct}%"></span></div><small class="muted">${p.pct}%</small></div>
+    ${a.projects.map((p,i)=>{ const cls=p.st==="En curso"?"ok":(p.st==="Planificado"?"warn":"");
+      const meta=[p.client,p.budget?money(p.budget):"",p.start?("Inicio "+p.start):"",p.due?("Entrega "+p.due):""].filter(Boolean).join(" · ");
+      return `<div class="row">
+      <div class="grow"><b>${esc(p.t)}</b><br><small>${esc(meta)}</small>${p.desc?`<br><small class="muted">${esc(p.desc)}</small>`:""}</div>
+      <div style="width:140px"><div class="bar"><span style="width:${p.pct}%"></span></div><small class="muted">${p.pct}%</small></div>
       <span class="pill ${cls}">${esc(p.st)}</span>${acts("proyecto",i)}</div>`; }).join("")||`<p class="muted">Aún no hay proyectos. Crea el primero.</p>`}
   </div></div>`;
 }
@@ -287,12 +291,23 @@ function vConfig(a){
   </div>`;
 }
 
+/* --- Clientes --- */
+function vClientes(a){
+  const list=a.clients||[];
+  return `<div class="grid"><div class="card s12">
+    <div class="section-title"><h2>Clientes</h2><div class="spacer"></div><button class="btn sm" data-add="cliente">+ Nuevo cliente</button></div>
+    ${list.length?list.map((c,i)=>`<div class="row"><span class="avatar sm" style="background:linear-gradient(145deg,${a.color},${shade(a.color,-22)})">${initials(c.name)}</span>
+        <div class="grow"><b>${esc(c.name)}</b><br><small>${esc(c.email||"")}${c.email&&c.phone?" · ":""}${esc(c.phone||"")}</small>${c.notes?`<br><small class="muted">${esc(c.notes)}</small>`:""}</div>${acts("cliente",i)}</div>`).join("")
+      :`<p class="muted">Aún no tienes clientes. Se crean solos al guardar una cotización, o agrégalos aquí.</p>`}
+  </div></div>`;
+}
+
 /* ===========================================================
    COTIZADOR — presupuestos profesionales + PDF
    =========================================================== */
 const CURRENCIES={CLP:"$",USD:"US$",EUR:"€",MXN:"MX$",ARS:"AR$",COP:"CO$",PEN:"S/"};
 const fmtq=(n,c)=>(CURRENCIES[c]||"$")+Number(n||0).toLocaleString("es-CL");
-function blankQuote(){ return { id:null, title:"Cotización", client:"", date:new Date().toISOString().slice(0,10),
+function blankQuote(){ return { id:null, client_id:null, project_id:null, title:"Cotización", client:"", date:new Date().toISOString().slice(0,10),
   discipline:"", currency:"CLP", taxPct:0, notes:"", items:[{desc:"",qty:1,price:0,unit:"unidad"}] }; }
 let quoteDraft = blankQuote();
 const quotesKey = a => "anima_quotes_"+(a.almaId||a.id);
@@ -306,7 +321,10 @@ function readQuoteForm(){
   quoteDraft.items=quoteDraft.items.map((it,i)=>({ desc:g("qi_desc_"+i), qty:+g("qi_qty_"+i)||0, price:+g("qi_price_"+i)||0, unit:g("qi_unit_"+i)||"unidad" }));
 }
 function vCotizador(a){
-  const t=quoteTotals(), cur=quoteDraft.currency, saved=loadQuotes(a);
+  const t=quoteTotals(), cur=quoteDraft.currency;
+  const saved = a.live
+    ? (state.cloudQuotes||[]).map(q=>({id:q.id,title:q.title,client:q.client_name,date:(q.created_at||"").slice(0,10)}))
+    : loadQuotes(a);
   const itemsRows = quoteDraft.items.map((it,i)=>`<div class="qitem">
       <input id="qi_desc_${i}" placeholder="Concepto / obra / servicio" value="${esc(it.desc)}">
       <input id="qi_qty_${i}" type="number" min="0" step="any" value="${it.qty}" title="Cantidad">
@@ -360,13 +378,53 @@ function vCotizador(a){
 function qAddItem(){ readQuoteForm(); quoteDraft.items.push({desc:"",qty:1,price:0,unit:"unidad"}); renderView(); }
 function qDelItem(i){ readQuoteForm(); quoteDraft.items.splice(i,1); if(!quoteDraft.items.length) quoteDraft.items.push({desc:"",qty:1,price:0,unit:"unidad"}); renderView(); }
 function qNew(){ quoteDraft=blankQuote(); renderView(); }
-function qSave(){ readQuoteForm(); const a=me(); const list=loadQuotes(a);
+async function qSave(){
+  readQuoteForm(); const a=me();
+  if(a.live) return qSaveCloud(a);
+  const list=loadQuotes(a);
   if(!quoteDraft.id){ quoteDraft.id="q"+Date.now(); list.unshift(JSON.parse(JSON.stringify(quoteDraft))); }
   else { const i=list.findIndex(x=>x.id===quoteDraft.id); if(i>=0) list[i]=JSON.parse(JSON.stringify(quoteDraft)); else list.unshift(JSON.parse(JSON.stringify(quoteDraft))); }
   saveQuotes(a,list); renderView(); alert("Cotización guardada.");
 }
-function qLoad(id){ const q=loadQuotes(me()).find(x=>x.id===id); if(q){ quoteDraft=JSON.parse(JSON.stringify(q)); renderView(); } }
-function qDeleteSaved(id){ if(!confirm("¿Eliminar esta cotización?"))return; const a=me(); saveQuotes(a,loadQuotes(a).filter(x=>x.id!==id)); renderView(); }
+async function qSaveCloud(a){
+  const t=quoteTotals();
+  try{
+    let clientId=quoteDraft.client_id||null;
+    if(quoteDraft.client){
+      let c=(a.clients||[]).find(x=>(x.name||"").toLowerCase()===quoteDraft.client.toLowerCase());
+      if(!c){ const row=await Cloud.insertRow("clients",{alma_id:a.almaId,name:quoteDraft.client}); c={_id:row.id,name:row.name}; (a.clients||(a.clients=[])).unshift(c); }
+      clientId=c._id;
+    }
+    let projectId=quoteDraft.project_id||null;
+    if(!projectId && quoteDraft.title){
+      const prow=await Cloud.insertRow("projects",{alma_id:a.almaId,title:quoteDraft.title,client:quoteDraft.client||null,status:"Planificado",pct:0,client_id:clientId});
+      projectId=prow.id; a.projects.unshift({_id:prow.id,t:quoteDraft.title,st:"Planificado",pct:0,client:quoteDraft.client||""});
+    }
+    const payload={ alma_id:a.almaId, client_id:clientId, project_id:projectId, title:quoteDraft.title, client_name:quoteDraft.client,
+      discipline:quoteDraft.discipline, currency:quoteDraft.currency, tax_pct:quoteDraft.taxPct, notes:quoteDraft.notes,
+      items:quoteDraft.items, subtotal:Math.round(t.sub), total:Math.round(t.total) };
+    if(quoteDraft.id){ await Cloud.updateRow("quotes",quoteDraft.id,payload); }
+    else { const qrow=await Cloud.insertRow("quotes",payload); quoteDraft.id=qrow.id; }
+    quoteDraft.client_id=clientId; quoteDraft.project_id=projectId;
+    state.cloudQuotes=await Cloud.quotes(a.almaId);
+    renderAll(); alert("Cotización guardada en la nube ✓ Cliente y proyecto vinculados.");
+  }catch(e){ alert("No se pudo guardar la cotización: "+(e.message||e)); }
+}
+function qLoad(id){
+  const a=me();
+  if(a.live){ const q=(state.cloudQuotes||[]).find(x=>x.id===id);
+    if(q){ quoteDraft={ id:q.id, client_id:q.client_id, project_id:q.project_id, title:q.title||"Cotización", client:q.client_name||"",
+      date:(q.created_at||"").slice(0,10), discipline:q.discipline||"", currency:q.currency||"CLP", taxPct:+q.tax_pct||0, notes:q.notes||"",
+      items:(q.items&&q.items.length)?q.items:[{desc:"",qty:1,price:0,unit:"unidad"}] }; renderView(); }
+    return;
+  }
+  const ql=loadQuotes(a).find(x=>x.id===id); if(ql){ quoteDraft=JSON.parse(JSON.stringify(ql)); renderView(); }
+}
+async function qDeleteSaved(id){
+  if(!confirm("¿Eliminar esta cotización?"))return; const a=me();
+  if(a.live){ try{ await Cloud.deleteRow("quotes",id); state.cloudQuotes=await Cloud.quotes(a.almaId); renderView(); }catch(e){ alert("No se pudo eliminar: "+(e.message||e)); } return; }
+  saveQuotes(a,loadQuotes(a).filter(x=>x.id!==id)); renderView();
+}
 function qExport(){
   readQuoteForm(); const a=me(), t=quoteTotals(), cur=quoteDraft.currency;
   document.getElementById("printArea").innerHTML=`
@@ -385,18 +443,66 @@ function qExport(){
 /* --- Comunidad --- */
 function roster(){ return (state.cloudAlmas && state.cloudAlmas.length) ? state.cloudAlmas : state.almas; }
 const liveMode = () => !!(state.cloudAlmas && state.cloudAlmas.length);
+function authorOf(id){ return (state.cloudAlmas||[]).find(x=>x.id===id) || {name:"Alma",color:"#888"}; }
 function vComunidad(a){
   const list=roster(); const clan=SEED_CLANS.find(c=>c.name===a.clan);
   const members=a.clan?list.filter(m=>m.clan===a.clan):[];
+  const feed=state.cloudPosts||[];
+  const create = a.live ? `<div class="card s12"><div class="section-title"><h2>Comparte con la comunidad</h2></div>
+      <div class="field"><input id="postTitle" placeholder="Título (opcional)"></div>
+      <div class="field"><textarea id="postBody" rows="2" placeholder="¿Qué estás creando? Comparte un proyecto, idea o pregunta…"></textarea></div>
+      <button class="btn" id="postSend">Publicar</button></div>`
+    : `<div class="card s12"><p class="muted">Entra a tu Alma para publicar en la comunidad.</p></div>`;
+  const wall = `<div class="card s12"><div class="section-title"><h2>Muro de la comunidad</h2><div class="spacer"></div><span class="pill ${liveMode()?'gold':''}">${feed.length} publicaciones</span></div>
+      ${feed.length?feed.map(p=>{ const au=authorOf(p.author_alma_id);
+        return `<div class="post" data-openpost="${p.id}"><span class="avatar sm" style="background:linear-gradient(145deg,${au.color},${shade(au.color,-22)})">${initials(au.name)}</span>
+          <div class="grow"><b>${esc(p.title||au.name)}</b><br><small class="muted">${esc(au.name)} · ${timeAgo(p.created_at)}</small>
+          <p style="margin:6px 0 0">${esc((p.body||"").slice(0,160))}${(p.body||"").length>160?"…":""}</p></div></div>`;
+      }).join(""):`<p class="muted">Aún no hay publicaciones.${a.live?" ¡Crea la primera!":""}</p>`}</div>`;
   const clanCard = a.clan ? `<div class="card s12"><div class="section-title"><h2>${clan?clan.emoji:"🖤"} ${esc(a.clan)}</h2><div class="spacer"></div><span class="pill">Clan · Nivel 2</span></div>
       <p class="muted">${clan?clan.desc:"Comunidad privada por invitación (2 a 8 Almas)."}</p>
       <div class="alma-grid" style="margin-top:14px">${members.map(almaMini).join("")}</div></div>`
     : `<div class="card s12"><div class="section-title"><h2>Sin Clan aún</h2></div><p class="muted">Un Clan es una comunidad privada por invitación (2 a 8 Almas).</p></div>`;
-  return `<div class="grid">${clanCard}
+  return `<div class="grid">${create}${wall}${clanCard}
     <div class="card s12"><div class="section-title"><h2>Constelación de Almas</h2><div class="spacer"></div>
       <span class="pill ${liveMode()?'gold':''}">${liveMode()?'🜂 En vivo · '+list.length+' Almas':'Founding · '+list.length+' Almas'}</span></div>
       <div class="alma-grid">${list.map(almaMini).join("")}</div></div></div>`;
 }
+async function loadPosts(){ if(!Cloud.enabled) return; try{ state.cloudPosts=await Cloud.posts(); if(state.view==="comunidad") renderView(); }catch(e){} }
+async function sendPost(){
+  const a=me(); if(!a.live){ alert("Entra a tu Alma para publicar."); return; }
+  const title=document.getElementById("postTitle").value.trim(), body=document.getElementById("postBody").value.trim();
+  if(!title && !body) return;
+  try{ await Cloud.insertRow("posts",{author_alma_id:a.almaId,kind:"post",title,body}); await loadPosts(); }
+  catch(e){ alert("No se pudo publicar: "+(e.message||e)); }
+}
+function openPost(id){
+  const p=(state.cloudPosts||[]).find(x=>x.id===id); if(!p) return; const au=authorOf(p.author_alma_id);
+  document.getElementById("postModal").classList.add("open");
+  document.getElementById("postModalBody").innerHTML=`
+    <div style="display:flex;gap:10px;align-items:center">
+      <span class="avatar sm" style="background:linear-gradient(145deg,${au.color},${shade(au.color,-22)})">${initials(au.name)}</span>
+      <div><b>${esc(au.name)}</b><br><small class="muted">${timeAgo(p.created_at)}</small></div></div>
+    ${p.title?`<h2 style="margin:12px 0 4px;letter-spacing:-.03em">${esc(p.title)}</h2>`:""}
+    <p style="white-space:pre-wrap">${esc(p.body||"")}</p>
+    <div class="section-title" style="margin-top:14px"><h3 style="font-size:14px;margin:0">Comentarios</h3></div>
+    <div id="postComments" class="muted">Cargando…</div>
+    <div class="lum-input" style="margin-top:10px"><input id="commentInput" placeholder="Escribe un comentario…"><button class="btn" id="commentSend" data-post="${id}">↑</button></div>`;
+  loadComments(id);
+}
+async function loadComments(postId){
+  try{ const cs=await Cloud.comments(postId); const box=document.getElementById("postComments"); if(!box) return;
+    box.innerHTML=cs.length?cs.map(c=>{ const au=authorOf(c.author_alma_id);
+      return `<div class="row"><span class="avatar sm" style="background:linear-gradient(145deg,${au.color},${shade(au.color,-22)})">${initials(au.name)}</span><div class="grow"><b>${esc(au.name)}</b> <small class="muted">${timeAgo(c.created_at)}</small><br>${esc(c.body)}</div></div>`;
+    }).join(""):`<p class="muted">Sé la primera Alma en comentar.</p>`;
+  }catch(e){}
+}
+async function sendComment(postId){
+  const a=me(); if(!a.live){ alert("Entra a tu Alma para comentar."); return; }
+  const el=document.getElementById("commentInput"); const body=el.value.trim(); if(!body) return; el.value="";
+  try{ await Cloud.insertRow("comments",{post_id:postId,author_alma_id:a.almaId,body}); loadComments(postId); }catch(e){ alert("No se pudo comentar: "+(e.message||e)); }
+}
+function closePost(){ document.getElementById("postModal").classList.remove("open"); }
 function almaMini(m){
   const lv=levelByKey(m.level); const act=(liveMode()&&!m.live)?`data-pub="${m.id}"`:`data-alma="${m.id}"`;
   return `<div class="card alma-card" ${act}>${avatarHTML(m,"lg")}
@@ -444,24 +550,27 @@ function vSantuario(a){
    =========================================================== */
 const EDITORS = {
   proyecto:{ title:"Proyecto", table:"projects", get:a=>a.projects, push:"unshift", xp:60,
-    fields:[{k:"t",l:"Nombre"},{k:"client",l:"Cliente"},{k:"st",l:"Estado",sel:["Planificado","En curso","Terminado"]},{k:"pct",l:"Avance %",num:true}],
-    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:+v.pct||0}) },
+    fields:[{k:"t",l:"Nombre"},{k:"client",l:"Cliente"},{k:"st",l:"Estado",sel:["Planificado","En curso","Terminado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Presupuesto",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Descripción",ta:true}],
+    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:+v.pct||0,budget:v.budget?+v.budget:null,started_at:v.start||null,due_at:v.due||null,description:v.desc}) },
   memoria:{ title:"Memoria", table:"memories", get:a=>a.memories, push:"unshift", xp:40,
     fields:[{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({title:v.t,detail:v.d}) },
   ingreso:{ title:"Ingreso", table:"finance_entries", get:a=>a.finance.income, push:"unshift", xp:20,
-    fields:[{k:"t",l:"Concepto"},{k:"a",l:"Monto",num:true},{k:"d",l:"Periodo (AAAA-MM)"}],
-    toRow:v=>({title:v.t,amount:+v.a||0,period:v.d,kind:"income"}) },
+    fields:[{k:"t",l:"Concepto"},{k:"a",l:"Monto",num:true},{k:"cat",l:"Categoría"},{k:"on",l:"Fecha",date:true},{k:"method",l:"Método (efectivo, transferencia…)"},{k:"d",l:"Periodo (AAAA-MM)"},{k:"notes",l:"Notas",ta:true}],
+    toRow:v=>({title:v.t,amount:+v.a||0,period:v.d,kind:"income",category:v.cat,occurred_at:v.on||null,method:v.method,notes:v.notes}) },
   egreso:{ title:"Egreso", table:"finance_entries", get:a=>a.finance.expense, push:"unshift", xp:0,
-    fields:[{k:"t",l:"Concepto"},{k:"a",l:"Monto",num:true},{k:"d",l:"Periodo (AAAA-MM)"}],
-    toRow:v=>({title:v.t,amount:+v.a||0,period:v.d,kind:"expense"}) },
+    fields:[{k:"t",l:"Concepto"},{k:"a",l:"Monto",num:true},{k:"cat",l:"Categoría"},{k:"on",l:"Fecha",date:true},{k:"method",l:"Método (efectivo, transferencia…)"},{k:"d",l:"Periodo (AAAA-MM)"},{k:"notes",l:"Notas",ta:true}],
+    toRow:v=>({title:v.t,amount:+v.a||0,period:v.d,kind:"expense",category:v.cat,occurred_at:v.on||null,method:v.method,notes:v.notes}) },
   hito:{ title:"Hito", table:"trajectory", get:a=>a.trajectory, push:"push", xp:50,
     fields:[{k:"y",l:"Año"},{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({year:v.y,title:v.t,detail:v.d}) },
   obra:{ title:"Obra", table:"portfolio", get:a=>a.portfolio, push:"push", xp:40,
-    fields:[{k:"t",l:"Título"},{k:"k",l:"Tipo / técnica"},{k:"c",l:"Color",color:true}], toRow:v=>({title:v.t,kind:v.k,color:v.c}) },
+    fields:[{k:"t",l:"Título"},{k:"k",l:"Tipo / técnica"},{k:"year",l:"Año"},{k:"c",l:"Color",color:true},{k:"link",l:"Enlace"},{k:"desc",l:"Descripción",ta:true}],
+    toRow:v=>({title:v.t,kind:v.k,color:v.c,year:v.year,link:v.link,description:v.desc}) },
   cita:{ title:"Cita", table:"agenda", get:a=>a.agenda, push:"push", xp:0,
-    fields:[{k:"h",l:"Hora (ej: 15:00)"},{k:"t",l:"Actividad"}], toRow:v=>({at_time:v.h,title:v.t}) },
+    fields:[{k:"h",l:"Hora (ej: 15:00)"},{k:"t",l:"Actividad"},{k:"date",l:"Fecha",date:true},{k:"notes",l:"Notas",ta:true}], toRow:v=>({at_time:v.h,title:v.t,on_date:v.date||null,notes:v.notes}) },
   doc:{ title:"Documento", table:"library", get:a=>a.library, push:"push", xp:0,
-    fields:[{k:"t",l:"Nombre"},{k:"k",l:"Tipo (Contrato, Brief…)"}], toRow:v=>({title:v.t,kind:v.k}) }
+    fields:[{k:"t",l:"Nombre"},{k:"k",l:"Tipo (Contrato, Brief…)"},{k:"url",l:"Enlace / URL"},{k:"notes",l:"Notas",ta:true}], toRow:v=>({title:v.t,kind:v.k,url:v.url,notes:v.notes}) },
+  cliente:{ title:"Cliente", table:"clients", get:a=>(a.clients||(a.clients=[])), push:"unshift", xp:0,
+    fields:[{k:"name",l:"Nombre"},{k:"email",l:"Correo"},{k:"phone",l:"Teléfono"},{k:"notes",l:"Notas",ta:true}], toRow:v=>({name:v.name,email:v.email,phone:v.phone,notes:v.notes}) }
 };
 let recordCtx=null;
 function openRecord(kind, idx=null){
@@ -473,6 +582,7 @@ function openRecord(kind, idx=null){
     if(f.sel) return `<div class="field"><label>${f.l}</label><select id="rec_${f.k}">${f.sel.map(o=>`<option ${o==val?'selected':''}>${o}</option>`).join("")}</select></div>`;
     if(f.ta)  return `<div class="field"><label>${f.l}</label><textarea id="rec_${f.k}" rows="3">${esc(val)}</textarea></div>`;
     if(f.color) return `<div class="field"><label>${f.l}</label><input type="color" id="rec_${f.k}" value="${val||a.color||'#b8a892'}"></div>`;
+    if(f.date) return `<div class="field"><label>${f.l}</label><input id="rec_${f.k}" type="date" value="${esc(val)}"></div>`;
     return `<div class="field"><label>${f.l}</label><input id="rec_${f.k}" type="${f.num?'number':'text'}" value="${esc(val)}"></div>`;
   }).join("");
   document.getElementById("recDel").style.display=(idx!=null)?"inline-flex":"none";
@@ -573,6 +683,9 @@ async function refreshAuth(){
 async function loadMyAlma(){
   const row=await Cloud.myAlma(); if(!row) return;
   const mods=await Cloud.loadModules(row.id); const a=dbAlmaToState(row,mods);
+  try{ a.clients=(await Cloud.clients(row.id)).map(c=>({_id:c.id,name:c.name,email:c.email,phone:c.phone,notes:c.notes})); }catch(e){ a.clients=[]; }
+  try{ state.cloudQuotes=await Cloud.quotes(row.id); }catch(e){ state.cloudQuotes=[]; }
+  try{ const p=await Cloud.getPrefs(row.id); if(p) localStorage.setItem("anima_cfg_"+row.id, JSON.stringify(p)); }catch(e){}
   state.almas=[a];   // tu Alma viva, limpia (las de muestra no se mezclan)
   state.currentId=a.id; state.view="mialma"; state.chat=[]; renderAll();
 }
@@ -648,7 +761,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
    RENDER + EVENTOS
    =========================================================== */
 function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); }
-function go(view){ state.view=view; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); }
+function go(view){ state.view=view; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); if(view==="comunidad") loadPosts(); }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 function openLumbre(){ drawer().classList.add("open"); dbg().classList.add("open"); renderLumbre(); }
@@ -660,6 +773,7 @@ document.addEventListener("click", e=>{
   const dl=e.target.closest("[data-del]"); if(dl){ const [k,i]=dl.dataset.del.split(":"); deleteRecord(k,+i); return; }
   const st=e.target.closest("[data-star]"); if(st){ _fbRating=+st.dataset.star; renderStars(); return; }
   const cf=e.target.closest("[data-cfg]"); if(cf){ toggleCfg(cf.dataset.cfg); return; }
+  const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
   const ql=e.target.closest("[data-qload]"); if(ql){ qLoad(ql.dataset.qload); return; }
   const qx=e.target.closest("[data-qdelete]"); if(qx){ qDeleteSaved(qx.dataset.qdelete); return; }
   const qd=e.target.closest("[data-qdel]"); if(qd){ qDelItem(+qd.dataset.qdel); return; }
@@ -682,6 +796,9 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#recDel")){ if(recordCtx) deleteRecord(recordCtx.kind,recordCtx.idx); }
   if(e.target.closest("#recClose")||e.target.id==="recordModal") closeRecord();
   if(e.target.closest("#pubClose")||e.target.id==="publicModal") closePublic();
+  if(e.target.closest("#postSend")) sendPost();
+  if(e.target.closest("#commentSend")){ const b=e.target.closest("#commentSend"); sendComment(b.dataset.post); }
+  if(e.target.closest("#postClose")||e.target.id==="postModal") closePost();
   if(e.target.closest("#feedbackBtn")) openFeedback();
   if(e.target.closest("#fbSend")) sendFeedback();
   if(e.target.closest("#fbClose")||e.target.id==="feedbackModal") closeFeedback();
@@ -697,7 +814,10 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#authSignUp")) doAuth("up");
   if(e.target.closest("#lumbreSend")) sendLumbre();
 });
-document.addEventListener("keydown", e=>{ if(e.key==="Enter" && e.target.id==="lumbreInput") sendLumbre(); });
+document.addEventListener("keydown", e=>{
+  if(e.key==="Enter" && e.target.id==="lumbreInput") sendLumbre();
+  if(e.key==="Enter" && e.target.id==="commentInput"){ const b=document.getElementById("commentSend"); if(b) sendComment(b.dataset.post); }
+});
 function sendLumbre(){ const i=document.getElementById("lumbreInput"), v=i.value.trim(); if(!v)return; i.value=""; lumbreAsk(v); }
 
 /* ---------- Boot ---------- */

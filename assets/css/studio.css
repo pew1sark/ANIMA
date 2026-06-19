@@ -153,6 +153,13 @@
 .wn.new{border-color:var(--gold);animation:cpulse 2.2s infinite;z-index:3}
 @keyframes cpulse{0%,100%{box-shadow:0 0 0 3px rgba(208,170,99,.25),0 0 12px rgba(208,170,99,.5)}50%{box-shadow:0 0 0 7px rgba(208,170,99,.10),0 0 22px rgba(208,170,99,.7)}}
 
+/* ---------- Comunidad: muro ---------- */
+.post{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);cursor:pointer;transition:.15s}
+.post:last-child{border-bottom:0}
+.post:hover{background:rgba(255,255,255,.5);border-radius:14px;padding-left:10px;padding-right:10px}
+.post .grow{min-width:0}
+.post p{color:var(--muted);font-size:13.5px}
+
 /* ---------- Acciones de ítem (editar/eliminar) ---------- */
 .acts{display:inline-flex;gap:4px;flex:0 0 auto}
 .ia{border:1px solid var(--line);background:rgba(255,255,255,.7);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:13px;color:#555;display:grid;place-items:center;transition:.15s}
