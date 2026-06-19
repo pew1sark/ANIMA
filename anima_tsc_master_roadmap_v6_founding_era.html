@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ANIMA TSC — Master Roadmap V6 · The Founding Era</title>
+  <style>
+    :root{
+      --bg:#f5f5f7;
+      --card:rgba(255,255,255,.78);
+      --text:#111;
+      --muted:#6e6e73;
+      --soft:#d9d7ce;
+      --warm:#b8a892;
+      --gold:#d0aa63;
+      --line:rgba(0,0,0,.08);
+      --shadow:0 28px 90px rgba(0,0,0,.09);
+      --radius:30px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Helvetica Neue",Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at 10% 0%,rgba(217,215,206,.9),transparent 32%),
+        radial-gradient(circle at 95% 18%,rgba(184,168,146,.32),transparent 30%),
+        radial-gradient(circle at 50% 100%,rgba(255,255,255,.95),transparent 40%),
+        var(--bg);
+      line-height:1.45;
+    }
+    .wrap{max-width:1240px;margin:0 auto;padding:36px 22px 90px}
+    .nav{
+      position:sticky;top:14px;z-index:10;
+      display:flex;align-items:center;justify-content:space-between;gap:20px;
+      padding:12px 16px;border:1px solid var(--line);border-radius:999px;
+      background:rgba(255,255,255,.68);backdrop-filter:blur(22px);
+      box-shadow:0 16px 50px rgba(0,0,0,.06)
+    }
+    .brand{display:flex;align-items:center;gap:10px;font-weight:850;letter-spacing:-.04em}
+    .mark{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(145deg,#fff,#e8e5dd);border:1px solid var(--line)}
+    .mark svg{width:21px;height:21px}
+    .nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:14px}
+    .hero{min-height:86vh;display:grid;place-items:center;text-align:center;padding:82px 0 42px}
+    .bigmark{width:126px;height:126px;margin:0 auto 24px;border-radius:38px;background:rgba(255,255,255,.8);border:1px solid var(--line);box-shadow:var(--shadow);display:grid;place-items:center;backdrop-filter:blur(20px)}
+    .bigmark svg{width:72px;height:72px}
+    h1{font-size:clamp(56px,12vw,142px);line-height:.84;letter-spacing:-.085em;margin:0}
+    .kicker{font-size:clamp(18px,2.2vw,30px);color:var(--muted);margin-top:14px}
+    .hero h2{font-size:clamp(28px,5vw,58px);line-height:1;letter-spacing:-.065em;max-width:980px;margin:30px auto 0}
+    .hero p{max-width:780px;margin:24px auto 0;color:var(--muted);font-size:18px}
+    .actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:30px}
+    .btn,button{border:0;border-radius:999px;background:#111;color:#fff;padding:13px 20px;font-weight:760;cursor:pointer;text-decoration:none;transition:.25s ease;font-size:14px}
+    .btn.secondary,button.secondary{background:rgba(255,255,255,.76);color:#111;border:1px solid var(--line)}
+    .btn:hover,button:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(0,0,0,.12)}
+    section{margin-top:54px;scroll-margin-top:100px}
+    .section-head{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:18px}
+    .section-head h2{font-size:clamp(36px,5.4vw,68px);line-height:.92;letter-spacing:-.07em;margin:0}
+    .section-head p{max-width:520px;color:var(--muted);margin:0}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px;box-shadow:0 22px 70px rgba(0,0,0,.06);backdrop-filter:blur(22px);overflow:hidden}
+    .span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-6{grid-column:span 6}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
+    .pill{display:inline-flex;padding:7px 11px;border-radius:999px;background:rgba(217,215,206,.7);color:#4c463d;font-size:12px;font-weight:850;margin-bottom:14px;text-transform:uppercase;letter-spacing:.04em}
+    .pill.gold{background:rgba(208,170,99,.18);color:#7b5920;border:1px solid rgba(208,170,99,.28)}
+    h3{font-size:24px;letter-spacing:-.04em;margin:0 0 9px}.card p{color:var(--muted);margin:0 0 16px}.muted{color:var(--muted)}
+    .quote{font-size:clamp(26px,3.5vw,44px);line-height:1.03;letter-spacing:-.055em;color:#111;margin:0}
+    ul{list-style:none;padding:0;margin:0}li{padding:10px 0;border-bottom:1px solid var(--line);color:#2a2a2a}li:last-child{border-bottom:0}
+    li.task{display:flex;gap:12px;align-items:flex-start}input[type=checkbox]{width:19px;height:19px;margin-top:2px;accent-color:#111;flex:0 0 auto}.done span{text-decoration:line-through;color:var(--muted)}
+    .progress-wrap{height:10px;border-radius:999px;background:rgba(0,0,0,.07);overflow:hidden;margin-top:18px}.progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#111,var(--warm),var(--gold));border-radius:999px;transition:.35s ease}.progress-text{font-size:13px;color:var(--muted);margin-top:8px}
+    .module{display:flex;justify-content:space-between;gap:18px;align-items:center;padding:16px;border-radius:20px;background:rgba(255,255,255,.54);border:1px solid var(--line);margin-top:10px}.module strong{font-size:17px}.module small{color:var(--muted)}
+    .path{display:grid;grid-template-columns:repeat(8,1fr);gap:12px}.level{text-align:center;padding:18px;border-radius:24px;background:rgba(255,255,255,.56);border:1px solid var(--line)}.level.founding{background:linear-gradient(145deg,rgba(208,170,99,.20),rgba(255,255,255,.68));border-color:rgba(208,170,99,.35)}.level .emoji{font-size:30px}.level strong{display:block;margin-top:8px}.level small{color:var(--muted)}
+    .flow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#111;color:#f5f5f7;padding:22px;border-radius:22px;white-space:pre-wrap}.countries{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.country{padding:18px;border-radius:24px;background:rgba(255,255,255,.56);border:1px solid var(--line);text-align:center}.country b{display:block;font-size:22px}.country small{color:var(--muted)}
+    details{border-radius:22px;border:1px solid var(--line);background:rgba(255,255,255,.55);padding:16px;margin-top:14px}summary{cursor:pointer;font-weight:850}pre{white-space:pre-wrap;word-wrap:break-word;background:#111;color:#f5f5f7;border-radius:18px;padding:18px;font-size:13px;line-height:1.5}.copy{margin-top:10px;background:rgba(255,255,255,.85);color:#111;border:1px solid var(--line);padding:10px 14px}
+    .price{font-size:42px;line-height:1;letter-spacing:-.06em;margin:6px 0 12px}.footer{text-align:center;color:var(--muted);border-top:1px solid var(--line);padding:38px;margin-top:70px}
+    @media(max-width:920px){.span-3,.span-4,.span-6,.span-8,.span-12{grid-column:span 12}.section-head{display:block}.section-head p{margin-top:12px}.nav-links{display:none}.path{grid-template-columns:1fr 1fr}.countries{grid-template-columns:1fr 1fr}}
+    @media print{.nav,.actions,.copy{display:none}body{background:#fff}.card{box-shadow:none;break-inside:avoid}.hero{min-height:auto}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <nav class="nav">
+      <div class="brand"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 8 88 90H72L61 66H39L28 90H12L50 8Z" stroke="#111" stroke-width="7" stroke-linejoin="round"/><circle cx="50" cy="49" r="6" fill="#111"/></svg></span>ANIMA TSC · V6</div>
+      <div class="nav-links"><a href="#vision">Visión</a><a href="#founding">Founding Era</a><a href="#ecosystem">Ecosistema</a><a href="#world">World</a><a href="#roadmap">Roadmap</a><a href="#prompts">Prompts</a></div>
+    </nav>
+
+    <header class="hero">
+      <div>
+        <div class="bigmark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><path d="M39 66C45 53 55 53 61 66" stroke="#B8A892" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></div>
+        <h1>ANIMA</h1>
+        <div class="kicker">TSC — The Soul of Creativity</div>
+        <h2>The Founding Era: A Living World for Creators.</h2>
+        <p>Create with instinct. Organize with intelligence. Grow with purpose. Evolve with the community. Leave a legacy.</p>
+        <div class="actions"><button onclick="window.print()">Guardar como PDF</button><a class="btn secondary" href="#roadmap">Ver Roadmap</a></div>
+      </div>
+    </header>
+
+    <section id="vision">
+      <div class="section-head"><h2>Visión V6</h2><p>ANIMA evoluciona desde una plataforma para creadores hacia un movimiento global con identidad, comunidad, IA y gamificación.</p></div>
+      <div class="grid">
+        <div class="card span-8"><span class="pill">Concepto central</span><p class="quote">Un mundo vivo donde los creadores organizan su carrera, aprenden, monetizan, conectan con clientes y construyen legado.</p></div>
+        <div class="card span-4"><span class="pill">Posicionamiento</span><ul><li>No es solo una app de IA.</li><li>No es otro CRM genérico.</li><li>No es una red social vacía.</li><li>Es el hogar mundial de los creadores.</li></ul></div>
+      </div>
+    </section>
+
+    <section id="founding">
+      <div class="section-head"><h2>The Founding Era</h2><p>La etapa previa al lanzamiento: crear confianza con una comunidad privada de embajadores fundadores.</p></div>
+      <div class="grid">
+        <div class="card span-8"><span class="pill gold">100 Founding Ambassadors</span><p class="quote">Los primeros guardianes de ANIMA. No son beta testers: son fundadores de la cultura.</p></div>
+        <div class="card span-4"><span class="pill">Beneficios</span><ul><li>Acceso vitalicio.</li><li>Insignia irrepetible.</li><li>Perfil destacado.</li><li>Canal privado.</li><li>Voto en nuevas funciones.</li><li>Nombre grabado en ANIMA.</li></ul></div>
+        <div class="card span-12"><span class="pill">Primera red internacional</span><div class="countries"><div class="country"><b>🇨🇱 Chile</b><small>15 guardianes</small></div><div class="country"><b>🇦🇷 Argentina</b><small>15 guardianes</small></div><div class="country"><b>🇨🇴 Colombia</b><small>20 guardianes</small></div><div class="country"><b>🇵🇪 Perú</b><small>10 guardianes</small></div><div class="country"><b>🇲🇽 México</b><small>25 guardianes</small></div><div class="country"><b>🇪🇸 España</b><small>15 guardianes</small></div></div></div>
+      </div>
+    </section>
+
+    <section id="ecosystem">
+      <div class="section-head"><h2>Ecosistema</h2><p>ANIMA se construye por módulos claros: primero utilidad, luego comunidad, luego mercado global.</p></div>
+      <div class="grid">
+        <div class="card span-6"><span class="pill">Productividad</span><div class="module"><div><strong>ANIMA Studio</strong><br><small>Clientes, proyectos, biblioteca y timeline.</small></div><span>Base</span></div><div class="module"><div><strong>ANIMA Murals</strong><br><small>Cotizador, materiales, PDF, medidas y seguimiento.</small></div><span>Diferencial</span></div><div class="module"><div><strong>ANIMA Finance</strong><br><small>Ingresos, egresos, contratos, pagos y estadísticas.</small></div><span>Orden</span></div><div class="module"><div><strong>ANIMA Shop</strong><br><small>Shopify, productos, pedidos, streetwear y obras.</small></div><span>Venta</span></div></div>
+        <div class="card span-6"><span class="pill">Inteligencia y comunidad</span><div class="module"><div><strong>ANIMA AI</strong><br><small>Director Creativo, Hunter, Productor y Orquestador.</small></div><span>IA</span></div><div class="module"><div><strong>ANIMA Mind</strong><br><small>Ideas, bocetos, frases, referencias y memoria creativa.</small></div><span>Alma</span></div><div class="module"><div><strong>ANIMA World</strong><br><small>Perfiles, niveles, logros, constelación y comunidad.</small></div><span>Enganche</span></div><div class="module"><div><strong>ANIMA Founders</strong><br><small>Embajadores, mapa global, misiones y comunidad privada.</small></div><span>Cultura</span></div></div>
+      </div>
+    </section>
+
+    <section id="world">
+      <div class="section-head"><h2>ANIMA World</h2><p>El sistema emocional: progresión, identidad, premios, desafíos y puntos interactivos dentro de la app.</p></div>
+      <div class="card span-12"><span class="pill">Camino del creador</span><div class="path"><div class="level founding"><div class="emoji">👑</div><strong>FOUNDING</strong><small>Primeros 100</small></div><div class="level"><div class="emoji">🌱</div><strong>EMBER</strong><small>La chispa</small></div><div class="level"><div class="emoji">🌿</div><strong>ROOT</strong><small>Las raíces</small></div><div class="level"><div class="emoji">🐾</div><strong>WILD</strong><small>El instinto</small></div><div class="level"><div class="emoji">🦅</div><strong>TOTEM</strong><small>La identidad</small></div><div class="level"><div class="emoji">☽</div><strong>AETHER</strong><small>La visión</small></div><div class="level"><div class="emoji">🜁</div><strong>SPIRIT</strong><small>El legado</small></div><div class="level"><div class="emoji">∞</div><strong>ANIMA</strong><small>Alma despierta</small></div></div></div>
+      <div class="grid" style="margin-top:18px"><div class="card span-4"><span class="pill">Desbloqueos</span><ul><li>EMBER → Perfil base.</li><li>ROOT → Biblioteca avanzada.</li><li>WILD → Market.</li><li>TOTEM → Hunter AI.</li><li>AETHER → Classroom.</li><li>SPIRIT → Mentorías.</li><li>ANIMA → Perfil destacado.</li></ul></div><div class="card span-4"><span class="pill">Premios</span><ul><li>XP por proyectos terminados.</li><li>Insignias por logros.</li><li>Estrellas en la constelación.</li><li>Badges por cursos.</li><li>Beneficios premium.</li></ul></div><div class="card span-4"><span class="pill">Ambassador</span><ul><li>Invita usuarios.</li><li>Crea desafíos.</li><li>Organiza eventos.</li><li>Enseña en Classroom.</li><li>Representa ANIMA en su ciudad.</li></ul></div></div>
+    </section>
+
+    <section id="classroom">
+      <div class="section-head"><h2>Creator Academy</h2><p>ANIMA Classroom se convierte en una academia viva: cursos, desafíos, XP, comunidad y mentorías.</p></div>
+      <div class="grid"><div class="card span-3"><span class="pill">Arte</span><h3>Muralismo</h3><p>Técnica, propuesta, cotización, montaje y documentación.</p></div><div class="card span-3"><span class="pill">Digital</span><h3>IA</h3><p>Prompts, agentes, workflows, contenido y automatización.</p></div><div class="card span-3"><span class="pill">Marca</span><h3>Streetwear</h3><p>Diseño, drops, Shopify, mockups y producción.</p></div><div class="card span-3"><span class="pill">Negocio</span><h3>Marketing</h3><p>Clientes, pricing, marca personal, finanzas y crecimiento.</p></div></div>
+    </section>
+
+    <section id="market">
+      <div class="section-head"><h2>Market + Portal</h2><p>Separar experiencias: creadores venden, clientes contratan y coleccionistas compran.</p></div>
+      <div class="grid"><div class="card span-3"><span class="pill">Creator</span><h3>Vende</h3><ul><li>Obras.</li><li>Fine Art.</li><li>Cursos.</li><li>Plantillas.</li><li>Servicios.</li></ul></div><div class="card span-3"><span class="pill">Client</span><h3>Contrata</h3><ul><li>Busca artistas.</li><li>Solicita cotización.</li><li>Aprueba avances.</li><li>Paga proyectos.</li></ul></div><div class="card span-3"><span class="pill">Collector</span><h3>Compra</h3><ul><li>Obras físicas.</li><li>Ediciones limitadas.</li><li>Prints.</li><li>Colecciones.</li></ul></div><div class="card span-3"><span class="pill gold">Ambassador</span><h3>Activa</h3><ul><li>Invita.</li><li>Traduce.</li><li>Modera.</li><li>Conecta comunidades.</li></ul></div></div>
+    </section>
+
+    <section id="subscriptions"><div class="section-head"><h2>Suscripciones</h2><p>Beta gratis de 7 días; después planes simples para validar ingresos sin frenar la comunidad.</p></div><div class="grid"><div class="card span-3"><span class="pill">Beta</span><h3>7 días</h3><div class="price">Gratis</div><p>Todo desbloqueado para validar valor.</p></div><div class="card span-3"><span class="pill">Creator</span><h3>Independiente</h3><div class="price">US$9</div><p>Studio, Mind, perfil y comunidad.</p></div><div class="card span-3"><span class="pill">Pro</span><h3>Profesional</h3><div class="price">US$19</div><p>Murals, Finance, AI, PDF y Market.</p></div><div class="card span-3"><span class="pill">Studio</span><h3>Equipo</h3><div class="price">US$49</div><p>Shopify, Hunter, contratos, multiusuario y Classroom.</p></div></div></section>
+
+    <section id="roadmap">
+      <div class="section-head"><h2>Roadmap oficial</h2><p>V6 agrega una fase previa al MVP: crear cultura y confianza antes de vender masivamente.</p></div>
+      <div class="card span-12"><h3>Progreso general</h3><div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div><div class="progress-text" id="progressText">0% completado</div></div>
+      <div class="grid" style="margin-top:18px">
+        <div class="card span-6"><span class="pill gold">Fase 0 — Founding Era</span><h3>100 embajadores</h3><ul><li class="task"><input type="checkbox"><span>Crear landing oficial de ANIMA.</span></li><li class="task"><input type="checkbox"><span>Crear formulario de Founding Ambassadors.</span></li><li class="task"><input type="checkbox"><span>Definir beneficios de acceso vitalicio e insignia única.</span></li><li class="task"><input type="checkbox"><span>Crear comunidad privada inicial.</span></li><li class="task"><input type="checkbox"><span>Seleccionar contactos por país y especialidad.</span></li><li class="task"><input type="checkbox"><span>Crear mapa mundial inicial de embajadores.</span></li></ul></div>
+        <div class="card span-6"><span class="pill">Mes 1 — MVP</span><h3>Base vendible</h3><ul><li class="task"><input type="checkbox"><span>Identidad visual ANIMA TSC.</span></li><li class="task"><input type="checkbox"><span>Web App responsive + diseño premium.</span></li><li class="task"><input type="checkbox"><span>Studio: clientes, proyectos y biblioteca.</span></li><li class="task"><input type="checkbox"><span>Murals: cotizador, costos, materiales y PDF.</span></li><li class="task"><input type="checkbox"><span>AI base: Director Creativo, Hunter y Productor.</span></li><li class="task"><input type="checkbox"><span>Perfiles con XP, niveles y logros.</span></li></ul></div>
+        <div class="card span-6"><span class="pill">Mes 2 — Comunidad</span><h3>Enganche</h3><ul><li class="task"><input type="checkbox"><span>Crear ANIMA World.</span></li><li class="task"><input type="checkbox"><span>Crear niveles EMBER → ANIMA + FOUNDING.</span></li><li class="task"><input type="checkbox"><span>Crear insignias y desbloqueos.</span></li><li class="task"><input type="checkbox"><span>Crear Creator Academy básica.</span></li><li class="task"><input type="checkbox"><span>Crear Client Portal privado.</span></li><li class="task"><input type="checkbox"><span>Convertir Web App en PWA instalable.</span></li></ul></div>
+        <div class="card span-6"><span class="pill">Mes 3 — Monetización</span><h3>Market</h3><ul><li class="task"><input type="checkbox"><span>Crear ANIMA Market.</span></li><li class="task"><input type="checkbox"><span>Conectar Stripe o Mercado Pago.</span></li><li class="task"><input type="checkbox"><span>Conectar Shopify API.</span></li><li class="task"><input type="checkbox"><span>Crear comisiones del marketplace.</span></li><li class="task"><input type="checkbox"><span>Lanzar beta cerrada con 500 usuarios.</span></li></ul></div>
+        <div class="card span-12"><span class="pill">Mes 4+ — Global</span><h3>Expansión</h3><ul><li class="task"><input type="checkbox"><span>Lanzamiento público en español: LATAM + España.</span></li><li class="task"><input type="checkbox"><span>Agregar inglés como segunda ola.</span></li><li class="task"><input type="checkbox"><span>Agregar portugués para Brasil.</span></li><li class="task"><input type="checkbox"><span>Crear ANIMA Legacy y Constellation avanzada.</span></li><li class="task"><input type="checkbox"><span>Crear apps nativas solo con usuarios pagando.</span></li></ul></div>
+      </div>
+    </section>
+
+    <section id="hosting"><div class="section-head"><h2>Stack tecnológico</h2><p>Primero Web App responsive, luego PWA, finalmente apps nativas cuando haya tracción.</p></div><div class="grid"><div class="card span-12"><div class="flow">Frontend: React + Vite + Tailwind
+Backend: Supabase
+Hosting: Vercel
+IA: OpenAI + Claude
+Imágenes: Cloudinary
+Pagos: Stripe + Mercado Pago
+Tienda: Shopify API
+Correos: Resend
+Futuro móvil: PWA → React Native / Expo
+Comunidad inicial: Discord / Circle / comunidad privada propia</div></div></div></section>
+
+    <section id="costs"><div class="section-head"><h2>Costos estimados</h2><p>Crecer por uso real. No pagar infraestructura grande antes de validar embajadores y usuarios.</p></div><div class="grid"><div class="card span-4"><span class="pill">Founding Era</span><h3>US$30–80/mes</h3><ul><li>Landing + Vercel.</li><li>Formulario.</li><li>Comunidad privada.</li><li>IA controlada.</li></ul></div><div class="card span-4"><span class="pill">Beta inicial</span><h3>US$50–150/mes</h3><ul><li>Supabase.</li><li>OpenAI/Claude.</li><li>Cloudinary.</li><li>Correos.</li></ul></div><div class="card span-4"><span class="pill">Escalando</span><h3>US$300+/mes</h3><ul><li>Más usuarios.</li><li>Más imágenes.</li><li>Marketplace.</li><li>Soporte y analíticas.</li></ul></div></div></section>
+
+    <section id="prompts"><div class="section-head"><h2>Prompts Claude Code + Codex</h2><p>Prompts actualizados para iniciar ANIMA V6 con dirección clara.</p></div><div class="grid"><div class="card span-12"><h3>Prompt maestro V6</h3><details open><summary>Ver prompt</summary><pre id="prompt1">You are the lead product engineer, designer and product strategist for ANIMA TSC V6.
+
+ANIMA TSC means: The Soul of Creativity.
+
+Build ANIMA as a living world for creators, not a generic CRM.
+
+Core slogan:
+Create with instinct.
+Organize with intelligence.
+Grow with purpose.
+Evolve with the community.
+Leave a legacy.
+
+New strategic phase:
+THE FOUNDING ERA.
+Before public launch, create a private global community of 100 Founding Ambassadors from Chile, Argentina, Colombia, Peru, Mexico and Spain.
+
+Founding Ambassadors receive lifetime access, a unique badge, featured profile, private channel, early access, voting power and a permanent place in ANIMA history.
+
+Modules:
+ANIMA Studio, Murals, Finance, Shop, AI, Mind, World, Founders, Classroom, Market, Client Portal, Legacy and Constellation.
+
+Progression:
+FOUNDING, EMBER, ROOT, WILD, TOTEM, AETHER, SPIRIT, ANIMA.
+
+Build first as responsive Web App, then PWA, then native apps only after traction.</pre><button class="copy" onclick="copyText('prompt1')">Copiar prompt</button></details></div><div class="card span-6"><h3>Prompt Founding Ambassadors</h3><details><summary>Ver prompt</summary><pre id="prompt2">Build the ANIMA Founding Ambassadors system.
+
+Create:
+- Ambassador application form.
+- Ambassador dashboard.
+- Country and city fields.
+- Creative discipline fields.
+- Unique Founding badge.
+- Lifetime access flag.
+- Invite tracking.
+- Global map view.
+- Private community access status.
+- Voting module for new features.
+
+The tone must feel premium, mythical, global and intimate.
+Do not call them beta testers. Call them Founding Ambassadors or Guardians.</pre><button class="copy" onclick="copyText('prompt2')">Copiar prompt</button></details></div><div class="card span-6"><h3>Prompt ANIMA World</h3><details><summary>Ver prompt</summary><pre id="prompt3">Build ANIMA World profile progression.
+
+Create:
+- Creator profile.
+- XP system.
+- Levels: FOUNDING, EMBER, ROOT, WILD, TOTEM, AETHER, SPIRIT, ANIMA.
+- Achievements.
+- Unlocks.
+- Badges.
+- Interactive constellation points.
+- Visual progress.
+- Ambassador role.
+
+The experience should feel meaningful, elegant and alive.
+Do not make it childish. Make it premium and emotional.</pre><button class="copy" onclick="copyText('prompt3')">Copiar prompt</button></details></div></div></section>
+
+    <div class="footer"><strong>ANIMA TSC — Master Roadmap V6</strong><br>The Soul of Creativity · The Founding Era · A Living World for Creators<br><br>SARK · Creator of ANIMA · First Soul of ANIMA</div>
+  </main>
+
+  <script>
+    const STORAGE_KEY="anima_tsc_master_roadmap_v6_founding_era";
+    const checks=[...document.querySelectorAll('input[type="checkbox"]')];
+    const progressBar=document.getElementById("progressBar");
+    const progressText=document.getElementById("progressText");
+    function updateTask(c){const li=c.closest(".task"); if(li) li.classList.toggle("done",c.checked)}
+    function updateProgress(){const total=checks.length, done=checks.filter(c=>c.checked).length; const pct=total?Math.round(done/total*100):0; progressBar.style.width=pct+"%"; progressText.textContent=pct+"% completado · "+done+" de "+total+" tareas";}
+    function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(checks.map(c=>c.checked)))}
+    function load(){try{const state=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");checks.forEach((c,i)=>{c.checked=!!state[i];updateTask(c)})}catch(e){} updateProgress()}
+    checks.forEach(c=>c.addEventListener("change",()=>{updateTask(c);updateProgress();save()}));
+    function copyText(id){navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>alert("Prompt copiado."));}
+    load();
+  </script>
+</body>
+</html>
