@@ -143,6 +143,54 @@
 /* mobile menu toggle */
 .menu-btn{display:none;border:1px solid var(--line);background:rgba(255,255,255,.7);width:40px;height:40px;border-radius:12px;font-size:18px;cursor:pointer}
 
+/* ---------- Camino del Alma (PIXEL ART) ---------- */
+.pixel-font{font-family:"Press Start 2P",monospace;letter-spacing:0;line-height:1.6}
+.camino-card{background:
+  repeating-linear-gradient(0deg,rgba(208,170,99,.04) 0 2px,transparent 2px 4px),
+  linear-gradient(160deg,#f7efdc,#efe3c6);
+  border:2px solid #d9c79a;box-shadow:0 0 0 2px #fff inset,var(--shadow-soft);image-rendering:pixelated}
+.camino-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.camino-head .pixel-font{font-size:16px;color:#5b4824;text-shadow:2px 2px 0 #e6d3a3}
+.camino-track{display:grid;grid-template-columns:repeat(8,1fr);gap:10px}
+.ptile{position:relative;text-align:center;padding:12px 6px 10px;border-radius:0;
+  background:#fbf5e6;border:3px solid #c9b486;box-shadow:3px 3px 0 #cdb47e;transition:.12s}
+.ptile .pn{position:absolute;top:4px;left:6px;font-size:8px;color:#b8862f}
+.ptile .pix{width:100%;max-width:54px;height:auto;display:block;margin:6px auto 8px;image-rendering:pixelated}
+.ptile b{display:block;font-size:8px;color:#5b4824}
+.ptile.cur{background:#fff6df;border-color:var(--gold);box-shadow:3px 3px 0 var(--gold),0 0 16px rgba(208,170,99,.5);transform:translateY(-2px)}
+.ptile.passed{opacity:.78}
+.ptile.passed::after{content:"✓";position:absolute;top:4px;right:6px;font-size:9px;color:#5f8a3a}
+@media(max-width:760px){.camino-track{grid-template-columns:repeat(4,1fr)}}
+
+/* ---------- Kanban: Flujo de trabajo ---------- */
+.kanban{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:12px;overflow-x:auto;padding-bottom:6px}
+.kcol{background:rgba(255,255,255,.45);border:1px solid var(--line);border-radius:16px;padding:10px;min-height:120px}
+.kcol-h{display:flex;justify-content:space-between;font-size:10.5px;font-weight:850;letter-spacing:.05em;color:var(--muted);padding:4px 6px 10px}
+.kcol-h span{background:rgba(0,0,0,.06);border-radius:999px;padding:0 7px}
+.kcard{background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:9px;box-shadow:var(--shadow-soft)}
+.kcard b{font-size:14px;letter-spacing:-.01em;display:block}
+.kcard small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.kcard p{margin:8px 0 0;font-size:12px;color:#4a463e}
+.kcard .kstatus{width:100%;margin-top:9px;border:1px solid var(--line);border-radius:9px;padding:6px 8px;font-size:12px;font-family:inherit;background:#faf8f3}
+.kcard .kacts{margin-top:8px;display:flex;justify-content:flex-end}
+.kempty{color:var(--muted);font-size:12px;padding:10px 6px;text-align:center}
+
+/* ---------- Portafolio (Behance) ---------- */
+.pf-grid{columns:3;column-gap:14px}
+.pf-card{break-inside:avoid;margin-bottom:14px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;box-shadow:var(--shadow-soft);transition:.18s}
+.pf-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.pf-cover{position:relative;aspect-ratio:4/3;display:grid;place-items:center}
+.pf-cover span{font-size:34px;font-weight:850;color:rgba(255,255,255,.9)}
+.pf-acts{position:absolute;top:8px;right:8px;opacity:0;transition:.15s}
+.pf-card:hover .pf-acts{opacity:1}
+.pf-cap{padding:12px 13px}
+.pf-cap b{font-size:14.5px;letter-spacing:-.01em}
+.pf-cap small{display:block;color:var(--muted);font-size:11.5px;margin-top:1px}
+.pf-cap p{margin:7px 0 0;font-size:12.5px;color:#4a463e}
+.pf-link{display:inline-block;margin-top:8px;font-size:12px;font-weight:800;color:#7b5920;text-decoration:none}
+@media(max-width:900px){.pf-grid{columns:2}}
+@media(max-width:560px){.pf-grid{columns:1}}
+
 /* ---------- Mapamundi de Almas ---------- */
 .worldmap{position:relative;width:100%;aspect-ratio:2/1;border-radius:20px;overflow:hidden;border:1px solid var(--line);
   background:radial-gradient(circle at 28% 18%,rgba(208,170,99,.14),transparent 46%),linear-gradient(160deg,#15161c,#20222b)}

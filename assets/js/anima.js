@@ -26,6 +26,32 @@ function shade(hex,p){ hex=hex||"#111111"; const n=parseInt(hex.slice(1),16); le
   r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));
   return "#"+(0x1000000+(r<<16)+(g<<8)+b).toString(16).slice(1); }
 
+/* ---------- Pixel art (solo el Camino del Alma) ---------- */
+const PIX={ y:"#e6bd63",Y:"#b8862f",o:"#c8763a",O:"#9a4f22",g:"#6faa3a",G:"#3f6f24",
+  n:"#9c7d44",N:"#5e4824",b:"#4a86a6",B:"#2f5c74",p:"#9a5fb0",P:"#caa0e4",r:"#cf5b5b",w:"#f5ecd2" };
+const LEVEL_SPRITES={
+  FOUNDING:["....y....","....Y....","..y.Y.y..","...yYy...","yYYYwYYYy","...yYy...","..y.Y.y..","....Y....","....y...."],
+  EMBER:["....o....","....o....","...ooy...","..ooyy...","..oyywo..",".ooyywoo.",".oyywwyo.",".ooyyyoo.","..ooooo.."],
+  ROOT:["....g....",".g..g..g.",".gg.g.gg.","..g.g.g..","...gNg...","....N....","....N....","..NNNNN..","........."],
+  WILD:["....r....",".r..r....",".r..r..r.",".r..r..r.",".r.rr.rr.",".r.rr.rr.",".rrrrrrr.",".........","........."],
+  TOTEM:[".n.n.n...",".........","...nnn...","..nnnnn..","..nnnnn..","..nnnnn..","...nnn...",".........","........."],
+  AETHER:["..bbbbb..",".bBbbbBb.",".b.bwb.b.",".bBbbbBb.",".b.bwb.b.",".bBbbbBb.","..bbbbb..","...bbb...","........."],
+  SPIRIT:["....y....",".y..y..y.","..yYYYy..",".yYYYYYy.","yyYYwYYyy",".yYYYYYy.","..yYYYy..",".y..y..y.","....y...."],
+  ANIMA:["....P....","...PpP...","..PpppP..",".PpppppP.","PpppppppP",".PpppppP.","..PpppP..","...PpP...","....P...."]
+};
+function pixelSprite(key){
+  const g=LEVEL_SPRITES[key]||LEVEL_SPRITES.FOUNDING; let r="";
+  g.forEach((row,y)=>{ [...row].forEach((ch,x)=>{ const c=PIX[ch]; if(c) r+=`<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${c}"/>`; }); });
+  return `<svg class="pix" viewBox="0 0 9 9" shape-rendering="crispEdges">${r}</svg>`;
+}
+function caminoPixelHTML(lp){
+  return `<div class="camino">
+    <div class="camino-head"><span class="pixel-font">TU CAMINO</span><span class="muted pixel-font" style="font-size:8px">ORIGEN → ANIMA</span></div>
+    <div class="camino-track">${LEVELS.map((l,i)=>`<div class="ptile ${i===lp.idx?'cur':''} ${i<lp.idx?'passed':''}">
+      <span class="pn pixel-font">${i+1}</span>${pixelSprite(l.key)}<b class="pixel-font">${l.label}</b></div>`).join("")}</div>
+  </div>`;
+}
+
 /* ---------- Personalización (mostrar/ocultar) ---------- */
 const cfgKey = a => "anima_cfg_"+(a.almaId||a.id);
 function getCfg(a){
@@ -136,7 +162,7 @@ function renderView(){
 function vMiAlma(a){
   const lp=levelProgress(a.xp), lv=levelByKey(a.level), cfg=getCfg(a);
   const inc=sum(a.finance.income), exp=sum(a.finance.expense);
-  const active=a.projects.filter(p=>p.st==="En curso").length;
+  const active=a.projects.filter(p=>!["Entregado","Cerrado","Terminado"].includes(p.st)).length;
   const createCTA = (!a.live && Cloud.enabled) ? `
     <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
       <span class="pill gold">Estás viendo una Alma de muestra</span>
@@ -189,11 +215,7 @@ function vMiAlma(a){
     <div class="card s3"><div class="stat"><span class="num">${money(inc-exp)}</span><span class="lbl">Ganancia</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${a.clan?esc(a.clan):"—"}</span><span class="lbl">${a.clan?"Tu Clan":"Sin Clan aún"}</span></div></div>`:``}
 
-    ${cfg.cards.camino!==false?`
-    <div class="card s12">
-      <div class="section-title"><h2>Tu camino</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px">FOUNDING → ANIMA</span></div>
-      <div class="path">${LEVELS.map((l,i)=>`<div class="lv ${i===lp.idx?'cur':''} ${i<lp.idx?'passed':''}"><div class="e">${l.emoji}</div><b>${l.key}</b><small>${l.name}</small></div>`).join("")}</div>
-    </div>`:``}
+    ${cfg.cards.camino!==false?`<div class="card s12 camino-card">${caminoPixelHTML(lp)}</div>`:``}
 
     ${cfg.cards.hoy!==false?`
     <div class="card s6"><div class="section-title"><h2>Hoy</h2><div class="spacer"></div><button class="btn sm" data-add="cita">+ Cita</button></div>
@@ -214,27 +236,45 @@ function vTrayectoria(a){
   </div></div>`;
 }
 
-/* --- Portafolio --- */
+/* --- Portafolio (galería tipo Behance) --- */
+function isImgUrl(u){ return u && /\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i.test(u); }
 function vPortafolio(a){
   return `<div class="grid"><div class="card s12">
-    <div class="section-title"><h2>Portafolio</h2><div class="spacer"></div><button class="btn sm" data-add="obra">+ Obra</button></div>
-    <div class="thumbs">${a.portfolio.map((p,i)=>`<div class="thumb">
-      <div class="ph" style="background:linear-gradient(145deg,${p.c},${shade(p.c,-25)})">${initials(p.t)}</div>
-      <div class="cap"><div style="display:flex;align-items:center"><div class="grow"><b>${esc(p.t)}</b><small>${esc(p.k)}</small></div>${acts("obra",i)}</div></div></div>`).join("")||`<p class="muted">Aún no hay obras.</p>`}</div>
+    <div class="section-title"><h2>Portafolio</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px;margin-right:10px">${a.portfolio.length} obras</span><button class="btn sm" data-add="obra">+ Obra</button></div>
+    ${a.portfolio.length?`<div class="pf-grid">${a.portfolio.map((p,i)=>{
+      const cover=isImgUrl(p.link)?`background-image:url('${esc(p.link)}');background-size:cover;background-position:center`
+        :`background:linear-gradient(145deg,${p.c},${shade(p.c,-28)})`;
+      return `<div class="pf-card">
+        <div class="pf-cover" style="${cover}">${isImgUrl(p.link)?"":`<span>${initials(p.t)}</span>`}<div class="pf-acts">${acts("obra",i)}</div></div>
+        <div class="pf-cap"><b>${esc(p.t)}</b><small>${esc([p.k,p.year].filter(Boolean).join(" · "))}</small>${p.desc?`<p>${esc(p.desc)}</p>`:""}${p.link&&!isImgUrl(p.link)?`<a href="${esc(p.link)}" target="_blank" rel="noopener" class="pf-link">Ver →</a>`:""}</div>
+      </div>`; }).join("")}</div>`
+    :`<p class="muted">Aún no hay obras. Agrega tu primera (puedes pegar el enlace de una imagen como portada).</p>`}
   </div></div>`;
 }
 
-/* --- Proyectos --- */
+/* --- Proyectos: Flujo de trabajo (kanban) --- */
+const FLOW=["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"];
+function flowOf(st){ if(FLOW.includes(st)) return st; if(st==="En curso") return "En producción"; if(st==="Terminado"||st==="Cerrado") return "Cerrado"; return "Cotizando"; }
 function vProyectos(a){
+  const cols=FLOW.map(s=>({s,items:[]}));
+  a.projects.forEach((p,i)=>{ const col=cols.find(c=>c.s===flowOf(p.st)); (col||cols[0]).items.push({p,i}); });
   return `<div class="grid"><div class="card s12">
-    <div class="section-title"><h2>Proyectos</h2><div class="spacer"></div><button class="btn sm" data-add="proyecto">+ Nuevo proyecto</button></div>
-    ${a.projects.map((p,i)=>{ const cls=p.st==="En curso"?"ok":(p.st==="Planificado"?"warn":"");
-      const meta=[p.client,p.budget?money(p.budget):"",p.start?("Inicio "+p.start):"",p.due?("Entrega "+p.due):""].filter(Boolean).join(" · ");
-      return `<div class="row">
-      <div class="grow"><b>${esc(p.t)}</b><br><small>${esc(meta)}</small>${p.desc?`<br><small class="muted">${esc(p.desc)}</small>`:""}</div>
-      <div style="width:140px"><div class="bar"><span style="width:${p.pct}%"></span></div><small class="muted">${p.pct}%</small></div>
-      <span class="pill ${cls}">${esc(p.st)}</span>${acts("proyecto",i)}</div>`; }).join("")||`<p class="muted">Aún no hay proyectos. Crea el primero.</p>`}
+    <div class="section-title"><h2>Flujo de trabajo</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px;margin-right:10px">${a.projects.length} trabajos</span><button class="btn sm" data-add="proyecto">+ Nuevo trabajo</button></div>
+    <div class="kanban">
+      ${cols.map(c=>`<div class="kcol"><div class="kcol-h">${c.s.toUpperCase()}<span>${c.items.length||""}</span></div>
+        ${c.items.map(({p,i})=>{ const bal=(p.budget||0)-(p.paid||0);
+          const meta=[p.client,p.budget?money(p.budget):"",p.budget?("saldo "+money(bal)):""].filter(Boolean).join(" · ");
+          return `<div class="kcard"><b>${esc(p.t)}</b><small>${esc(meta)}</small>${p.due?`<small class="muted">Entrega ${esc(p.due)}</small>`:""}${p.desc?`<p>${esc(p.desc)}</p>`:""}
+            <select class="kstatus" data-pstatus="${i}">${FLOW.map(s=>`<option ${s===flowOf(p.st)?'selected':''}>${s}</option>`).join("")}</select>
+            <div class="kacts">${acts("proyecto",i)}</div></div>`; }).join("")||`<div class="kempty">Sin trabajos.</div>`}
+      </div>`).join("")}
+    </div>
   </div></div>`;
+}
+async function setProjectStatus(i,st){
+  const a=me(); const p=a.projects[i]; if(!p) return; p.st=st;
+  if(a.live && p._id){ try{ await Cloud.updateRow("projects",p._id,{status:st}); }catch(e){ alert("No se pudo mover: "+(e.message||e)); } }
+  save(); renderAll();
 }
 
 /* --- Finanzas --- */
@@ -549,8 +589,8 @@ function vSantuario(a){
    EDITOR UNIVERSAL DE REGISTROS (crear / editar / eliminar)
    =========================================================== */
 const EDITORS = {
-  proyecto:{ title:"Proyecto", table:"projects", get:a=>a.projects, push:"unshift", xp:60,
-    fields:[{k:"t",l:"Nombre"},{k:"client",l:"Cliente"},{k:"st",l:"Estado",sel:["Planificado","En curso","Terminado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Presupuesto",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Descripción",ta:true}],
+  proyecto:{ title:"Trabajo", table:"projects", get:a=>a.projects, push:"unshift", xp:60,
+    fields:[{k:"t",l:"Trabajo"},{k:"client",l:"Cliente"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
     toRow:v=>({title:v.t,client:v.client,status:v.st,pct:+v.pct||0,budget:v.budget?+v.budget:null,started_at:v.start||null,due_at:v.due||null,description:v.desc}) },
   memoria:{ title:"Memoria", table:"memories", get:a=>a.memories, push:"unshift", xp:40,
     fields:[{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({title:v.t,detail:v.d}) },
@@ -817,6 +857,9 @@ document.addEventListener("click", e=>{
 document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target.id==="lumbreInput") sendLumbre();
   if(e.key==="Enter" && e.target.id==="commentInput"){ const b=document.getElementById("commentSend"); if(b) sendComment(b.dataset.post); }
+});
+document.addEventListener("change", e=>{
+  const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); }
 });
 function sendLumbre(){ const i=document.getElementById("lumbreInput"), v=i.value.trim(); if(!v)return; i.value=""; lumbreAsk(v); }
 
