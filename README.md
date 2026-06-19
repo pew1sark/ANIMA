@@ -97,6 +97,18 @@ ANIMA está lista para una **beta cerrada por invitación**:
 - **Privacidad**: finanzas, memorias, proyectos, agenda y biblioteca son privados por
   RLS — nadie más los ve, ni siquiera en el Santuario.
 
+### Interactividad y personalización
+
+- **Todo editable**: cada ítem (proyectos, finanzas, hitos, obras, citas, documentos,
+  memorias) se crea, **edita y elimina** con formularios reales. Los cambios sincronizan
+  el resto de paneles al instante (KPIs, dashboard, etc.).
+- **Personalizar** (⚙): cada Alma decide **qué módulos y secciones se muestran** en su
+  espacio. La config se guarda por Alma.
+- **Cotizador** (₵): editor de presupuestos profesional, adaptable a cualquier rama de
+  arte (unidades libres: m², hora, pieza…), con impuestos, multi-moneda, cotizaciones
+  guardadas y **exportación a PDF**.
+- **Crear Alma** visible desde la portada de cada Alma de muestra y al editar perfil.
+
 ## 🔟 Las 10 Almas Fundadoras
 
 SARK (Chile), Valentina Cruz (Argentina), Nicolás Herrera (Colombia), Diego Ramírez (México),
