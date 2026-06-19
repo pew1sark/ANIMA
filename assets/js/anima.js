@@ -81,25 +81,35 @@ const TITLES = {
 };
 function renderTop(){ const [t,s]=TITLES[state.view]||["ANIMA",""]; document.getElementById("topTitle").innerHTML=`<h1>${t}</h1><div class="sub">${s}</div>`; }
 
-/* ---------- Constelación (mapa de Almas entrando al mundo) ---------- */
+/* ---------- Mapamundi de Almas ---------- */
 function hashStr(s){ s=String(s||""); let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; } return h; }
 function timeAgo(iso){ if(!iso) return ""; const d=(Date.now()-new Date(iso).getTime())/1000;
   if(isNaN(d)) return ""; if(d<60) return "ahora"; if(d<3600) return Math.floor(d/60)+" min"; if(d<86400) return Math.floor(d/3600)+" h"; return Math.floor(d/86400)+" d"; }
+const WORLD_IMG="https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg";
+const CITY_COORDS={ "santiago":[-33.45,-70.66],"valparaiso":[-33.05,-71.62],"buenos aires":[-34.6,-58.38],
+  "cordoba":[-31.42,-64.18],"medellin":[6.24,-75.57],"bogota":[4.71,-74.07],"ciudad de mexico":[19.43,-99.13],
+  "guadalajara":[20.67,-103.35],"lima":[-12.04,-77.04],"madrid":[40.42,-3.70] };
+const COUNTRY_COORDS={ "chile":[-35,-71],"argentina":[-38,-63],"colombia":[4,-73],"mexico":[23,-102],
+  "peru":[-10,-76],"espana":[40,-4],"spain":[40,-4] };
+const deburr=s=>(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u{1F1E6}-\u{1F1FF}]/gu,"").trim().toLowerCase();
+function almaLatLng(m){ const c=deburr(m.city); if(CITY_COORDS[c]) return CITY_COORDS[c];
+  const co=deburr(m.country); if(COUNTRY_COORDS[co]) return COUNTRY_COORDS[co]; return [15,-20]; }
 function constelacionHTML(){
-  const list = roster();
-  const byNew = [...list].sort((a,b)=> new Date(b.created_at||0).getTime() - new Date(a.created_at||0).getTime());
-  const recent = byNew.slice(0,5);
-  const nodes = list.map(m=>{
-    const h=hashStr(m.id||m.slug||m.name); const x=7+(h%86), y=12+((h>>4)%74);
-    const isNew = liveMode() && recent.indexOf(m)>-1;
-    const act = (liveMode()&&!m.live)?`data-pub="${m.id}"`:`data-alma="${m.id}"`;
-    return `<button class="cn ${isNew?'new':''}" ${act} style="left:${x}%;top:${y}%;--c:${m.color}" title="${esc(m.name)} · ${m.level}">${initials(m.name)}</button>`;
+  const list=roster();
+  const recent=[...list].sort((a,b)=>new Date(b.created_at||0).getTime()-new Date(a.created_at||0).getTime()).slice(0,5);
+  const nodes=list.map(m=>{
+    const [lat,lng]=almaLatLng(m); const j=hashStr(m.id||m.name);
+    const x=Math.max(2,Math.min(98,(lng+180)/360*100+((j%14)-7)*0.18));
+    const y=Math.max(4,Math.min(96,(90-lat)/180*100+(((j>>4)%12)-6)*0.18));
+    const isNew=liveMode()&&recent.indexOf(m)>-1;
+    const act=(liveMode()&&!m.live)?`data-pub="${m.id}"`:`data-alma="${m.id}"`;
+    return `<button class="wn ${isNew?'new':''}" ${act} style="left:${x}%;top:${y}%;--c:${m.color}" title="${esc(m.name)} · ${esc(m.city||m.country||"")} · ${m.level}">${initials(m.name)}</button>`;
   }).join("");
-  const chips = recent.map(m=>`<span class="chip"><b style="color:${m.color}">●</b> ${esc(m.name)} · ${m.created_at?timeAgo(m.created_at):m.level}</span>`).join("");
+  const chips=recent.map(m=>`<span class="chip"><b style="color:${m.color}">●</b> ${esc(m.name)} · ${esc(deburr(m.city)?m.city:m.country||"")} ${m.created_at?"· "+timeAgo(m.created_at):""}</span>`).join("");
   return `<div class="card s12">
-    <div class="section-title"><h2>Mapa Constelación</h2><div class="spacer"></div>
+    <div class="section-title"><h2>Mapa de Almas</h2><div class="spacer"></div>
       <span class="pill ${liveMode()?'gold':''}">${liveMode()?'🜂 En vivo':'Demo'} · ${list.length} Almas</span></div>
-    <div class="constel">${nodes}</div>
+    <div class="worldmap"><img src="${WORLD_IMG}" alt="" loading="lazy" onerror="this.style.display='none'">${nodes}</div>
     <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap">
       <small class="muted" style="font-weight:850;text-transform:uppercase;letter-spacing:.05em;font-size:10.5px">Entrando al mundo</small>
       ${chips}
