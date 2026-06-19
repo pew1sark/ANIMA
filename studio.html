@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f5f5f7" />
+  <title>ANIMA Studio — Alpha · The Founding Era</title>
+  <meta name="description" content="ANIMA TSC — un sistema vivo para organizar la memoria, trayectoria, proyectos y crecimiento de una Alma." />
+  <link rel="stylesheet" href="assets/css/anima.css" />
+  <link rel="stylesheet" href="assets/css/studio.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="side" id="side">
+      <div class="brand">
+        <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><path d="M39 66C45 53 55 53 61 66" stroke="#B8A892" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>
+        ANIMA
+      </div>
+      <div class="who" id="whoBox"><div id="who"></div></div>
+      <nav id="nav"></nav>
+      <div style="flex:1"></div>
+      <div style="padding:8px 6px;display:flex;flex-direction:column;gap:8px">
+        <button class="btn gold sm" id="feedbackBtn">✦ Enviar feedback</button>
+        <a class="btn ghost sm" href="roadmap.html">Ver Roadmap V6</a>
+        <button class="btn ghost sm" id="resetBtn">Restaurar Almas</button>
+        <small class="muted" style="padding:4px 6px;font-size:11px">The Soul of Creativity · Beta cerrada</small>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <div class="topbar">
+        <button class="menu-btn" id="menuBtn">☰</button>
+        <div id="topTitle"></div>
+        <div class="spacer"></div>
+        <button class="btn secondary sm" id="authBtn">Entrar</button>
+        <div class="lumbre-chip" id="lumbreOpen"><span class="dot"></span>LUMBRE</div>
+      </div>
+      <div class="view" id="view"></div>
+    </main>
+  </div>
+
+  <!-- LUMBRE DRAWER -->
+  <div class="drawer-bg" id="drawerBg"></div>
+  <aside class="drawer" id="drawer">
+    <div class="head">
+      <span class="mark" style="background:linear-gradient(145deg,#d0aa63,#b8862f)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2c1 4 3 5 5 6-3 1-5 3-5 8-0-5-2-7-5-8 2-1 4-2 5-6z" fill="#fff"/></svg></span>
+      <div style="flex:1"><b style="letter-spacing:-.02em">LUMBRE</b><br><small class="muted">Motor agente · 100% local por defecto</small></div>
+      <button class="btn ghost sm" id="lumbreClose">✕</button>
+    </div>
+    <div class="body" id="lumbreChat"></div>
+    <div class="foot">
+      <div class="modes" id="lumbreMode" style="margin-bottom:12px"></div>
+      <div class="lum-input">
+        <input id="lumbreInput" placeholder="Pregúntale a LUMBRE…" autocomplete="off" />
+        <button class="btn" id="lumbreSend">↑</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Área de impresión (Dossier PDF) -->
+  <div id="printArea"></div>
+
+  <!-- MODAL AUTH -->
+  <div class="auth-modal" id="authModal">
+    <div class="auth-box">
+      <div class="auth-head">
+        <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>
+        <div style="flex:1"><b>Entra a tu Alma</b><br><small class="muted">Tu espacio privado, en la nube.</small></div>
+        <button class="btn ghost sm" id="authClose">✕</button>
+      </div>
+      <div class="field"><label>Nombre (solo al crear)</label><input id="authName" placeholder="Tu nombre de Alma" autocomplete="name" /></div>
+      <div class="field"><label>Correo</label><input id="authEmail" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" /></div>
+      <div class="field"><label>Contraseña</label><input id="authPass" type="password" placeholder="••••••••" autocomplete="current-password" /></div>
+      <div class="field"><label>Código de invitación (solo al crear)</label><input id="authCode" placeholder="Beta cerrada — pídeselo a SARK" autocomplete="off" /></div>
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <button class="btn" id="authSignIn" style="flex:1">Entrar</button>
+        <button class="btn secondary" id="authSignUp" style="flex:1">Crear Alma</button>
+      </div>
+      <div id="authMsg" class="muted" style="font-size:12.5px;margin-top:12px;min-height:16px"></div>
+      <p class="muted" style="font-size:11px;margin-top:8px">🔒 Tus finanzas, memorias y proyectos son privados. Nada se comparte automáticamente.</p>
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR ALMA -->
+  <div class="auth-modal" id="editModal">
+    <div class="auth-box">
+      <div class="auth-head"><div style="flex:1"><b>Editar mi Alma</b><br><small class="muted">Tu identidad, tu decisión.</small></div><button class="btn ghost sm" id="edClose">✕</button></div>
+      <div class="field"><label>Nombre</label><input id="edName" /></div>
+      <div style="display:flex;gap:10px">
+        <div class="field" style="flex:1"><label>Rol / Oficio</label><input id="edRole" placeholder="Ej: Muralista" /></div>
+        <div class="field" style="flex:1"><label>Ciudad</label><input id="edCity" /></div>
+      </div>
+      <div class="field"><label>País</label><input id="edCountry" placeholder="Ej: 🇨🇱 Chile" /></div>
+      <div class="field"><label>Bio</label><textarea id="edBio" rows="3"></textarea></div>
+      <div class="field"><label>Etiquetas (separadas por coma)</label><input id="edTags" placeholder="Muralismo, IA, Streetwear" /></div>
+      <button class="btn" id="edSave" style="width:100%">Guardar Alma</button>
+    </div>
+  </div>
+
+  <!-- MODAL PERFIL PÚBLICO -->
+  <div class="auth-modal" id="publicModal">
+    <div class="auth-box">
+      <div class="auth-head"><div style="flex:1"><b>Perfil público</b></div><button class="btn ghost sm" id="pubClose">✕</button></div>
+      <div id="pubBody"></div>
+    </div>
+  </div>
+
+  <!-- MODAL FEEDBACK -->
+  <div class="auth-modal" id="feedbackModal">
+    <div class="auth-box">
+      <div class="auth-head"><span class="mark" style="background:linear-gradient(145deg,#d0aa63,#b8862f)"></span><div style="flex:1"><b>Tu voz construye ANIMA</b><br><small class="muted">Beta cerrada · cuéntame qué sientes.</small></div><button class="btn ghost sm" id="fbClose">✕</button></div>
+      <div class="field"><label>¿Cómo lo viviste?</label><div id="fbStars" style="display:flex;gap:6px"></div></div>
+      <div class="field"><label>Mensaje</label><textarea id="fbMsg" rows="4" placeholder="Qué te gustó, qué falló, qué le falta a tu Alma…"></textarea></div>
+      <button class="btn gold" id="fbSend" style="width:100%">Enviar feedback</button>
+      <div id="fbStatus" class="muted" style="font-size:12.5px;margin-top:10px;min-height:16px"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/seed.js"></script>
+  <script src="assets/js/anima.js"></script>
+</body>
+</html>
