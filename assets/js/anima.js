@@ -479,7 +479,7 @@ async function saveRecord(){
   try{
     if(idx==null){
       const item={...v};
-      if(a.live){ const row=await Cloud.insertRow(cfg.table, cfg.toRow(v)); item._id=row.id; }
+      if(a.live){ const row=await Cloud.insertRow(cfg.table, {...cfg.toRow(v), alma_id:a.almaId}); item._id=row.id; }
       arr[cfg.push==="push"?"push":"unshift"](item);
       if(cfg.xp){ a.xp=(a.xp||0)+cfg.xp; if(a.live){ try{await Cloud.setXP(a.almaId,a.xp);}catch(e){} } await syncLevel(a); }
     }else{
@@ -558,12 +558,12 @@ async function refreshAuth(){
   const s=await Cloud.session();
   if(s){ const pend=localStorage.getItem("anima_pending_invite"); if(pend){ try{await Cloud.redeemInvite(pend);}catch(e){} localStorage.removeItem("anima_pending_invite"); }
     await loadMyAlma(); updateAuthUI(s);
-  }else{ state.almas=state.almas.filter(x=>!x.live); if(me().live) state.currentId="sark"; updateAuthUI(null); renderAll(); }
+  }else{ if(state.almas.some(x=>x.live)){ state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="sark"; } updateAuthUI(null); renderAll(); }
 }
 async function loadMyAlma(){
   const row=await Cloud.myAlma(); if(!row) return;
   const mods=await Cloud.loadModules(row.id); const a=dbAlmaToState(row,mods);
-  state.almas=state.almas.filter(x=>!x.live); state.almas.unshift(a);
+  state.almas=[a];   // tu Alma viva, limpia (las de muestra no se mezclan)
   state.currentId=a.id; state.view="mialma"; state.chat=[]; renderAll();
 }
 function updateAuthUI(session){
