@@ -77,7 +77,12 @@ const Cloud = {
   addAgenda(almaId, at_time, title){ return _sb.from("agenda").insert({ alma_id:almaId, at_time, title }); },
   addLibrary(almaId, title, kind){ return _sb.from("library").insert({ alma_id:almaId, title, kind }); },
   setXP(almaId, xp){ return _sb.from("almas").update({ xp }).eq("id", almaId); },
-  updateAlma(almaId, patch){ return _sb.from("almas").update(patch).eq("id", almaId); }
+  updateAlma(almaId, patch){ return _sb.from("almas").update(patch).eq("id", almaId); },
+
+  /* CRUD genérico por tabla (para editar/eliminar cualquier ítem) */
+  async insertRow(table, row){ const { data, error } = await _sb.from(table).insert(row).select().single(); if(error) throw error; return data; },
+  async updateRow(table, id, patch){ const { error } = await _sb.from(table).update(patch).eq("id", id); if(error) throw error; },
+  async deleteRow(table, id){ const { error } = await _sb.from(table).delete().eq("id", id); if(error) throw error; }
 };
 
 /* DB → forma en memoria que usan las vistas */
@@ -88,14 +93,14 @@ function dbAlmaToState(row, m){
     role: row.role || "Creador", city: row.city || "", country: row.country || "",
     bio: row.bio || "", tags: row.tags || [], clan: row.clan || null,
     finance: {
-      income:  (m.income  || []).map(x => ({ t:x.title, a:Number(x.amount), d:x.period })),
-      expense: (m.expense || []).map(x => ({ t:x.title, a:Number(x.amount), d:x.period }))
+      income:  (m.income  || []).map(x => ({ _id:x.id, t:x.title, a:Number(x.amount), d:x.period })),
+      expense: (m.expense || []).map(x => ({ _id:x.id, t:x.title, a:Number(x.amount), d:x.period }))
     },
-    projects:   (m.projects   || []).map(x => ({ t:x.title, st:x.status, pct:x.pct, client:x.client })),
-    trajectory: (m.trajectory || []).map(x => ({ y:x.year, t:x.title, d:x.detail })),
-    portfolio:  (m.portfolio  || []).map(x => ({ t:x.title, k:x.kind, c:x.color })),
-    memories:   (m.memories   || []).map(x => ({ t:x.title, d:x.detail })),
-    library:    (m.library    || []).map(x => ({ t:x.title, k:x.kind })),
-    agenda:     (m.agenda     || []).map(x => ({ h:x.at_time, t:x.title }))
+    projects:   (m.projects   || []).map(x => ({ _id:x.id, t:x.title, st:x.status, pct:x.pct, client:x.client })),
+    trajectory: (m.trajectory || []).map(x => ({ _id:x.id, y:x.year, t:x.title, d:x.detail })),
+    portfolio:  (m.portfolio  || []).map(x => ({ _id:x.id, t:x.title, k:x.kind, c:x.color })),
+    memories:   (m.memories   || []).map(x => ({ _id:x.id, t:x.title, d:x.detail })),
+    library:    (m.library    || []).map(x => ({ _id:x.id, t:x.title, k:x.kind })),
+    agenda:     (m.agenda     || []).map(x => ({ _id:x.id, h:x.at_time, t:x.title }))
   };
 }
