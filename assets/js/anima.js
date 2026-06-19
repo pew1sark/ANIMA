@@ -30,7 +30,7 @@ function shade(hex,p){ hex=hex||"#111111"; const n=parseInt(hex.slice(1),16); le
 const cfgKey = a => "anima_cfg_"+(a.almaId||a.id);
 function getCfg(a){
   const def={ modules:{trayectoria:true,portafolio:true,proyectos:true,finanzas:true,cotizador:true,agenda:true,memoria:true,biblioteca:true},
-              cards:{camino:true,kpis:true,hoy:true,memoria:true} };
+              cards:{constelacion:true,kpis:true,camino:true,hoy:true,memoria:true} };
   try{ const c=JSON.parse(localStorage.getItem(cfgKey(a))); if(c){ return { modules:{...def.modules,...c.modules}, cards:{...def.cards,...c.cards} }; } }catch(e){}
   return def;
 }
@@ -80,6 +80,32 @@ const TITLES = {
   santuario:["Santuario","Nivel 3: la organización completa de ANIMA."]
 };
 function renderTop(){ const [t,s]=TITLES[state.view]||["ANIMA",""]; document.getElementById("topTitle").innerHTML=`<h1>${t}</h1><div class="sub">${s}</div>`; }
+
+/* ---------- Constelación (mapa de Almas entrando al mundo) ---------- */
+function hashStr(s){ s=String(s||""); let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; } return h; }
+function timeAgo(iso){ if(!iso) return ""; const d=(Date.now()-new Date(iso).getTime())/1000;
+  if(isNaN(d)) return ""; if(d<60) return "ahora"; if(d<3600) return Math.floor(d/60)+" min"; if(d<86400) return Math.floor(d/3600)+" h"; return Math.floor(d/86400)+" d"; }
+function constelacionHTML(){
+  const list = roster();
+  const byNew = [...list].sort((a,b)=> new Date(b.created_at||0).getTime() - new Date(a.created_at||0).getTime());
+  const recent = byNew.slice(0,5);
+  const nodes = list.map(m=>{
+    const h=hashStr(m.id||m.slug||m.name); const x=7+(h%86), y=12+((h>>4)%74);
+    const isNew = liveMode() && recent.indexOf(m)>-1;
+    const act = (liveMode()&&!m.live)?`data-pub="${m.id}"`:`data-alma="${m.id}"`;
+    return `<button class="cn ${isNew?'new':''}" ${act} style="left:${x}%;top:${y}%;--c:${m.color}" title="${esc(m.name)} · ${m.level}">${initials(m.name)}</button>`;
+  }).join("");
+  const chips = recent.map(m=>`<span class="chip"><b style="color:${m.color}">●</b> ${esc(m.name)} · ${m.created_at?timeAgo(m.created_at):m.level}</span>`).join("");
+  return `<div class="card s12">
+    <div class="section-title"><h2>Mapa Constelación</h2><div class="spacer"></div>
+      <span class="pill ${liveMode()?'gold':''}">${liveMode()?'🜂 En vivo':'Demo'} · ${list.length} Almas</span></div>
+    <div class="constel">${nodes}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap">
+      <small class="muted" style="font-weight:850;text-transform:uppercase;letter-spacing:.05em;font-size:10.5px">Entrando al mundo</small>
+      ${chips}
+    </div>
+  </div>`;
+}
 
 /* ---------- Acciones de ítem (editar/eliminar) ---------- */
 function acts(kind,i){ return `<span class="acts"><button class="ia" data-edit="${kind}:${i}" title="Editar">✎</button><button class="ia danger" data-del="${kind}:${i}" title="Eliminar">✕</button></span>`; }
@@ -142,6 +168,8 @@ function vMiAlma(a){
     </div>
 
     ${createCTA}${onboarding}
+
+    ${cfg.cards.constelacion!==false?constelacionHTML():``}
 
     ${cfg.cards.kpis!==false?`
     <div class="card s3"><div class="stat"><span class="num">${active}</span><span class="lbl">Proyectos en curso</span></div></div>
@@ -239,7 +267,7 @@ function vBiblioteca(a){
 function vConfig(a){
   const cfg=getCfg(a);
   const mod=[["trayectoria","Trayectoria"],["portafolio","Portafolio"],["proyectos","Proyectos"],["finanzas","Finanzas"],["cotizador","Cotizador"],["agenda","Agenda"],["memoria","Memorias"],["biblioteca","Biblioteca"]];
-  const card=[["kpis","Indicadores rápidos"],["camino","Camino del creador (XP y nivel)"],["hoy","Agenda de hoy"],["memoria","Última memoria"]];
+  const card=[["constelacion","Mapa Constelación"],["kpis","Indicadores rápidos"],["camino","Camino del creador (XP y nivel)"],["hoy","Agenda de hoy"],["memoria","Última memoria"]];
   const tg=(g,k,l,on)=>`<div class="row"><div class="grow"><b>${l}</b></div><button class="toggle ${on?'on':''}" data-cfg="${g}:${k}"><span></span></button></div>`;
   return `<div class="grid">
     <div class="card s12"><span class="pill gold">Personalización</span>

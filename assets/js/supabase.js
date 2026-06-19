@@ -30,8 +30,8 @@ const Cloud = {
   async allAlmas(){
     if(!_sb) return [];
     const { data } = await _sb.from("almas")
-      .select("id,slug,name,role,city,country,bio,color,level,xp,clan,tags,is_founding")
-      .order("xp", { ascending:false });
+      .select("id,slug,name,role,city,country,bio,color,level,xp,clan,tags,is_founding,created_at")
+      .order("created_at", { ascending:false });
     return data || [];
   },
 
