@@ -52,7 +52,8 @@ const NAV = [
   {v:"memoria",    ico:"✦", t:"Memorias"},
   {v:"biblioteca", ico:"❏", t:"Biblioteca"},
   {sec:"Mundo"},
-  {v:"comunidad",  ico:"❂", t:"Comunidad"}
+  {v:"comunidad",  ico:"❂", t:"Comunidad"},
+  {v:"santuario",  ico:"🜁", t:"Santuario"}
 ];
 
 function renderNav(){
@@ -85,7 +86,8 @@ const TITLES = {
   agenda:["Agenda","Tu día, ordenado."],
   memoria:["Memorias","Ideas, frases y referencias que no quieres perder."],
   biblioteca:["Biblioteca","Tus documentos y archivos."],
-  comunidad:["Comunidad","Tu Clan y la constelación de Almas."]
+  comunidad:["Comunidad","Tu Clan y la constelación de Almas."],
+  santuario:["Santuario","Nivel 3: la organización completa de ANIMA."]
 };
 function renderTop(){
   const [t,s] = TITLES[state.view] || ["ANIMA",""];
@@ -100,7 +102,8 @@ function renderView(){
   const fn = {
     mialma:vMiAlma, trayectoria:vTrayectoria, portafolio:vPortafolio,
     proyectos:vProyectos, finanzas:vFinanzas, agenda:vAgenda,
-    memoria:vMemoria, biblioteca:vBiblioteca, comunidad:vComunidad
+    memoria:vMemoria, biblioteca:vBiblioteca, comunidad:vComunidad,
+    santuario:vSantuario
   }[state.view] || vMiAlma;
   document.getElementById("view").innerHTML = fn(a);
 }
@@ -122,7 +125,11 @@ function vMiAlma(a){
         </div>
       </div>
       <p style="margin:16px 0 0">${a.bio}</p>
-      <div style="margin-top:14px">${a.tags.map(t=>`<span class="chip">${t}</span>`).join("")}</div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        ${a.tags.map(t=>`<span class="chip">${t}</span>`).join("")}
+        <span style="flex:1"></span>
+        <span class="btn ghost sm" data-export>⤓ Exportar PDF</span>
+      </div>
     </div>
 
     <div class="card s4">
@@ -277,6 +284,96 @@ function almaMini(m){
   </div>`;
 }
 
+/* --- Santuario (Nivel 3) --- */
+function vSantuario(a){
+  const S = SEED_SANCTUARY;
+  const totalInc = state.almas.reduce((t,x)=>t+sum(x.finance.income),0);
+  const totalExp = state.almas.reduce((t,x)=>t+sum(x.finance.expense),0);
+  const totalProj = state.almas.reduce((t,x)=>t+x.projects.length,0);
+  const activeProj = state.almas.reduce((t,x)=>t+x.projects.filter(p=>p.st==="En curso").length,0);
+  // distribución por nivel
+  const dist = LEVELS.map(l=>({l, n:state.almas.filter(x=>x.level===l.key).length})).filter(d=>d.n>0);
+  const top = [...state.almas].sort((x,y)=>y.xp-x.xp).slice(0,5);
+  return `<div class="grid">
+    <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
+      <span class="pill gold">Nivel 3 · Santuario</span>
+      <h2 style="font-size:30px;letter-spacing:-.05em;margin:10px 0 4px">${S.emoji} ${S.name}</h2>
+      <p class="muted" style="max-width:680px">${S.desc}</p>
+    </div>
+
+    <div class="card s3"><div class="stat"><span class="num">${state.almas.length}</span><span class="lbl">Almas</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num">${S.clans.length}</span><span class="lbl">Clanes</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num">${activeProj}/${totalProj}</span><span class="lbl">Proyectos activos</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num">${money(totalInc-totalExp)}</span><span class="lbl">Ganancia general</span></div></div>
+
+    <div class="card s7">
+      <div class="section-title"><h2>Clanes del Santuario</h2></div>
+      ${S.clans.map(id=>{
+        const c=SEED_CLANS.find(x=>x.id===id);
+        const inc=c.members.reduce((t,mid)=>{const m=state.almas.find(x=>x.id===mid);return t+(m?sum(m.finance.income):0);},0);
+        return `<div class="row"><span style="font-size:22px">${c.emoji}</span>
+          <div class="grow"><b>${c.name}</b><br><small>${c.members.length} Almas · ${c.desc}</small></div>
+          <span class="amt in">${money(inc)}</span></div>`;
+      }).join("")}
+    </div>
+    <div class="card s5">
+      <div class="section-title"><h2>Departamentos</h2></div>
+      ${S.departments.map(d=>{const l=state.almas.find(x=>x.id===d.lead);return `<div class="row"><div class="grow"><b>${d.t}</b><br><small>Lidera: ${l?l.name:"—"}</small></div></div>`;}).join("")}
+    </div>
+
+    <div class="card s7">
+      <div class="section-title"><h2>Finanzas generales</h2><div class="spacer"></div><span class="pill">Agregado del Santuario</span></div>
+      <div class="grid" style="gap:14px">
+        <div class="s4"><div class="stat"><span class="num" style="color:var(--ok);font-size:22px">${money(totalInc)}</span><span class="lbl">Ingresos</span></div></div>
+        <div class="s4"><div class="stat"><span class="num" style="color:var(--danger);font-size:22px">${money(totalExp)}</span><span class="lbl">Egresos</span></div></div>
+        <div class="s4"><div class="stat"><span class="num" style="font-size:22px">${money(totalInc-totalExp)}</span><span class="lbl">Neto</span></div></div>
+      </div>
+      <p class="muted" style="font-size:12px;margin-top:14px">🔒 Vista agregada para administración. Las finanzas privadas de cada Alma nunca se exponen en detalle sin su permiso.</p>
+    </div>
+    <div class="card s5">
+      <div class="section-title"><h2>Distribución por nivel</h2></div>
+      ${dist.map(d=>`<div class="row"><span style="font-size:18px">${d.l.emoji}</span><div class="grow"><b>${d.l.key}</b></div><span class="chip">${d.n}</span></div>`).join("")}
+    </div>
+
+    <div class="card s12">
+      <div class="section-title"><h2>Almas destacadas (XP)</h2></div>
+      ${top.map((m,i)=>`<div class="row"><b style="color:var(--gold);width:24px">${i+1}</b>${avatarHTML(m,"sm")}<div class="grow"><b>${m.name}</b><br><small>${m.role}</small></div><span class="chip">${m.xp.toLocaleString("es-CL")} XP</span></div>`).join("")}
+    </div>
+  </div>`;
+}
+
+/* ===========================================================
+   EXPORTAR PDF — Dossier del Alma
+   =========================================================== */
+function exportPDF(){
+  const a = me(); const lv = levelByKey(a.level);
+  const inc=sum(a.finance.income), exp=sum(a.finance.expense);
+  document.getElementById("printArea").innerHTML = `
+    <div class="p-head">
+      <div class="brand"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>ANIMA TSC</div>
+      <small>Dossier de Alma · ${new Date().toLocaleDateString("es-CL")}</small>
+    </div>
+    <h1 class="p-name">${a.name}</h1>
+    <div class="p-sub">${lv.emoji} ${a.level} · ${lv.name} · ${a.xp.toLocaleString("es-CL")} XP — ${a.role} · ${a.country}</div>
+    <p>${a.bio}</p>
+    <div class="p-tags">${a.tags.map(t=>`<span>${t}</span>`).join("")}</div>
+
+    <h2>Trayectoria</h2>
+    ${a.trajectory.map(n=>`<p><b>${n.y} · ${n.t}</b> — ${n.d}</p>`).join("")}
+
+    <h2>Proyectos</h2>
+    ${a.projects.map(p=>`<p><b>${p.t}</b> (${p.st}, ${p.pct}%) — ${p.client}</p>`).join("")}
+
+    <h2>Portafolio</h2>
+    <p>${a.portfolio.map(p=>`${p.t} (${p.k})`).join(" · ")}</p>
+
+    <h2>Finanzas</h2>
+    <p>Ingresos: ${money(inc)} · Egresos: ${money(exp)} · <b>Ganancia: ${money(inc-exp)}</b></p>
+
+    <div class="p-foot">ANIMA TSC — The Soul of Creativity · The Founding Era</div>`;
+  window.print();
+}
+
 /* ===========================================================
    LUMBRE — motor agente local
    =========================================================== */
@@ -378,6 +475,7 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#menuBtn")) document.getElementById("side").classList.toggle("open");
   if(e.target.closest("#whoBox")) go("comunidad");
   if(e.target.closest("#resetBtn")) reset();
+  if(e.target.closest("#exportBtn")||e.target.closest("[data-export]")) exportPDF();
   if(e.target.closest("#lumbreSend")) sendLumbre();
 });
 document.addEventListener("keydown", e=>{ if(e.key==="Enter" && e.target.id==="lumbreInput") sendLumbre(); });

@@ -338,3 +338,17 @@ const SEED_CLANS = [
   { id:"aetherlab", name:"AETHER LAB", emoji:"☽", desc:"Laboratorio de IA, sonido y dirección de arte.", members:["nicolas","lucia","tomas","renata"] },
   { id:"wildhouse", name:"WILD HOUSE", emoji:"🐾", desc:"Casa de streetwear y muralismo comunitario.", members:["diego","sofia"] }
 ];
+
+/* === SANTUARIO (Nivel 3) === */
+/* Más de 8 Almas: organización avanzada que agrupa múltiples Clanes. */
+const SEED_SANCTUARY = {
+  name:"ANIMA — Founding Sanctuary",
+  emoji:"🜁",
+  desc:"El primer Santuario de ANIMA: las 10 Almas Fundadoras y sus tres Clanes, unidos en The Founding Era.",
+  clans:["blackink","aetherlab","wildhouse"],
+  departments:[
+    { t:"Arte & Muralismo", lead:"sark" },
+    { t:"Digital & IA",      lead:"nicolas" },
+    { t:"Marca & Producto",  lead:"renata" }
+  ]
+};
