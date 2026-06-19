@@ -5,14 +5,14 @@
 
 /* --- Camino del creador: niveles --- */
 const LEVELS = [
-  { key:"FOUNDING", name:"Fundador",      emoji:"👑", color:"#d0aa63", xp:0,     desc:"Los primeros 100. Guardianes de la cultura ANIMA." },
-  { key:"EMBER",    name:"Brasa",         emoji:"🌱", color:"#c0703a", xp:400,   desc:"La chispa. Aquí comienza el fuego de una Alma." },
-  { key:"ROOT",     name:"Raíz",          emoji:"🌿", color:"#5f8a3a", xp:1200,  desc:"Las raíces. La trayectoria empieza a sostenerse." },
-  { key:"WILD",     name:"Instinto",      emoji:"🐾", color:"#8a6f3a", xp:2600,  desc:"El instinto. Crear sin miedo, con identidad propia." },
-  { key:"TOTEM",    name:"Identidad",     emoji:"🦅", color:"#3a6f8a", xp:4800,  desc:"La identidad. El Alma se vuelve reconocible." },
-  { key:"AETHER",   name:"Visión",        emoji:"☽",  color:"#5a4f8a", xp:8000,  desc:"La visión. Más allá del oficio: dirección y propósito." },
-  { key:"SPIRIT",   name:"Espíritu",      emoji:"🜁", color:"#7b3a8a", xp:13000, desc:"El espíritu. Una Alma que guía y deja legado." },
-  { key:"ANIMA",    name:"Alma Despierta",emoji:"∞",  color:"#111111", xp:21000, desc:"Alma despierta. El círculo se completa." }
+  { key:"FOUNDING", label:"ORIGEN", name:"Fundador",      emoji:"👑", color:"#d0aa63", xp:0,     desc:"Los primeros 100. Guardianes de la cultura ANIMA." },
+  { key:"EMBER",    label:"CHISPA", name:"Brasa",         emoji:"🌱", color:"#c0703a", xp:400,   desc:"La chispa. Aquí comienza el fuego de una Alma." },
+  { key:"ROOT",     label:"RAÍZ",   name:"Raíz",          emoji:"🌿", color:"#5f8a3a", xp:1200,  desc:"Las raíces. La trayectoria empieza a sostenerse." },
+  { key:"WILD",     label:"PULSO",  name:"Instinto",      emoji:"🐾", color:"#8a6f3a", xp:2600,  desc:"El instinto. Crear sin miedo, con identidad propia." },
+  { key:"TOTEM",    label:"HUELLA", name:"Identidad",     emoji:"🦅", color:"#3a6f8a", xp:4800,  desc:"La identidad. El Alma se vuelve reconocible." },
+  { key:"AETHER",   label:"TÓTEM",  name:"Visión",        emoji:"☽",  color:"#5a4f8a", xp:8000,  desc:"La visión. Más allá del oficio: dirección y propósito." },
+  { key:"SPIRIT",   label:"AURA",   name:"Espíritu",      emoji:"🜁", color:"#7b3a8a", xp:13000, desc:"El espíritu. Una Alma que guía y deja legado." },
+  { key:"ANIMA",    label:"ANIMA",  name:"Alma Despierta",emoji:"∞",  color:"#111111", xp:21000, desc:"Alma despierta. El círculo se completa." }
 ];
 const levelByKey = k => LEVELS.find(l => l.key === k) || LEVELS[0];
 function levelProgress(xp){
