@@ -26,13 +26,22 @@ const Cloud = {
   signOut(){ return _sb.auth.signOut(); },
   onAuth(cb){ if(_sb) _sb.auth.onAuthStateChange((_e, s)=>cb(s)); },
 
-  /* Constelación pública (cara pública de cada Alma) */
-  async foundingAlmas(){
+  /* Constelación pública VIVA — todas las Almas (fundadoras + beta) */
+  async allAlmas(){
     if(!_sb) return [];
     const { data } = await _sb.from("almas")
-      .select("slug,name,role,city,country,bio,color,level,xp,clan,tags")
-      .eq("is_founding", true).order("xp", { ascending:false });
+      .select("id,slug,name,role,city,country,bio,color,level,xp,clan,tags,is_founding")
+      .order("xp", { ascending:false });
     return data || [];
+  },
+
+  /* Invitaciones (beta cerrada) */
+  async checkInvite(code){ if(!_sb) return false; const { data } = await _sb.rpc("check_invite", { p_code:code }); return !!data; },
+  async redeemInvite(code){ if(!_sb) return false; const { data } = await _sb.rpc("redeem_invite", { p_code:code }); return !!data; },
+
+  /* Feedback */
+  async sendFeedback({ rating, message, context, almaName }){
+    return _sb.from("feedback").insert({ rating, message, context, alma_name:almaName });
   },
 
   /* El Alma del usuario autenticado */
@@ -63,7 +72,12 @@ const Cloud = {
   addMemory(almaId, title, detail){ return _sb.from("memories").insert({ alma_id:almaId, title, detail }); },
   addProject(almaId, title, client){ return _sb.from("projects").insert({ alma_id:almaId, title, client, status:"Planificado", pct:0 }); },
   addFinance(almaId, kind, title, amount){ return _sb.from("finance_entries").insert({ alma_id:almaId, kind, title, amount, period:new Date().toISOString().slice(0,7) }); },
-  setXP(almaId, xp){ return _sb.from("almas").update({ xp }).eq("id", almaId); }
+  addTrajectory(almaId, year, title, detail){ return _sb.from("trajectory").insert({ alma_id:almaId, year, title, detail }); },
+  addPortfolio(almaId, title, kind, color){ return _sb.from("portfolio").insert({ alma_id:almaId, title, kind, color }); },
+  addAgenda(almaId, at_time, title){ return _sb.from("agenda").insert({ alma_id:almaId, at_time, title }); },
+  addLibrary(almaId, title, kind){ return _sb.from("library").insert({ alma_id:almaId, title, kind }); },
+  setXP(almaId, xp){ return _sb.from("almas").update({ xp }).eq("id", almaId); },
+  updateAlma(almaId, patch){ return _sb.from("almas").update(patch).eq("id", almaId); }
 };
 
 /* DB → forma en memoria que usan las vistas */

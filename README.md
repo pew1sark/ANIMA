@@ -77,6 +77,26 @@ Funciona en 4 modos y **no depende obligatoriamente de internet**:
 
 ---
 
+## 🧪 Beta cerrada (operación)
+
+ANIMA está lista para una **beta cerrada por invitación**:
+
+- **Acceso por invitación**: para crear un Alma se requiere un código.
+  - Código reutilizable para amigos cercanos: **`ANIMA-2026`**
+  - Códigos de un solo uso: `FUNDADOR-01` … `FUNDADOR-05`
+  - Para crear más: insertar filas en la tabla `invites` (Supabase).
+- **Login sin fricción** — recomendado para la beta:
+  *Supabase → Authentication → Sign In / Providers → Email →* desactivar
+  **"Confirm email"**. (Por defecto está activado; con amigos conviene apagarlo.)
+- **Constelación viva**: cada Alma que entra aparece en *Comunidad* para los demás
+  (solo su cara pública: nombre, rol, nivel, bio, trayectoria y portafolio).
+- **Feedback**: botón **✦ Enviar feedback** en el Studio → tabla `feedback`
+  (lee los resultados en Supabase → Table Editor).
+- **Subida de nivel**: agregar proyectos, memorias e hitos da XP y sube de nivel
+  automáticamente (FOUNDING → ANIMA).
+- **Privacidad**: finanzas, memorias, proyectos, agenda y biblioteca son privados por
+  RLS — nadie más los ve, ni siquiera en el Santuario.
+
 ## 🔟 Las 10 Almas Fundadoras
 
 SARK (Chile), Valentina Cruz (Argentina), Nicolás Herrera (Colombia), Diego Ramírez (México),

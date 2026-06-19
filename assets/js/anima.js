@@ -128,9 +128,20 @@ function vMiAlma(a){
       <div style="margin-top:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         ${a.tags.map(t=>`<span class="chip">${t}</span>`).join("")}
         <span style="flex:1"></span>
+        ${a.live?`<span class="btn ghost sm" id="editBtn">✎ Editar Alma</span>`:``}
         <span class="btn ghost sm" data-export>⤓ Exportar PDF</span>
       </div>
     </div>
+    ${a.live && a.memories.length===0 && a.projects.length===0 ? `
+    <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
+      <span class="pill gold">Bienvenida, Alma nueva</span>
+      <p style="margin:8px 0 0">Tu Alma acaba de nacer en <b>EMBER</b>. Empieza a darle vida: edita tu perfil, agrega tu primer proyecto, una memoria o un hito de tu trayectoria. Cada acción te da XP y te acerca al siguiente nivel.</p>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="btn sm" id="editBtn">✎ Editar mi perfil</span>
+        <span class="btn secondary sm" data-add="proyecto">+ Primer proyecto</span>
+        <span class="btn secondary sm" data-add="memoria">+ Primera memoria</span>
+      </div>
+    </div>`:``}
 
     <div class="card s4">
       <span class="pill gold">Camino del creador</span>
@@ -170,7 +181,7 @@ function vMiAlma(a){
 /* --- Trayectoria --- */
 function vTrayectoria(a){
   return `<div class="grid"><div class="card s12">
-    <div class="section-title"><h2>Trayectoria de ${a.name}</h2></div>
+    <div class="section-title"><h2>Trayectoria de ${a.name}</h2><div class="spacer"></div>${a.live?`<span class="btn sm" data-add="hito">+ Hito</span>`:``}</div>
     <div class="tl">
       ${a.trajectory.map(n=>`<div class="node"><div class="yr">${n.y}</div><b>${n.t}</b><p class="muted" style="margin:4px 0 0">${n.d}</p></div>`).join("")}
     </div>
@@ -181,7 +192,7 @@ function vTrayectoria(a){
 /* --- Portafolio --- */
 function vPortafolio(a){
   return `<div class="grid"><div class="card s12">
-    <div class="section-title"><h2>Portafolio</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px">${a.portfolio.length} obras</span></div>
+    <div class="section-title"><h2>Portafolio</h2><div class="spacer"></div>${a.live?`<span class="btn sm" data-add="obra">+ Obra</span>`:`<span class="muted" style="font-size:12.5px">${a.portfolio.length} obras</span>`}</div>
     <div class="thumbs">
       ${a.portfolio.map(p=>`<div class="thumb">
         <div class="ph" style="background:linear-gradient(145deg,${p.c},${shade(p.c,-25)})">${initials(p.t)}</div>
@@ -230,7 +241,7 @@ function vFinanzas(a){
 /* --- Agenda --- */
 function vAgenda(a){
   return `<div class="grid"><div class="card s12">
-    <div class="section-title"><h2>Agenda de hoy</h2></div>
+    <div class="section-title"><h2>Agenda de hoy</h2><div class="spacer"></div>${a.live?`<span class="btn sm" data-add="cita">+ Cita</span>`:``}</div>
     ${a.agenda.map(x=>`<div class="row"><b style="color:var(--gold);width:70px">${x.h}</b><div class="grow">${x.t}</div></div>`).join("") || `<p class="muted">Día libre.</p>`}
   </div></div>`;
 }
@@ -246,54 +257,64 @@ function vMemoria(a){
 /* --- Biblioteca --- */
 function vBiblioteca(a){
   return `<div class="grid"><div class="card s12">
-    <div class="section-title"><h2>Biblioteca</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px">${a.library.length} documentos</span></div>
+    <div class="section-title"><h2>Biblioteca</h2><div class="spacer"></div>${a.live?`<span class="btn sm" data-add="doc">+ Documento</span>`:`<span class="muted" style="font-size:12.5px">${a.library.length} documentos</span>`}</div>
     ${a.library.map(d=>`<div class="row"><span style="font-size:18px">❏</span><div class="grow"><b>${d.t}</b></div><span class="chip">${d.k}</span></div>`).join("")}
     <p class="muted" style="margin-top:16px;font-size:12.5px">LUMBRE en modo IA Local puede leer estos PDFs, extraer información y ordenar tu memoria sin enviar nada a internet.</p>
   </div></div>`;
 }
 
 /* --- Comunidad (Clan + Constelación) --- */
+// Roster vivo: usa la nube si está disponible; si no, el seed local (demo).
+function roster(){ return (state.cloudAlmas && state.cloudAlmas.length) ? state.cloudAlmas : state.almas; }
+const liveMode = () => !!(state.cloudAlmas && state.cloudAlmas.length);
+
 function vComunidad(a){
-  const clan = SEED_CLANS.find(c=>c.id && a.clan===c.name);
+  const list = roster();
+  const clan = SEED_CLANS.find(c=>c.name===a.clan);
+  const members = a.clan ? list.filter(m=>m.clan===a.clan) : [];
   const clanCard = a.clan ? `
     <div class="card s12">
       <div class="section-title"><h2>${clan?clan.emoji:"🖤"} ${a.clan}</h2><div class="spacer"></div><span class="pill">Clan · Nivel 2</span></div>
       <p class="muted">${clan?clan.desc:"Comunidad privada por invitación (2 a 8 Almas)."}</p>
-      <div class="alma-grid" style="margin-top:14px">
-        ${(clan?clan.members:[]).map(id=>{const m=state.almas.find(x=>x.id===id);return m?almaMini(m):"";}).join("")}
-      </div>
+      <div class="alma-grid" style="margin-top:14px">${members.map(almaMini).join("")}</div>
     </div>` : `
     <div class="card s12"><div class="section-title"><h2>Sin Clan aún</h2></div>
       <p class="muted">Un Clan es una comunidad privada por invitación (2 a 8 Almas). Un Alma no entra automáticamente: debe ser invitada.</p></div>`;
   return `<div class="grid">
     ${clanCard}
     <div class="card s12">
-      <div class="section-title"><h2>Constelación de Almas</h2><div class="spacer"></div><span class="pill gold">Founding · 10 Almas</span></div>
-      <div class="alma-grid">${state.almas.map(almaMini).join("")}</div>
+      <div class="section-title"><h2>Constelación de Almas</h2><div class="spacer"></div>
+        <span class="pill ${liveMode()?'gold':''}">${liveMode()?'🜂 En vivo · '+list.length+' Almas':'Founding · '+list.length+' Almas'}</span></div>
+      <div class="alma-grid">${list.map(almaMini).join("")}</div>
     </div>
   </div>`;
 }
 function almaMini(m){
   const lv = levelByKey(m.level);
-  return `<div class="card alma-card" data-alma="${m.id}">
+  // En modo vivo, las Almas ajenas abren su perfil público; en demo, se cambia de Alma.
+  const act = (liveMode() && !m.live) ? `data-pub="${m.id}"` : `data-alma="${m.id}"`;
+  return `<div class="card alma-card" ${act}>
     ${avatarHTML(m,"lg")}
     <b style="display:block;letter-spacing:-.02em">${m.name}</b>
-    <small class="muted">${m.role}</small><br>
+    <small class="muted">${m.role||""}</small><br>
     <span class="level-badge" style="margin-top:8px;border-color:${lv.color}55;color:${lv.color};font-size:11px">${lv.emoji} ${m.level}</span>
-    <div class="muted" style="font-size:11px;margin-top:6px">${m.country}</div>
+    <div class="muted" style="font-size:11px;margin-top:6px">${m.country||""}</div>
   </div>`;
 }
 
 /* --- Santuario (Nivel 3) --- */
 function vSantuario(a){
   const S = SEED_SANCTUARY;
-  const totalInc = state.almas.reduce((t,x)=>t+sum(x.finance.income),0);
-  const totalExp = state.almas.reduce((t,x)=>t+sum(x.finance.expense),0);
-  const totalProj = state.almas.reduce((t,x)=>t+x.projects.length,0);
-  const activeProj = state.almas.reduce((t,x)=>t+x.projects.filter(p=>p.st==="En curso").length,0);
-  // distribución por nivel
-  const dist = LEVELS.map(l=>({l, n:state.almas.filter(x=>x.level===l.key).length})).filter(d=>d.n>0);
-  const top = [...state.almas].sort((x,y)=>y.xp-x.xp).slice(0,5);
+  const list = roster();
+  const live = liveMode();
+  // Finanzas/proyectos sólo de Almas con datos accesibles (las ajenas son privadas)
+  const full = state.almas.filter(x=>x.finance);
+  const totalInc = full.reduce((t,x)=>t+sum(x.finance.income),0);
+  const totalExp = full.reduce((t,x)=>t+sum(x.finance.expense),0);
+  const totalProj = full.reduce((t,x)=>t+x.projects.length,0);
+  const activeProj = full.reduce((t,x)=>t+x.projects.filter(p=>p.st==="En curso").length,0);
+  const dist = LEVELS.map(l=>({l, n:list.filter(x=>x.level===l.key).length})).filter(d=>d.n>0);
+  const top = [...list].sort((x,y)=>y.xp-x.xp).slice(0,5);
   return `<div class="grid">
     <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
       <span class="pill gold">Nivel 3 · Santuario</span>
@@ -301,34 +322,33 @@ function vSantuario(a){
       <p class="muted" style="max-width:680px">${S.desc}</p>
     </div>
 
-    <div class="card s3"><div class="stat"><span class="num">${state.almas.length}</span><span class="lbl">Almas</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num">${list.length}</span><span class="lbl">Almas</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${S.clans.length}</span><span class="lbl">Clanes</span></div></div>
-    <div class="card s3"><div class="stat"><span class="num">${activeProj}/${totalProj}</span><span class="lbl">Proyectos activos</span></div></div>
-    <div class="card s3"><div class="stat"><span class="num">${money(totalInc-totalExp)}</span><span class="lbl">Ganancia general</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num">${activeProj}/${totalProj}</span><span class="lbl">Proyectos ${live?'(míos)':'activos'}</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num">${money(totalInc-totalExp)}</span><span class="lbl">Ganancia ${live?'(mía)':'general'}</span></div></div>
 
     <div class="card s7">
       <div class="section-title"><h2>Clanes del Santuario</h2></div>
       ${S.clans.map(id=>{
         const c=SEED_CLANS.find(x=>x.id===id);
-        const inc=c.members.reduce((t,mid)=>{const m=state.almas.find(x=>x.id===mid);return t+(m?sum(m.finance.income):0);},0);
+        const n=list.filter(m=>m.clan===c.name).length;
         return `<div class="row"><span style="font-size:22px">${c.emoji}</span>
-          <div class="grow"><b>${c.name}</b><br><small>${c.members.length} Almas · ${c.desc}</small></div>
-          <span class="amt in">${money(inc)}</span></div>`;
+          <div class="grow"><b>${c.name}</b><br><small>${n} Almas · ${c.desc}</small></div></div>`;
       }).join("")}
     </div>
     <div class="card s5">
       <div class="section-title"><h2>Departamentos</h2></div>
-      ${S.departments.map(d=>{const l=state.almas.find(x=>x.id===d.lead);return `<div class="row"><div class="grow"><b>${d.t}</b><br><small>Lidera: ${l?l.name:"—"}</small></div></div>`;}).join("")}
+      ${S.departments.map(d=>{const l=list.find(x=>x.slug===d.lead)||state.almas.find(x=>x.id===d.lead);return `<div class="row"><div class="grow"><b>${d.t}</b><br><small>Lidera: ${l?l.name:"—"}</small></div></div>`;}).join("")}
     </div>
 
     <div class="card s7">
-      <div class="section-title"><h2>Finanzas generales</h2><div class="spacer"></div><span class="pill">Agregado del Santuario</span></div>
-      <div class="grid" style="gap:14px">
+      <div class="section-title"><h2>Finanzas generales</h2><div class="spacer"></div><span class="pill">${live?'Privadas':'Agregado'}</span></div>
+      ${live ? `<p class="muted" style="font-size:13px">🔒 En el sistema vivo, las finanzas de cada Alma son <b>privadas</b>. El Santuario sólo ve métricas que cada Alma decide compartir. Estos números corresponden únicamente a tu Alma.</p>` : ``}
+      <div class="grid" style="gap:14px;margin-top:${live?'10px':'0'}">
         <div class="s4"><div class="stat"><span class="num" style="color:var(--ok);font-size:22px">${money(totalInc)}</span><span class="lbl">Ingresos</span></div></div>
         <div class="s4"><div class="stat"><span class="num" style="color:var(--danger);font-size:22px">${money(totalExp)}</span><span class="lbl">Egresos</span></div></div>
         <div class="s4"><div class="stat"><span class="num" style="font-size:22px">${money(totalInc-totalExp)}</span><span class="lbl">Neto</span></div></div>
       </div>
-      <p class="muted" style="font-size:12px;margin-top:14px">🔒 Vista agregada para administración. Las finanzas privadas de cada Alma nunca se exponen en detalle sin su permiso.</p>
     </div>
     <div class="card s5">
       <div class="section-title"><h2>Distribución por nivel</h2></div>
@@ -449,26 +469,52 @@ function addEntry(kind){
 /* Versión en la nube: persiste en Supabase (Alma viva del usuario) */
 async function addEntryLive(a, kind){
   try{
+    let gained=0;
     if(kind==="memoria"){
       const t=prompt("Título de la memoria:"); if(!t)return;
       const d=prompt("Descripción:")||"";
-      await Cloud.addMemory(a.almaId,t,d); a.memories.unshift({t,d});
-      a.xp+=40; await Cloud.setXP(a.almaId,a.xp);
+      await Cloud.addMemory(a.almaId,t,d); a.memories.unshift({t,d}); gained=40;
     }else if(kind==="ingreso"||kind==="egreso"){
       const t=prompt(`Concepto del ${kind}:`); if(!t)return;
       const amt=parseInt((prompt("Monto (solo números):")||"0").replace(/\D/g,""))||0;
       const dbk=kind==="ingreso"?"income":"expense";
       await Cloud.addFinance(a.almaId,dbk,t,amt);
-      (kind==="ingreso"?a.finance.income:a.finance.expense).unshift({t,a:amt,d:new Date().toISOString().slice(0,7)});
+      (kind==="ingreso"?a.finance.income:a.finance.expense).unshift({t,a:amt,d:new Date().toISOString().slice(0,7)}); gained=20;
     }else if(kind==="proyecto"){
       const t=prompt("Nombre del proyecto:"); if(!t)return;
       const client=prompt("Cliente:")||"—";
       await Cloud.addProject(a.almaId,t,client);
-      a.projects.unshift({t,st:"Planificado",pct:0,client});
-      a.xp+=60; await Cloud.setXP(a.almaId,a.xp);
+      a.projects.unshift({t,st:"Planificado",pct:0,client}); gained=60;
+    }else if(kind==="hito"){
+      const t=prompt("Título del hito:"); if(!t)return;
+      const y=prompt("Año:")||String(new Date().getFullYear());
+      const d=prompt("Descripción:")||"";
+      await Cloud.addTrajectory(a.almaId,y,t,d); a.trajectory.push({y,t,d}); gained=50;
+    }else if(kind==="obra"){
+      const t=prompt("Título de la obra:"); if(!t)return;
+      const k=prompt("Tipo (ej: Mural, Óleo, Foto):")||"Obra";
+      await Cloud.addPortfolio(a.almaId,t,k,a.color); a.portfolio.push({t,k,c:a.color}); gained=40;
+    }else if(kind==="cita"){
+      const h=prompt("Hora (ej: 15:00):")||""; const t=prompt("Actividad:"); if(!t)return;
+      await Cloud.addAgenda(a.almaId,h,t); a.agenda.push({h,t});
+    }else if(kind==="doc"){
+      const t=prompt("Nombre del documento:"); if(!t)return;
+      const k=prompt("Tipo (ej: Contrato, Brief):")||"Documento";
+      await Cloud.addLibrary(a.almaId,t,k); a.library.push({t,k});
     }
+    if(gained){ a.xp+=gained; await Cloud.setXP(a.almaId,a.xp); await syncLevel(a); }
     renderAll();
   }catch(e){ alert("No se pudo guardar en la nube: "+(e.message||e)); }
+}
+
+/* Sube de nivel automáticamente según XP (FOUNDING→ANIMA) */
+async function syncLevel(a){
+  const cur = levelProgress(a.xp).cur.key;
+  if(cur !== a.level){
+    a.level = cur;
+    try{ await Cloud.updateAlma(a.almaId,{ level:cur }); }catch(e){}
+    setTimeout(()=>alert("✦ Tu Alma evolucionó a nivel "+cur),50);
+  }
 }
 
 /* ===========================================================
@@ -476,9 +522,17 @@ async function addEntryLive(a, kind){
    =========================================================== */
 async function refreshAuth(){
   if(!Cloud.enabled){ updateAuthUI(null); return; }
+  // Constelación viva para todos (lectura pública)
+  try{ state.cloudAlmas = await Cloud.allAlmas(); }catch(e){}
   const s = await Cloud.session();
-  if(s){ await loadMyAlma(); updateAuthUI(s); }
-  else { state.almas = state.almas.filter(x=>!x.live); if(me().live) state.currentId="sark"; updateAuthUI(null); }
+  if(s){
+    // Canjear invitación pendiente del registro
+    const pend = localStorage.getItem("anima_pending_invite");
+    if(pend){ try{ await Cloud.redeemInvite(pend); }catch(e){} localStorage.removeItem("anima_pending_invite"); }
+    await loadMyAlma(); updateAuthUI(s);
+  }else{
+    state.almas = state.almas.filter(x=>!x.live); if(me().live) state.currentId="sark"; updateAuthUI(null); renderAll();
+  }
 }
 async function loadMyAlma(){
   const row = await Cloud.myAlma(); if(!row) return;
@@ -501,14 +555,19 @@ async function doAuth(mode){
   const email=document.getElementById("authEmail").value.trim();
   const pass=document.getElementById("authPass").value;
   const name=document.getElementById("authName").value.trim();
+  const code=(document.getElementById("authCode").value||"").trim().toUpperCase();
   const msg=document.getElementById("authMsg");
   if(!email||!pass){ msg.textContent="Ingresa correo y contraseña."; return; }
   msg.textContent="…";
   try{
     if(mode==="up"){
+      if(!code){ msg.textContent="Necesitas un código de invitación (beta cerrada)."; return; }
+      const ok = await Cloud.checkInvite(code);
+      if(!ok){ msg.textContent="Código de invitación inválido o ya usado."; return; }
+      localStorage.setItem("anima_pending_invite", code);
       const { data, error } = await Cloud.signUp(email,pass,name||email.split("@")[0]);
       if(error) throw error;
-      if(!data.session){ msg.textContent="Alma creada. Revisa tu correo para confirmar y luego entra."; return; }
+      if(!data.session){ msg.textContent="Alma creada. Revisa tu correo para confirmar y vuelve a entrar."; return; }
     }else{
       const { error } = await Cloud.signIn(email,pass);
       if(error) throw error;
@@ -522,6 +581,82 @@ async function logout(){
   state.almas = JSON.parse(JSON.stringify(SEED_ALMAS));
   state.currentId="sark"; state.view="mialma"; save();
   renderAll(); updateAuthUI(null);
+}
+
+/* ===========================================================
+   EDITAR MI ALMA (perfil) — sólo Alma viva
+   =========================================================== */
+function openEdit(){
+  const a=me(); if(!a.live){ alert("Entra a tu Alma para editar tu perfil."); return; }
+  document.getElementById("edName").value=a.name||"";
+  document.getElementById("edRole").value=a.role||"";
+  document.getElementById("edCity").value=a.city||"";
+  document.getElementById("edCountry").value=a.country||"";
+  document.getElementById("edBio").value=a.bio||"";
+  document.getElementById("edTags").value=(a.tags||[]).join(", ");
+  document.getElementById("editModal").classList.add("open");
+}
+function closeEdit(){ document.getElementById("editModal").classList.remove("open"); }
+async function saveEdit(){
+  const a=me(); const g=id=>document.getElementById(id).value.trim();
+  const patch={ name:g("edName"), role:g("edRole"), city:g("edCity"), country:g("edCountry"),
+                bio:g("edBio"), tags:g("edTags").split(",").map(s=>s.trim()).filter(Boolean) };
+  try{ await Cloud.updateAlma(a.almaId, patch); Object.assign(a, patch); closeEdit(); renderAll(); updateAuthUI(await Cloud.session()); }
+  catch(e){ alert("No se pudo guardar: "+(e.message||e)); }
+}
+
+/* ===========================================================
+   PERFIL PÚBLICO de otra Alma (constelación viva)
+   =========================================================== */
+async function openPublic(id){
+  const row=(state.cloudAlmas||[]).find(x=>x.id===id); if(!row) return;
+  const lv=levelByKey(row.level); const box=document.getElementById("pubBody");
+  document.getElementById("publicModal").classList.add("open");
+  box.innerHTML=`<div style="text-align:center">
+      <span class="avatar lg" style="margin:0 auto 10px;background:linear-gradient(145deg,${row.color},${shade(row.color,-22)})">${initials(row.name)}</span>
+      <h2 style="margin:0;letter-spacing:-.04em">${row.name}</h2>
+      <div class="muted">${row.role||""} · ${row.country||""}</div>
+      <span class="level-badge" style="margin-top:8px;border-color:${lv.color}55;color:${lv.color}">${lv.emoji} ${row.level}</span>
+    </div>
+    <p style="margin-top:14px">${row.bio||""}</p>
+    <div>${(row.tags||[]).map(t=>`<span class="chip">${t}</span>`).join("")}</div>
+    <div id="pubExtra" class="muted" style="font-size:12.5px;margin-top:12px">Cargando trayectoria…</div>`;
+  // Trayectoria + portafolio son cara pública (RLS lo permite)
+  try{
+    const m = await Cloud.loadModules(id);
+    const tj=(m.trajectory||[]).map(x=>`<div class="node"><div class="yr">${x.year}</div><b>${x.title}</b><p class="muted" style="margin:2px 0 0">${x.detail||""}</p></div>`).join("");
+    const pf=(m.portfolio||[]).map(x=>`<span class="chip">${x.title} · ${x.kind}</span>`).join("");
+    document.getElementById("pubExtra").innerHTML =
+      (tj?`<h3 style="font-size:15px;margin:8px 0 4px">Trayectoria</h3><div class="tl">${tj}</div>`:"") +
+      (pf?`<h3 style="font-size:15px;margin:14px 0 6px">Portafolio</h3><div>${pf}</div>`:"") || "Sin trayectoria pública aún.";
+  }catch(e){ document.getElementById("pubExtra").textContent=""; }
+}
+function closePublic(){ document.getElementById("publicModal").classList.remove("open"); }
+
+/* ===========================================================
+   FEEDBACK (beta)
+   =========================================================== */
+let _fbRating=0;
+function openFeedback(){
+  if(!Cloud.enabled || !me().live){ alert("Entra a tu Alma para enviar feedback."); return; }
+  _fbRating=0; document.getElementById("fbMsg").value=""; document.getElementById("fbStatus").textContent="";
+  renderStars(); document.getElementById("feedbackModal").classList.add("open");
+}
+function closeFeedback(){ document.getElementById("feedbackModal").classList.remove("open"); }
+function renderStars(){
+  document.getElementById("fbStars").innerHTML=[1,2,3,4,5].map(n=>
+    `<span data-star="${n}" style="cursor:pointer;font-size:26px;color:${n<=_fbRating?'#d0aa63':'#ccc'}">★</span>`).join("");
+}
+async function sendFeedback(){
+  const message=document.getElementById("fbMsg").value.trim();
+  const st=document.getElementById("fbStatus");
+  if(!message && !_fbRating){ st.textContent="Escribe algo o deja una estrella."; return; }
+  st.textContent="Enviando…";
+  try{
+    await Cloud.sendFeedback({ rating:_fbRating||null, message, context:state.view, almaName:me().name });
+    st.textContent="¡Gracias! Tu voz construye ANIMA. 🜂";
+    setTimeout(closeFeedback,1100);
+  }catch(e){ st.textContent="No se pudo enviar: "+(e.message||e); }
 }
 
 /* ===========================================================
@@ -540,15 +675,25 @@ function closeLumbre(){ drawer().classList.remove("open"); dbg().classList.remov
 function closeSide(){ document.getElementById("side").classList.remove("open"); }
 
 document.addEventListener("click", e=>{
-  const t=e.target.closest("[data-view],[data-alma],[data-go],[data-add],[data-mode]");
+  const star=e.target.closest("[data-star]");
+  if(star){ _fbRating=+star.dataset.star; renderStars(); return; }
+  const t=e.target.closest("[data-view],[data-alma],[data-pub],[data-go],[data-add],[data-mode]");
   if(t){
     if(t.dataset.view) go(t.dataset.view);
     else if(t.dataset.go) go(t.dataset.go);
     else if(t.dataset.alma) switchAlma(t.dataset.alma);
+    else if(t.dataset.pub) openPublic(t.dataset.pub);
     else if(t.dataset.add) addEntry(t.dataset.add);
     else if(t.dataset.mode){ state.lumbreMode=t.dataset.mode; save(); renderLumbre(); }
     return;
   }
+  if(e.target.closest("#editBtn")) openEdit();
+  if(e.target.closest("#edSave")) saveEdit();
+  if(e.target.closest("#edClose")||e.target.id==="editModal") closeEdit();
+  if(e.target.closest("#pubClose")||e.target.id==="publicModal") closePublic();
+  if(e.target.closest("#feedbackBtn")) openFeedback();
+  if(e.target.closest("#fbSend")) sendFeedback();
+  if(e.target.closest("#fbClose")||e.target.id==="feedbackModal") closeFeedback();
   if(e.target.closest("#lumbreOpen")) openLumbre();
   if(e.target.closest("#lumbreClose")||e.target.id==="drawerBg") closeLumbre();
   if(e.target.closest("#menuBtn")) document.getElementById("side").classList.toggle("open");
