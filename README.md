@@ -1,0 +1,102 @@
+# ANIMA TSC — The Soul of Creativity
+
+> Aquí no existen usuarios. Existen **Almas**.
+
+ANIMA no es un CRM. No es una red social. No es solo una IA.
+Es **un sistema vivo** para organizar la memoria, la trayectoria, los proyectos y el
+crecimiento de una Alma —sola, en un Clan o en un Santuario— sin perder nunca su identidad.
+
+Este repositorio contiene la **primera Alpha** de ANIMA (The Founding Era), sembrada con
+**10 Almas Fundadoras** de LATAM y España.
+
+---
+
+## 🌐 Páginas
+
+| Archivo | Qué es |
+|---|---|
+| `index.html` | Portada pública de ANIMA TSC |
+| `studio.html` | **La Alpha** — la app del Studio con las 10 Almas |
+| `roadmap.html` | Master Roadmap V6 · The Founding Era |
+
+Todo es **estático** (HTML + CSS + JS, sin build). Funciona abriendo `index.html`
+directamente o publicándolo en cualquier hosting estático.
+
+### Estructura
+
+```
+.
+├── index.html              · Portada
+├── studio.html             · App (Alpha)
+├── roadmap.html            · Roadmap V6
+└── assets/
+    ├── css/
+    │   ├── anima.css        · Sistema de diseño (paleta, marca, componentes)
+    │   └── studio.css       · Layout de la app
+    └── js/
+        ├── seed.js          · Niveles, modos de LUMBRE y las 10 Almas fundadoras
+        └── anima.js         · Lógica del Studio (vistas, LUMBRE, persistencia)
+```
+
+---
+
+## 🧬 La estructura del sistema
+
+- **Nivel 1 · Alma** — espacio privado: Perfil, Trayectoria, Portafolio, Proyectos, Finanzas, Agenda, Memorias, Biblioteca y LUMBRE.
+- **Nivel 2 · Clan** — 2 a 8 Almas. Comunidad privada **por invitación**.
+- **Nivel 3 · Santuario** — más de 8 Almas. Organización avanzada.
+
+**Privacidad absoluta:** Mi Alma ≠ Mi Clan ≠ Mi Santuario. Nada se comparte automáticamente.
+
+### El camino del creador
+`FOUNDING → EMBER → ROOT → WILD → TOTEM → AETHER → SPIRIT → ANIMA`
+
+### LUMBRE — el motor agente
+Funciona en 4 modos y **no depende obligatoriamente de internet**:
+`OFF` (manual) · `Básico` (sin IA) · `IA Local` (PDF/CV/imágenes sin salir del dispositivo) · `IA Conectada` (Claude, OpenAI, Gemini, Ollama — opcional).
+
+> En esta Alpha, LUMBRE responde con un motor local basado en reglas sobre los datos de
+> cada Alma. La conexión a motores externos es opcional y aún no está cableada.
+
+---
+
+## 🔟 Las 10 Almas Fundadoras
+
+SARK (Chile), Valentina Cruz (Argentina), Nicolás Herrera (Colombia), Diego Ramírez (México),
+Camila Soto (Perú), Lucía Fernández (España), Mateo Vargas (Chile), Sofía Morales (México),
+Tomás Rojas (Argentina) y Renata Díaz (Colombia).
+
+Los datos se guardan en tu navegador (`localStorage`). Usa **Restaurar Almas** en el
+Studio para volver al estado fundacional.
+
+---
+
+## ▶️ Cómo verlo
+
+```bash
+# opción simple
+open index.html
+
+# o servir localmente
+python3 -m http.server 8080   # luego abre http://localhost:8080
+```
+
+### Publicar en la web (GitHub Pages)
+1. Settings → Pages → Source: rama de despliegue, carpeta `/root`.
+2. La portada quedará en `https://<usuario>.github.io/<repo>/`.
+
+---
+
+## 📐 La regla para todo el desarrollo
+
+Cada nueva función debe responder **sí** a una de estas preguntas:
+
+1. ¿Ayuda a un Alma a **recordar**?
+2. ¿Ayuda a un Alma a **crecer**?
+3. ¿Ayuda a un Alma a **crear**?
+
+Si la respuesta es no, **no pertenece a ANIMA**.
+
+---
+
+*SARK · Creator of ANIMA · First Soul of ANIMA*

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f5f5f7" />
+  <title>ANIMA Studio — Alpha · The Founding Era</title>
+  <meta name="description" content="ANIMA TSC — un sistema vivo para organizar la memoria, trayectoria, proyectos y crecimiento de una Alma." />
+  <link rel="stylesheet" href="assets/css/anima.css" />
+  <link rel="stylesheet" href="assets/css/studio.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="side" id="side">
+      <div class="brand">
+        <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><path d="M39 66C45 53 55 53 61 66" stroke="#B8A892" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>
+        ANIMA
+      </div>
+      <div class="who" id="whoBox"><div id="who"></div></div>
+      <nav id="nav"></nav>
+      <div style="flex:1"></div>
+      <div style="padding:8px 6px;display:flex;flex-direction:column;gap:8px">
+        <a class="btn ghost sm" href="roadmap.html">Ver Roadmap V6</a>
+        <button class="btn ghost sm" id="resetBtn">Restaurar Almas</button>
+        <small class="muted" style="padding:4px 6px;font-size:11px">The Soul of Creativity · Alpha</small>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <div class="topbar">
+        <button class="menu-btn" id="menuBtn">☰</button>
+        <div id="topTitle"></div>
+        <div class="spacer"></div>
+        <div class="lumbre-chip" id="lumbreOpen"><span class="dot"></span>LUMBRE</div>
+      </div>
+      <div class="view" id="view"></div>
+    </main>
+  </div>
+
+  <!-- LUMBRE DRAWER -->
+  <div class="drawer-bg" id="drawerBg"></div>
+  <aside class="drawer" id="drawer">
+    <div class="head">
+      <span class="mark" style="background:linear-gradient(145deg,#d0aa63,#b8862f)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2c1 4 3 5 5 6-3 1-5 3-5 8-0-5-2-7-5-8 2-1 4-2 5-6z" fill="#fff"/></svg></span>
+      <div style="flex:1"><b style="letter-spacing:-.02em">LUMBRE</b><br><small class="muted">Motor agente · 100% local por defecto</small></div>
+      <button class="btn ghost sm" id="lumbreClose">✕</button>
+    </div>
+    <div class="body" id="lumbreChat"></div>
+    <div class="foot">
+      <div class="modes" id="lumbreMode" style="margin-bottom:12px"></div>
+      <div class="lum-input">
+        <input id="lumbreInput" placeholder="Pregúntale a LUMBRE…" autocomplete="off" />
+        <button class="btn" id="lumbreSend">↑</button>
+      </div>
+    </div>
+  </aside>
+
+  <script src="assets/js/seed.js"></script>
+  <script src="assets/js/anima.js"></script>
+</body>
+</html>

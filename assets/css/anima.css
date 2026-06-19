@@ -1,0 +1,67 @@
+/* ===========================================================
+   ANIMA TSC — Design System
+   The Soul of Creativity · Founding Era
+   =========================================================== */
+:root{
+  --bg:#f5f5f7;
+  --card:rgba(255,255,255,.78);
+  --card-solid:#ffffff;
+  --text:#111;
+  --muted:#6e6e73;
+  --soft:#d9d7ce;
+  --warm:#b8a892;
+  --gold:#d0aa63;
+  --line:rgba(0,0,0,.08);
+  --line-strong:rgba(0,0,0,.14);
+  --shadow:0 28px 90px rgba(0,0,0,.09);
+  --shadow-soft:0 18px 50px rgba(0,0,0,.06);
+  --radius:28px;
+  --radius-sm:18px;
+  --ok:#3a8a5f;
+  --warn:#b8862f;
+  --danger:#b23b3b;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Helvetica Neue",Arial,sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 10% 0%,rgba(217,215,206,.9),transparent 32%),
+    radial-gradient(circle at 95% 18%,rgba(184,168,146,.32),transparent 30%),
+    radial-gradient(circle at 50% 100%,rgba(255,255,255,.95),transparent 40%),
+    var(--bg);
+  background-attachment:fixed;
+  line-height:1.45;
+  min-height:100vh;
+}
+a{color:inherit}
+button{font-family:inherit}
+
+/* ---------- Marca ---------- */
+.brand{display:flex;align-items:center;gap:10px;font-weight:850;letter-spacing:-.04em}
+.mark{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(145deg,#fff,#e8e5dd);border:1px solid var(--line);flex:0 0 auto}
+.mark svg{width:22px;height:22px}
+
+/* ---------- Botones ---------- */
+.btn{border:0;border-radius:999px;background:#111;color:#fff;padding:12px 18px;font-weight:760;cursor:pointer;text-decoration:none;transition:.22s ease;font-size:14px;display:inline-flex;align-items:center;gap:8px}
+.btn.secondary{background:rgba(255,255,255,.76);color:#111;border:1px solid var(--line)}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.btn.gold{background:linear-gradient(135deg,var(--gold),#b8862f);color:#fff}
+.btn:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(0,0,0,.12)}
+.btn.sm{padding:8px 13px;font-size:13px}
+
+/* ---------- Cards / pills ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow-soft);backdrop-filter:blur(22px);overflow:hidden}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;background:rgba(217,215,206,.7);color:#4c463d;font-size:11px;font-weight:850;text-transform:uppercase;letter-spacing:.05em}
+.pill.gold{background:rgba(208,170,99,.18);color:#7b5920;border:1px solid rgba(208,170,99,.28)}
+.pill.ok{background:rgba(58,138,95,.14);color:var(--ok)}
+.pill.warn{background:rgba(184,134,47,.16);color:var(--warn)}
+.pill.danger{background:rgba(178,59,59,.13);color:var(--danger)}
+.muted{color:var(--muted)}
+.gold-text{color:#7b5920}
+
+/* progress */
+.bar{height:9px;border-radius:999px;background:rgba(0,0,0,.07);overflow:hidden}
+.bar > span{display:block;height:100%;background:linear-gradient(90deg,#111,var(--warm),var(--gold));border-radius:999px;transition:.4s ease}
