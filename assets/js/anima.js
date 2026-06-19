@@ -428,6 +428,7 @@ function lumbreThink(q){
    =========================================================== */
 function addEntry(kind){
   const a = me();
+  if(a.live) return addEntryLive(a, kind);
   if(kind==="memoria"){
     const t=prompt("Título de la memoria:"); if(!t)return;
     const d=prompt("Descripción:")||"";
@@ -443,6 +444,84 @@ function addEntry(kind){
     a.projects.unshift({t,st:"Planificado",pct:0,client}); a.xp+=60;
   }
   save(); renderAll();
+}
+
+/* Versión en la nube: persiste en Supabase (Alma viva del usuario) */
+async function addEntryLive(a, kind){
+  try{
+    if(kind==="memoria"){
+      const t=prompt("Título de la memoria:"); if(!t)return;
+      const d=prompt("Descripción:")||"";
+      await Cloud.addMemory(a.almaId,t,d); a.memories.unshift({t,d});
+      a.xp+=40; await Cloud.setXP(a.almaId,a.xp);
+    }else if(kind==="ingreso"||kind==="egreso"){
+      const t=prompt(`Concepto del ${kind}:`); if(!t)return;
+      const amt=parseInt((prompt("Monto (solo números):")||"0").replace(/\D/g,""))||0;
+      const dbk=kind==="ingreso"?"income":"expense";
+      await Cloud.addFinance(a.almaId,dbk,t,amt);
+      (kind==="ingreso"?a.finance.income:a.finance.expense).unshift({t,a:amt,d:new Date().toISOString().slice(0,7)});
+    }else if(kind==="proyecto"){
+      const t=prompt("Nombre del proyecto:"); if(!t)return;
+      const client=prompt("Cliente:")||"—";
+      await Cloud.addProject(a.almaId,t,client);
+      a.projects.unshift({t,st:"Planificado",pct:0,client});
+      a.xp+=60; await Cloud.setXP(a.almaId,a.xp);
+    }
+    renderAll();
+  }catch(e){ alert("No se pudo guardar en la nube: "+(e.message||e)); }
+}
+
+/* ===========================================================
+   AUTH — sesión real (Supabase)
+   =========================================================== */
+async function refreshAuth(){
+  if(!Cloud.enabled){ updateAuthUI(null); return; }
+  const s = await Cloud.session();
+  if(s){ await loadMyAlma(); updateAuthUI(s); }
+  else { state.almas = state.almas.filter(x=>!x.live); if(me().live) state.currentId="sark"; updateAuthUI(null); }
+}
+async function loadMyAlma(){
+  const row = await Cloud.myAlma(); if(!row) return;
+  const mods = await Cloud.loadModules(row.id);
+  const a = dbAlmaToState(row, mods);
+  state.almas = state.almas.filter(x=>!x.live);
+  state.almas.unshift(a);
+  state.currentId = a.id; state.view = "mialma"; state.chat=[];
+  renderAll();
+}
+function updateAuthUI(session){
+  const btn = document.getElementById("authBtn"); if(!btn) return;
+  if(session){ const a=state.almas.find(x=>x.live); btn.textContent = a? ("● "+a.name.split(" ")[0]) : "● Mi cuenta"; btn.dataset.in="1"; }
+  else { btn.textContent = Cloud.enabled ? "Entrar" : "Modo local"; btn.dataset.in=""; }
+}
+function openAuth(){ if(!Cloud.enabled){ alert("Conexión a la nube no disponible. ANIMA funciona en modo Fundadores local."); return; }
+  document.getElementById("authModal").classList.add("open"); document.getElementById("authMsg").textContent=""; }
+function closeAuth(){ document.getElementById("authModal").classList.remove("open"); }
+async function doAuth(mode){
+  const email=document.getElementById("authEmail").value.trim();
+  const pass=document.getElementById("authPass").value;
+  const name=document.getElementById("authName").value.trim();
+  const msg=document.getElementById("authMsg");
+  if(!email||!pass){ msg.textContent="Ingresa correo y contraseña."; return; }
+  msg.textContent="…";
+  try{
+    if(mode==="up"){
+      const { data, error } = await Cloud.signUp(email,pass,name||email.split("@")[0]);
+      if(error) throw error;
+      if(!data.session){ msg.textContent="Alma creada. Revisa tu correo para confirmar y luego entra."; return; }
+    }else{
+      const { error } = await Cloud.signIn(email,pass);
+      if(error) throw error;
+    }
+    closeAuth(); await refreshAuth();
+  }catch(e){ msg.textContent = e.message || "No se pudo completar."; }
+}
+async function logout(){
+  if(!confirm("¿Salir de tu Alma?")) return;
+  await Cloud.signOut();
+  state.almas = JSON.parse(JSON.stringify(SEED_ALMAS));
+  state.currentId="sark"; state.view="mialma"; save();
+  renderAll(); updateAuthUI(null);
 }
 
 /* ===========================================================
@@ -476,6 +555,10 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#whoBox")) go("comunidad");
   if(e.target.closest("#resetBtn")) reset();
   if(e.target.closest("#exportBtn")||e.target.closest("[data-export]")) exportPDF();
+  if(e.target.closest("#authBtn")){ const b=e.target.closest("#authBtn"); b.dataset.in? logout() : openAuth(); }
+  if(e.target.closest("#authClose")||e.target.id==="authModal") closeAuth();
+  if(e.target.closest("#authSignIn")) doAuth("in");
+  if(e.target.closest("#authSignUp")) doAuth("up");
   if(e.target.closest("#lumbreSend")) sendLumbre();
 });
 document.addEventListener("keydown", e=>{ if(e.key==="Enter" && e.target.id==="lumbreInput") sendLumbre(); });
@@ -485,3 +568,5 @@ function sendLumbre(){
 
 /* ---------- Boot ---------- */
 renderAll();
+refreshAuth();
+if(Cloud.enabled) Cloud.onAuth(()=>{}); // listener disponible para futuras reacciones

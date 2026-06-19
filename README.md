@@ -19,8 +19,25 @@ Este repositorio contiene la **primera Alpha** de ANIMA (The Founding Era), semb
 | `studio.html` | **La Alpha** — la app del Studio con las 10 Almas |
 | `roadmap.html` | Master Roadmap V6 · The Founding Era |
 
-Todo es **estático** (HTML + CSS + JS, sin build). Funciona abriendo `index.html`
-directamente o publicándolo en cualquier hosting estático.
+El frontend es **estático** (HTML + CSS + JS, sin build). El backend es **Supabase**
+(Postgres + Auth) para auth real y persistencia. Si no hay conexión, ANIMA sigue
+funcionando en **modo Fundadores local** — fiel a la filosofía: *ANIMA no depende
+obligatoriamente de internet.*
+
+### Backend (Supabase)
+
+- **Auth real**: cada usuario que se registra **nace como un Alma** (trigger
+  `on_auth_user_created`).
+- **Esquema**: `almas` (Nivel 1) + módulos `projects`, `finance_entries`,
+  `trajectory`, `portfolio`, `memories`, `library`, `agenda`.
+- **Privacidad por RLS** (Mi Alma ≠ Mi Clan):
+  - *Cara pública* (lectura para todos): `almas`, `trajectory`, `portfolio`.
+  - *Privado* (solo el dueño): `projects`, `finance_entries`, `memories`,
+    `library`, `agenda`.
+- Las **10 Almas Fundadoras** están sembradas en la nube (perfil público) y
+  alimentan la constelación.
+- La clave usada en el cliente es la **publishable key** (segura para frontend);
+  la seguridad real vive en las políticas RLS.
 
 ### Estructura
 
