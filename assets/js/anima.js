@@ -529,10 +529,10 @@ function vConsola(a){
         <button class="btn sm ${!va?'gold':''}" data-viewas="">Creador (todo)</button>
       </div></div>`;
 
-  const note=`<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.10),rgba(255,255,255,.6))">
-      <span class="pill gold">Backend</span>
-      <p class="muted" style="max-width:680px;margin-top:8px">Para editar a otras Almas aplica la migración <b>0005</b> en Supabase (SQL Editor).
-        Para guardar <b>Plan</b> y <b>Rol</b> aplica además la <b>0006</b>. Sin ellas, el resto se guarda igual y verás un aviso en lo que falte.</p></div>`;
+  const note=`<div class="card s12" style="background:linear-gradient(145deg,rgba(58,138,95,.12),rgba(255,255,255,.6))">
+      <span class="pill" style="background:rgba(58,138,95,.16);border:1px solid rgba(58,138,95,.4);color:#2f7a52">Backend conectado ✓</span>
+      <p class="muted" style="max-width:680px;margin-top:8px">Estás conectado a Supabase. Puedes asignar <b>Plan</b>, <b>Rol</b>, nivel, XP, rol-crew y clan a cualquier Alma; se guarda en la nube al instante.
+        Para gestionar Almas necesitas haber entrado con el correo del Creador (<b>${esc(CREATOR_EMAIL)}</b>).</p></div>`;
 
   const almas=state.cloudAlmas||[];
   const rows = almas.length ? almas.map(x=>{
@@ -574,11 +574,11 @@ async function consolaSave(almaId){
   const btn=g("cs_save_"+almaId); if(btn){ btn.disabled=true; btn.textContent="Guardando…"; }
   try{
     const rows=await Cloud.adminUpdateAlma(almaId, core);
-    if(!rows.length) throw new Error("RLS bloqueó el cambio. Aplica la migración 0005 en Supabase.");
-    // Plan y rol viven en columnas de la 0006; si aún no existen, no rompemos el guardado principal.
+    if(!rows.length) throw new Error("No se aplicó el cambio. Asegúrate de haber entrado con el correo del Creador ("+CREATOR_EMAIL+").");
+    // Plan y rol se guardan aparte para no bloquear el resto si algo falla.
     let planWarn="";
     try{ await Cloud.adminUpdateAlma(almaId, planRole); }
-    catch(e2){ planWarn=" (Plan/Rol no se guardaron: falta aplicar la migración 0006)"; }
+    catch(e2){ planWarn=" (No se pudo guardar Plan/Rol: "+(e2.message||e2)+")"; }
     state.cloudAlmas=await Cloud.allAlmas();
     renderView();
     alert("Alma actualizada ✓"+planWarn);
