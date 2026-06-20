@@ -30,7 +30,7 @@ const Cloud = {
   async allAlmas(){
     if(!_sb) return [];
     const { data } = await _sb.from("almas")
-      .select("id,slug,name,role,city,country,bio,color,level,xp,clan,tags,is_founding,created_at")
+      .select("id,slug,name,role,crew_role,avatar_url,city,country,bio,color,level,xp,clan,tags,is_founding,created_at")
       .eq("is_founding", false)
       .order("created_at", { ascending:false });
     return data || [];
@@ -79,6 +79,14 @@ const Cloud = {
   addLibrary(almaId, title, kind){ return _sb.from("library").insert({ alma_id:almaId, title, kind }); },
   setXP(almaId, xp){ return _sb.from("almas").update({ xp }).eq("id", almaId); },
   updateAlma(almaId, patch){ return _sb.from("almas").update(patch).eq("id", almaId); },
+
+  /* Consola del Creador: edita otra Alma. .select() permite saber si
+     RLS dejó pasar el cambio (data vacío = bloqueado, falta migración 0005). */
+  async adminUpdateAlma(almaId, patch){
+    const { data, error } = await _sb.from("almas").update(patch).eq("id", almaId).select();
+    if(error) throw error;
+    return data || [];
+  },
 
   /* CRUD genérico por tabla (para editar/eliminar cualquier ítem) */
   async insertRow(table, row){ const { data, error } = await _sb.from(table).insert(row).select().single(); if(error) throw error; return data; },

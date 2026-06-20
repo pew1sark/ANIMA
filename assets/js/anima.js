@@ -80,25 +80,63 @@ function getCfg(a){
 function setCfg(a,c){ localStorage.setItem(cfgKey(a), JSON.stringify(c)); if(a.live){ Cloud.savePrefs(a.almaId,c).catch(()=>{}); } }
 function toggleCfg(path){ const a=me(); const c=getCfg(a); const [g,k]=path.split(":"); c[g][k]=(c[g][k]===false); setCfg(a,c); renderAll(); }
 
-/* ---------- Navegación ---------- */
-const MODULES = [
-  {v:"trayectoria",ico:"⤴",t:"Trayectoria"},
-  {v:"portafolio", ico:"▦",t:"Portafolio"},
-  {v:"proyectos",  ico:"◷",t:"Proyectos"},
-  {v:"finanzas",   ico:"$",t:"Finanzas"},
-  {v:"clientes",   ico:"☺",t:"Clientes"},
-  {v:"cotizador",  ico:"₵",t:"Cotizador"},
-  {v:"agenda",     ico:"☰",t:"Agenda"},
-  {v:"memoria",    ico:"✦",t:"Memorias"},
-  {v:"biblioteca", ico:"❏",t:"Biblioteca"}
+/* ---------- Navegación (3 capas: secciones › reinos › módulos) ---------- */
+const CREATOR_EMAIL = "sarkgraff@gmail.com";
+let isCreator = false;   // se activa en refreshAuth si la sesión es del Creador
+
+/* Planes (umbrales). El Creador puede "Ver como" cada uno: vista previa
+   que oculta lo que ese plan no incluye, sin tocar dato alguno.
+   Según planes.html: Comunidad es Clan+, Santuario es solo Santuario. */
+const PLAN_TIERS = [["ALMA","◆ Alma"],["CLAN","❂ Clan"],["SANTUARIO","🜁 Santuario"]];
+function planAllows(view){
+  const va=state.viewAs; if(!va) return true;            // Creador: todo
+  if(view==="comunidad") return va!=="ALMA";              // Clan y Santuario
+  if(view==="santuario") return va==="SANTUARIO";         // solo Santuario
+  return true;                                            // espacio privado: todos los planes
+}
+
+const NAV_TREE = [
+  { type:"item",  v:"mialma", ico:"◆", t:"Mi Alma" },
+  { type:"reino", key:"esencia", ico:"✦", t:"Esencia", children:[
+      {v:"trayectoria",ico:"⤴",t:"Trayectoria"},
+      {v:"portafolio", ico:"▦",t:"Portafolio"},
+      {v:"memoria",    ico:"✦",t:"Memorias"},
+      {v:"biblioteca", ico:"❏",t:"Biblioteca"}
+  ]},
+  { type:"reino", key:"taller", ico:"₵", t:"Taller", children:[
+      {v:"proyectos",  ico:"◷",t:"Proyectos"},
+      {v:"clientes",   ico:"☺",t:"Clientes"},
+      {v:"cotizador",  ico:"₵",t:"Cotizador"},
+      {v:"finanzas",   ico:"$",t:"Finanzas"},
+      {v:"agenda",     ico:"☰",t:"Agenda"}
+  ]}
 ];
-function navItem(n){ return `<div class="nav-item ${state.view===n.v?'active':''}" data-view="${n.v}"><span class="ico">${n.ico}</span>${n.t}</div>`; }
+function navItem(n, sub){ return `<div class="nav-item ${sub?'sub':''} ${state.view===n.v?'active':''}" data-view="${n.v}"><span class="ico">${n.ico}</span>${n.t}</div>`; }
+function reinoOpen(key){ if(!state.navOpen) state.navOpen={}; return state.navOpen[key]!==false; }
+function toggleReino(key){ if(!state.navOpen) state.navOpen={}; state.navOpen[key]=!reinoOpen(key); save(); renderNav(); }
 function renderNav(){
   const cfg=getCfg(me());
-  let h=`<div class="nav-label">Mi Alma</div>`+navItem({v:"mialma",ico:"◆",t:"Mi Alma"});
-  MODULES.forEach(m=>{ if(cfg.modules[m.v]!==false) h+=navItem(m); });
-  h+=navItem({v:"config",ico:"⚙",t:"Personalizar"});
-  h+=`<div class="nav-label">Mundo</div>`+navItem({v:"comunidad",ico:"❂",t:"Comunidad"})+navItem({v:"santuario",ico:"🜁",t:"Santuario"});
+  let h=`<div class="nav-label">Mi Alma</div>`;
+  NAV_TREE.forEach(node=>{
+    if(node.type==="item"){ h+=navItem(node); return; }
+    const kids=node.children.filter(c=>cfg.modules[c.v]!==false);
+    if(!kids.length) return;
+    const activeInside=kids.some(c=>c.v===state.view);
+    const open=reinoOpen(node.key)||activeInside;
+    h+=`<div class="nav-group ${open?'open':''} ${activeInside?'has-active':''}" data-reino="${node.key}">
+        <span class="ico">${node.ico}</span><span class="rt">${node.t}</span><span class="caret">⌄</span></div>`;
+    h+=`<div class="nav-sub ${open?'open':''}"><div class="nav-sub-inner">${kids.map(c=>navItem(c,true)).join("")}</div></div>`;
+  });
+  let world=`<div class="nav-label">Mundo</div>`;
+  if(planAllows("comunidad")) world+=navItem({v:"comunidad",ico:"❂",t:"Comunidad"});
+  if(planAllows("santuario")) world+=navItem({v:"santuario",ico:"🜁",t:"Santuario"});
+  h+=world;
+  // El bloque Creador se oculta mientras se previsualiza un plan (vista fiel).
+  if(isCreator && !state.viewAs){
+    h+=`<div class="nav-label">Creador</div>`
+      +navItem({v:"consola",ico:"⬡",t:"Consola"})
+      +navItem({v:"config",ico:"⚙",t:"Personalizar"});
+  }
   document.getElementById("nav").innerHTML=h;
 }
 
@@ -121,6 +159,7 @@ const TITLES = {
   memoria:["Memorias","Ideas, frases y referencias que no quieres perder."],
   biblioteca:["Biblioteca","Tus documentos y archivos."],
   config:["Personalizar","Tú decides qué muestra tu Alma."],
+  consola:["Consola del Creador","Asigna nivel, rol y clan · vista omnipresente."],
   comunidad:["Comunidad","Tu Clan y la constelación de Almas."],
   santuario:["Santuario","Nivel 3: la organización completa de ANIMA."]
 };
@@ -175,15 +214,22 @@ function acts(kind,i){ return `<span class="acts"><button class="ia" data-edit="
    VISTAS
    =========================================================== */
 function renderView(){
+  if(state.viewAs && !isCreator) state.viewAs=null;              // "Ver como" es solo del Creador
+  if((state.view==="config"||state.view==="consola") && !isCreator) state.view="mialma"; // solo Creador
+  if(state.viewAs){                                              // en vista previa no se entra al taller del Creador
+    if(state.view==="config"||state.view==="consola") state.view="mialma";
+    if(!planAllows(state.view)) state.view="mialma";             // el plan previsualizado no incluye esta vista
+  }
   const fn = { mialma:vMiAlma, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
     finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
-    config:vConfig, comunidad:vComunidad, santuario:vSantuario }[state.view] || vMiAlma;
-  document.getElementById("view").innerHTML = fn(me());
+    config:vConfig, consola:vConsola, comunidad:vComunidad, santuario:vSantuario }[state.view] || vMiAlma;
+  document.getElementById("view").innerHTML = previewBanner() + fn(me());
 }
 
 /* --- Mi Alma --- */
 function vMiAlma(a){
-  const lp=levelProgress(a.xp), lv=levelByKey(a.level); const tab=state.almaTab||"resumen";
+  const lp=levelProgress(a.xp), lv=levelByKey(a.level);
+  let tab=state.almaTab||"resumen"; if(tab==="ajustes"&&!isCreator) tab="resumen";
   const idline=[a.discipline||a.role, a.specialty].filter(Boolean).join(" · ");
   const header=`<div class="card s12">
     <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
@@ -208,7 +254,8 @@ function vMiAlma(a){
       <button class="btn ghost sm" data-export>⤓ PDF</button>
     </div>
   </div>`;
-  const tabs=[["resumen","Resumen"],["identidad","Identidad"],["publica","Vista pública"],["ajustes","Ajustes"]];
+  const tabs=[["resumen","Resumen"],["identidad","Identidad"],["publica","Vista pública"]];
+  if(isCreator) tabs.push(["ajustes","Ajustes"]);
   const tabbar=`<div class="card s12 tabbar">${tabs.map(([k,l])=>`<button class="tabbtn ${tab===k?'on':''}" data-tab="${k}">${l}</button>`).join("")}</div>`;
   const body = tab==="identidad"?vAlmaIdentidad(a) : tab==="publica"?vAlmaPublica(a) : tab==="ajustes"?vConfigBody(a) : vAlmaResumen(a,lp);
   return `<div class="grid">${header}${tabbar}${body}</div>`;
@@ -417,6 +464,78 @@ function vConfigBody(a){
     <div class="card s6"><div class="section-title"><h2>Secciones de Mi Alma</h2></div>${card.map(([k,l])=>tg("cards",k,l,cfg.cards[k]!==false)).join("")}</div>`;
 }
 function vConfig(a){ return `<div class="grid">${vConfigBody(a)}</div>`; }
+
+/* --- Consola del Creador (Fase 3) --- */
+function previewBanner(){
+  if(!state.viewAs) return "";
+  const l=(PLAN_TIERS.find(t=>t[0]===state.viewAs)||["",state.viewAs])[1];
+  return `<div class="viewas-banner">Viendo ANIMA como <b>${l}</b> — vista previa, no se modifica ningún dato.
+    <button class="btn sm" data-viewas="">Salir de la vista ✕</button></div>`;
+}
+function setViewAs(tier){
+  if(!isCreator) return;
+  state.viewAs = tier || null;
+  if(state.viewAs && !planAllows(state.view)) state.view="mialma";
+  save(); renderAll(); closeSide();
+}
+function vConsola(a){
+  const va=state.viewAs;
+  const omni=`<div class="card s12">
+      <div class="section-title"><h2>Omnipresencia · Ver como</h2></div>
+      <p class="muted" style="max-width:640px">Previsualiza ANIMA tal como la vería cada umbral. Es solo una vista del Studio: <b>no cambia ningún dato real</b>.</p>
+      <div class="viewas-row">
+        ${PLAN_TIERS.map(([k,l])=>`<button class="btn sm ${va===k?'gold':''}" data-viewas="${k}">${l}</button>`).join("")}
+        <button class="btn sm ${!va?'gold':''}" data-viewas="">Creador (todo)</button>
+      </div></div>`;
+
+  const note=`<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.10),rgba(255,255,255,.6))">
+      <span class="pill gold">Backend</span>
+      <p class="muted" style="max-width:680px;margin-top:8px">Para que los cambios de nivel, rol o clan se guarden, aplica la migración
+        <b>0005</b> en Supabase (SQL Editor). Sin ella, RLS impedirá editar a otras Almas y verás un aviso al guardar.</p></div>`;
+
+  const almas=state.cloudAlmas||[];
+  const rows = almas.length ? almas.map(x=>{
+    const lv=levelByKey(x.level);
+    const opts=LEVELS.map(l=>`<option value="${l.key}" ${l.key===(x.level||'EMBER')?'selected':''}>${l.emoji} ${l.label} · ${esc(l.name)}</option>`).join("");
+    return `<div class="card s12 cs-row">
+        <div class="row" style="align-items:flex-start;margin-bottom:10px">
+          <span class="avatar sm" style="background:linear-gradient(145deg,${x.color||'#888'},${shade(x.color||'#888',-22)})">${initials(x.name)}</span>
+          <div class="grow"><b>${esc(x.name)}</b><br><small class="muted">${lv.emoji} ${esc(x.level||'EMBER')} · ${x.xp||0} XP${x.clan?` · ${esc(x.clan)}`:""}${x.crew_role?` · ${esc(x.crew_role)}`:""}</small></div>
+        </div>
+        <div class="cs-fields">
+          <label class="fld"><span>Nivel</span><select id="cs_level_${x.id}">${opts}</select></label>
+          <label class="fld"><span>XP</span><input id="cs_xp_${x.id}" type="number" min="0" value="${x.xp||0}"></label>
+          <label class="fld"><span>Rol (crew)</span><input id="cs_role_${x.id}" type="text" value="${esc(x.crew_role||'')}" placeholder="FOUNDING / rol"></label>
+          <label class="fld"><span>Clan</span><input id="cs_clan_${x.id}" type="text" value="${esc(x.clan||'')}" placeholder="slug del clan"></label>
+          <button class="btn sm gold cs-save" id="cs_save_${x.id}" data-cssave="${x.id}">Guardar</button>
+        </div>
+      </div>`;
+  }).join("") : `<div class="card s12"><p class="muted">Aún no hay Almas reales. Cuando alguien cruce el umbral aparecerá aquí.</p></div>`;
+
+  return `<div class="grid">${omni}${note}${rows}</div>`;
+}
+async function consolaSave(almaId){
+  if(!isCreator || !Cloud.enabled) return;
+  const g=id=>document.getElementById(id);
+  const patch={
+    level: g("cs_level_"+almaId).value,
+    crew_role: (g("cs_role_"+almaId).value||"").trim() || null,
+    clan: (g("cs_clan_"+almaId).value||"").trim() || null
+  };
+  const xpv=g("cs_xp_"+almaId).value;
+  if(xpv!=="") patch.xp=Math.max(0, parseInt(xpv,10)||0);
+  const btn=g("cs_save_"+almaId); if(btn){ btn.disabled=true; btn.textContent="Guardando…"; }
+  try{
+    const rows=await Cloud.adminUpdateAlma(almaId, patch);
+    if(!rows.length) throw new Error("RLS bloqueó el cambio. Aplica la migración 0005 en Supabase.");
+    state.cloudAlmas=await Cloud.allAlmas();
+    renderView();
+    alert("Alma actualizada ✓");
+  }catch(e){
+    alert("No se pudo guardar: "+(e.message||e));
+    if(btn){ btn.disabled=false; btn.textContent="Guardar"; }
+  }
+}
 
 /* --- Clientes --- */
 function vClientes(a){
@@ -803,6 +922,7 @@ async function refreshAuth(){
   if(!Cloud.enabled){ updateAuthUI(null); return; }
   try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){}
   const s=await Cloud.session();
+  isCreator = !!(s && s.user && (s.user.email||"").toLowerCase() === CREATOR_EMAIL);
   if(s){ const pend=localStorage.getItem("anima_pending_invite"); if(pend){ try{await Cloud.redeemInvite(pend);}catch(e){} localStorage.removeItem("anima_pending_invite"); }
     await loadMyAlma(); updateAuthUI(s);
   }else{ if(state.almas.some(x=>x.live)){ state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; } updateAuthUI(null); renderAll(); }
@@ -841,7 +961,7 @@ async function doAuth(mode){
   }catch(e){ msg.textContent=e.message||"No se pudo completar."; }
 }
 async function logout(){ if(!confirm("¿Salir de tu Alma?"))return; await Cloud.signOut();
-  state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; state.view="mialma"; save(); renderAll(); updateAuthUI(null); }
+  isCreator=false; state.viewAs=null; state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; state.view="mialma"; save(); renderAll(); updateAuthUI(null); }
 
 /* --- Editar perfil --- */
 function openEdit(){ const a=me(); if(!a.live){ if(Cloud.enabled){ openAuth(); } else { alert("Entra a tu Alma para editar."); } return; }
@@ -899,6 +1019,9 @@ function closeLumbre(){ drawer().classList.remove("open"); dbg().classList.remov
 function closeSide(){ document.getElementById("side").classList.remove("open"); }
 
 document.addEventListener("click", e=>{
+  const rn=e.target.closest("[data-reino]"); if(rn){ toggleReino(rn.dataset.reino); return; }
+  const va=e.target.closest("[data-viewas]"); if(va){ setViewAs(va.dataset.viewas); return; }
+  const cs=e.target.closest("[data-cssave]"); if(cs){ consolaSave(cs.dataset.cssave); return; }
   const ed=e.target.closest("[data-edit]"); if(ed){ const [k,i]=ed.dataset.edit.split(":"); openRecord(k,+i); return; }
   const dl=e.target.closest("[data-del]"); if(dl){ const [k,i]=dl.dataset.del.split(":"); deleteRecord(k,+i); return; }
   const st=e.target.closest("[data-star]"); if(st){ _fbRating=+st.dataset.star; renderStars(); return; }
