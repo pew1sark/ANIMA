@@ -59,13 +59,14 @@ body.rite{
 .eyebrow .ln{width:28px;height:1px;background:linear-gradient(90deg,transparent,rgba(208,170,99,.7),transparent)}
 
 /* --- Logo ANIMA (marca limpia, nunca alterada) --- */
-.brand-mark{width:auto;display:inline-flex;flex-direction:column;align-items:center;gap:10px;margin:0 auto}
-.brand-mark .peak{width:58px;height:58px}
-.brand-mark .peak svg{width:100%;height:100%}
-.wordmark{font-size:clamp(38px,9vw,84px);line-height:.9;letter-spacing:.06em;margin:0;font-weight:600;color:var(--ink)}
-.version-tag{display:inline-flex;align-items:center;gap:6px;margin-top:2px;font-size:10.5px;font-weight:800;
-  letter-spacing:.28em;text-transform:uppercase;color:var(--gold-deep);
-  padding:4px 12px;border-radius:999px;border:1px solid rgba(208,170,99,.32);background:rgba(208,170,99,.10)}
+.brand-mark{display:inline-flex;flex-direction:column;align-items:center;gap:6px;margin:0 auto}
+.brand-mark .peak{display:block;line-height:0}
+.brand-mark .peak svg{display:block;width:clamp(34px,7vw,58px);height:auto}
+.wordmark{font-size:clamp(40px,9.5vw,88px);line-height:.9;letter-spacing:.04em;text-indent:.04em;
+  margin:0;font-weight:600;color:var(--ink)}
+.version-tag{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:10.5px;font-weight:800;
+  letter-spacing:.26em;text-transform:uppercase;color:var(--gold-deep);
+  padding:5px 13px;border-radius:999px;border:1px solid rgba(208,170,99,.32);background:rgba(208,170,99,.10)}
 
 h1.rite{font-size:clamp(36px,8vw,76px);line-height:.94;letter-spacing:-.05em;margin:0;font-weight:800;color:var(--ink)}
 .rite-lede{font-size:clamp(19px,3.4vw,30px);line-height:1.35;letter-spacing:-.02em;margin:26px auto 0;max-width:520px;
@@ -193,8 +194,45 @@ h1.rite{font-size:clamp(36px,8vw,76px);line-height:.94;letter-spacing:-.05em;mar
 .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
   border:1px solid var(--line-2);font-size:12px;color:var(--muted);background:#fff}
 
+/* Chip + menú del Alma (cabecera del Home) */
+.alma-pill{position:relative;display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+  padding:9px 15px;border-radius:999px;background:rgba(255,255,255,.8);border:1px solid var(--line);
+  font-weight:760;font-size:14px;color:var(--ink);box-shadow:0 8px 24px rgba(0,0,0,.05);user-select:none}
+.alma-pill .adot{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px rgba(208,170,99,.2)}
+.alma-pill .acaret{color:var(--muted);font-size:12px}
+.alma-pop{position:absolute;top:calc(100% + 8px);right:0;min-width:212px;z-index:30;
+  background:#fff;border:1px solid var(--line);border-radius:16px;padding:7px;
+  box-shadow:0 22px 60px rgba(0,0,0,.16);display:none;flex-direction:column;gap:2px}
+.alma-pop.open{display:flex}
+.apop-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;background:none;cursor:pointer;
+  font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);padding:10px 12px;border-radius:11px;text-decoration:none}
+.apop-item:hover{background:rgba(0,0,0,.045)}
+.apop-item.danger{color:#b23b3b}
+.apop-sep{height:1px;background:var(--line);margin:4px 6px}
+
+/* Tres accesos: Alma / Clan / Santuario */
+.entry-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.entry{position:relative;display:block;text-decoration:none;color:var(--ink);
+  background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;
+  box-shadow:0 18px 50px rgba(0,0,0,.05);backdrop-filter:blur(18px);transition:.25s var(--ease)}
+.entry.open:hover{transform:translateY(-4px);border-color:rgba(208,170,99,.5);box-shadow:0 24px 60px rgba(0,0,0,.1)}
+.entry.locked{opacity:.62;filter:saturate(.6)}
+.entry .eg{font-size:30px;color:var(--gold-deep)}
+.entry b{display:block;margin:10px 0 4px;font-size:18px;letter-spacing:-.02em}
+.entry small{color:var(--muted);font-size:12.5px;line-height:1.45;display:block;min-height:34px}
+.entry .ego{display:inline-block;margin-top:12px;color:var(--gold-deep);font-weight:800;font-size:13px;text-decoration:none}
+.entry .lock{position:absolute;top:18px;right:18px;font-size:14px;opacity:.6}
+
+/* Tirar para refrescar (móvil) */
+.ptr{position:fixed;top:0;left:0;right:0;display:grid;place-items:center;z-index:60;pointer-events:none;
+  height:0;overflow:hidden;color:var(--gold-deep);font-size:13px;font-weight:700}
+.ptr .ring{width:22px;height:22px;border-radius:50%;border:2px solid rgba(208,170,99,.35);border-top-color:var(--gold);margin-bottom:6px}
+.ptr.spin .ring{animation:spin .7s linear infinite}
+
 .home-foot{margin-top:34px;text-align:center;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:24px}
 .home-foot a{color:var(--muted);margin:0 8px}
+
+@media(max-width:680px){ .entry-grid{grid-template-columns:1fr} .entry small{min-height:0} }
 
 @media(max-width:760px){
   .c4,.c6,.c8{grid-column:span 12}

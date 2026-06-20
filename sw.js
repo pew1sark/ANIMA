@@ -1,7 +1,7 @@
 /* ANIMA — Service Worker (PWA)
    Network-first para archivos propios (siempre lo último), con
    respaldo a caché cuando no hay conexión. No intercepta Supabase ni CDNs. */
-const CACHE = "anima-v6";
+const CACHE = "anima-v7";
 const ASSETS = [
   "./", "index.html", "studio.html", "roadmap.html", "portfolio.html", "legal.html", "manifest.webmanifest",
   "umbral.html", "despertar.html", "home.html",
@@ -24,6 +24,6 @@ self.addEventListener("fetch", e => {
       const copy = r.clone();
       caches.open(CACHE).then(c => c.put(e.request, copy));
       return r;
-    }).catch(() => caches.match(e.request).then(m => m || caches.match("studio.html")))
+    }).catch(() => caches.match(e.request).then(m => m || caches.match("home.html")))
   );
 });
