@@ -88,6 +88,22 @@ const Cloud = {
     return data || [];
   },
 
+  /* Subida de imágenes en ALTA CALIDAD al bucket público "media"
+     (migración 0008). Cada Alma escribe sólo en su carpeta /<uid>/…
+     Devuelve la URL pública lista para usar como portada/foto/banner. */
+  async uploadMedia(file, folder){
+    if(!_sb) throw new Error("Sin conexión a la nube.");
+    const { data:ud } = await _sb.auth.getUser();
+    const uid = ud && ud.user && ud.user.id;
+    if(!uid) throw new Error("Inicia sesión para subir imágenes.");
+    const ext = ((file.name||"").split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"") || "jpg";
+    const path = `${uid}/${folder||"obra"}-${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;
+    const { error } = await _sb.storage.from("media").upload(path, file, { cacheControl:"31536000", upsert:false, contentType:file.type||"image/jpeg" });
+    if(error) throw error;
+    const { data } = _sb.storage.from("media").getPublicUrl(path);
+    return data.publicUrl;
+  },
+
   /* CRUD genérico por tabla (para editar/eliminar cualquier ítem) */
   async insertRow(table, row){ const { data, error } = await _sb.from(table).insert(row).select().single(); if(error) throw error; return data; },
   async updateRow(table, id, patch){ const { error } = await _sb.from(table).update(patch).eq("id", id); if(error) throw error; },
@@ -126,7 +142,7 @@ function dbAlmaToState(row, m){
     role: row.role || "Creador", city: row.city || "", country: row.country || "",
     bio: row.bio || "", tags: row.tags || [], clan: row.clan || null,
     plan: row.plan || "ALMA", team_role: row.team_role || null,
-    photo: row.avatar_url || "", discipline: row.discipline || "", specialty: row.specialty || "",
+    photo: row.avatar_url || "", banner: row.banner_url || "", discipline: row.discipline || "", specialty: row.specialty || "",
     handle: row.handle || "", territory: row.territory || "", website: row.website || "",
     instagram: row.instagram || "", portfolio_url: row.portfolio_url || "", shop_url: row.shop_url || "",
     visibility: row.visibility || {},
