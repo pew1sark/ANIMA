@@ -19,7 +19,7 @@ async function main(){
   let qy=sb.from("almas").select("*"); qy = almaId ? qy.eq("id",almaId) : qy.eq("slug",slug);
   const { data:a } = await qy.maybeSingle();
   if(!a){ $("#app").innerHTML="<div class='empty'><h2>Esta Alma aún no es pública</h2><p>Puede que el enlace sea incorrecto.</p></div>"; return; }
-  if(a.visibility && a.visibility.public===false){
+  if(!(a.visibility && a.visibility.public===true)){
     document.title=`${a.name} · ANIMA`;
     $("#app").innerHTML=`<div class='empty'><h2>Portafolio privado</h2><p>${esc(a.name)} mantiene su portafolio en privado por ahora.</p><a class='btn' href='studio.html' style='margin-top:14px;display:inline-block'>Crear mi Alma →</a></div>`;
     return;
@@ -77,15 +77,17 @@ function render(a, port, traj){
         <h1>${esc(a.name)}</h1>
         ${headline}
         <div class="pf-meta">${esc(idline||"")}${a.territory||a.country?" · "+esc(a.territory||a.country):""}</div>
-        <div class="pf-badges"><span class="pf-badge" style="border-color:${lv.color}55;color:${lv.color}">${lv.emoji||"✦"} ${lv.label||a.level}</span>${role}${avail}</div>
+        <div class="pf-badges"><span class="pf-badge" style="border-color:${lv.color}55;color:${lv.color}">${lv.emoji||"✦"} ${lv.label||a.level}</span>${role}${avail}
+          <button class="spark-btn" id="sparkBtn" data-spark="${a.id}">✦ Dar Chispa</button></div>
       </div>
     </div>
     <div class="pf-cols">
       <aside>
         <div class="pf-stats">
+          <div class="pf-stat"><b id="sparkStat">${(a.sparks||0).toLocaleString("es-CL")}</b><small>Chispas</small></div>
           <div class="pf-stat"><b>${port.length}</b><small>Obras</small></div>
           <div class="pf-stat"><b>${(a.xp||0).toLocaleString("es-CL")}</b><small>XP</small></div>
-          ${since?`<div class="pf-stat"><b style="font-size:13px;font-weight:800">${esc(since)}</b><small>En ANIMA desde</small></div>`:""}
+          ${since?`<div class="pf-stat"><b style="font-size:13px;font-weight:800">${esc(since)}</b><small>Desde</small></div>`:""}
         </div>
         ${show("bio")&&a.bio?`<div class="pf-section-t">Sobre mí</div><p style="font-size:14px;line-height:1.5;margin:0 0 4px">${esc(a.bio)}</p>`:""}
         ${show("tags")&&(a.tags||[]).length?`<div class="pf-section-t">Servicios</div><div style="margin:2px 0 4px">${(a.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}
@@ -101,8 +103,24 @@ function render(a, port, traj){
     </div>`;
 }
 
+/* Chispas (los "me gusta" de ANIMA) — una por visitante (localStorage) */
+async function giveSpark(btn){
+  const id=btn.dataset.spark; if(!id||!sb) return;
+  const key="anima_spark_"+id;
+  if(localStorage.getItem(key)){ btn.textContent="✦ Ya diste tu Chispa"; btn.disabled=true; btn.classList.add("done"); return; }
+  btn.disabled=true;
+  try{
+    const { data, error } = await sb.rpc("give_spark", { p_alma:id });
+    if(error) throw error;
+    localStorage.setItem(key,"1");
+    const stat=$("#sparkStat"); if(stat && data!=null) stat.textContent=Number(data).toLocaleString("es-CL");
+    btn.textContent="✦ ¡Gracias!"; btn.classList.add("done","pulse");
+  }catch(err){ btn.disabled=false; btn.textContent="✦ Dar Chispa"; }
+}
+
 /* Lightbox */
 document.addEventListener("click", e=>{
+  const sp=e.target.closest("[data-spark]"); if(sp){ giveSpark(sp); return; }
   const it=e.target.closest("[data-img]");
   if(it && it.dataset.img){ $("#lbImg").src=it.dataset.img; $("#lbCap").textContent=it.dataset.cap||""; $("#lightbox").classList.add("open"); }
   if(e.target.closest("#lbClose")||e.target.id==="lightbox") $("#lightbox").classList.remove("open");

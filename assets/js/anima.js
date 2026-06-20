@@ -352,11 +352,10 @@ function vAlmaIdentidad(a){
     <button class="btn" id="idSave" style="width:100%;margin-top:6px">Guardar identidad</button>
   </div>
   <div class="card s4" style="align-self:start">
-    <div class="section-title"><h2 style="font-size:16px">Imagen de tu Alma</h2></div>
+    <div class="section-title"><h2 style="font-size:16px">Foto de perfil</h2></div>
     <div style="text-align:center;margin:4px 0 14px">${avatarHTML(a,"lg")}</div>
     ${imgUpField("id_photo","Foto de perfil", a.photo, "perfil")}
-    ${imgUpField("id_banner","Banner / portada", a.banner, "banner")}
-    <p class="muted" style="font-size:11.5px;margin-top:4px">Sube fotos en <b>alta calidad</b> para que tu portafolio público se vea profesional. También puedes pegar un enlace.</p>
+    <p class="muted" style="font-size:11.5px;margin-top:4px">Súbela en <b>alta calidad</b>. El <b>banner</b> de tu portafolio se edita en la ventana <b>Portafolio → ✎ Personalizar</b>.</p>
   </div>`;
 }
 function vAlmaPublica(a){
@@ -388,12 +387,12 @@ async function saveIdentity(){
   const a=me(); if(!a.live) return;
   const g=id=>{const e=document.getElementById(id);return e?e.value.trim():"";};
   const patch={ name:g("id_name"), discipline:g("id_disc"), specialty:g("id_spec"), handle:g("id_handle"),
-    territory:g("id_terr"), bio:g("id_bio"), avatar_url:g("id_photo"), banner_url:g("id_banner"), website:g("id_web"),
+    territory:g("id_terr"), bio:g("id_bio"), avatar_url:g("id_photo"), website:g("id_web"),
     instagram:g("id_ig"), portfolio_url:g("id_port"), shop_url:g("id_shop"),
     tags:g("id_tags").split(",").map(s=>s.trim()).filter(Boolean) };
   try{ await Cloud.updateAlma(a.almaId,patch);
     a.name=patch.name; a.discipline=patch.discipline; a.specialty=patch.specialty; a.handle=patch.handle;
-    a.territory=patch.territory; a.bio=patch.bio; a.photo=patch.avatar_url; a.banner=patch.banner_url; a.website=patch.website;
+    a.territory=patch.territory; a.bio=patch.bio; a.photo=patch.avatar_url; a.website=patch.website;
     a.instagram=patch.instagram; a.portfolio_url=patch.portfolio_url; a.shop_url=patch.shop_url; a.tags=patch.tags;
     a.role=patch.discipline||a.role;
     renderAll(); updateAuthUI(await Cloud.session()); alert("Identidad guardada ✓");
@@ -459,7 +458,7 @@ function availBadge(v){ if(!v) return ""; const dot=v.startsWith("No")?"⚪":v.s
 function pfLinks(a){ const L=[]; if(a.website)L.push(["Sitio web",a.website]);
   if(a.instagram)L.push(["Instagram",a.instagram.startsWith("http")?a.instagram:"https://instagram.com/"+a.instagram.replace("@","")]);
   if(a.portfolio_url)L.push(["Portafolio",a.portfolio_url]); if(a.shop_url)L.push(["Tienda",a.shop_url]); return L; }
-function isPublicPf(a){ return !(a.visibility && a.visibility.public===false); }
+function isPublicPf(a){ return !!(a.visibility && a.visibility.public===true); }
 
 function pfHero(a){
   const banner = (a.banner && isImgUrl(a.banner))
@@ -474,33 +473,36 @@ function pfHero(a){
             <small class="muted">${esc([a.discipline||a.role,a.specialty].filter(Boolean).join(" · ")||"Tu portafolio")} · ${a.portfolio.length} obra${a.portfolio.length===1?"":"s"}</small></div>
         </div>
         <div class="pf-hero-acts">
-          <span class="pill ${pub?'ok':''}" title="Visibilidad de tu portafolio">${pub?'◉ Público':'○ Privado'}</span>
-          ${a.live?`<a class="btn ghost sm" href="portfolio.html?alma=${a.almaId}" target="_blank" rel="noopener">Ver público ↗</a>`:""}
+          <button class="pf-pubtoggle ${pub?'on':''}" data-pfpublic title="Activa o desactiva tu portafolio público"><span class="toggle ${pub?'on':''}"></span>${pub?'Público':'Privado'}</button>
+          ${a.live&&pub?`<a class="btn ghost sm" href="portfolio.html?alma=${a.almaId}" target="_blank" rel="noopener">Ver público ↗</a>`:""}
           <button class="btn secondary sm" data-pfedit>✎ Personalizar</button>
           <button class="btn gold sm" data-add="obra">＋ Subir obra</button>
         </div>
       </div>
     </div>`;
 }
+function memberSince(a){ if(!a.created_at) return ""; const d=new Date(a.created_at); return isNaN(d)?"":d.toLocaleDateString("es-CL",{year:"numeric",month:"long"}); }
 function pfInfoCard(a){
   const loc=a.territory||a.country||""; const services=a.tags||[]; const links=pfLinks(a);
   const head=a.headline||[a.discipline||a.role,a.specialty].filter(Boolean).join(" · ");
+  const lv=levelByKey(a.level); const since=memberSince(a);
   return `<div class="card s4 pf-info">
     <div class="pf-info-top">${avatarHTML(a,"lg")}
       <h3>${esc(a.name)}</h3>
       ${head?`<p class="pf-headline">${esc(head)}</p>`:""}
-      ${loc?`<div class="pf-info-loc">⌖ ${esc(loc)}</div>`:""}
+      <div class="pf-info-loc">${lv.emoji} ${esc(lv.label)}${loc?` · ⌖ ${esc(loc)}`:""}</div>
       ${availBadge(a.availability)}
     </div>
     <div class="pf-info-stats">
+      <div><b>✦ ${(a.sparks||0).toLocaleString("es-CL")}</b><small>Chispas</small></div>
       <div><b>${a.portfolio.length}</b><small>Obras</small></div>
       <div><b>${(a.xp||0).toLocaleString("es-CL")}</b><small>XP</small></div>
-      <div><b>${isPublicPf(a)?"Público":"Privado"}</b><small>Estado</small></div>
     </div>
     ${a.bio?`<div class="pf-info-sec"><span class="pf-info-h">Sobre mí</span><p>${esc(a.bio)}</p></div>`:""}
     ${services.length?`<div class="pf-info-sec"><span class="pf-info-h">Servicios</span><div class="pf-chips">${services.map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div>`:""}
     ${links.length?`<div class="pf-info-sec"><span class="pf-info-h">Enlaces</span><div class="pf-links">${links.map(([t,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${t} ↗</a>`).join("")}</div></div>`:""}
-    <button class="btn secondary sm" data-pfedit style="width:100%;margin-top:14px">✎ Editar tarjeta y portada</button>
+    <div class="pf-info-foot">${since?`En ANIMA desde ${esc(since)} · `:""}${isPublicPf(a)?"Portafolio público":"Portafolio privado"}</div>
+    <button class="btn secondary sm" data-pfedit style="width:100%;margin-top:12px">✎ Editar tarjeta y portada</button>
   </div>`;
 }
 function pfEditor(a){
