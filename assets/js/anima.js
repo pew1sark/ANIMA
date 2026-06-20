@@ -80,25 +80,46 @@ function getCfg(a){
 function setCfg(a,c){ localStorage.setItem(cfgKey(a), JSON.stringify(c)); if(a.live){ Cloud.savePrefs(a.almaId,c).catch(()=>{}); } }
 function toggleCfg(path){ const a=me(); const c=getCfg(a); const [g,k]=path.split(":"); c[g][k]=(c[g][k]===false); setCfg(a,c); renderAll(); }
 
-/* ---------- Navegación ---------- */
-const MODULES = [
-  {v:"trayectoria",ico:"⤴",t:"Trayectoria"},
-  {v:"portafolio", ico:"▦",t:"Portafolio"},
-  {v:"proyectos",  ico:"◷",t:"Proyectos"},
-  {v:"finanzas",   ico:"$",t:"Finanzas"},
-  {v:"clientes",   ico:"☺",t:"Clientes"},
-  {v:"cotizador",  ico:"₵",t:"Cotizador"},
-  {v:"agenda",     ico:"☰",t:"Agenda"},
-  {v:"memoria",    ico:"✦",t:"Memorias"},
-  {v:"biblioteca", ico:"❏",t:"Biblioteca"}
+/* ---------- Navegación (3 capas: secciones › reinos › módulos) ---------- */
+const CREATOR_EMAIL = "sarkgraff@gmail.com";
+let isCreator = false;   // se activa en refreshAuth si la sesión es del Creador
+
+const NAV_TREE = [
+  { type:"item",  v:"mialma", ico:"◆", t:"Mi Alma" },
+  { type:"reino", key:"esencia", ico:"✦", t:"Esencia", children:[
+      {v:"trayectoria",ico:"⤴",t:"Trayectoria"},
+      {v:"portafolio", ico:"▦",t:"Portafolio"},
+      {v:"memoria",    ico:"✦",t:"Memorias"},
+      {v:"biblioteca", ico:"❏",t:"Biblioteca"}
+  ]},
+  { type:"reino", key:"taller", ico:"₵", t:"Taller", children:[
+      {v:"proyectos",  ico:"◷",t:"Proyectos"},
+      {v:"clientes",   ico:"☺",t:"Clientes"},
+      {v:"cotizador",  ico:"₵",t:"Cotizador"},
+      {v:"finanzas",   ico:"$",t:"Finanzas"},
+      {v:"agenda",     ico:"☰",t:"Agenda"}
+  ]}
 ];
-function navItem(n){ return `<div class="nav-item ${state.view===n.v?'active':''}" data-view="${n.v}"><span class="ico">${n.ico}</span>${n.t}</div>`; }
+function navItem(n, sub){ return `<div class="nav-item ${sub?'sub':''} ${state.view===n.v?'active':''}" data-view="${n.v}"><span class="ico">${n.ico}</span>${n.t}</div>`; }
+function reinoOpen(key){ if(!state.navOpen) state.navOpen={}; return state.navOpen[key]!==false; }
+function toggleReino(key){ if(!state.navOpen) state.navOpen={}; state.navOpen[key]=!reinoOpen(key); save(); renderNav(); }
 function renderNav(){
   const cfg=getCfg(me());
-  let h=`<div class="nav-label">Mi Alma</div>`+navItem({v:"mialma",ico:"◆",t:"Mi Alma"});
-  MODULES.forEach(m=>{ if(cfg.modules[m.v]!==false) h+=navItem(m); });
-  h+=navItem({v:"config",ico:"⚙",t:"Personalizar"});
+  let h=`<div class="nav-label">Mi Alma</div>`;
+  NAV_TREE.forEach(node=>{
+    if(node.type==="item"){ h+=navItem(node); return; }
+    const kids=node.children.filter(c=>cfg.modules[c.v]!==false);
+    if(!kids.length) return;
+    const activeInside=kids.some(c=>c.v===state.view);
+    const open=reinoOpen(node.key)||activeInside;
+    h+=`<div class="nav-group ${open?'open':''} ${activeInside?'has-active':''}" data-reino="${node.key}">
+        <span class="ico">${node.ico}</span><span class="rt">${node.t}</span><span class="caret">⌄</span></div>`;
+    h+=`<div class="nav-sub ${open?'open':''}"><div class="nav-sub-inner">${kids.map(c=>navItem(c,true)).join("")}</div></div>`;
+  });
   h+=`<div class="nav-label">Mundo</div>`+navItem({v:"comunidad",ico:"❂",t:"Comunidad"})+navItem({v:"santuario",ico:"🜁",t:"Santuario"});
+  if(isCreator){
+    h+=`<div class="nav-label">Creador</div>`+navItem({v:"config",ico:"⚙",t:"Personalizar"});
+  }
   document.getElementById("nav").innerHTML=h;
 }
 
@@ -175,6 +196,7 @@ function acts(kind,i){ return `<span class="acts"><button class="ia" data-edit="
    VISTAS
    =========================================================== */
 function renderView(){
+  if(state.view==="config" && !isCreator) state.view="mialma";   // Personalizar es solo del Creador
   const fn = { mialma:vMiAlma, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
     finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
     config:vConfig, comunidad:vComunidad, santuario:vSantuario }[state.view] || vMiAlma;
@@ -183,7 +205,8 @@ function renderView(){
 
 /* --- Mi Alma --- */
 function vMiAlma(a){
-  const lp=levelProgress(a.xp), lv=levelByKey(a.level); const tab=state.almaTab||"resumen";
+  const lp=levelProgress(a.xp), lv=levelByKey(a.level);
+  let tab=state.almaTab||"resumen"; if(tab==="ajustes"&&!isCreator) tab="resumen";
   const idline=[a.discipline||a.role, a.specialty].filter(Boolean).join(" · ");
   const header=`<div class="card s12">
     <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
@@ -208,7 +231,8 @@ function vMiAlma(a){
       <button class="btn ghost sm" data-export>⤓ PDF</button>
     </div>
   </div>`;
-  const tabs=[["resumen","Resumen"],["identidad","Identidad"],["publica","Vista pública"],["ajustes","Ajustes"]];
+  const tabs=[["resumen","Resumen"],["identidad","Identidad"],["publica","Vista pública"]];
+  if(isCreator) tabs.push(["ajustes","Ajustes"]);
   const tabbar=`<div class="card s12 tabbar">${tabs.map(([k,l])=>`<button class="tabbtn ${tab===k?'on':''}" data-tab="${k}">${l}</button>`).join("")}</div>`;
   const body = tab==="identidad"?vAlmaIdentidad(a) : tab==="publica"?vAlmaPublica(a) : tab==="ajustes"?vConfigBody(a) : vAlmaResumen(a,lp);
   return `<div class="grid">${header}${tabbar}${body}</div>`;
@@ -803,6 +827,7 @@ async function refreshAuth(){
   if(!Cloud.enabled){ updateAuthUI(null); return; }
   try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){}
   const s=await Cloud.session();
+  isCreator = !!(s && s.user && (s.user.email||"").toLowerCase() === CREATOR_EMAIL);
   if(s){ const pend=localStorage.getItem("anima_pending_invite"); if(pend){ try{await Cloud.redeemInvite(pend);}catch(e){} localStorage.removeItem("anima_pending_invite"); }
     await loadMyAlma(); updateAuthUI(s);
   }else{ if(state.almas.some(x=>x.live)){ state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; } updateAuthUI(null); renderAll(); }
@@ -841,7 +866,7 @@ async function doAuth(mode){
   }catch(e){ msg.textContent=e.message||"No se pudo completar."; }
 }
 async function logout(){ if(!confirm("¿Salir de tu Alma?"))return; await Cloud.signOut();
-  state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; state.view="mialma"; save(); renderAll(); updateAuthUI(null); }
+  isCreator=false; state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; state.view="mialma"; save(); renderAll(); updateAuthUI(null); }
 
 /* --- Editar perfil --- */
 function openEdit(){ const a=me(); if(!a.live){ if(Cloud.enabled){ openAuth(); } else { alert("Entra a tu Alma para editar."); } return; }
@@ -899,6 +924,7 @@ function closeLumbre(){ drawer().classList.remove("open"); dbg().classList.remov
 function closeSide(){ document.getElementById("side").classList.remove("open"); }
 
 document.addEventListener("click", e=>{
+  const rn=e.target.closest("[data-reino]"); if(rn){ toggleReino(rn.dataset.reino); return; }
   const ed=e.target.closest("[data-edit]"); if(ed){ const [k,i]=ed.dataset.edit.split(":"); openRecord(k,+i); return; }
   const dl=e.target.closest("[data-del]"); if(dl){ const [k,i]=dl.dataset.del.split(":"); deleteRecord(k,+i); return; }
   const st=e.target.closest("[data-star]"); if(st){ _fbRating=+st.dataset.star; renderStars(); return; }
