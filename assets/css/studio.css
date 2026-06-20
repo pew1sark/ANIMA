@@ -291,6 +291,26 @@
 .img-pick input{display:none}
 .img-hint{font-size:11px}
 
+/* Portafolio — tarjeta de información estilo Behance */
+.pf-info{align-self:start}
+.pf-info-top{text-align:center;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.pf-info-top .avatar{margin:0 auto 10px}
+.pf-info-top h3{margin:0;font-size:19px;letter-spacing:-.03em}
+.pf-headline{color:var(--muted);font-size:13.5px;margin:3px 0 0}
+.pf-info-loc{font-size:12.5px;color:var(--muted);margin-top:6px}
+.pf-avail{margin-top:10px;display:inline-flex}
+.pf-info-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 0;border-bottom:1px solid var(--line);text-align:center}
+.pf-info-stats b{display:block;font-size:17px;letter-spacing:-.02em}
+.pf-info-stats small{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+.pf-info-sec{padding:13px 0;border-bottom:1px solid var(--line)}
+.pf-info-sec:last-of-type{border-bottom:0}
+.pf-info-h{display:block;font-size:10.5px;font-weight:850;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:7px}
+.pf-info-sec p{margin:0;font-size:13.5px;line-height:1.5}
+.pf-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pf-info .pf-links{display:flex;flex-direction:column;gap:6px}
+.pf-info .pf-links a{font-size:13px;font-weight:700;color:#7b5920;text-decoration:none}
+.pf-info .pf-links a:hover{text-decoration:underline}
+
 
 /* ---------- Mapamundi de Almas ---------- */
 .worldmap{position:relative;width:100%;aspect-ratio:2/1;border-radius:20px;overflow:hidden;border:1px solid var(--line);

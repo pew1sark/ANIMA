@@ -145,6 +145,7 @@ function dbAlmaToState(row, m){
     photo: row.avatar_url || "", banner: row.banner_url || "", discipline: row.discipline || "", specialty: row.specialty || "",
     handle: row.handle || "", territory: row.territory || "", website: row.website || "",
     instagram: row.instagram || "", portfolio_url: row.portfolio_url || "", shop_url: row.shop_url || "",
+    headline: row.headline || "", availability: row.availability || "",
     visibility: row.visibility || {},
     finance: {
       income:  (m.income  || []).map(x => ({ _id:x.id, t:x.title, a:Number(x.amount), d:x.period, cat:x.category, on:x.occurred_at, method:x.method, notes:x.notes })),

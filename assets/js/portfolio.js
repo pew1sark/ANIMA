@@ -19,6 +19,11 @@ async function main(){
   let qy=sb.from("almas").select("*"); qy = almaId ? qy.eq("id",almaId) : qy.eq("slug",slug);
   const { data:a } = await qy.maybeSingle();
   if(!a){ $("#app").innerHTML="<div class='empty'><h2>Esta Alma aún no es pública</h2><p>Puede que el enlace sea incorrecto.</p></div>"; return; }
+  if(a.visibility && a.visibility.public===false){
+    document.title=`${a.name} · ANIMA`;
+    $("#app").innerHTML=`<div class='empty'><h2>Portafolio privado</h2><p>${esc(a.name)} mantiene su portafolio en privado por ahora.</p><a class='btn' href='studio.html' style='margin-top:14px;display:inline-block'>Crear mi Alma →</a></div>`;
+    return;
+  }
   const [{data:port},{data:traj}] = await Promise.all([
     sb.from("portfolio").select("*").eq("alma_id",a.id),
     sb.from("trajectory").select("*").eq("alma_id",a.id)
@@ -37,6 +42,8 @@ function render(a, port, traj){
     ? `<div class="pf-photo" style="background-image:url('${esc(a.avatar_url)}')"></div>`
     : `<div class="pf-photo" style="background:linear-gradient(145deg,${a.color},${shade(a.color,-22)})">${initials(a.name)}</div>`;
   const idline=[a.discipline||a.role, a.specialty].filter(Boolean).join(" · ");
+  const headline = a.headline ? `<div class="pf-headline">${esc(a.headline)}</div>` : "";
+  const avail = a.availability ? `<span class="pf-avail ${a.availability.startsWith("No")?"off":a.availability.startsWith("Agenda")?"lim":""}">${a.availability.startsWith("No")?"⚪":a.availability.startsWith("Agenda")?"🟡":"🟢"} ${esc(a.availability)}</span>` : "";
   const role = a.crew_role ? `<span class="pf-role">${esc(a.crew_role)}</span>` : "";
   const since = a.created_at ? new Date(a.created_at).toLocaleDateString("es-CL",{year:"numeric",month:"long"}) : "";
   const links=[]; if(a.website)links.push(["Sitio web",a.website]); if(a.instagram)links.push(["Instagram",a.instagram.startsWith("http")?a.instagram:"https://instagram.com/"+a.instagram.replace("@","")]);
@@ -68,8 +75,9 @@ function render(a, port, traj){
     <div class="pf-id">${photo}
       <div style="padding-bottom:8px">
         <h1>${esc(a.name)}</h1>
+        ${headline}
         <div class="pf-meta">${esc(idline||"")}${a.territory||a.country?" · "+esc(a.territory||a.country):""}</div>
-        <span class="pf-badge" style="border-color:${lv.color}55;color:${lv.color}">${lv.emoji||"✦"} ${lv.label||a.level}</span>${role}
+        <div class="pf-badges"><span class="pf-badge" style="border-color:${lv.color}55;color:${lv.color}">${lv.emoji||"✦"} ${lv.label||a.level}</span>${role}${avail}</div>
       </div>
     </div>
     <div class="pf-cols">
@@ -79,8 +87,8 @@ function render(a, port, traj){
           <div class="pf-stat"><b>${(a.xp||0).toLocaleString("es-CL")}</b><small>XP</small></div>
           ${since?`<div class="pf-stat"><b style="font-size:13px;font-weight:800">${esc(since)}</b><small>En ANIMA desde</small></div>`:""}
         </div>
-        ${show("bio")&&a.bio?`<p style="font-size:14px;line-height:1.5">${esc(a.bio)}</p>`:""}
-        ${show("tags")&&(a.tags||[]).length?`<div style="margin:12px 0">${(a.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}
+        ${show("bio")&&a.bio?`<div class="pf-section-t">Sobre mí</div><p style="font-size:14px;line-height:1.5;margin:0 0 4px">${esc(a.bio)}</p>`:""}
+        ${show("tags")&&(a.tags||[]).length?`<div class="pf-section-t">Servicios</div><div style="margin:2px 0 4px">${(a.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}
         ${show("links")&&links.length?`<div class="pf-section-t">Enlaces</div><div class="pf-links">${links.map(([t,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${t} <span>↗</span></a>`).join("")}</div>`:""}
         ${trajHTML}
         <div style="margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.5);text-align:center">
