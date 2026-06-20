@@ -26,11 +26,12 @@ const Cloud = {
   signOut(){ return _sb.auth.signOut(); },
   onAuth(cb){ if(_sb) _sb.auth.onAuthStateChange((_e, s)=>cb(s)); },
 
-  /* Constelación pública VIVA — todas las Almas (fundadoras + beta) */
+  /* Constelación pública VIVA — solo Almas reales (sin las fundadoras demo) */
   async allAlmas(){
     if(!_sb) return [];
     const { data } = await _sb.from("almas")
       .select("id,slug,name,role,city,country,bio,color,level,xp,clan,tags,is_founding,created_at")
+      .eq("is_founding", false)
       .order("created_at", { ascending:false });
     return data || [];
   },
