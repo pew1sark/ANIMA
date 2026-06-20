@@ -194,7 +194,7 @@ const TITLES = {
   proyectos:["Proyectos","Lo que está vivo ahora mismo."],
   finanzas:["Finanzas","Ingresos, egresos y ganancia — privado."],
   clientes:["Clientes","Tu cartera de clientes y contactos."],
-  cotizador:["Cotizador","Crea presupuestos profesionales y expórtalos en PDF."],
+  cotizador:["Centro documental","Cotizaciones, propuestas y documentos profesionales · exporta en PDF."],
   agenda:["Agenda","Tu día, ordenado."],
   memoria:["Memorias","Ideas, frases y referencias que no quieres perder."],
   biblioteca:["Biblioteca","Tus documentos y archivos."],
@@ -604,8 +604,71 @@ function vClientes(a){
    =========================================================== */
 const CURRENCIES={CLP:"$",USD:"US$",EUR:"€",MXN:"MX$",ARS:"AR$",COP:"CO$",PEN:"S/"};
 const fmtq=(n,c)=>(CURRENCIES[c]||"$")+Number(n||0).toLocaleString("es-CL");
-function blankQuote(){ return { id:null, client_id:null, project_id:null, title:"Cotización", client:"", date:new Date().toISOString().slice(0,10),
+function blankQuote(){ return { id:null, client_id:null, project_id:null, docType:"cotizacion", title:"Cotización", client:"", date:new Date().toISOString().slice(0,10),
   discipline:"", currency:"CLP", taxPct:0, notes:"", items:[{desc:"",qty:1,price:0,unit:"unidad"}] }; }
+
+/* ---------- Centro documental: formatos + plantillas (estilo Canva, identidad ANIMA) ---------- */
+const DOC_FORMATS=[
+  {id:"cotizacion", t:"Cotización",         ico:"₵", d:"Presupuesto detallado, ítem por ítem."},
+  {id:"propuesta",  t:"Propuesta",          ico:"✦", d:"Concepto + inversión. La obra se explica con palabras."},
+  {id:"factura",    t:"Factura · Honorarios", ico:"$", d:"Cobro formal de un trabajo entregado."},
+  {id:"orden",      t:"Orden de trabajo",    ico:"◷", d:"Lo acordado, listo para producción."},
+  {id:"anticipo",   t:"Recibo de anticipo",  ico:"⛨", d:"Comprobante del anticipo para iniciar."},
+  {id:"acuerdo",    t:"Acuerdo breve",       ico:"❏", d:"Alcance, plazos y condiciones en una página."}
+];
+const docFmt=id=>DOC_FORMATS.find(f=>f.id===id)||DOC_FORMATS[0];
+const TEMPLATES=[
+  {id:"mural_pub", t:"Mural publicitario", ico:"🜂", disc:"Muralismo · Marca", fmt:"propuesta",
+   note:"Anticipo 50% para iniciar (cubre materiales, pre-producción y boceto). Saldo contra entrega. Incluye documentación fotográfica del proceso. Validez 15 días.",
+   items:[["Concepto + boceto (dirección creativa)",1,"proyecto"],["Intervención mural",1,"m²"],["Materiales (aerosol / acrílico)",1,"global"],["Jornadas de ejecución",1,"jornada"],["Documentación foto + video",1,"global"]]},
+  {id:"mural_dec", t:"Mural decorativo", ico:"◈", disc:"Muralismo · Espacio", fmt:"cotizacion",
+   note:"El concepto parte del espacio y de quién lo vive. Anticipo 50%. Validez 15 días.",
+   items:[["Visita y lectura del espacio",1,"visita"],["Concepto y paleta",1,"proyecto"],["Intervención mural",1,"m²"],["Materiales",1,"global"]]},
+  {id:"foto", t:"Sesión fotográfica", ico:"❍", disc:"Fotografía", fmt:"cotizacion",
+   note:"Incluye edición de seleccionados y entrega digital en alta resolución. Anticipo 50%.",
+   items:[["Pre-producción y dirección",1,"sesión"],["Jornada de fotografía",1,"jornada"],["Edición y retoque",1,"global"],["Entrega Fine Art (opcional)",1,"global"]]},
+  {id:"taller", t:"Taller / Workshop", ico:"✲", disc:"Educación · Arte urbano", fmt:"propuesta",
+   note:"Incluye materiales para participantes. Cupo según espacio. Anticipo para reservar la fecha.",
+   items:[["Diseño del taller",1,"global"],["Sesión / clase",1,"sesión"],["Materiales por participante",1,"persona"]]},
+  {id:"direccion", t:"Dirección creativa", ico:"✦", disc:"Conceptual", fmt:"propuesta",
+   note:"Honorarios por desarrollo conceptual y supervisión artística. No incluye ejecución de terceros.",
+   items:[["Investigación y concepto",1,"global"],["Desarrollo de narrativa visual",1,"global"],["Supervisión artística",1,"jornada"]]},
+  {id:"tattoo", t:"Sesión de tatuaje", ico:"❂", disc:"Tatuaje", fmt:"cotizacion",
+   note:"Incluye diseño personalizado. El abono reserva la fecha y cubre el diseño.",
+   items:[["Diseño personalizado",1,"diseño"],["Sesión de tatuaje",1,"sesión"]]},
+  {id:"diseno", t:"Diseño / Branding", ico:"▦", disc:"Diseño", fmt:"cotizacion",
+   note:"Incluye 2 rondas de ajustes y entrega de archivos editables. Anticipo 50%.",
+   items:[["Investigación de marca",1,"global"],["Propuesta de identidad",1,"global"],["Entrega de archivos",1,"global"]]},
+  {id:"musica", t:"Producción musical", ico:"♪", disc:"Música", fmt:"cotizacion",
+   note:"Incluye mezcla. Masterización opcional. Entrega de stems a pedido.",
+   items:[["Producción / arreglo",1,"tema"],["Grabación",1,"jornada"],["Mezcla",1,"tema"],["Masterización (opcional)",1,"tema"]]},
+  {id:"obra", t:"Obra original · Fine Art", ico:"◆", disc:"Coleccionismo", fmt:"factura",
+   note:"Obra única con certificado de autenticidad. Embalaje y envío según destino.",
+   items:[["Obra original",1,"pieza"],["Certificado de autenticidad",1,"global"],["Embalaje y envío",1,"global"]]}
+];
+const tplKey = a => "anima_templates_"+(a.almaId||a.id);
+function loadTpls(a){ try{ return JSON.parse(localStorage.getItem(tplKey(a)))||[]; }catch(e){ return []; } }
+function saveTpls(a,t){ localStorage.setItem(tplKey(a), JSON.stringify(t)); }
+function normItem(it){ return Array.isArray(it)?{desc:it[0]||"",qty:it[1]||1,unit:it[2]||"unidad",price:it[3]||0}:{desc:it.desc||"",qty:it.qty||1,unit:it.unit||"unidad",price:it.price||0}; }
+function applyTemplate(tpl){
+  quoteDraft=blankQuote();
+  quoteDraft.docType=tpl.fmt||"cotizacion"; quoteDraft.title=tpl.t||docFmt(quoteDraft.docType).t;
+  quoteDraft.discipline=tpl.disc||""; quoteDraft.notes=tpl.note||"";
+  const its=(tpl.items||[]).map(normItem); quoteDraft.items=its.length?its:[{desc:"",qty:1,price:0,unit:"unidad"}];
+}
+function cotUseFormat(id){ quoteDraft=blankQuote(); quoteDraft.docType=id; quoteDraft.title=docFmt(id).t; state.cotMode="editor"; renderView(); }
+function cotUseTemplate(id){ const a=me(); const tpl=TEMPLATES.find(t=>t.id===id)||loadTpls(a).find(t=>t.id===id); if(!tpl) return; applyTemplate(tpl); state.cotMode="editor"; renderView(); }
+function cotBlank(){ quoteDraft=blankQuote(); state.cotMode="editor"; renderView(); }
+function cotGallery(){ state.cotMode="galeria"; renderView(); }
+function cotSaveTemplate(){
+  readQuoteForm(); const a=me();
+  const name=prompt("Nombre de la plantilla:", quoteDraft.title||"Mi plantilla"); if(!name) return;
+  const list=loadTpls(a);
+  list.unshift({ id:"t"+Date.now(), t:name, ico:"✶", disc:quoteDraft.discipline||"", fmt:quoteDraft.docType||"cotizacion",
+    note:quoteDraft.notes||"", items:quoteDraft.items.map(it=>({desc:it.desc,qty:it.qty,unit:it.unit,price:it.price})), custom:true });
+  saveTpls(a,list); alert("Plantilla guardada ✓ Aparecerá en «Mis plantillas».");
+}
+function cotDelTemplate(id){ const a=me(); if(!confirm("¿Eliminar esta plantilla?"))return; saveTpls(a,loadTpls(a).filter(t=>t.id!==id)); renderView(); }
 let quoteDraft = blankQuote();
 const quotesKey = a => "anima_quotes_"+(a.almaId||a.id);
 function loadQuotes(a){ try{ return JSON.parse(localStorage.getItem(quotesKey(a)))||[]; }catch(e){ return []; } }
@@ -615,13 +678,59 @@ function readQuoteForm(){
   const g=id=>{const e=document.getElementById(id);return e?e.value:"";};
   quoteDraft.title=g("q_title"); quoteDraft.client=g("q_client"); quoteDraft.date=g("q_date");
   quoteDraft.discipline=g("q_disc"); quoteDraft.currency=g("q_cur"); quoteDraft.taxPct=+g("q_tax")||0; quoteDraft.notes=g("q_notes");
+  if(g("q_fmt")) quoteDraft.docType=g("q_fmt");
   quoteDraft.items=quoteDraft.items.map((it,i)=>({ desc:g("qi_desc_"+i), qty:+g("qi_qty_"+i)||0, price:+g("qi_price_"+i)||0, unit:g("qi_unit_"+i)||"unidad" }));
 }
-function vCotizador(a){
-  const t=quoteTotals(), cur=quoteDraft.currency;
+function vCotizador(a){ return state.cotMode==="editor" ? vCotEditor(a) : vCotGaleria(a); }
+
+function vCotGaleria(a){
   const saved = a.live
     ? (state.cloudQuotes||[]).map(q=>({id:q.id,title:q.title,client:q.client_name,date:(q.created_at||"").slice(0,10)}))
     : loadQuotes(a);
+  const mine = loadTpls(a);
+  const fmtStrip = DOC_FORMATS.map(f=>`<button class="doc-fmt" data-cotfmt="${f.id}"><span class="df-ico">${f.ico}</span><b>${f.t}</b><small>${f.d}</small></button>`).join("");
+  const tplCard = (t,custom)=>`<div class="tpl-card" data-cottpl="${t.id}">
+      ${custom?`<button class="ia danger tpl-del" data-cottpldel="${t.id}" title="Eliminar">✕</button>`:``}
+      <span class="tpl-ico">${t.ico||"✶"}</span>
+      <b>${esc(t.t)}</b>
+      <small class="muted">${esc(t.disc||docFmt(t.fmt).t)}</small>
+      <span class="pill" style="margin-top:8px;width:max-content">${docFmt(t.fmt).ico} ${docFmt(t.fmt).t}</span>
+      <span class="tpl-use">Usar plantilla →</span>
+    </div>`;
+  return `<div class="grid">
+    <div class="card s12 cot-hero">
+      <div><span class="pill gold">Centro documental</span>
+        <h2 style="font-size:clamp(24px,4vw,34px);letter-spacing:-.05em;margin:12px 0 4px">¿Qué vas a crear hoy?</h2>
+        <p class="muted" style="max-width:560px;margin:0">Elige un formato o parte de una plantilla pensada para tu oficio. Todo se exporta en PDF con la identidad de tu Alma.</p>
+      </div>
+      <button class="btn" data-cotblank>＋ Documento en blanco</button>
+    </div>
+
+    <div class="card s12">
+      <div class="section-title"><h2 style="font-size:18px">Formatos</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px">El documento que necesitas</span></div>
+      <div class="doc-fmts">${fmtStrip}</div>
+    </div>
+
+    <div class="card s12">
+      <div class="section-title"><h2 style="font-size:18px">Plantillas por oficio</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px">ANIMA es para todo creador</span></div>
+      <div class="tpl-grid">${TEMPLATES.map(t=>tplCard(t,false)).join("")}</div>
+    </div>
+
+    ${mine.length?`<div class="card s12">
+      <div class="section-title"><h2 style="font-size:18px">Mis plantillas</h2><div class="spacer"></div><span class="pill gold">${mine.length}</span></div>
+      <div class="tpl-grid">${mine.map(t=>tplCard(t,true)).join("")}</div>
+    </div>`:``}
+
+    <div class="card s12">
+      <div class="section-title"><h2 style="font-size:18px">Documentos guardados</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px">${saved.length}</span></div>
+      ${saved.length?saved.map(q=>`<div class="row"><div class="grow"><b>${esc(q.title)}</b><br><small>${esc(q.client||"—")} · ${esc(q.date)}</small></div>
+        <button class="btn ghost sm" data-qload="${q.id}">Abrir</button><button class="ia danger" data-qdelete="${q.id}">✕</button></div>`).join(""):`<p class="muted">Aún no guardas documentos. Crea el primero desde un formato o plantilla.</p>`}
+    </div>
+  </div>`;
+}
+
+function vCotEditor(a){
+  const t=quoteTotals(), cur=quoteDraft.currency, fmt=docFmt(quoteDraft.docType);
   const itemsRows = quoteDraft.items.map((it,i)=>`<div class="qitem">
       <input id="qi_desc_${i}" placeholder="Concepto / obra / servicio" value="${esc(it.desc)}">
       <input id="qi_qty_${i}" type="number" min="0" step="any" value="${it.qty}" title="Cantidad">
@@ -632,12 +741,15 @@ function vCotizador(a){
     </div>`).join("");
   return `<div class="grid">
     <div class="card s8">
-      <div class="section-title"><h2>Editor de cotización</h2><div class="spacer"></div>
-        <button class="btn ghost sm" id="q_new">＋ Nueva</button>
+      <div class="section-title">
+        <button class="btn ghost sm" data-cotback>← Centro</button>
+        <h2 style="font-size:20px">${fmt.ico} ${fmt.t}</h2><div class="spacer"></div>
+        <button class="btn ghost sm" id="q_tpl" title="Guardar este documento como plantilla reutilizable">✶ Plantilla</button>
         <button class="btn secondary sm" id="q_save">Guardar</button>
-        <button class="btn sm" id="q_export">⤓ Exportar PDF</button>
+        <button class="btn sm" id="q_export">⤓ PDF</button>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:150px"><label>Formato</label><select id="q_fmt">${DOC_FORMATS.map(f=>`<option value="${f.id}" ${f.id===quoteDraft.docType?'selected':''}>${f.t}</option>`).join("")}</select></div>
         <div class="field" style="flex:2;min-width:180px"><label>Título</label><input id="q_title" value="${esc(quoteDraft.title)}"></div>
         <div class="field" style="flex:1;min-width:120px"><label>Fecha</label><input id="q_date" type="date" value="${esc(quoteDraft.date)}"></div>
       </div>
@@ -662,13 +774,7 @@ function vCotizador(a){
       <div class="row"><div class="grow muted">Subtotal</div><b>${fmtq(t.sub,cur)}</b></div>
       <div class="row"><div class="grow muted">Impuesto (${quoteDraft.taxPct||0}%)</div><b>${fmtq(t.tax,cur)}</b></div>
       <div class="row"><div class="grow"><b>Total</b></div><span class="kpi" style="font-size:24px">${fmtq(t.total,cur)}</span></div>
-      <p class="muted" style="font-size:12px;margin-top:8px">Editor adaptable a cualquier rama de arte. Exporta un PDF limpio listo para enviar al cliente.</p>
-    </div>
-
-    <div class="card s12">
-      <div class="section-title"><h2>Cotizaciones guardadas</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px">${saved.length}</span></div>
-      ${saved.map(q=>`<div class="row"><div class="grow"><b>${esc(q.title)}</b><br><small>${esc(q.client||"—")} · ${esc(q.date)}</small></div>
-        <button class="btn ghost sm" data-qload="${q.id}">Abrir</button><button class="ia danger" data-qdelete="${q.id}">✕</button></div>`).join("")||`<p class="muted">Aún no guardas cotizaciones.</p>`}
+      <p class="muted" style="font-size:12px;margin-top:8px">${esc(fmt.d)} Exporta un PDF limpio con tu identidad, listo para enviar.</p>
     </div>
   </div>`;
 }
@@ -708,14 +814,14 @@ async function qSaveCloud(a){
   }catch(e){ alert("No se pudo guardar la cotización: "+(e.message||e)); }
 }
 function qLoad(id){
-  const a=me();
+  const a=me(); state.cotMode="editor";
   if(a.live){ const q=(state.cloudQuotes||[]).find(x=>x.id===id);
-    if(q){ quoteDraft={ id:q.id, client_id:q.client_id, project_id:q.project_id, title:q.title||"Cotización", client:q.client_name||"",
+    if(q){ quoteDraft={ id:q.id, client_id:q.client_id, project_id:q.project_id, docType:q.doc_type||"cotizacion", title:q.title||"Cotización", client:q.client_name||"",
       date:(q.created_at||"").slice(0,10), discipline:q.discipline||"", currency:q.currency||"CLP", taxPct:+q.tax_pct||0, notes:q.notes||"",
       items:(q.items&&q.items.length)?q.items:[{desc:"",qty:1,price:0,unit:"unidad"}] }; renderView(); }
     return;
   }
-  const ql=loadQuotes(a).find(x=>x.id===id); if(ql){ quoteDraft=JSON.parse(JSON.stringify(ql)); renderView(); }
+  const ql=loadQuotes(a).find(x=>x.id===id); if(ql){ quoteDraft=JSON.parse(JSON.stringify(ql)); if(!quoteDraft.docType) quoteDraft.docType="cotizacion"; renderView(); }
 }
 async function qDeleteSaved(id){
   if(!confirm("¿Eliminar esta cotización?"))return; const a=me();
@@ -725,7 +831,7 @@ async function qDeleteSaved(id){
 function qExport(){
   readQuoteForm(); const a=me(), t=quoteTotals(), cur=quoteDraft.currency;
   document.getElementById("printArea").innerHTML=`
-    <div class="p-head"><div class="brand"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>ANIMA · ${esc(a.name)}</div><small>Cotización · ${esc(quoteDraft.date)}</small></div>
+    <div class="p-head"><div class="brand"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>ANIMA · ${esc(a.name)}</div><small>${esc(docFmt(quoteDraft.docType).t)} · ${esc(quoteDraft.date)}</small></div>
     <h1 class="p-name">${esc(quoteDraft.title)}</h1>
     <div class="p-sub">${esc(quoteDraft.discipline||a.role||"")} · Cliente: ${esc(quoteDraft.client||"—")}</div>
     <table class="p-table"><thead><tr><th>Concepto</th><th>Cant.</th><th>Unidad</th><th>P. unitario</th><th>Subtotal</th></tr></thead><tbody>
@@ -1190,7 +1296,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
    RENDER + EVENTOS
    =========================================================== */
 function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); }
-function go(view){ state.view=view; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); if(view==="comunidad") loadPosts(); if(view==="equipo"||view==="recordatorios") syncTeam(me().clan); }
+function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); if(view==="comunidad") loadPosts(); if(view==="equipo"||view==="recordatorios") syncTeam(me().clan); }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 function openLumbre(){ drawer().classList.add("open"); dbg().classList.add("open"); renderLumbre(); }
@@ -1215,6 +1321,11 @@ document.addEventListener("click", e=>{
   const pcf=e.target.closest("[data-pubcfg]"); if(pcf){ togglePublic(pcf.dataset.pubcfg); return; }
   const mz=e.target.closest("[data-mapsize]"); if(mz){ setMapSize(mz.dataset.mapsize); return; }
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
+  const cfmt=e.target.closest("[data-cotfmt]"); if(cfmt){ cotUseFormat(cfmt.dataset.cotfmt); return; }
+  const ctd=e.target.closest("[data-cottpldel]"); if(ctd){ cotDelTemplate(ctd.dataset.cottpldel); return; }
+  const ctp=e.target.closest("[data-cottpl]"); if(ctp){ cotUseTemplate(ctp.dataset.cottpl); return; }
+  if(e.target.closest("[data-cotblank]")){ cotBlank(); return; }
+  if(e.target.closest("[data-cotback]")){ cotGallery(); return; }
   const ql=e.target.closest("[data-qload]"); if(ql){ qLoad(ql.dataset.qload); return; }
   const qx=e.target.closest("[data-qdelete]"); if(qx){ qDeleteSaved(qx.dataset.qdelete); return; }
   const qd=e.target.closest("[data-qdel]"); if(qd){ qDelItem(+qd.dataset.qdel); return; }
@@ -1228,6 +1339,7 @@ document.addEventListener("click", e=>{
     else if(t.dataset.mode){ state.lumbreMode=t.dataset.mode; save(); renderLumbre(); }
     return; }
   if(e.target.closest("#q_new")) qNew();
+  if(e.target.closest("#q_tpl")) cotSaveTemplate();
   if(e.target.closest("#q_save")) qSave();
   if(e.target.closest("#q_export")) qExport();
   if(e.target.closest("#createAlmaBtn")) openAuth();
@@ -1269,7 +1381,8 @@ document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target.id==="commentInput"){ const b=document.getElementById("commentSend"); if(b) sendComment(b.dataset.post); }
 });
 document.addEventListener("change", e=>{
-  const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); }
+  const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); return; }
+  const qf=e.target.closest("#q_fmt"); if(qf){ readQuoteForm(); renderView(); }
 });
 function sendLumbre(){ const i=document.getElementById("lumbreInput"), v=i.value.trim(); if(!v)return; i.value=""; lumbreAsk(v); }
 
