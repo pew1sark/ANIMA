@@ -163,7 +163,8 @@ const NAV_TREE = [
   ]}
 ];
 function navItem(n, sub){ return `<div class="nav-item ${sub?'sub':''} ${state.view===n.v?'active':''}" data-view="${n.v}"><span class="ico">${n.ico}</span>${n.t}</div>`; }
-function reinoOpen(key){ if(!state.navOpen) state.navOpen={}; return state.navOpen[key]!==false; }
+/* Los reinos arrancan COLABSADOS: el Alma los despliega para descubrir. */
+function reinoOpen(key){ if(!state.navOpen) state.navOpen={}; return state.navOpen[key]===true; }
 function toggleReino(key){ if(!state.navOpen) state.navOpen={}; state.navOpen[key]=!reinoOpen(key); save(); renderNav(); }
 function renderNav(){
   const cfg=getCfg(me());
@@ -412,7 +413,7 @@ async function saveIdentity(){
     a.instagram=patch.instagram; a.portfolio_url=patch.portfolio_url; a.shop_url=patch.shop_url; a.tags=patch.tags;
     a.role=patch.discipline||a.role;
     // Esencia: completar el perfil con lo esencial (una sola vez)
-    if(window.AnimaState && patch.bio && patch.discipline && (patch.tags||[]).length) AnimaState.addEsenciaOnce("perfil",20,"Completar perfil");
+    if(window.AnimaState && patch.bio && patch.discipline && (patch.tags||[]).length){ AnimaState.addEsenciaOnce("perfil",20,"Completar perfil"); setTimeout(maybeLevelGuide,400); }
     renderAll(); updateAuthUI(await Cloud.session()); alert("Identidad guardada ✓");
   }catch(e){ alert("No se pudo guardar (¿aplicaste la migración 0003?): "+(e.message||e)); }
 }
@@ -1040,7 +1041,7 @@ async function sendPost(){
   const title=document.getElementById("postTitle").value.trim(), body=document.getElementById("postBody").value.trim();
   if(!title && !body) return;
   try{ await Cloud.insertRow("posts",{author_alma_id:a.almaId,kind:"post",title,body});
-    if(window.AnimaState) AnimaState.addEsencia(15,"Publicar en comunidad");
+    if(window.AnimaState){ AnimaState.addEsencia(15,"Publicar en comunidad"); setTimeout(maybeLevelGuide,400); }
     await loadPosts(); }
   catch(e){ alert("No se pudo publicar: "+(e.message||e)); }
 }
@@ -1069,7 +1070,7 @@ async function sendComment(postId){
   const a=me(); if(!a.live){ alert("Entra a tu Alma para comentar."); return; }
   const el=document.getElementById("commentInput"); const body=el.value.trim(); if(!body) return; el.value="";
   try{ await Cloud.insertRow("comments",{post_id:postId,author_alma_id:a.almaId,body});
-    if(window.AnimaState) AnimaState.addEsencia(5,"Comentar en comunidad");
+    if(window.AnimaState){ AnimaState.addEsencia(5,"Comentar en comunidad"); setTimeout(maybeLevelGuide,400); }
     loadComments(postId); }catch(e){ alert("No se pudo comentar: "+(e.message||e)); }
 }
 function closePost(){ document.getElementById("postModal").classList.remove("open"); }
@@ -1575,7 +1576,9 @@ async function loadMyAlma(){
   if(window.AnimaState){ try{
     const st=AnimaState.get(); if(a.name) st.name=a.name; if(a.affinity) st.affinity=a.affinity; AnimaState.save(st);
     AnimaState.syncCloud(row);   // sube/reconciliar Esencia y Afinidad (best-effort)
+    maybeLevelGuide();           // LUMBRE guía si el Alma despertó un nuevo nivel
   }catch(e){} }
+  applyHashView();               // entrada directa a Clan/Santuario desde el Home
 }
 function updateAuthUI(session){
   const btn=document.getElementById("authBtn"); if(!btn) return;
@@ -1585,6 +1588,74 @@ function updateAuthUI(session){
 function openAuth(){ if(!Cloud.enabled){ alert("Conexión a la nube no disponible. ANIMA funciona en modo Fundadores local."); return; }
   document.getElementById("authModal").classList.add("open"); document.getElementById("authMsg").textContent=""; }
 function closeAuth(){ document.getElementById("authModal").classList.remove("open"); }
+
+/* ---------- Menú del Alma (cabecera, junto a LUMBRE) ---------- */
+function renderAlmaMenu(){
+  const pop=document.getElementById("almaPop"); if(!pop) return;
+  const items=[`<button class="apop-item" data-almago="mialma">✦ Mi Alma</button>`];
+  if(planAllows("clanpanel")) items.push(`<button class="apop-item" data-almago="clanpanel">❂ Mi Clan</button>`);
+  if(planAllows("santuario")) items.push(`<button class="apop-item" data-almago="santuario">🜁 Santuario</button>`);
+  items.push(`<div class="apop-sep"></div>`);
+  items.push(`<button class="apop-item" id="almaSwitch">⤿ Cambiar de Alma</button>`);
+  items.push(`<button class="apop-item danger" id="almaLogout">⏻ Cerrar sesión</button>`);
+  pop.innerHTML=items.join("");
+}
+function toggleAlmaMenu(){ const pop=document.getElementById("almaPop"); if(!pop) return;
+  if(pop.classList.contains("open")){ pop.classList.remove("open"); return; }
+  renderAlmaMenu(); pop.classList.add("open"); }
+function closeAlmaMenu(){ const pop=document.getElementById("almaPop"); if(pop) pop.classList.remove("open"); }
+
+/* ---------- Entrada directa a una vista desde el Home (#go=vista) ---------- */
+function applyHashView(){
+  const m=(location.hash||"").match(/go=([a-z_]+)/i); if(!m) return;
+  const v=m[1]; history.replaceState(null,"",location.pathname+location.search);
+  if(planAllows(v)) go(v);
+}
+
+/* ---------- LUMBRE: guía contextual en cada nivel desbloqueado ---------- */
+function lumbreLevelTip(l){
+  const u=(l.unlocks||[]).join(", ");
+  const map={
+    CHISPA:`Encendiste tu <b>Chispa</b> ✨. Empieza por <b>Mi Alma</b>: completa tu identidad y sube tu primera obra. Cada acción te da Esencia y te acerca al siguiente nivel.`,
+    RAIZ:`¡Subiste a <b>Raíz</b> 🌱! Desbloqueaste <b>${u}</b>. Guarda tus clientes y contactos aquí para no perder ningún vínculo.`,
+    PULSO:`Tu Alma late: nivel <b>Pulso</b> 💓. Ahora tienes <b>${u}</b>. Crea tu primer proyecto y muévele los estados a medida que avanza.`,
+    HUELLA:`Dejas <b>Huella</b> 📜. Se abrió tu <b>${u}</b>. Sube PDFs e imágenes y arma tu portafolio para mostrar al mundo.`,
+    TOTEM:`Despertó <b>Tótem</b> 🔥… y conmigo, <b>LUMBRE</b>, como tu IA. Pídeme leer archivos y ordenar ideas. Desbloqueaste: <b>${u}</b>.`,
+    AURA:`Tu <b>Aura</b> 🜂 irradia. Activaste <b>${u}</b>: deja que ANIMA trabaje por ti con recordatorios, flujos y automatizaciones.`,
+    ANIMA:`Eres <b>ANIMA</b> ∞. El ecosistema completo es tuyo: <b>${u}</b>. Gracias por llegar hasta aquí — esto apenas empieza.`
+  };
+  return map[l.key]||`Nuevo nivel: <b>${esc(l.name)}</b>. Desbloqueaste: ${esc(u)}.`;
+}
+function maybeLevelGuide(){
+  if(!window.AnimaState) return;
+  const p=AnimaState.progress(), key=p.level.key;
+  const order=AnimaState.LEVELS.map(l=>l.key);
+  const seen=localStorage.getItem("anima_lumbre_level_seen");
+  if(seen===key) return;
+  // Guiar solo al AVANZAR (no al retroceder); sembrar 'seen' sin molestar si baja.
+  if(seen && order.indexOf(key)<=order.indexOf(seen)){ localStorage.setItem("anima_lumbre_level_seen",key); return; }
+  localStorage.setItem("anima_lumbre_level_seen",key);
+  state.chat=state.chat||[]; state.chat.push({role:"lum",text:lumbreLevelTip(p.level)}); save();
+  openLumbre();
+}
+
+/* ---------- Tirar para refrescar (móvil) ---------- */
+function setupPullToRefresh(){
+  if(document.querySelector(".ptr")) return;
+  const ind=document.createElement("div"); ind.className="ptr";
+  ind.innerHTML='<div style="display:grid;place-items:center"><span class="ring"></span><span class="lbl">Tira para actualizar</span></div>';
+  document.body.appendChild(ind); const lbl=ind.querySelector(".lbl");
+  let startY=0,pulling=false,dist=0; const TRIG=70;
+  const view=()=>document.getElementById("view");
+  const atTop=()=>{ const v=view(); return (window.scrollY||0)<=0 && (!v||v.scrollTop<=0); };
+  window.addEventListener("touchstart",e=>{ if(!atTop()){pulling=false;return;} startY=e.touches[0].clientY; pulling=true; dist=0; },{passive:true});
+  window.addEventListener("touchmove",e=>{ if(!pulling) return; dist=e.touches[0].clientY-startY;
+    if(dist<=0){ ind.style.height="0px"; return; } const h=Math.min(90,dist*0.5); ind.style.height=h+"px";
+    if(lbl) lbl.textContent=h>=TRIG*0.5?"Suelta para actualizar":"Tira para actualizar"; },{passive:true});
+  window.addEventListener("touchend",()=>{ if(!pulling) return; pulling=false;
+    if(ind.offsetHeight>=TRIG*0.5){ ind.classList.add("spin"); ind.style.height="52px"; if(lbl) lbl.textContent="Actualizando…";
+      setTimeout(()=>location.reload(),450); } else { ind.style.height="0px"; } });
+}
 async function doAuth(mode){
   const g=id=>document.getElementById(id).value, email=g("authEmail").trim(), pass=g("authPass"),
     name=g("authName").trim(), code=(g("authCode")||"").trim().toUpperCase(), msg=document.getElementById("authMsg");
@@ -1601,8 +1672,11 @@ async function doAuth(mode){
     closeAuth(); await refreshAuth();
   }catch(e){ msg.textContent=e.message||"No se pudo completar."; }
 }
-async function logout(){ if(!confirm("¿Salir de tu Alma?"))return; await Cloud.signOut();
-  isCreator=false; state.viewAs=null; state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; state.view="mialma"; save(); renderAll(); updateAuthUI(null); }
+/* Cerrar sesión → vuelve al Home de ANIMA (la página principal por defecto). */
+async function logout(){ if(!confirm("¿Cerrar sesión de tu Alma?"))return; try{await Cloud.signOut();}catch(e){} location.href="home.html"; }
+/* Cambiar de Alma → cierra sesión y abre el acceso para entrar con otra. */
+async function switchAlmaSession(){ try{await Cloud.signOut();}catch(e){}
+  isCreator=false; state.viewAs=null; state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; state.view="mialma"; save(); renderAll(); updateAuthUI(null); openAuth(); }
 
 /* --- Editar perfil --- */
 function openEdit(){ const a=me(); if(!a.live){ if(Cloud.enabled){ openAuth(); } else { alert("Entra a tu Alma para editar."); } return; }
@@ -1652,7 +1726,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
    RENDER + EVENTOS
    =========================================================== */
 function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); }
-function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); if(view==="comunidad") loadPosts(); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
+function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad") loadPosts(); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 function openLumbre(){ drawer().classList.add("open"); dbg().classList.add("open"); renderLumbre(); }
@@ -1740,7 +1814,11 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#levelClose")||e.target.id==="levelModal") closeLevels();
   if(e.target.closest("#sharePf")) sharePortfolio();
   if(e.target.closest("[data-export]")) exportPDF();
-  if(e.target.closest("#authBtn")){ const b=e.target.closest("#authBtn"); b.dataset.in?logout():openAuth(); }
+  const ag=e.target.closest("[data-almago]"); if(ag){ closeAlmaMenu(); go(ag.dataset.almago); return; }
+  if(e.target.closest("#almaSwitch")){ closeAlmaMenu(); switchAlmaSession(); return; }
+  if(e.target.closest("#almaLogout")){ closeAlmaMenu(); logout(); return; }
+  if(e.target.closest("#authBtn")){ const b=e.target.closest("#authBtn"); b.dataset.in?toggleAlmaMenu():openAuth(); return; }
+  else if(!e.target.closest("#almaPop")) closeAlmaMenu();
   if(e.target.closest("#authClose")||e.target.id==="authModal") closeAuth();
   if(e.target.closest("#authSignIn")) doAuth("in");
   if(e.target.closest("#authSignUp")) doAuth("up");
@@ -1817,6 +1895,7 @@ async function installApp(){
 
 /* ---------- Boot ---------- */
 renderAll();
+setupPullToRefresh();
 refreshAuth();
 if("serviceWorker" in navigator){ window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
 if(!localStorage.getItem("anima_tour_done")){ setTimeout(()=>{ if(!localStorage.getItem("anima_tour_done")) startTour(); }, 1100); }
