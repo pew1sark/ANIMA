@@ -447,11 +447,26 @@ async function uploadImgField(fileInput){
   }catch(err){ setS("No se pudo subir: "+(err.message||err)); }
   done();
 }
-function vPortafolio(a){
+const AVAIL_OPTS=[
+  ["","Sin indicar"],
+  ["Disponible para proyectos","🟢 Disponible para proyectos"],
+  ["Disponible (freelance)","🟢 Disponible · freelance"],
+  ["Agenda limitada","🟡 Agenda limitada"],
+  ["No disponible por ahora","⚪ No disponible por ahora"]
+];
+function availBadge(v){ if(!v) return ""; const dot=v.startsWith("No")?"⚪":v.startsWith("Agenda")?"🟡":"🟢";
+  const cls=v.startsWith("No")?"":v.startsWith("Agenda")?"warn":"ok"; return `<span class="pill ${cls} pf-avail">${dot} ${esc(v)}</span>`; }
+function pfLinks(a){ const L=[]; if(a.website)L.push(["Sitio web",a.website]);
+  if(a.instagram)L.push(["Instagram",a.instagram.startsWith("http")?a.instagram:"https://instagram.com/"+a.instagram.replace("@","")]);
+  if(a.portfolio_url)L.push(["Portafolio",a.portfolio_url]); if(a.shop_url)L.push(["Tienda",a.shop_url]); return L; }
+function isPublicPf(a){ return !(a.visibility && a.visibility.public===false); }
+
+function pfHero(a){
   const banner = (a.banner && isImgUrl(a.banner))
     ? `background-image:url('${esc(a.banner)}')`
     : `background:linear-gradient(135deg,${a.color||'#b8a892'},${shade(a.color||'#b8a892',-40)})`;
-  const hero = `<div class="card s12 pf-hero">
+  const pub=isPublicPf(a);
+  return `<div class="card s12 pf-hero">
       <div class="pf-hero-banner" style="${banner}"></div>
       <div class="pf-hero-bar">
         <div class="pf-hero-id">${avatarHTML(a,"lg")}
@@ -459,26 +474,101 @@ function vPortafolio(a){
             <small class="muted">${esc([a.discipline||a.role,a.specialty].filter(Boolean).join(" · ")||"Tu portafolio")} · ${a.portfolio.length} obra${a.portfolio.length===1?"":"s"}</small></div>
         </div>
         <div class="pf-hero-acts">
-          ${a.live?`<button class="btn ghost sm" id="sharePf">↗ Compartir</button>`:""}
+          <span class="pill ${pub?'ok':''}" title="Visibilidad de tu portafolio">${pub?'◉ Público':'○ Privado'}</span>
+          ${a.live?`<a class="btn ghost sm" href="portfolio.html?alma=${a.almaId}" target="_blank" rel="noopener">Ver público ↗</a>`:""}
+          <button class="btn secondary sm" data-pfedit>✎ Personalizar</button>
           <button class="btn gold sm" data-add="obra">＋ Subir obra</button>
         </div>
       </div>
     </div>`;
-  const grid = a.portfolio.length
-    ? `<div class="card s12"><div class="pf-grid">${a.portfolio.map((p,i)=>{
-        const cover=isImgUrl(p.link)?`background-image:url('${esc(p.link)}');background-size:cover;background-position:center`
-          :`background:linear-gradient(145deg,${p.c},${shade(p.c,-28)})`;
-        return `<div class="pf-card">
-          <div class="pf-cover" style="${cover}">${isImgUrl(p.link)?"":`<span>${initials(p.t)}</span>`}<div class="pf-acts">${acts("obra",i)}</div></div>
-          <div class="pf-cap"><b>${esc(p.t)}</b><small>${esc([p.k,p.year].filter(Boolean).join(" · "))}</small>${p.desc?`<p>${esc(p.desc)}</p>`:""}${p.link&&!isImgUrl(p.link)?`<a href="${esc(p.link)}" target="_blank" rel="noopener" class="pf-link">Ver →</a>`:""}</div>
-        </div>`; }).join("")}</div></div>`
-    : `<div class="card s12 pf-empty">
+}
+function pfInfoCard(a){
+  const loc=a.territory||a.country||""; const services=a.tags||[]; const links=pfLinks(a);
+  const head=a.headline||[a.discipline||a.role,a.specialty].filter(Boolean).join(" · ");
+  return `<div class="card s4 pf-info">
+    <div class="pf-info-top">${avatarHTML(a,"lg")}
+      <h3>${esc(a.name)}</h3>
+      ${head?`<p class="pf-headline">${esc(head)}</p>`:""}
+      ${loc?`<div class="pf-info-loc">⌖ ${esc(loc)}</div>`:""}
+      ${availBadge(a.availability)}
+    </div>
+    <div class="pf-info-stats">
+      <div><b>${a.portfolio.length}</b><small>Obras</small></div>
+      <div><b>${(a.xp||0).toLocaleString("es-CL")}</b><small>XP</small></div>
+      <div><b>${isPublicPf(a)?"Público":"Privado"}</b><small>Estado</small></div>
+    </div>
+    ${a.bio?`<div class="pf-info-sec"><span class="pf-info-h">Sobre mí</span><p>${esc(a.bio)}</p></div>`:""}
+    ${services.length?`<div class="pf-info-sec"><span class="pf-info-h">Servicios</span><div class="pf-chips">${services.map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div>`:""}
+    ${links.length?`<div class="pf-info-sec"><span class="pf-info-h">Enlaces</span><div class="pf-links">${links.map(([t,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${t} ↗</a>`).join("")}</div></div>`:""}
+    <button class="btn secondary sm" data-pfedit style="width:100%;margin-top:14px">✎ Editar tarjeta y portada</button>
+  </div>`;
+}
+function pfEditor(a){
+  const f=(id,l,v,ph="")=>`<div class="field"><label>${l}</label><input id="${id}" value="${esc(v||"")}" placeholder="${ph}"></div>`;
+  const availSel=`<div class="field"><label>Disponibilidad</label><select id="pf_avail">${AVAIL_OPTS.map(([val,lab])=>`<option value="${esc(val)}" ${val===(a.availability||"")?'selected':''}>${lab}</option>`).join("")}</select></div>`;
+  return `<div class="card s12">
+    <div class="section-title"><h2 style="font-size:18px">Personaliza tu portafolio</h2><div class="spacer"></div>
+      <button class="btn ghost sm" data-pfcancel>Cancelar</button><button class="btn sm" id="pfSave">Guardar</button></div>
+    <div class="row" style="border:0;padding:2px 0 12px"><div class="grow"><b>Portafolio público</b><br><small class="muted">${a.live?"Si lo apagas, tu enlace muestra el perfil como privado para las demás Almas.":"Entra a tu Alma en la nube para publicar tu portafolio."}</small></div>
+      <button class="toggle ${isPublicPf(a)?'on':''}" data-pfpublic></button></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div style="flex:2;min-width:240px">${imgUpField("pf_banner","Banner / portada", a.banner, "banner")}
+        <small class="muted">Medidas recomendadas: <b>1600 × 400 px</b> (proporción 4:1). JPG o PNG, hasta 15 MB. Deja el centro despejado: en móvil se recorta a los lados.</small></div>
+      <div style="flex:1;min-width:180px">${imgUpField("pf_photo","Foto de perfil", a.photo, "perfil")}
+        <small class="muted">Recomendado: <b>400 × 400 px</b>, cuadrada.</small></div>
+    </div>
+    <div class="section-title" style="margin-top:12px"><h2 style="font-size:16px">Tarjeta de información</h2></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><div style="flex:2;min-width:200px">${f("pf_headline2","Titular (ej: Artista visual · Muralista)",a.headline)}</div><div style="flex:1;min-width:160px">${f("pf_loc","Ubicación",a.territory||a.country,"Ciudad, país")}</div></div>
+    ${availSel}
+    <div class="field"><label>Sobre mí</label><textarea id="pf_bio" rows="3" placeholder="Quién eres, qué haces y qué te mueve como creador.">${esc(a.bio||"")}</textarea></div>
+    ${f("pf_tags","Servicios / habilidades (separados por coma)",(a.tags||[]).join(", "),"Muralismo, Fotografía, Dirección creativa")}
+    <div class="section-title" style="margin-top:8px"><h2 style="font-size:15px">Enlaces</h2></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><div style="flex:1;min-width:160px">${f("pf_web","Sitio web",a.website)}</div><div style="flex:1;min-width:160px">${f("pf_ig","Instagram",a.instagram)}</div></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><div style="flex:1;min-width:160px">${f("pf_port","Portafolio externo",a.portfolio_url)}</div><div style="flex:1;min-width:160px">${f("pf_shop","Tienda / catálogo",a.shop_url)}</div></div>
+  </div>`;
+}
+function pfWorks(a){
+  return a.portfolio.length
+    ? `<div class="card s8"><div class="section-title"><h2 style="font-size:18px">Obras</h2><div class="spacer"></div><button class="btn sm" data-add="obra">＋ Subir obra</button></div>
+        <div class="pf-grid">${a.portfolio.map((p,i)=>{
+          const cover=isImgUrl(p.link)?`background-image:url('${esc(p.link)}');background-size:cover;background-position:center`
+            :`background:linear-gradient(145deg,${p.c},${shade(p.c,-28)})`;
+          return `<div class="pf-card">
+            <div class="pf-cover" style="${cover}">${isImgUrl(p.link)?"":`<span>${initials(p.t)}</span>`}<div class="pf-acts">${acts("obra",i)}</div></div>
+            <div class="pf-cap"><b>${esc(p.t)}</b><small>${esc([p.k,p.year].filter(Boolean).join(" · "))}</small>${p.desc?`<p>${esc(p.desc)}</p>`:""}${p.link&&!isImgUrl(p.link)?`<a href="${esc(p.link)}" target="_blank" rel="noopener" class="pf-link">Ver →</a>`:""}</div>
+          </div>`; }).join("")}</div></div>`
+    : `<div class="card s8 pf-empty">
         <span class="pf-empty-ico">▦</span>
         <h2 style="margin:10px 0 4px;letter-spacing:-.03em">Tu portafolio empieza aquí</h2>
-        <p class="muted" style="max-width:440px;margin:0 auto 18px">Sube tus obras en <b>alta calidad</b> — así se verán en tu perfil público, profesional como en Behance. Cada obra suma XP.</p>
+        <p class="muted" style="max-width:440px;margin:0 auto 18px">Sube tus obras en <b>alta calidad</b> — se verán en tu perfil público, profesional como en Behance. Cada obra suma XP.</p>
         <button class="btn gold" data-add="obra">＋ Subir mi primera obra</button>
       </div>`;
-  return `<div class="grid">${hero}${grid}</div>`;
+}
+function vPortafolio(a){
+  if(state.pfEdit) return `<div class="grid">${pfHero(a)}${pfEditor(a)}</div>`;
+  return `<div class="grid">${pfHero(a)}${pfInfoCard(a)}${pfWorks(a)}</div>`;
+}
+function portfolioEdit(){ const a=me(); if(!a.live){ if(Cloud.enabled){ openAuth(); } else { alert("Entra a tu Alma para personalizar tu portafolio."); } return; } state.pfEdit=true; renderView(); }
+function portfolioCancel(){ state.pfEdit=false; renderView(); }
+async function togglePortfolioPublic(){
+  const a=me(); if(!a.live){ alert("Entra a tu Alma en la nube para publicar tu portafolio."); return; }
+  a.visibility=a.visibility||{}; a.visibility.public=!isPublicPf(a);
+  try{ await Cloud.updateAlma(a.almaId,{visibility:a.visibility}); }catch(e){ alert("No se pudo cambiar la visibilidad: "+(e.message||e)); }
+  renderView();
+}
+async function savePortfolioProfile(){
+  const a=me(); if(!a.live){ alert("Entra a tu Alma para guardar tu portafolio."); return; }
+  const g=id=>{const e=document.getElementById(id);return e?e.value.trim():"";};
+  const patch={ banner_url:g("pf_banner"), avatar_url:g("pf_photo"), headline:g("pf_headline2"),
+    availability:g("pf_avail"), territory:g("pf_loc"), bio:g("pf_bio"), website:g("pf_web"),
+    instagram:g("pf_ig"), portfolio_url:g("pf_port"), shop_url:g("pf_shop"),
+    tags:g("pf_tags").split(",").map(s=>s.trim()).filter(Boolean) };
+  try{ await Cloud.updateAlma(a.almaId,patch);
+    a.banner=patch.banner_url; a.photo=patch.avatar_url; a.headline=patch.headline; a.availability=patch.availability;
+    a.territory=patch.territory; a.bio=patch.bio; a.website=patch.website; a.instagram=patch.instagram;
+    a.portfolio_url=patch.portfolio_url; a.shop_url=patch.shop_url; a.tags=patch.tags;
+    state.pfEdit=false; renderAll(); alert("Portafolio actualizado ✓");
+  }catch(e){ alert("No se pudo guardar: "+(e.message||e)); }
 }
 
 /* --- Proyectos: Flujo de trabajo (kanban) --- */
@@ -1350,7 +1440,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
    RENDER + EVENTOS
    =========================================================== */
 function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); }
-function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); if(view==="comunidad") loadPosts(); if(view==="equipo"||view==="recordatorios") syncTeam(me().clan); }
+function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); if(view==="comunidad") loadPosts(); if(view==="equipo"||view==="recordatorios") syncTeam(me().clan); }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 function openLumbre(){ drawer().classList.add("open"); dbg().classList.add("open"); renderLumbre(); }
@@ -1375,6 +1465,9 @@ document.addEventListener("click", e=>{
   const pcf=e.target.closest("[data-pubcfg]"); if(pcf){ togglePublic(pcf.dataset.pubcfg); return; }
   const mz=e.target.closest("[data-mapsize]"); if(mz){ setMapSize(mz.dataset.mapsize); return; }
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
+  if(e.target.closest("[data-pfedit]")){ portfolioEdit(); return; }
+  if(e.target.closest("[data-pfcancel]")){ portfolioCancel(); return; }
+  if(e.target.closest("[data-pfpublic]")){ togglePortfolioPublic(); return; }
   const cfmt=e.target.closest("[data-cotfmt]"); if(cfmt){ cotUseFormat(cfmt.dataset.cotfmt); return; }
   const ctd=e.target.closest("[data-cottpldel]"); if(ctd){ cotDelTemplate(ctd.dataset.cottpldel); return; }
   const ctp=e.target.closest("[data-cottpl]"); if(ctp){ cotUseTemplate(ctp.dataset.cottpl); return; }
@@ -1393,6 +1486,7 @@ document.addEventListener("click", e=>{
     else if(t.dataset.mode){ state.lumbreMode=t.dataset.mode; save(); renderLumbre(); }
     return; }
   if(e.target.closest("#q_new")) qNew();
+  if(e.target.closest("#pfSave")) savePortfolioProfile();
   if(e.target.closest("#q_tpl")) cotSaveTemplate();
   if(e.target.closest("#q_save")) qSave();
   if(e.target.closest("#q_export")) qExport();
