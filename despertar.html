@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#08080b" />
+  <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
+  <title>Despertar — ANIMA Alpha</title>
+  <meta name="description" content="El rito de inicio de ANIMA: despierta, crea tu Alma y comienza tu viaje." />
+  <link rel="stylesheet" href="assets/css/umbral.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/anima-state.js"></script>
+</head>
+<body class="rite">
+  <div class="field"><div class="core"></div></div>
+  <main class="rite-wrap" id="scene"><!-- las escenas se inyectan aquí --></main>
+
+  <script src="assets/js/rite.js"></script>
+  <script>
+  /* ===========================================================
+     EL RITO DE ENTRADA — controlador de escenas
+     Despertar → Crear Alma → Primer Despertar → Tutorial → Logro
+     =========================================================== */
+  var scene = document.getElementById("scene");
+  var form = { name: "", email: "", pass: "", code: "", affinity: "" };
+
+  function render(html) {
+    scene.classList.add("fade-out");
+    setTimeout(function () {
+      scene.innerHTML = html;
+      scene.classList.remove("fade-out");
+      scene.scrollTop = 0; window.scrollTo(0, 0);
+    }, 260);
+  }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+  /* ---------- 1 · DESPERTAR / ALPHA ---------- */
+  function sceneAlpha() {
+    render(
+      '<span class="eyebrow"><span class="ln"></span>Despertar<span class="ln"></span></span>' +
+      '<div class="lumbre-core" style="width:120px;height:120px">' +
+        '<span class="halo"></span><span class="ring r1"></span><span class="ring r2"></span>' +
+        '<img src="assets/img/lumbre.svg" width="84" height="100" alt="LUMBRE" /></div>' +
+      '<h1 class="rite" style="font-size:clamp(34px,7vw,64px)">ANIMA Alpha</h1>' +
+      '<div class="panel center" style="margin-top:26px">' +
+        '<p class="rite-sub" style="margin-top:0;font-size:16px">Bienvenido a <b style="color:var(--gold)">ANIMA Alpha</b>. ' +
+        'Esta es una versión experimental. Todavía pueden existir errores. ' +
+        'Las primeras Almas ayudarán a perfeccionar ANIMA.</p>' +
+        '<div style="margin:18px 0 4px"><span class="code-chip">' + AnimaState.ALPHA_CODE + '</span></div>' +
+        '<p class="hint" style="text-align:center">Guarda este código. Lo necesitarás para nacer.</p>' +
+        '<div class="actions" style="margin-top:22px">' +
+          '<button class="cbtn" id="acceptBtn">Acepto despertar</button>' +
+        '</div>' +
+      '</div>' +
+      '<p class="seal">Acceso por invitación · The Founding Era</p>'
+    );
+    bind("acceptBtn", sceneCrear);
+  }
+
+  /* ---------- 2 · CREAR ALMA ---------- */
+  function sceneCrear() {
+    var afn = AnimaState.AFINIDADES.map(function (a) {
+      return '<button type="button" class="afn" data-afn="' + a.key + '">' +
+        '<span class="g">' + a.glyph + '</span><b>' + a.name + '</b><small>' + esc(a.desc) + '</small></button>';
+    }).join("");
+
+    render(
+      '<span class="eyebrow"><span class="ln"></span>Crear Alma<span class="ln"></span></span>' +
+      '<h1 class="rite" style="font-size:clamp(30px,6vw,52px)">Da forma a tu Alma</h1>' +
+      '<p class="rite-sub">Aquí no hay usuarios. Hay Almas. Esto es lo único que necesitamos para que nazcas.</p>' +
+      '<form class="panel" id="crearForm" style="margin-top:24px" autocomplete="on" novalidate>' +
+        '<div class="field-row"><label>Nombre del Alma</label>' +
+          '<input id="f_name" name="name" placeholder="¿Cómo te llamarás dentro de ANIMA?" autocomplete="name" /></div>' +
+        '<div class="field-row"><label>Correo</label>' +
+          '<input id="f_email" name="email" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" /></div>' +
+        '<div class="field-row"><label>Clave</label>' +
+          '<input id="f_pass" name="password" type="password" placeholder="Una clave secreta" autocomplete="new-password" /></div>' +
+        '<div class="field-row"><label>Código Alpha</label>' +
+          '<input id="f_code" name="code" placeholder="' + AnimaState.ALPHA_CODE + '" autocomplete="off" /></div>' +
+
+        '<div class="field-row" style="margin-top:24px"><label>Tu Afinidad</label>' +
+          '<p class="hint" style="margin-top:0">Tu naturaleza creadora. No te limita: define con qué energía empiezas el camino.</p>' +
+          '<div class="afn-grid">' + afn + '</div></div>' +
+
+        '<div class="trust">' +
+          '<h4>🔒 Tu Alma es tuya</h4>' +
+          '<ul>' +
+            '<li>Nunca compartiremos ni venderemos ningún dato de tu Alma.</li>' +
+            '<li>Tú decides qué se hace público y qué permanece privado.</li>' +
+            '<li>Tus finanzas, memorias y proyectos son privados por defecto.</li>' +
+            '<li>Tu clave se cifra; ni el equipo de ANIMA puede verla.</li>' +
+            '<li>Puedes borrar tu Alma y todos tus datos cuando quieras.</li>' +
+          '</ul>' +
+          '<label class="agree"><input type="checkbox" id="f_agree" />' +
+            '<span>Acepto las <a href="legal.html#privacidad" target="_blank" style="color:var(--gold)">políticas de privacidad</a> ' +
+            'y <a href="legal.html#terminos" target="_blank" style="color:var(--gold)">términos</a> de ANIMA. ' +
+            'Entiendo que mi Alma controla su información.</span></label>' +
+        '</div>' +
+
+        '<div class="err" id="f_err"></div>' +
+        '<div class="actions" style="margin-top:8px">' +
+          '<button type="button" class="cbtn ghost" id="backBtn">Volver</button>' +
+          '<button type="submit" class="cbtn" id="nacerBtn">Nacer ✦</button>' +
+        '</div>' +
+      '</form>'
+    );
+
+    // restaurar valores y afinidad
+    document.getElementById("f_name").value = form.name;
+    document.getElementById("f_email").value = form.email;
+    document.getElementById("f_code").value = form.code;
+    if (form.affinity) {
+      var sel = scene.querySelector('[data-afn="' + form.affinity + '"]');
+      if (sel) sel.classList.add("on");
+    }
+
+    scene.querySelectorAll("[data-afn]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        scene.querySelectorAll(".afn").forEach(function (x) { x.classList.remove("on"); });
+        b.classList.add("on"); form.affinity = b.dataset.afn;
+      });
+    });
+    bind("backBtn", sceneAlpha);
+    document.getElementById("crearForm").addEventListener("submit", function (e) { e.preventDefault(); nacer(); });
+  }
+
+  async function nacer() {
+    var g = function (id) { return (document.getElementById(id).value || "").trim(); };
+    form.name = g("f_name"); form.email = g("f_email"); form.pass = document.getElementById("f_pass").value;
+    form.code = g("f_code");
+    var agree = document.getElementById("f_agree").checked;
+    var err = document.getElementById("f_err");
+
+    if (!form.name) { err.textContent = "Toda Alma necesita un nombre."; return; }
+    if (!form.email || !/.+@.+\..+/.test(form.email)) { err.textContent = "Necesitamos un correo válido para tu Alma."; return; }
+    if (!form.pass || form.pass.length < 6) { err.textContent = "Tu clave debe tener al menos 6 caracteres."; return; }
+    if (!AnimaState.checkAlphaCode(form.code)) { err.textContent = "Código inválido. Esta Alma aún no ha sido convocada."; return; }
+    if (!form.affinity) { err.textContent = "Elige la Afinidad con la que despiertas."; return; }
+    if (!agree) { err.textContent = "Acepta las políticas para que tu Alma pueda nacer."; return; }
+
+    var btn = document.getElementById("nacerBtn");
+    btn.disabled = true; btn.textContent = "Naciendo…"; err.textContent = "";
+
+    // Guarda local (primera etapa de la vida del Alma) + esencia por crear (req. 9)
+    AnimaState.createAlma({ name: form.name, email: form.email, affinity: form.affinity, code: form.code });
+    AnimaState.addEsencia(40, "Crear Alma");
+    var s = AnimaState.get(); s.steps.despertar = true; AnimaState.save(s);
+
+    // Nube sin fricción: crea la cuenta real en Supabase (auto-confirmada,
+    // sesión inmediata). Si el correo ya existe, iniciamos sesión en el acto.
+    // Si no hay nube, el rito continúa igual — ANIMA no depende de internet.
+    try {
+      if (typeof Cloud !== "undefined" && Cloud.enabled) {
+        var res = await Cloud.signUp(form.email, form.pass, form.name, form.affinity);
+        var exists = res && res.error && /registered|already/i.test(res.error.message || "");
+        var hasSession = res && res.data && res.data.session;
+        if (exists || (!hasSession && !(res && res.error))) {
+          // Alma ya convocada (o sin sesión directa): entrar con su clave.
+          try { await Cloud.signIn(form.email, form.pass); } catch (e2) {}
+        } else if (res && res.error && !exists) {
+          console.warn("ANIMA signUp:", res.error.message);
+        }
+      }
+    } catch (e) { console.warn("ANIMA nube:", e); }
+
+    scenePrimerDespertar();
+  }
+
+  /* ---------- 3 · PRIMER DESPERTAR ---------- */
+  function scenePrimerDespertar() {
+    var s = AnimaState.get(); s.steps.primerDespertar = true; AnimaState.save(s);
+    render(
+      '<span class="eyebrow"><span class="ln"></span>Primer Despertar<span class="ln"></span></span>' +
+      '<div class="lumbre-core"><span class="halo"></span><span class="ring r1"></span>' +
+        '<span class="ring r2"></span><span class="ring r3"></span>' +
+        '<img src="assets/img/lumbre.svg" width="110" height="130" alt="LUMBRE" /></div>' +
+      '<h1 class="rite" style="font-size:clamp(32px,7vw,60px)">Has nacido</h1>' +
+      '<p class="rite-lede">Pero todavía eres una chispa.</p>' +
+      '<p class="rite-sub">Cada experiencia dentro de ANIMA expandirá tu conciencia.</p>' +
+      essenceHTML() +
+      '<div class="actions"><button class="cbtn" id="viajeBtn">Comenzar viaje ✦</button></div>'
+    );
+    bind("viajeBtn", function () { sceneTutorial(0); });
+    animateEssence();
+  }
+
+  /* ---------- 4 · RITO DE INICIO / TUTORIAL ---------- */
+  var TUTORIAL = [
+    { ico: "✨", t: "Qué es Mi Alma", d: "Mi Alma es tu espacio vivo: tu identidad, tu perfil y el pulso de lo que creas. Todo nace y se recuerda aquí. No es un panel de control: es tu reflejo dentro de ANIMA." },
+    { ico: "🜂", t: "Qué son los niveles", d: "Tu Alma crece por niveles, de Chispa a ANIMA. Subir no es un trofeo: cada nivel despierta nuevas capacidades del sistema. Empiezas como Chispa." },
+    { ico: "🔓", t: "Qué se desbloquea", d: "Conexiones, Proyectos, Huella (biblioteca y portafolio), LUMBRE (tu IA), Automatizaciones y, al final, el ecosistema completo. Se abren a medida que avanzas." },
+    { ico: "💠", t: "Cómo ganas Esencia", d: "La Esencia es tu energía de crecimiento. Ganas Esencia al interactuar: completar tu perfil, dar chispas a otras Almas, publicar en la comunidad y crear. Mientras más vives ANIMA, más rápido despiertas." },
+    { ico: "∞", t: "Cómo entrar a ANIMA", d: "Al terminar este rito entrarás a tu Home: verás tu nivel, tu Esencia y lo que tienes desbloqueado. Desde ahí exploras ANIMA a tu ritmo." }
+  ];
+  function sceneTutorial(i) {
+    var step = TUTORIAL[i];
+    var dots = TUTORIAL.map(function (_, k) { return '<i class="' + (k === i ? "on" : "") + '"></i>'; }).join("");
+    var last = i === TUTORIAL.length - 1;
+    render(
+      '<span class="eyebrow"><span class="ln"></span>Rito de Inicio · ' + (i + 1) + '/' + TUTORIAL.length + '<span class="ln"></span></span>' +
+      '<div class="dots">' + dots + '</div>' +
+      '<div class="panel center">' +
+        '<div class="step-ico">' + step.ico + '</div>' +
+        '<h1 class="rite" style="font-size:clamp(26px,5vw,40px)">' + step.t + '</h1>' +
+        '<p class="rite-sub" style="font-size:16px">' + step.d + '</p>' +
+        '<div class="actions" style="margin-top:24px">' +
+          (i > 0 ? '<button class="cbtn ghost" id="tprev">Atrás</button>' : '') +
+          '<button class="cbtn" id="tnext">' + (last ? "Entrar a ANIMA ✦" : "Siguiente") + '</button>' +
+        '</div>' +
+      '</div>'
+    );
+    if (i > 0) bind("tprev", function () { sceneTutorial(i - 1); });
+    bind("tnext", function () { last ? completarTutorial() : sceneTutorial(i + 1); });
+  }
+  function completarTutorial() {
+    var s = AnimaState.get();
+    if (!s.steps.tutorial) { s.steps.tutorial = true; AnimaState.save(s); AnimaState.addEsencia(60, "Completar tutorial"); }
+    sceneLogro();
+  }
+
+  /* ---------- 5 · PRIMER LOGRO ---------- */
+  function sceneLogro() {
+    var s = AnimaState.get(); s.steps.logro = true; AnimaState.save(s);
+    AnimaState.markCompleted();
+    localStorage.setItem("anima_onboarding_completed", "true"); // explícito (req. 6)
+    var p = AnimaState.progress();
+    render(
+      '<span class="eyebrow"><span class="ln"></span>Logro desbloqueado<span class="ln"></span></span>' +
+      '<div class="medal">🏆</div>' +
+      '<h1 class="rite" style="font-size:clamp(28px,6vw,52px)">Primer Despertar</h1>' +
+      '<p class="rite-lede">Has comprendido la esencia de ANIMA.</p>' +
+      '<p class="rite-sub">Nivel alcanzado: <b style="color:var(--gold)">' + p.level.glyph + ' ' + p.level.name.toUpperCase() + '</b></p>' +
+      essenceHTML() +
+      '<div class="actions"><button class="cbtn" id="enterBtn">Entrar a ANIMA ✦</button></div>' +
+      '<p class="seal">Tu viaje apenas comienza. Sigue creando para despertar nuevos niveles.</p>'
+    );
+    bind("enterBtn", function () { Rite.go("home.html"); });
+    animateEssence();
+  }
+
+  /* ---------- Esencia (barra) ---------- */
+  function essenceHTML() {
+    var p = AnimaState.progress();
+    return '<div class="essence">' +
+      '<div class="top"><span>ALMA · Nivel actual: <span class="lvl">' + p.level.glyph + ' ' + p.level.name.toUpperCase() + '</span></span>' +
+      '<span>Esencia: ' + p.into + ' / ' + p.span + '</span></div>' +
+      '<div class="ebar"><span data-pct="' + p.pct + '"></span></div></div>';
+  }
+  function animateEssence() {
+    var bar = scene.querySelector(".ebar > span");
+    if (bar) setTimeout(function () { bar.style.width = (bar.dataset.pct || 0) + "%"; }, 200);
+  }
+
+  function bind(id, fn) { var el = document.getElementById(id); if (el) el.addEventListener("click", fn); }
+
+  /* ---------- Boot: reanuda donde quedó el rito ---------- */
+  (function boot() {
+    if (AnimaState.isCompleted()) { location.replace("home.html"); return; }
+    var s = AnimaState.get();
+    if (s.steps.tutorial) sceneLogro();
+    else if (s.steps.nacer) scenePrimerDespertar();
+    else sceneAlpha();
+  })();
+  </script>
+</body>
+</html>

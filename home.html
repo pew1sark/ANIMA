@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#08080b" />
+  <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
+  <title>Home — ANIMA</title>
+  <meta name="description" content="El Home de tu Alma: nivel, esencia y lo que has desbloqueado en ANIMA." />
+  <link rel="stylesheet" href="assets/css/umbral.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/anima-state.js"></script>
+</head>
+<body class="rite" style="display:block;align-items:stretch;justify-content:flex-start">
+  <div class="field"><div class="core"></div></div>
+
+  <main class="home-wrap" id="home"><!-- inyectado --></main>
+
+  <script src="assets/js/rite.js"></script>
+  <script>
+  /* Si el Alma no ha despertado, vuelve al rito (req. 11). */
+  if (!AnimaState.isCompleted()) { location.replace("umbral.html"); }
+
+  var home = document.getElementById("home");
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+  function render() {
+    var s = AnimaState.get();
+    var p = AnimaState.progress();
+    var afn = AnimaState.affinity(s.affinity);
+    var nameFirst = (s.name || "Alma").split(" ")[0];
+
+    // Menú progresivo
+    var menu = AnimaState.MENU.map(function (m) {
+      var lv = AnimaState.levelByKey(m.level);
+      var unlocked = AnimaState.isUnlocked(m.level);
+      if (unlocked) {
+        return '<a class="mtile open" href="studio.html">' +
+          '<span class="g">' + m.glyph + '</span><b>' + m.t + '</b>' +
+          '<small>Desbloqueado</small>' +
+          '<span class="lvtag">Nivel ' + lv.n + ' · ' + lv.name + '</span></a>';
+      }
+      return '<div class="mtile locked" title="Despierta para descubrir">' +
+        '<span class="lock">🔒</span>' +
+        '<span class="g">' + m.glyph + '</span><b>' + m.t + '</b>' +
+        '<small>Despierta para descubrir</small>' +
+        '<span class="lvtag">Requiere ' + lv.name + '</span></div>';
+    }).join("");
+
+    // Funciones desbloqueadas (acumuladas hasta el nivel actual)
+    var unlockedFns = [];
+    for (var i = 0; i <= p.idx; i++) { unlockedFns = unlockedFns.concat(AnimaState.LEVELS[i].unlocks); }
+    var unlockedChips = unlockedFns.map(function (f) { return '<span class="chip">✓ ' + esc(f) + '</span>'; }).join("");
+
+    // Próximo desbloqueo
+    var nextHTML;
+    if (p.next) {
+      var nextChips = p.next.unlocks.map(function (f) { return '<span class="chip">' + esc(f) + '</span>'; }).join("");
+      nextHTML =
+        '<div class="hcard c12"><div class="label">Próximo desbloqueo</div>' +
+        '<div class="next-unlock" style="margin-top:12px">' +
+          '<span class="lv-badge">' + p.next.glyph + ' ' + p.next.name + '</span>' +
+          '<div class="chips">' + nextChips + '</div>' +
+        '</div>' +
+        '<p class="hint" style="margin-top:12px">Gana Esencia interactuando con ANIMA: completa tu perfil, da chispas a otras Almas, ' +
+        'publica en la comunidad y crea. Mientras más vives ANIMA, antes despiertas <b style="color:var(--gold)">' + p.next.name + '</b>.</p></div>';
+    } else {
+      nextHTML = '<div class="hcard c12"><div class="label">Despertar completo</div>' +
+        '<p class="big" style="font-size:22px">∞ Eres ANIMA</p>' +
+        '<p class="hint">Has recorrido todo el camino. El ecosistema completo es tuyo.</p></div>';
+    }
+
+    home.innerHTML =
+      '<div class="home-top">' +
+        '<div class="home-brand"><span class="m"><img src="assets/img/lumbre.svg" alt=""></span>ANIMA</div>' +
+        '<a class="cbtn ghost" href="index.html" style="padding:10px 18px;font-size:13.5px">Salir</a>' +
+      '</div>' +
+
+      '<div class="home-hero">' +
+        '<h1>Bienvenida, ' + esc(nameFirst) + '.</h1>' +
+        '<p>Tu Alma está despierta. ' + (afn ? 'Naciste con la Afinidad <b style="color:var(--gold)">' + afn.glyph + ' ' + afn.name + '</b>. ' : '') +
+        'Este es tu Home: tu nivel, tu Esencia y lo que has desbloqueado.</p>' +
+      '</div>' +
+
+      '<div class="hgrid">' +
+        // Nivel + Esencia
+        '<div class="hcard c8">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">' +
+            '<div><div class="label">Nivel actual</div>' +
+              '<div style="display:flex;align-items:center;gap:10px;margin-top:8px">' +
+                '<span class="lv-badge" style="font-size:16px">' + p.level.glyph + ' ' + p.level.name.toUpperCase() + '</span>' +
+                '<span class="hint" style="margin:0">Nivel ' + p.level.n + ' de 7</span></div></div>' +
+            '<div style="text-align:right"><div class="label">Esencia</div>' +
+              '<div class="big">' + p.into + ' <span style="font-size:18px;color:var(--muted)">/ ' + p.span + '</span></div></div>' +
+          '</div>' +
+          '<div class="essence" style="max-width:100%;margin-top:18px"><div class="ebar"><span data-pct="' + p.pct + '"></span></div>' +
+            '<div class="top" style="margin:8px 0 0">' +
+              '<span>' + esc(p.level.desc) + '</span>' +
+              '<span>' + (p.next ? "hacia " + p.next.name : "nivel máximo ∞") + '</span></div></div>' +
+        '</div>' +
+
+        // Continuar
+        '<div class="hcard c4" style="display:flex;flex-direction:column;justify-content:center;text-align:center">' +
+          '<div class="lumbre-core" style="width:88px;height:88px;margin:0 auto 10px">' +
+            '<span class="halo"></span><img src="assets/img/lumbre.svg" width="58" height="70" alt="LUMBRE"></div>' +
+          '<p class="hint" style="margin:0 0 14px">Tu mundo te espera.</p>' +
+          '<a class="cbtn" href="studio.html" style="justify-content:center">Continuar explorando ✦</a>' +
+        '</div>' +
+
+        // Menú progresivo
+        '<div class="hcard c12"><div class="label" style="margin-bottom:14px">Tu camino en ANIMA</div>' +
+          '<div class="menu-grid">' + menu + '</div></div>' +
+
+        // Funciones desbloqueadas
+        '<div class="hcard c12"><div class="label">Funciones desbloqueadas</div>' +
+          '<div class="next-unlock" style="margin-top:12px"><div class="chips">' + unlockedChips + '</div></div></div>' +
+
+        // Próximo desbloqueo
+        nextHTML +
+      '</div>' +
+
+      '<div class="home-foot">' +
+        '<strong>ANIMA TSC — The Soul of Creativity</strong> · The Founding Era<br>' +
+        '<a href="legal.html#privacidad">Privacidad</a>·<a href="legal.html#terminos">Términos</a>·<a href="roadmap.html">Roadmap V6</a><br>' +
+        '<span style="opacity:.6">Tus datos son privados; tú decides qué compartir.</span>' +
+      '</div>';
+
+    var bar = home.querySelector(".ebar > span");
+    if (bar) setTimeout(function () { bar.style.width = (bar.dataset.pct || 0) + "%"; }, 250);
+  }
+
+  render();
+
+  /* Reconciliar con la nube: si esta Alma tiene sesión, la Esencia y la
+     Afinidad del servidor mandan. Best-effort, nunca bloquea el Home. */
+  (function cloudRefresh(){
+    try{
+      if(typeof Cloud==="undefined" || !Cloud.enabled) return;
+      Cloud.myAlma().then(function(row){
+        if(!row) return;
+        var st=AnimaState.get();
+        if(row.affinity) st.affinity=row.affinity;
+        if(row.name) st.name=row.name;
+        AnimaState.save(st);
+        // sube la Esencia local si va por delante; luego usa el valor efectivo
+        AnimaState.syncCloud(row).then(function(){ render(); });
+      }).catch(function(){});
+    }catch(e){}
+  })();
+  </script>
+</body>
+</html>

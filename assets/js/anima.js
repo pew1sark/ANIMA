@@ -411,6 +411,8 @@ async function saveIdentity(){
     a.territory=patch.territory; a.bio=patch.bio; a.photo=patch.avatar_url; a.website=patch.website;
     a.instagram=patch.instagram; a.portfolio_url=patch.portfolio_url; a.shop_url=patch.shop_url; a.tags=patch.tags;
     a.role=patch.discipline||a.role;
+    // Esencia: completar el perfil con lo esencial (una sola vez)
+    if(window.AnimaState && patch.bio && patch.discipline && (patch.tags||[]).length) AnimaState.addEsenciaOnce("perfil",20,"Completar perfil");
     renderAll(); updateAuthUI(await Cloud.session()); alert("Identidad guardada ✓");
   }catch(e){ alert("No se pudo guardar (¿aplicaste la migración 0003?): "+(e.message||e)); }
 }
@@ -1037,7 +1039,9 @@ async function sendPost(){
   const a=me(); if(!a.live){ alert("Entra a tu Alma para publicar."); return; }
   const title=document.getElementById("postTitle").value.trim(), body=document.getElementById("postBody").value.trim();
   if(!title && !body) return;
-  try{ await Cloud.insertRow("posts",{author_alma_id:a.almaId,kind:"post",title,body}); await loadPosts(); }
+  try{ await Cloud.insertRow("posts",{author_alma_id:a.almaId,kind:"post",title,body});
+    if(window.AnimaState) AnimaState.addEsencia(15,"Publicar en comunidad");
+    await loadPosts(); }
   catch(e){ alert("No se pudo publicar: "+(e.message||e)); }
 }
 function openPost(id){
@@ -1064,7 +1068,9 @@ async function loadComments(postId){
 async function sendComment(postId){
   const a=me(); if(!a.live){ alert("Entra a tu Alma para comentar."); return; }
   const el=document.getElementById("commentInput"); const body=el.value.trim(); if(!body) return; el.value="";
-  try{ await Cloud.insertRow("comments",{post_id:postId,author_alma_id:a.almaId,body}); loadComments(postId); }catch(e){ alert("No se pudo comentar: "+(e.message||e)); }
+  try{ await Cloud.insertRow("comments",{post_id:postId,author_alma_id:a.almaId,body});
+    if(window.AnimaState) AnimaState.addEsencia(5,"Comentar en comunidad");
+    loadComments(postId); }catch(e){ alert("No se pudo comentar: "+(e.message||e)); }
 }
 function closePost(){ document.getElementById("postModal").classList.remove("open"); }
 function almaMini(m){
@@ -1565,6 +1571,11 @@ async function loadMyAlma(){
   try{ const p=await Cloud.getPrefs(row.id); if(p) localStorage.setItem("anima_cfg_"+row.id, JSON.stringify(p)); }catch(e){}
   state.almas=[a];   // tu Alma viva, limpia (las de muestra no se mezclan)
   state.currentId=a.id; state.view="mialma"; state.chat=[]; renderAll();
+  // Puente con el camino ceremonial (Esencia + Afinidad del rito de entrada)
+  if(window.AnimaState){ try{
+    const st=AnimaState.get(); if(a.name) st.name=a.name; if(a.affinity) st.affinity=a.affinity; AnimaState.save(st);
+    AnimaState.syncCloud(row);   // sube/reconciliar Esencia y Afinidad (best-effort)
+  }catch(e){} }
 }
 function updateAuthUI(session){
   const btn=document.getElementById("authBtn"); if(!btn) return;

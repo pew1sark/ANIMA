@@ -114,6 +114,8 @@ async function giveSpark(btn){
     if(error) throw error;
     localStorage.setItem(key,"1");
     const stat=$("#sparkStat"); if(stat && data!=null) stat.textContent=Number(data).toLocaleString("es-CL");
+    // Dar Chispas a otras Almas alimenta tu propia Esencia (una vez por Alma).
+    if(window.AnimaState) AnimaState.addEsenciaOnce("spark_"+id,5,"Dar una Chispa");
     btn.textContent="✦ ¡Gracias!"; btn.classList.add("done","pulse");
   }catch(err){ btn.disabled=false; btn.textContent="✦ Dar Chispa"; }
 }
