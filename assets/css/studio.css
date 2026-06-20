@@ -310,6 +310,13 @@
 .pf-info .pf-links{display:flex;flex-direction:column;gap:6px}
 .pf-info .pf-links a{font-size:13px;font-weight:700;color:#7b5920;text-decoration:none}
 .pf-info .pf-links a:hover{text-decoration:underline}
+.pf-info-foot{margin-top:13px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);text-align:center}
+.pf-pubtoggle{display:inline-flex;align-items:center;gap:8px;padding:6px 13px 6px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.78);font-weight:800;font-size:13px;color:var(--muted);cursor:pointer;font-family:inherit;transition:.18s}
+.pf-pubtoggle.on{color:var(--ok);border-color:rgba(58,138,95,.34);background:rgba(58,138,95,.10)}
+.pf-pubtoggle .toggle{width:36px;height:21px}
+.pf-pubtoggle .toggle span{width:16px;height:16px}
+.pf-pubtoggle .toggle.on span{left:17px}
+.pf-pubtoggle:hover{transform:translateY(-1px)}
 
 
 /* ---------- Mapamundi de Almas ---------- */
