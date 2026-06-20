@@ -4,13 +4,13 @@
    personalización y Cotizador. Local + nube (Supabase).
    =========================================================== */
 
-const STORAGE = "anima_alpha_state_v1";
+const STORAGE = "anima_alpha_state_v2";
 
 /* ---------- Estado ---------- */
 let state = load();
 function load(){
   try{ const s = JSON.parse(localStorage.getItem(STORAGE)); if(s && s.almas && s.almas.length) return s; }catch(e){}
-  return { almas: JSON.parse(JSON.stringify(SEED_ALMAS)), currentId:"sark", view:"mialma", lumbreMode:"LOCAL", chat:[] };
+  return { almas: JSON.parse(JSON.stringify(SEED_ALMAS)), currentId:"guest", view:"mialma", lumbreMode:"LOCAL", chat:[] };
 }
 function save(){ localStorage.setItem(STORAGE, JSON.stringify(state)); }
 function reset(){ if(confirm("¿Restaurar ANIMA a las 10 Almas fundadoras? Se borrarán tus cambios locales.")){ localStorage.removeItem(STORAGE); location.reload(); } }
@@ -784,7 +784,7 @@ async function refreshAuth(){
   const s=await Cloud.session();
   if(s){ const pend=localStorage.getItem("anima_pending_invite"); if(pend){ try{await Cloud.redeemInvite(pend);}catch(e){} localStorage.removeItem("anima_pending_invite"); }
     await loadMyAlma(); updateAuthUI(s);
-  }else{ if(state.almas.some(x=>x.live)){ state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="sark"; } updateAuthUI(null); renderAll(); }
+  }else{ if(state.almas.some(x=>x.live)){ state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; } updateAuthUI(null); renderAll(); }
 }
 async function loadMyAlma(){
   const row=await Cloud.myAlma(); if(!row) return;
@@ -820,7 +820,7 @@ async function doAuth(mode){
   }catch(e){ msg.textContent=e.message||"No se pudo completar."; }
 }
 async function logout(){ if(!confirm("¿Salir de tu Alma?"))return; await Cloud.signOut();
-  state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="sark"; state.view="mialma"; save(); renderAll(); updateAuthUI(null); }
+  state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; state.view="mialma"; save(); renderAll(); updateAuthUI(null); }
 
 /* --- Editar perfil --- */
 function openEdit(){ const a=me(); if(!a.live){ if(Cloud.enabled){ openAuth(); } else { alert("Entra a tu Alma para editar."); } return; }
@@ -918,6 +918,7 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#menuBtn")) document.getElementById("side").classList.toggle("open");
   if(e.target.closest("#whoBox")) go("mialma");
   if(e.target.closest("#resetBtn")) reset();
+  if(e.target.closest("#installBtn")) installApp();
   if(e.target.closest("[data-export]")) exportPDF();
   if(e.target.closest("#authBtn")){ const b=e.target.closest("#authBtn"); b.dataset.in?logout():openAuth(); }
   if(e.target.closest("#authClose")||e.target.id==="authModal") closeAuth();
@@ -934,6 +935,16 @@ document.addEventListener("change", e=>{
 });
 function sendLumbre(){ const i=document.getElementById("lumbreInput"), v=i.value.trim(); if(!v)return; i.value=""; lumbreAsk(v); }
 
+/* ---------- PWA (instalable) ---------- */
+let deferredPrompt=null;
+window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferredPrompt=e; const b=document.getElementById("installBtn"); if(b) b.hidden=false; });
+window.addEventListener("appinstalled", ()=>{ deferredPrompt=null; const b=document.getElementById("installBtn"); if(b) b.hidden=true; });
+async function installApp(){
+  if(deferredPrompt){ deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; const b=document.getElementById("installBtn"); if(b) b.hidden=true; }
+  else { alert("Para instalar ANIMA:\n\n• iPhone/iPad (Safari): botón Compartir → \"Agregar a inicio\".\n• Android (Chrome): menú ⋮ → \"Instalar app\".\n• Computador (Chrome/Edge): ícono de instalar en la barra de direcciones."); }
+}
+
 /* ---------- Boot ---------- */
 renderAll();
 refreshAuth();
+if("serviceWorker" in navigator){ window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
