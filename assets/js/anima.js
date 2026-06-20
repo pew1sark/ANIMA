@@ -99,13 +99,15 @@ const PLAN_META = {
 };
 const PLAN_ORDER = ["ALMA","CLAN","SANTUARIO"];
 /* Vistas que cada plan DESBLOQUEA por encima del espacio individual.
-   El espacio individual (esencia + taller) lo tienen TODOS los planes. */
+   El espacio individual (esencia + taller) y la Comunidad/constelación
+   los tienen TODOS los planes — ANIMA es una comunidad de Almas.
+   Clan y Santuario añaden herramientas de equipo y el panel de la organización. */
 const PLAN_UNLOCKS = {
   ALMA:      [],
-  CLAN:      ["equipo","recordatorios","comunidad"],
-  SANTUARIO: ["equipo","recordatorios","comunidad","santuario"]
+  CLAN:      ["equipo","recordatorios"],
+  SANTUARIO: ["equipo","recordatorios","santuario"]
 };
-const GATED_VIEWS = ["equipo","recordatorios","comunidad","santuario"]; // requieren plan
+const GATED_VIEWS = ["equipo","recordatorios","santuario"]; // requieren plan (Comunidad NO se restringe)
 const ROLES = [["MIEMBRO","Miembro"],["LIDER","Líder"],["ADMIN","Admin"]];
 
 function almaPlan(a){ return (a && PLAN_META[a.plan]) ? a.plan : "ALMA"; }
