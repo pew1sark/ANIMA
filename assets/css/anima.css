@@ -65,3 +65,12 @@ button{font-family:inherit}
 /* progress */
 .bar{height:9px;border-radius:999px;background:rgba(0,0,0,.07);overflow:hidden}
 .bar > span{display:block;height:100%;background:linear-gradient(90deg,#111,var(--warm),var(--gold));border-radius:999px;transition:.4s ease}
+
+/* ---------- LUMBRE (criatura pixel animada) ---------- */
+.lumbre{image-rendering:pixelated;display:block;filter:drop-shadow(0 0 12px rgba(242,198,78,.55));animation:lum-float 3.2s ease-in-out infinite}
+@keyframes lum-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.lumbre-wrap{position:relative;display:inline-grid;place-items:center;padding:10px}
+.lumbre-wrap::before,.lumbre-wrap::after{content:"✦";position:absolute;color:#f2c64e;opacity:0;text-shadow:0 0 8px rgba(242,198,78,.8);animation:lum-spark 2.6s ease-in-out infinite}
+.lumbre-wrap::before{top:4%;left:2%;font-size:15px}
+.lumbre-wrap::after{bottom:8%;right:4%;font-size:11px;animation-delay:1.2s}
+@keyframes lum-spark{0%,100%{opacity:0;transform:scale(.5) rotate(0)}50%{opacity:.95;transform:scale(1.15) rotate(20deg)}}

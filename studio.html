@@ -24,7 +24,7 @@
     <!-- SIDEBAR -->
     <aside class="side" id="side">
       <div class="brand">
-        <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><path d="M39 66C45 53 55 53 61 66" stroke="#B8A892" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>
+        <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M30 74 L49 31" stroke="#111" stroke-width="5.5" stroke-linecap="round"/><path d="M51 31 L70 74" stroke="#111" stroke-width="5.5" stroke-linecap="round"/><circle cx="50" cy="61" r="2.6" fill="#f2c64e"/></svg></span>
         ANIMA
       </div>
       <div class="who" id="whoBox"><div id="who"></div></div>
@@ -32,6 +32,7 @@
       <div style="flex:1"></div>
       <div style="padding:8px 6px;display:flex;flex-direction:column;gap:8px">
         <button class="btn sm" id="installBtn" hidden>⤓ Instalar app</button>
+        <button class="btn secondary sm" id="tourBtn">✦ Ver tutorial</button>
         <button class="btn gold sm" id="feedbackBtn">✦ Enviar feedback</button>
         <a class="btn ghost sm" href="roadmap.html">Ver Roadmap V6</a>
         <button class="btn ghost sm" id="resetBtn">Restaurar Almas</button>
@@ -56,7 +57,7 @@
   <div class="drawer-bg" id="drawerBg"></div>
   <aside class="drawer" id="drawer">
     <div class="head">
-      <span class="mark" style="background:linear-gradient(145deg,#d0aa63,#b8862f)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2c1 4 3 5 5 6-3 1-5 3-5 8-0-5-2-7-5-8 2-1 4-2 5-6z" fill="#fff"/></svg></span>
+      <span class="mark" style="background:radial-gradient(circle at 50% 40%,#fff7e1,#f0d89a)"><img src="assets/img/lumbre.svg" width="22" height="26" alt="" style="image-rendering:pixelated"></span>
       <div style="flex:1"><b style="letter-spacing:-.02em">LUMBRE</b><br><small class="muted">Motor agente · 100% local por defecto</small></div>
       <button class="btn ghost sm" id="lumbreClose">✕</button>
     </div>
@@ -70,6 +71,15 @@
     </div>
   </aside>
 
+  <!-- LUMBRE compañera flotante -->
+  <button class="lumbre-fab" id="lumbreFab" title="LUMBRE"><img class="lumbre" src="assets/img/lumbre.svg" width="44" height="52" alt="LUMBRE" /></button>
+
+  <!-- Tutorial guiado por LUMBRE -->
+  <div class="tour" id="tour">
+    <div class="tour-ring" id="tourRing"></div>
+    <div class="tour-bub" id="tourBub"></div>
+  </div>
+
   <!-- Área de impresión (Dossier PDF) -->
   <div id="printArea"></div>
 
@@ -77,7 +87,7 @@
   <div class="auth-modal" id="authModal">
     <div class="auth-box">
       <div class="auth-head">
-        <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>
+        <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M30 74 L49 31" stroke="#111" stroke-width="5.5" stroke-linecap="round"/><path d="M51 31 L70 74" stroke="#111" stroke-width="5.5" stroke-linecap="round"/><circle cx="50" cy="61" r="2.6" fill="#f2c64e"/></svg></span>
         <div style="flex:1"><b>Entra a tu Alma</b><br><small class="muted">Tu espacio privado, en la nube.</small></div>
         <button class="btn ghost sm" id="authClose">✕</button>
       </div>

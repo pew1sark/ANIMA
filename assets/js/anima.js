@@ -942,6 +942,10 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#whoBox")) go("mialma");
   if(e.target.closest("#resetBtn")) reset();
   if(e.target.closest("#installBtn")) installApp();
+  if(e.target.closest("#lumbreFab")) openLumbre();
+  if(e.target.closest("#tourBtn")) startTour();
+  if(e.target.closest("#tourNext")) tourNext();
+  if(e.target.closest("#tourSkip")) endTour();
   if(e.target.closest("#levelsInfo")) openLevels();
   if(e.target.closest("#levelClose")||e.target.id==="levelModal") closeLevels();
   if(e.target.closest("#sharePf")) sharePortfolio();
@@ -970,6 +974,38 @@ function sharePortfolio(){ const a=me(); if(!a.live){ alert("Crea tu Alma para t
   else prompt("Tu portafolio:",url);
 }
 
+/* ---------- Tutorial guiado por LUMBRE ---------- */
+const TOUR=[
+  {sel:"#nav", title:"Tu menú", text:"Aquí vive tu Alma: trayectoria, portafolio, finanzas, cotizador, clientes y más. Lo que no uses, lo ocultas en Ajustes."},
+  {sel:".tabbar", title:"Tu perfil", text:"Mi Alma tiene pestañas: Resumen, Identidad (tu foto y datos), Vista pública (qué muestras) y Ajustes."},
+  {sel:".camino-card", title:"Tu camino", text:"Subes de nivel creando. Cada nivel desbloquea nuevas ventanas. Toca la ⓘ para ver el mapa de niveles."},
+  {sel:".map-card", title:"El mundo", text:"El Mapa de Almas muestra a la comunidad que va entrando a ANIMA, ubicada en el planeta."},
+  {sel:"#lumbreFab", title:"Soy LUMBRE ✦", text:"Tu chispa compañera. Tócame cuando quieras: te ayudo con finanzas, proyectos y tu siguiente nivel. ¡Bienvenida a ANIMA!"}
+];
+function startTour(){ closeLumbre(); state.view="mialma"; state.almaTab="resumen"; renderAll(); setTimeout(()=>tourStep(0),360); }
+function tourStep(i){
+  if(i>=TOUR.length) return endTour();
+  state.tourI=i; const step=TOUR[i]; const el=document.querySelector(step.sel);
+  document.getElementById("tour").classList.add("open");
+  if(!el){ return tourStep(i+1); }
+  el.scrollIntoView({block:"center",behavior:"smooth"});
+  setTimeout(()=>{
+    const r=el.getBoundingClientRect();
+    const ring=document.getElementById("tourRing");
+    ring.style.cssText=`top:${r.top-6}px;left:${Math.max(6,r.left-6)}px;width:${Math.min(r.width+12,window.innerWidth-12)}px;height:${r.height+12}px`;
+    const bub=document.getElementById("tourBub");
+    bub.innerHTML=`<img class="lumbre" src="assets/img/lumbre.svg" width="42" height="50" alt="">
+      <div style="flex:1"><b>${step.title}</b><p>${step.text}</p>
+      <div class="trow"><span class="muted" style="font-size:11px">${i+1}/${TOUR.length}</span><span style="flex:1"></span>
+      <button class="btn ghost sm" id="tourSkip">Saltar</button><button class="btn sm" id="tourNext">${i===TOUR.length-1?"¡Listo!":"Siguiente"}</button></div></div>`;
+    let top=r.bottom+12; if(top> window.innerHeight-170) top=Math.max(12,r.top-170);
+    let left=Math.max(12,Math.min(window.innerWidth-330, r.left));
+    bub.style.cssText=`top:${top}px;left:${left}px`;
+  },380);
+}
+function tourNext(){ tourStep((state.tourI||0)+1); }
+function endTour(){ document.getElementById("tour").classList.remove("open"); localStorage.setItem("anima_tour_done","1"); }
+
 /* ---------- PWA (instalable) ---------- */
 let deferredPrompt=null;
 window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferredPrompt=e; const b=document.getElementById("installBtn"); if(b) b.hidden=false; });
@@ -983,3 +1019,4 @@ async function installApp(){
 renderAll();
 refreshAuth();
 if("serviceWorker" in navigator){ window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+if(!localStorage.getItem("anima_tour_done")){ setTimeout(()=>{ if(!localStorage.getItem("anima_tour_done")) startTour(); }, 1100); }
