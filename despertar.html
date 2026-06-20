@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#08080b" />
+  <meta name="theme-color" content="#f5f5f7" />
   <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
-  <title>Despertar — ANIMA Alpha</title>
+  <link rel="apple-touch-icon" href="assets/img/icon.svg" />
+  <title>Despertar — ANIMA</title>
   <meta name="description" content="El rito de inicio de ANIMA: despierta, crea tu Alma y comienza tu viaje." />
   <link rel="stylesheet" href="assets/css/umbral.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -25,37 +26,41 @@
   var scene = document.getElementById("scene");
   var form = { name: "", email: "", pass: "", code: "", affinity: "" };
 
-  function render(html) {
+  /* Logo ANIMA: marca limpia (caret). Nunca se altera. */
+  var PEAK = '<svg viewBox="0 0 100 100" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* render inyecta el HTML y SOLO entonces ejecuta onReady (bind de botones). */
+  function render(html, onReady) {
     scene.classList.add("fade-out");
     setTimeout(function () {
       scene.innerHTML = html;
       scene.classList.remove("fade-out");
       scene.scrollTop = 0; window.scrollTo(0, 0);
+      if (typeof onReady === "function") onReady();
     }, 260);
   }
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+  function bind(id, fn) { var el = document.getElementById(id); if (el) el.addEventListener("click", fn); }
 
   /* ---------- 1 · DESPERTAR / ALPHA ---------- */
   function sceneAlpha() {
     render(
       '<span class="eyebrow"><span class="ln"></span>Despertar<span class="ln"></span></span>' +
-      '<div class="lumbre-core" style="width:120px;height:120px">' +
-        '<span class="halo"></span><span class="ring r1"></span><span class="ring r2"></span>' +
-        '<img src="assets/img/lumbre.svg" width="84" height="100" alt="LUMBRE" /></div>' +
-      '<h1 class="rite" style="font-size:clamp(34px,7vw,64px)">ANIMA Alpha</h1>' +
+      '<div class="brand-mark"><span class="peak">' + PEAK + '</span>' +
+        '<h1 class="wordmark">ANIMA</h1>' +
+        '<span class="version-tag">Alpha · versión experimental</span></div>' +
       '<div class="panel center" style="margin-top:26px">' +
-        '<p class="rite-sub" style="margin-top:0;font-size:16px">Bienvenido a <b style="color:var(--gold)">ANIMA Alpha</b>. ' +
-        'Esta es una versión experimental. Todavía pueden existir errores. ' +
-        'Las primeras Almas ayudarán a perfeccionar ANIMA.</p>' +
+        '<p class="rite-sub" style="margin-top:0;font-size:16px">Bienvenido a ANIMA. Esta es una versión experimental. ' +
+        'Todavía pueden existir errores. Las primeras Almas ayudarán a perfeccionar ANIMA.</p>' +
         '<div style="margin:18px 0 4px"><span class="code-chip">' + AnimaState.ALPHA_CODE + '</span></div>' +
         '<p class="hint" style="text-align:center">Guarda este código. Lo necesitarás para nacer.</p>' +
         '<div class="actions" style="margin-top:22px">' +
           '<button class="cbtn" id="acceptBtn">Acepto despertar</button>' +
         '</div>' +
       '</div>' +
-      '<p class="seal">Acceso por invitación · The Founding Era</p>'
+      '<p class="seal">Acceso por invitación · The Founding Era</p>',
+      function () { bind("acceptBtn", sceneCrear); }
     );
-    bind("acceptBtn", sceneCrear);
   }
 
   /* ---------- 2 · CREAR ALMA ---------- */
@@ -93,8 +98,8 @@
             '<li>Puedes borrar tu Alma y todos tus datos cuando quieras.</li>' +
           '</ul>' +
           '<label class="agree"><input type="checkbox" id="f_agree" />' +
-            '<span>Acepto las <a href="legal.html#privacidad" target="_blank" style="color:var(--gold)">políticas de privacidad</a> ' +
-            'y <a href="legal.html#terminos" target="_blank" style="color:var(--gold)">términos</a> de ANIMA. ' +
+            '<span>Acepto las <a href="legal.html#privacidad" target="_blank" style="color:var(--gold-deep)">políticas de privacidad</a> ' +
+            'y <a href="legal.html#terminos" target="_blank" style="color:var(--gold-deep)">términos</a> de ANIMA. ' +
             'Entiendo que mi Alma controla su información.</span></label>' +
         '</div>' +
 
@@ -103,26 +108,26 @@
           '<button type="button" class="cbtn ghost" id="backBtn">Volver</button>' +
           '<button type="submit" class="cbtn" id="nacerBtn">Nacer ✦</button>' +
         '</div>' +
-      '</form>'
+      '</form>',
+      function () {
+        // restaurar valores y afinidad
+        document.getElementById("f_name").value = form.name;
+        document.getElementById("f_email").value = form.email;
+        document.getElementById("f_code").value = form.code;
+        if (form.affinity) {
+          var sel = scene.querySelector('[data-afn="' + form.affinity + '"]');
+          if (sel) sel.classList.add("on");
+        }
+        scene.querySelectorAll("[data-afn]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            scene.querySelectorAll(".afn").forEach(function (x) { x.classList.remove("on"); });
+            b.classList.add("on"); form.affinity = b.dataset.afn;
+          });
+        });
+        bind("backBtn", sceneAlpha);
+        document.getElementById("crearForm").addEventListener("submit", function (e) { e.preventDefault(); nacer(); });
+      }
     );
-
-    // restaurar valores y afinidad
-    document.getElementById("f_name").value = form.name;
-    document.getElementById("f_email").value = form.email;
-    document.getElementById("f_code").value = form.code;
-    if (form.affinity) {
-      var sel = scene.querySelector('[data-afn="' + form.affinity + '"]');
-      if (sel) sel.classList.add("on");
-    }
-
-    scene.querySelectorAll("[data-afn]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        scene.querySelectorAll(".afn").forEach(function (x) { x.classList.remove("on"); });
-        b.classList.add("on"); form.affinity = b.dataset.afn;
-      });
-    });
-    bind("backBtn", sceneAlpha);
-    document.getElementById("crearForm").addEventListener("submit", function (e) { e.preventDefault(); nacer(); });
   }
 
   async function nacer() {
@@ -149,14 +154,12 @@
 
     // Nube sin fricción: crea la cuenta real en Supabase (auto-confirmada,
     // sesión inmediata). Si el correo ya existe, iniciamos sesión en el acto.
-    // Si no hay nube, el rito continúa igual — ANIMA no depende de internet.
     try {
       if (typeof Cloud !== "undefined" && Cloud.enabled) {
         var res = await Cloud.signUp(form.email, form.pass, form.name, form.affinity);
         var exists = res && res.error && /registered|already/i.test(res.error.message || "");
         var hasSession = res && res.data && res.data.session;
         if (exists || (!hasSession && !(res && res.error))) {
-          // Alma ya convocada (o sin sesión directa): entrar con su clave.
           try { await Cloud.signIn(form.email, form.pass); } catch (e2) {}
         } else if (res && res.error && !exists) {
           console.warn("ANIMA signUp:", res.error.message);
@@ -179,10 +182,9 @@
       '<p class="rite-lede">Pero todavía eres una chispa.</p>' +
       '<p class="rite-sub">Cada experiencia dentro de ANIMA expandirá tu conciencia.</p>' +
       essenceHTML() +
-      '<div class="actions"><button class="cbtn" id="viajeBtn">Comenzar viaje ✦</button></div>'
+      '<div class="actions"><button class="cbtn" id="viajeBtn">Comenzar viaje ✦</button></div>',
+      function () { bind("viajeBtn", function () { sceneTutorial(0); }); animateEssence(); }
     );
-    bind("viajeBtn", function () { sceneTutorial(0); });
-    animateEssence();
   }
 
   /* ---------- 4 · RITO DE INICIO / TUTORIAL ---------- */
@@ -208,10 +210,12 @@
           (i > 0 ? '<button class="cbtn ghost" id="tprev">Atrás</button>' : '') +
           '<button class="cbtn" id="tnext">' + (last ? "Entrar a ANIMA ✦" : "Siguiente") + '</button>' +
         '</div>' +
-      '</div>'
+      '</div>',
+      function () {
+        if (i > 0) bind("tprev", function () { sceneTutorial(i - 1); });
+        bind("tnext", function () { last ? completarTutorial() : sceneTutorial(i + 1); });
+      }
     );
-    if (i > 0) bind("tprev", function () { sceneTutorial(i - 1); });
-    bind("tnext", function () { last ? completarTutorial() : sceneTutorial(i + 1); });
   }
   function completarTutorial() {
     var s = AnimaState.get();
@@ -223,20 +227,18 @@
   function sceneLogro() {
     var s = AnimaState.get(); s.steps.logro = true; AnimaState.save(s);
     AnimaState.markCompleted();
-    localStorage.setItem("anima_onboarding_completed", "true"); // explícito (req. 6)
     var p = AnimaState.progress();
     render(
       '<span class="eyebrow"><span class="ln"></span>Logro desbloqueado<span class="ln"></span></span>' +
       '<div class="medal">🏆</div>' +
       '<h1 class="rite" style="font-size:clamp(28px,6vw,52px)">Primer Despertar</h1>' +
       '<p class="rite-lede">Has comprendido la esencia de ANIMA.</p>' +
-      '<p class="rite-sub">Nivel alcanzado: <b style="color:var(--gold)">' + p.level.glyph + ' ' + p.level.name.toUpperCase() + '</b></p>' +
+      '<p class="rite-sub">Nivel alcanzado: <b style="color:var(--gold-deep)">' + p.level.glyph + ' ' + p.level.name.toUpperCase() + '</b></p>' +
       essenceHTML() +
       '<div class="actions"><button class="cbtn" id="enterBtn">Entrar a ANIMA ✦</button></div>' +
-      '<p class="seal">Tu viaje apenas comienza. Sigue creando para despertar nuevos niveles.</p>'
+      '<p class="seal">Tu viaje apenas comienza. Sigue creando para despertar nuevos niveles.</p>',
+      function () { bind("enterBtn", function () { Rite.go("home.html"); }); animateEssence(); }
     );
-    bind("enterBtn", function () { Rite.go("home.html"); });
-    animateEssence();
   }
 
   /* ---------- Esencia (barra) ---------- */
@@ -251,8 +253,6 @@
     var bar = scene.querySelector(".ebar > span");
     if (bar) setTimeout(function () { bar.style.width = (bar.dataset.pct || 0) + "%"; }, 200);
   }
-
-  function bind(id, fn) { var el = document.getElementById(id); if (el) el.addEventListener("click", fn); }
 
   /* ---------- Boot: reanuda donde quedó el rito ---------- */
   (function boot() {
