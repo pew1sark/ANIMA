@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f5f5f7" />
+  <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
+  <title>Legal · ANIMA TSC</title>
+  <link rel="stylesheet" href="assets/css/anima.css" />
+  <style>
+    .wrap{max-width:780px;margin:0 auto;padding:30px 22px 80px}
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+    h1{font-size:clamp(34px,7vw,56px);letter-spacing:-.06em;margin:14px 0 4px}
+    h2{font-size:22px;letter-spacing:-.03em;margin:34px 0 8px;scroll-margin-top:20px}
+    p,li{color:#3a3a3a;font-size:15px;line-height:1.65}
+    ul{padding-left:18px}li{border:0;padding:4px 0}
+    .muted{color:var(--muted)}
+    .card{padding:22px;margin-top:16px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="nav">
+      <a class="brand" href="index.html" style="text-decoration:none"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M30 74 L49 31" stroke="#111" stroke-width="5.5" stroke-linecap="round"/><path d="M51 31 L70 74" stroke="#111" stroke-width="5.5" stroke-linecap="round"/><circle cx="50" cy="61" r="2.6" fill="#f2c64e"/></svg></span>ANIMA</a>
+      <a class="btn secondary sm" href="index.html">← Volver</a>
+    </div>
+
+    <span class="pill gold">Legal · Founding Era</span>
+    <h1>Privacidad y términos</h1>
+    <p class="muted">ANIMA TSC está en beta cerrada. Estas políticas son claras y resumidas; se ampliarán antes del lanzamiento público. Última actualización: junio 2026.</p>
+
+    <div class="card">
+      <h2 id="privacidad">1. Privacidad</h2>
+      <p>En ANIMA no existen "usuarios": existen <b>Almas</b>. Tu Alma es tuya.</p>
+      <ul>
+        <li><b>Qué guardamos:</b> tu correo (para iniciar sesión) y los datos que tú creas (perfil, trayectoria, portafolio, finanzas, proyectos, clientes, memorias, agenda, publicaciones).</li>
+        <li><b>Privado por defecto:</b> tus finanzas, memorias, agenda, clientes y proyectos son <b>privados</b>. Nadie más los ve, ni siquiera dentro de un Clan o Santuario.</li>
+        <li><b>Lo que sí es público:</b> solo lo que tú eliges mostrar en tu Vista pública (nombre, bio, etiquetas, trayectoria, portafolio, enlaces).</li>
+        <li><b>No vendemos tus datos</b> ni los usamos para publicidad.</li>
+        <li><b>Infraestructura:</b> los datos se almacenan de forma segura en Supabase (PostgreSQL) con seguridad a nivel de fila (RLS).</li>
+      </ul>
+
+      <h2 id="terminos">2. Términos de uso</h2>
+      <ul>
+        <li>El acceso es <b>por invitación</b> durante la Founding Era.</li>
+        <li>Eres responsable del contenido que publicas. Respeta los derechos de autor y a las demás Almas.</li>
+        <li>No se permite contenido ilegal, de odio, acoso ni spam. Podemos suspender Almas que incumplan.</li>
+        <li>ANIMA está en beta: pueden ocurrir cambios, interrupciones o pérdidas de datos. Te avisaremos de cambios importantes.</li>
+        <li>Conservas la propiedad de tu obra y tu contenido.</li>
+      </ul>
+
+      <h2 id="seguridad">3. Seguridad</h2>
+      <ul>
+        <li>Inicio de sesión con correo y contraseña cifrada (no guardamos tu contraseña en texto plano).</li>
+        <li>Cada Alma solo puede leer y escribir sus propios datos privados (RLS).</li>
+        <li>Usa una contraseña única. Si detectas algo extraño, escríbenos.</li>
+        <li>LUMBRE funciona de forma local por defecto; no envía tu información a servidores de IA salvo que tú lo conectes.</li>
+      </ul>
+
+      <h2 id="contacto">4. Contacto</h2>
+      <p>¿Dudas o quieres borrar tu Alma y tus datos? Escribe a <b>SARK</b>, creador de ANIMA. Atenderemos tu solicitud.</p>
+    </div>
+
+    <p class="muted" style="text-align:center;margin-top:30px;font-size:12px">© 2026 ANIMA TSC — The Soul of Creativity</p>
+  </main>
+</body>
+</html>
