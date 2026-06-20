@@ -147,14 +147,18 @@
     AnimaState.addEsencia(40, "Crear Alma");
     var s = AnimaState.get(); s.steps.despertar = true; AnimaState.save(s);
 
-    // Nube best-effort: crea la cuenta real en Supabase reutilizando el backend
-    // existente. Si requiere confirmación de correo o no hay nube, el rito
-    // continúa igual — ANIMA no depende obligatoriamente de internet.
+    // Nube sin fricción: crea la cuenta real en Supabase (auto-confirmada,
+    // sesión inmediata). Si el correo ya existe, iniciamos sesión en el acto.
+    // Si no hay nube, el rito continúa igual — ANIMA no depende de internet.
     try {
       if (typeof Cloud !== "undefined" && Cloud.enabled) {
         var res = await Cloud.signUp(form.email, form.pass, form.name, form.affinity);
-        if (res && res.error && !/registered|already/i.test(res.error.message || "")) {
-          // error no fatal: lo registramos pero seguimos en local
+        var exists = res && res.error && /registered|already/i.test(res.error.message || "");
+        var hasSession = res && res.data && res.data.session;
+        if (exists || (!hasSession && !(res && res.error))) {
+          // Alma ya convocada (o sin sesión directa): entrar con su clave.
+          try { await Cloud.signIn(form.email, form.pass); } catch (e2) {}
+        } else if (res && res.error && !exists) {
           console.warn("ANIMA signUp:", res.error.message);
         }
       }
