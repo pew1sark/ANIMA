@@ -30,37 +30,51 @@ function shade(hex,p){ hex=hex||"#111111"; const n=parseInt(hex.slice(1),16); le
   return "#"+(0x1000000+(r<<16)+(g<<8)+b).toString(16).slice(1); }
 
 /* ---------- Pixel art (solo el Camino del Alma) ---------- */
-const PIX={ y:"#e6bd63",Y:"#b8862f",o:"#c8763a",O:"#9a4f22",g:"#6faa3a",G:"#3f6f24",
-  n:"#9c7d44",N:"#5e4824",b:"#4a86a6",B:"#2f5c74",p:"#9a5fb0",P:"#caa0e4",r:"#cf5b5b",w:"#f5ecd2" };
 const LEVEL_SPRITES={
-  FOUNDING:["....y....","....Y....","..y.Y.y..","...yYy...","yYYYwYYYy","...yYy...","..y.Y.y..","....Y....","....y...."],
-  EMBER:["....o....","....o....","...ooy...","..ooyy...","..oyywo..",".ooyywoo.",".oyywwyo.",".ooyyyoo.","..ooooo.."],
-  ROOT:["....g....",".g..g..g.",".gg.g.gg.","..g.g.g..","...gNg...","....N....","....N....","..NNNNN..","........."],
-  WILD:["....r....",".r..r....",".r..r..r.",".r..r..r.",".r.rr.rr.",".r.rr.rr.",".rrrrrrr.",".........","........."],
-  TOTEM:[".n.n.n...",".........","...nnn...","..nnnnn..","..nnnnn..","..nnnnn..","...nnn...",".........","........."],
-  AETHER:["..bbbbb..",".bBbbbBb.",".b.bwb.b.",".bBbbbBb.",".b.bwb.b.",".bBbbbBb.","..bbbbb..","...bbb...","........."],
-  SPIRIT:["....y....",".y..y..y.","..yYYYy..",".yYYYYYy.","yyYYwYYyy",".yYYYYYy.","..yYYYy..",".y..y..y.","....y...."],
-  ANIMA:["....P....","...PpP...","..PpppP..",".PpppppP.","PpppppppP",".PpppppP.","..PpppP..","...PpP...","....P...."]
+  FOUNDING:["....a....","....X....","..x.X.x..","...xXx...","XXXXaXXXX","...xXx...","..x.X.x..","....X....","....a...."],
+  EMBER:["....X....","....X....","...xXx...","...xXx...","..xXaXx..","..xXaXx..","...xXx...","....X....","........."],
+  ROOT:["...XaX...","....X....","..X.X.X..","..X.X.X..","...XXX...","..d.X.d..",".d..X..d.","d...d...d","........."],
+  WILD:[".........",".X.....X.",".X.X.X.X.",".X.X.X.X.",".X.X.X.X.",".X.XaX.X.",".XXXXXXX.",".........","........."],
+  TOTEM:[".X.X.X...",".........","...XXX...","..XXXXX..","..XXXXX..","..XXXXX..","...XXX...",".........","........."],
+  AETHER:["..XXXXX..",".XdXXXdX.",".X.XaX.X.",".XdXXXdX.",".X.XaX.X.",".XdXXXdX.","..XXXXX..","...XXX...","........."],
+  SPIRIT:["....a....",".x..X..x.","..xXXXx..",".xXXXXXx.","aXXXaXXXa",".xXXXXXx.","..xXXXx..",".x..X..x.","....a...."],
+  ANIMA:["....a....","...XaX...","..XxxxX..",".XxxxxxX.","XxxxxxxxX",".XxxxxxX.","..XxxxX..","...XaX...","....a...."]
 };
-function pixelSprite(key){
-  const g=LEVEL_SPRITES[key]||LEVEL_SPRITES.FOUNDING; let r="";
-  g.forEach((row,y)=>{ [...row].forEach((ch,x)=>{ const c=PIX[ch]; if(c) r+=`<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${c}"/>`; }); });
+function pixelSprite(l){
+  const pal={ X:l.color, x:shade(l.color,46), d:shade(l.color,-48), a:"#f5ecd2" };
+  const g=LEVEL_SPRITES[l.key]||LEVEL_SPRITES.FOUNDING; let r="";
+  g.forEach((row,y)=>{ [...row].forEach((ch,x)=>{ const c=pal[ch]; if(c) r+=`<rect x="${x}" y="${y}" width="1.04" height="1.04" fill="${c}"/>`; }); });
   return `<svg class="pix" viewBox="0 0 9 9" shape-rendering="crispEdges">${r}</svg>`;
 }
+const UNLOCKS={ FOUNDING:"Tu Alma, portafolio y memoria", EMBER:"Cotizador y finanzas", ROOT:"Clientes y flujo de trabajo",
+  WILD:"Publicar en la comunidad", TOTEM:"Crear o unirte a un Clan", AETHER:"Mentorías y perfil destacado",
+  SPIRIT:"Academia: enseñar y cursos", ANIMA:"Santuario e IA conectada (LUMBRE)" };
 function caminoPixelHTML(lp){
+  const nx=lp.next; const falta=nx?Math.max(0,nx.xp-me().xp):0;
   return `<div class="camino">
-    <div class="camino-head"><span class="pixel-font">TU CAMINO</span><span class="muted pixel-font" style="font-size:8px">ORIGEN → ANIMA</span></div>
+    <div class="camino-head"><span class="pixel-font">TU CAMINO</span><div class="spacer" style="flex:1"></div>
+      <button class="ia" id="levelsInfo" title="¿Qué son los niveles?">ⓘ</button></div>
     <div class="camino-track">${LEVELS.map((l,i)=>`<div class="ptile ${i===lp.idx?'cur':''} ${i<lp.idx?'passed':''}">
-      <span class="pn pixel-font">${i+1}</span>${pixelSprite(l.key)}<b class="pixel-font">${l.label}</b></div>`).join("")}</div>
+      <span class="pn pixel-font">${i+1}</span>${pixelSprite(l)}<b class="pixel-font">${l.label}</b></div>`).join("")}</div>
+    <div class="camino-prog"><div class="bar"><span style="width:${lp.pct}%"></span></div>
+      <small class="muted">${nx?`${lp.pct}% — faltan ${falta.toLocaleString("es-CL")} XP para <b>${nx.label}</b>`:"Alma Despierta · nivel máximo ∞"}</small></div>
   </div>`;
 }
+function openLevels(){
+  document.getElementById("levelBody").innerHTML=`<p class="muted" style="font-size:13px">Tu Alma evoluciona con tu actividad. Cada acción (crear trabajos, memorias, hitos) da XP y desbloquea nuevas ventanas dentro de ANIMA.</p>
+    ${LEVELS.map(l=>`<div class="row"><div style="width:40px">${pixelSprite(l)}</div><div class="grow"><b>${l.label}</b> <small class="muted">· ${l.name} · ${l.xp.toLocaleString("es-CL")} XP</small><br><small class="muted">Desbloquea: ${UNLOCKS[l.key]||""}</small></div></div>`).join("")}`;
+  document.getElementById("levelModal").classList.add("open");
+}
+function closeLevels(){ document.getElementById("levelModal").classList.remove("open"); }
+
+/* ---------- Personalización (mostrar/ocultar) ---------- */
 
 /* ---------- Personalización (mostrar/ocultar) ---------- */
 const cfgKey = a => "anima_cfg_"+(a.almaId||a.id);
 function getCfg(a){
   const def={ modules:{trayectoria:true,portafolio:true,proyectos:true,finanzas:true,clientes:true,cotizador:true,agenda:true,memoria:true,biblioteca:true},
-              cards:{constelacion:true,kpis:true,camino:true,graficos:true,hoy:true,memoria:true} };
-  try{ const c=JSON.parse(localStorage.getItem(cfgKey(a))); if(c){ return { modules:{...def.modules,...c.modules}, cards:{...def.cards,...c.cards} }; } }catch(e){}
+              cards:{constelacion:true,kpis:true,camino:true,graficos:true,hoy:true,memoria:true}, mapSize:"md" };
+  try{ const c=JSON.parse(localStorage.getItem(cfgKey(a))); if(c){ return { modules:{...def.modules,...c.modules}, cards:{...def.cards,...c.cards}, mapSize:c.mapSize||def.mapSize }; } }catch(e){}
   return def;
 }
 function setCfg(a,c){ localStorage.setItem(cfgKey(a), JSON.stringify(c)); if(a.live){ Cloud.savePrefs(a.almaId,c).catch(()=>{}); } }
@@ -137,16 +151,22 @@ function constelacionHTML(){
     return `<button class="wn ${isNew?'new':''}" ${act} style="left:${x}%;top:${y}%;--c:${m.color}" title="${esc(m.name)} · ${esc(m.city||m.country||"")} · ${m.level}">${initials(m.name)}</button>`;
   }).join("");
   const chips=recent.map(m=>`<span class="chip"><b style="color:${m.color}">●</b> ${esc(m.name)} · ${esc(deburr(m.city)?m.city:m.country||"")} ${m.created_at?"· "+timeAgo(m.created_at):""}</span>`).join("");
-  return `<div class="card s12">
-    <div class="section-title"><h2>Mapa de Almas</h2><div class="spacer"></div>
-      <span class="pill ${liveMode()?'gold':''}">${liveMode()?'🜂 En vivo':'Demo'} · ${list.length} Almas</span></div>
-    <div class="worldmap"><img src="${WORLD_IMG}" alt="" loading="lazy" onerror="this.style.display='none'">${nodes}</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap">
-      <small class="muted" style="font-weight:850;text-transform:uppercase;letter-spacing:.05em;font-size:10.5px">Entrando al mundo</small>
+  const sz=getCfg(me()).mapSize||"md";
+  return `<div class="card s12 map-card">
+    <div class="map-bar">
+      <span class="pixel-font" style="font-size:11px;color:#e9d9a8">⌖ MAPA DE ALMAS</span>
+      <span class="pill ${liveMode()?'gold':''}" style="margin-left:6px">${liveMode()?'🜂 '+list.length:'Demo · '+list.length}</span>
+      <div class="spacer" style="flex:1"></div>
+      <div class="map-sizes">${["sm","md","lg"].map(s=>`<button class="msz ${sz===s?'on':''}" data-mapsize="${s}">${s.toUpperCase()}</button>`).join("")}</div>
+    </div>
+    <div class="worldmap ${sz}"><img src="${WORLD_IMG}" alt="" loading="lazy" onerror="this.style.display='none'">${nodes}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+      <small class="pixel-font" style="font-size:8px;color:#7b5920">ENTRANDO AL MUNDO</small>
       ${chips}
     </div>
   </div>`;
 }
+function setMapSize(s){ const a=me(); const c=getCfg(a); c.mapSize=s; setCfg(a,c); renderAll(); }
 
 /* ---------- Acciones de ítem (editar/eliminar) ---------- */
 function acts(kind,i){ return `<span class="acts"><button class="ia" data-edit="${kind}:${i}" title="Editar">✎</button><button class="ia danger" data-del="${kind}:${i}" title="Eliminar">✕</button></span>`; }
@@ -184,6 +204,7 @@ function vMiAlma(a){
     <div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       ${(a.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}
       ${linksHTML(a)}<span style="flex:1"></span>
+      ${a.live?`<button class="btn ghost sm" id="sharePf">↗ Compartir portafolio</button>`:""}
       <button class="btn ghost sm" data-export>⤓ PDF</button>
     </div>
   </div>`;
@@ -842,7 +863,8 @@ async function openPublic(id){
   document.getElementById("pubBody").innerHTML=`<div style="text-align:center">
       <span class="avatar lg" style="margin:0 auto 10px;${av}">${row.avatar_url?"":initials(row.name)}</span>
       <h2 style="margin:0;letter-spacing:-.04em">${esc(row.name)}</h2><div class="muted">${esc([row.discipline||row.role,row.specialty].filter(Boolean).join(" · "))} · ${esc(row.territory||row.country||"")}</div>
-      <span class="level-badge" style="margin-top:8px;border-color:${lv.color}55;color:${lv.color}">${lv.emoji} ${lv.label}</span></div>
+      <span class="level-badge" style="margin-top:8px;border-color:${lv.color}55;color:${lv.color}">${lv.emoji} ${lv.label}</span>
+      <div style="margin-top:12px"><a class="btn sm" href="portfolio.html?alma=${id}" target="_blank" rel="noopener">Ver portafolio completo →</a></div></div>
     ${show("bio")?`<p style="margin-top:14px">${esc(row.bio||"")}</p>`:""}${show("tags")?`<div>${(row.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}
     <div id="pubExtra" class="muted" style="font-size:12.5px;margin-top:12px">Cargando…</div>`;
   try{ const m=await Cloud.loadModules(id);
@@ -883,6 +905,7 @@ document.addEventListener("click", e=>{
   const cf=e.target.closest("[data-cfg]"); if(cf){ toggleCfg(cf.dataset.cfg); return; }
   const tb=e.target.closest("[data-tab]"); if(tb){ state.almaTab=tb.dataset.tab; state.view="mialma"; renderAll(); return; }
   const pcf=e.target.closest("[data-pubcfg]"); if(pcf){ togglePublic(pcf.dataset.pubcfg); return; }
+  const mz=e.target.closest("[data-mapsize]"); if(mz){ setMapSize(mz.dataset.mapsize); return; }
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
   const ql=e.target.closest("[data-qload]"); if(ql){ qLoad(ql.dataset.qload); return; }
   const qx=e.target.closest("[data-qdelete]"); if(qx){ qDeleteSaved(qx.dataset.qdelete); return; }
@@ -919,6 +942,9 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#whoBox")) go("mialma");
   if(e.target.closest("#resetBtn")) reset();
   if(e.target.closest("#installBtn")) installApp();
+  if(e.target.closest("#levelsInfo")) openLevels();
+  if(e.target.closest("#levelClose")||e.target.id==="levelModal") closeLevels();
+  if(e.target.closest("#sharePf")) sharePortfolio();
   if(e.target.closest("[data-export]")) exportPDF();
   if(e.target.closest("#authBtn")){ const b=e.target.closest("#authBtn"); b.dataset.in?logout():openAuth(); }
   if(e.target.closest("#authClose")||e.target.id==="authModal") closeAuth();
@@ -934,6 +960,15 @@ document.addEventListener("change", e=>{
   const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); }
 });
 function sendLumbre(){ const i=document.getElementById("lumbreInput"), v=i.value.trim(); if(!v)return; i.value=""; lumbreAsk(v); }
+
+/* ---------- Compartir portafolio ---------- */
+function portfolioURL(a){ const base=location.origin+location.pathname.replace(/[^/]*$/,""); return base+"portfolio.html?alma="+a.almaId; }
+function sharePortfolio(){ const a=me(); if(!a.live){ alert("Crea tu Alma para tener tu portafolio público compartible."); return; }
+  const url=portfolioURL(a);
+  if(navigator.share){ navigator.share({title:"Portafolio · "+a.name, url}).catch(()=>{}); }
+  else if(navigator.clipboard){ navigator.clipboard.writeText(url).then(()=>alert("Enlace de tu portafolio copiado:\n"+url)); }
+  else prompt("Tu portafolio:",url);
+}
 
 /* ---------- PWA (instalable) ---------- */
 let deferredPrompt=null;
