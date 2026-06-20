@@ -95,6 +95,7 @@
         <a class="lk btn ghost sm" href="#filosofia">Filosofía</a>
         <a class="lk btn ghost sm" href="planes.html">Planes</a>
         <a class="lk btn secondary sm" href="roadmap.html">Roadmap V6</a>
+        <button class="btn ghost sm" id="installBtn">⤓ Instalar app</button>
         <a class="btn sm" href="studio.html">Cruzar el umbral →</a>
       </div>
     </nav>
@@ -203,6 +204,22 @@
       if(/cruzar el umbral/i.test(t)){
         a.textContent = done ? "Entrar a ANIMA →" : "Entrar al Umbral →";
       }
+    });
+  })();
+
+  // Instalar / Añadir al inicio (la app abre siempre en el Home: start_url=home.html)
+  (function(){
+    var btn = document.getElementById("installBtn"); if(!btn) return;
+    var deferred = null;
+    var standalone = (matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+    var iOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if(standalone){ btn.style.display = "none"; return; }
+    addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); deferred = e; });
+    addEventListener("appinstalled", function(){ deferred = null; btn.style.display = "none"; });
+    btn.addEventListener("click", function(){
+      if(deferred){ deferred.prompt(); deferred.userChoice.then(function(){ deferred = null; }); return; }
+      if(iOS){ alert("Añade ANIMA a tu inicio (iPhone/iPad · Safari):\n\n1) Toca Compartir ⬆️.\n2) Elige \"Agregar a inicio\".\n\nEl icono abrirá ANIMA siempre desde tu Home."); return; }
+      alert("Instala ANIMA como app:\n\n• Android (Chrome): menú ⋮ → \"Instalar app\".\n• Computador (Chrome/Edge): icono ⊕ en la barra de direcciones.\n\nSe abrirá siempre desde tu Home.");
     });
   })();
   </script>
