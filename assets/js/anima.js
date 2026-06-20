@@ -84,15 +84,50 @@ function toggleCfg(path){ const a=me(); const c=getCfg(a); const [g,k]=path.spli
 const CREATOR_EMAIL = "sarkgraff@gmail.com";
 let isCreator = false;   // se activa en refreshAuth si la sesión es del Creador
 
-/* Planes (umbrales). El Creador puede "Ver como" cada uno: vista previa
-   que oculta lo que ese plan no incluye, sin tocar dato alguno.
-   Según planes.html: Comunidad es Clan+, Santuario es solo Santuario. */
+/* ===========================================================
+   PLANES Y ROLES (Fase 4) — los umbrales cobran vida
+   -----------------------------------------------------------
+   PLAN  = qué partes de ANIMA ve un Alma (umbral contratado).
+   ROL   = qué puede HACER dentro de su Clan/Santuario.
+   El Creador (correo) está por encima de todo: ve y edita todo,
+   y solo él ve Consola + Personalizar. Ninguna otra Alma las ve. */
 const PLAN_TIERS = [["ALMA","◆ Alma"],["CLAN","❂ Clan"],["SANTUARIO","🜁 Santuario"]];
+const PLAN_META = {
+  ALMA:      { ico:"◆", t:"Alma",      sub:"Individual",        nivel:1 },
+  CLAN:      { ico:"❂", t:"Clan",      sub:"Equipo (2–8)",      nivel:2 },
+  SANTUARIO: { ico:"🜁", t:"Santuario", sub:"Organización (8+)", nivel:3 }
+};
+const PLAN_ORDER = ["ALMA","CLAN","SANTUARIO"];
+/* Vistas que cada plan DESBLOQUEA por encima del espacio individual.
+   El espacio individual (esencia + taller) y la Comunidad/constelación
+   los tienen TODOS los planes — ANIMA es una comunidad de Almas.
+   Clan y Santuario añaden herramientas de equipo y el panel de la organización. */
+const PLAN_UNLOCKS = {
+  ALMA:      [],
+  CLAN:      ["equipo","recordatorios"],
+  SANTUARIO: ["equipo","recordatorios","santuario"]
+};
+const GATED_VIEWS = ["equipo","recordatorios","santuario"]; // requieren plan (Comunidad NO se restringe)
+const ROLES = [["MIEMBRO","Miembro"],["LIDER","Líder"],["ADMIN","Admin"]];
+
+function almaPlan(a){ return (a && PLAN_META[a.plan]) ? a.plan : "ALMA"; }
+function almaRole(a){ if(isCreator && a===me()) return "CREADOR"; return (a && a.team_role) || "MIEMBRO"; }
+/* Plan efectivo de la sesión: el Creador ve todo (SANTUARIO) salvo que
+   esté previsualizando con "Ver como". El resto, su plan real. */
+function effectivePlan(){
+  if(state.viewAs) return state.viewAs;
+  if(isCreator) return "SANTUARIO";
+  return almaPlan(me());
+}
 function planAllows(view){
-  const va=state.viewAs; if(!va) return true;            // Creador: todo
-  if(view==="comunidad") return va!=="ALMA";              // Clan y Santuario
-  if(view==="santuario") return va==="SANTUARIO";         // solo Santuario
-  return true;                                            // espacio privado: todos los planes
+  if(!GATED_VIEWS.includes(view)) return true;            // espacio individual: todos
+  return PLAN_UNLOCKS[effectivePlan()].includes(view);
+}
+/* ¿La sesión puede gestionar el equipo? (Líder, Admin o Creador) */
+function canLead(){
+  if(isCreator && !state.viewAs) return true;
+  const r=almaRole(me());
+  return r==="LIDER" || r==="ADMIN" || r==="CREADOR";
 }
 
 const NAV_TREE = [
@@ -109,6 +144,11 @@ const NAV_TREE = [
       {v:"cotizador",  ico:"₵",t:"Cotizador"},
       {v:"finanzas",   ico:"$",t:"Finanzas"},
       {v:"agenda",     ico:"☰",t:"Agenda"}
+  ]},
+  // Reino Clan: solo aparece en planes Clan/Santuario (gating por planAllows).
+  { type:"reino", key:"clan", ico:"❂", t:"Clan", children:[
+      {v:"equipo",        ico:"⛬",t:"Equipo"},
+      {v:"recordatorios", ico:"⏰",t:"Recordatorios"}
   ]}
 ];
 function navItem(n, sub){ return `<div class="nav-item ${sub?'sub':''} ${state.view===n.v?'active':''}" data-view="${n.v}"><span class="ico">${n.ico}</span>${n.t}</div>`; }
@@ -119,7 +159,7 @@ function renderNav(){
   let h=`<div class="nav-label">Mi Alma</div>`;
   NAV_TREE.forEach(node=>{
     if(node.type==="item"){ h+=navItem(node); return; }
-    const kids=node.children.filter(c=>cfg.modules[c.v]!==false);
+    const kids=node.children.filter(c=>cfg.modules[c.v]!==false && planAllows(c.v));
     if(!kids.length) return;
     const activeInside=kids.some(c=>c.v===state.view);
     const open=reinoOpen(node.key)||activeInside;
@@ -127,10 +167,10 @@ function renderNav(){
         <span class="ico">${node.ico}</span><span class="rt">${node.t}</span><span class="caret">⌄</span></div>`;
     h+=`<div class="nav-sub ${open?'open':''}"><div class="nav-sub-inner">${kids.map(c=>navItem(c,true)).join("")}</div></div>`;
   });
-  let world=`<div class="nav-label">Mundo</div>`;
+  let world="";
   if(planAllows("comunidad")) world+=navItem({v:"comunidad",ico:"❂",t:"Comunidad"});
   if(planAllows("santuario")) world+=navItem({v:"santuario",ico:"🜁",t:"Santuario"});
-  h+=world;
+  if(world) h+=`<div class="nav-label">Mundo</div>`+world;
   // El bloque Creador se oculta mientras se previsualiza un plan (vista fiel).
   if(isCreator && !state.viewAs){
     h+=`<div class="nav-label">Creador</div>`
@@ -159,7 +199,9 @@ const TITLES = {
   memoria:["Memorias","Ideas, frases y referencias que no quieres perder."],
   biblioteca:["Biblioteca","Tus documentos y archivos."],
   config:["Personalizar","Tú decides qué muestra tu Alma."],
-  consola:["Consola del Creador","Asigna nivel, rol y clan · vista omnipresente."],
+  consola:["Consola del Creador","Planes, roles, nivel y clan · vista omnipresente."],
+  equipo:["Equipo","Tu Clan: miembros, roles y tablero compartido."],
+  recordatorios:["Recordatorios","Lo que el Clan no puede olvidar."],
   comunidad:["Comunidad","Tu Clan y la constelación de Almas."],
   santuario:["Santuario","Nivel 3: la organización completa de ANIMA."]
 };
@@ -215,14 +257,13 @@ function acts(kind,i){ return `<span class="acts"><button class="ia" data-edit="
    =========================================================== */
 function renderView(){
   if(state.viewAs && !isCreator) state.viewAs=null;              // "Ver como" es solo del Creador
-  if((state.view==="config"||state.view==="consola") && !isCreator) state.view="mialma"; // solo Creador
-  if(state.viewAs){                                              // en vista previa no se entra al taller del Creador
-    if(state.view==="config"||state.view==="consola") state.view="mialma";
-    if(!planAllows(state.view)) state.view="mialma";             // el plan previsualizado no incluye esta vista
-  }
+  // Consola y Personalizar: SOLO el Creador, y nunca durante una vista previa.
+  if((state.view==="config"||state.view==="consola") && (!isCreator || state.viewAs)) state.view="mialma";
+  // Gating por plan: si el plan (real o previsualizado) no incluye la vista, vuelve a Mi Alma.
+  if(!planAllows(state.view)) state.view="mialma";
   const fn = { mialma:vMiAlma, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
     finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
-    config:vConfig, consola:vConsola, comunidad:vComunidad, santuario:vSantuario }[state.view] || vMiAlma;
+    config:vConfig, consola:vConsola, equipo:vEquipo, recordatorios:vRecordatorios, comunidad:vComunidad, santuario:vSantuario }[state.view] || vMiAlma;
   document.getElementById("view").innerHTML = previewBanner() + fn(me());
 }
 
@@ -490,20 +531,25 @@ function vConsola(a){
 
   const note=`<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.10),rgba(255,255,255,.6))">
       <span class="pill gold">Backend</span>
-      <p class="muted" style="max-width:680px;margin-top:8px">Para que los cambios de nivel, rol o clan se guarden, aplica la migración
-        <b>0005</b> en Supabase (SQL Editor). Sin ella, RLS impedirá editar a otras Almas y verás un aviso al guardar.</p></div>`;
+      <p class="muted" style="max-width:680px;margin-top:8px">Para editar a otras Almas aplica la migración <b>0005</b> en Supabase (SQL Editor).
+        Para guardar <b>Plan</b> y <b>Rol</b> aplica además la <b>0006</b>. Sin ellas, el resto se guarda igual y verás un aviso en lo que falte.</p></div>`;
 
   const almas=state.cloudAlmas||[];
   const rows = almas.length ? almas.map(x=>{
     const lv=levelByKey(x.level);
-    const opts=LEVELS.map(l=>`<option value="${l.key}" ${l.key===(x.level||'EMBER')?'selected':''}>${l.emoji} ${l.label} · ${esc(l.name)}</option>`).join("");
+    const lopts=LEVELS.map(l=>`<option value="${l.key}" ${l.key===(x.level||'EMBER')?'selected':''}>${l.emoji} ${l.label} · ${esc(l.name)}</option>`).join("");
+    const popts=PLAN_TIERS.map(([k,l])=>`<option value="${k}" ${k===(x.plan||'ALMA')?'selected':''}>${l}</option>`).join("");
+    const ropts=ROLES.map(([k,l])=>`<option value="${k}" ${k===(x.team_role||'MIEMBRO')?'selected':''}>${l}</option>`).join("");
+    const pm=PLAN_META[x.plan||'ALMA']||PLAN_META.ALMA;
     return `<div class="card s12 cs-row">
         <div class="row" style="align-items:flex-start;margin-bottom:10px">
           <span class="avatar sm" style="background:linear-gradient(145deg,${x.color||'#888'},${shade(x.color||'#888',-22)})">${initials(x.name)}</span>
-          <div class="grow"><b>${esc(x.name)}</b><br><small class="muted">${lv.emoji} ${esc(x.level||'EMBER')} · ${x.xp||0} XP${x.clan?` · ${esc(x.clan)}`:""}${x.crew_role?` · ${esc(x.crew_role)}`:""}</small></div>
+          <div class="grow"><b>${esc(x.name)}</b> ${planBadge(x.plan||'ALMA')} ${roleBadge(x.team_role||'MIEMBRO')}<br><small class="muted">${lv.emoji} ${esc(x.level||'EMBER')} · ${x.xp||0} XP${x.clan?` · ${esc(x.clan)}`:""}${x.crew_role?` · ${esc(x.crew_role)}`:""}</small></div>
         </div>
         <div class="cs-fields">
-          <label class="fld"><span>Nivel</span><select id="cs_level_${x.id}">${opts}</select></label>
+          <label class="fld"><span>Plan</span><select id="cs_plan_${x.id}">${popts}</select></label>
+          <label class="fld"><span>Rol</span><select id="cs_trole_${x.id}">${ropts}</select></label>
+          <label class="fld"><span>Nivel</span><select id="cs_level_${x.id}">${lopts}</select></label>
           <label class="fld"><span>XP</span><input id="cs_xp_${x.id}" type="number" min="0" value="${x.xp||0}"></label>
           <label class="fld"><span>Rol (crew)</span><input id="cs_role_${x.id}" type="text" value="${esc(x.crew_role||'')}" placeholder="FOUNDING / rol"></label>
           <label class="fld"><span>Clan</span><input id="cs_clan_${x.id}" type="text" value="${esc(x.clan||'')}" placeholder="slug del clan"></label>
@@ -517,20 +563,25 @@ function vConsola(a){
 async function consolaSave(almaId){
   if(!isCreator || !Cloud.enabled) return;
   const g=id=>document.getElementById(id);
-  const patch={
+  const core={
     level: g("cs_level_"+almaId).value,
     crew_role: (g("cs_role_"+almaId).value||"").trim() || null,
     clan: (g("cs_clan_"+almaId).value||"").trim() || null
   };
   const xpv=g("cs_xp_"+almaId).value;
-  if(xpv!=="") patch.xp=Math.max(0, parseInt(xpv,10)||0);
+  if(xpv!=="") core.xp=Math.max(0, parseInt(xpv,10)||0);
+  const planRole={ plan:g("cs_plan_"+almaId).value, team_role:g("cs_trole_"+almaId).value||null };
   const btn=g("cs_save_"+almaId); if(btn){ btn.disabled=true; btn.textContent="Guardando…"; }
   try{
-    const rows=await Cloud.adminUpdateAlma(almaId, patch);
+    const rows=await Cloud.adminUpdateAlma(almaId, core);
     if(!rows.length) throw new Error("RLS bloqueó el cambio. Aplica la migración 0005 en Supabase.");
+    // Plan y rol viven en columnas de la 0006; si aún no existen, no rompemos el guardado principal.
+    let planWarn="";
+    try{ await Cloud.adminUpdateAlma(almaId, planRole); }
+    catch(e2){ planWarn=" (Plan/Rol no se guardaron: falta aplicar la migración 0006)"; }
     state.cloudAlmas=await Cloud.allAlmas();
     renderView();
-    alert("Alma actualizada ✓");
+    alert("Alma actualizada ✓"+planWarn);
   }catch(e){
     alert("No se pudo guardar: "+(e.message||e));
     if(btn){ btn.disabled=false; btn.textContent="Guardar"; }
@@ -792,6 +843,134 @@ function vSantuario(a){
 }
 
 /* ===========================================================
+   CLAN — Equipo, roles y recordatorios (Fase 4)
+   Local-first (localStorage por clan) + sincronización en la nube
+   best-effort si existen las tablas de la migración 0006.
+   =========================================================== */
+function roleBadge(role){
+  const m={CREADOR:["👑","Creador","#d0aa63"],ADMIN:["◆","Admin","#7b3a8a"],LIDER:["✦","Líder","#3a6f8a"],MIEMBRO:["•","Miembro","#8a8170"]};
+  const [i,l,c]=m[role]||m.MIEMBRO; return `<span class="role-badge" style="--rc:${c}">${i} ${l}</span>`;
+}
+function planBadge(plan){ const p=PLAN_META[plan]||PLAN_META.ALMA; return `<span class="plan-badge">${p.ico} ${esc(p.t)}</span>`; }
+function clanMembers(clan){ return clan ? roster().filter(m=>m.clan===clan) : []; }
+
+function teamKey(clan){ return "anima_team_"+(clan||"_none"); }
+function teamLocal(clan){ try{ const d=JSON.parse(localStorage.getItem(teamKey(clan))); if(d&&d.tasks&&d.reminders) return d; }catch(e){} return {tasks:[],reminders:[]}; }
+function teamSaveLocal(clan,d){ try{ localStorage.setItem(teamKey(clan), JSON.stringify(d)); }catch(e){} }
+function teamCache(clan){ if(!state.teamCache) state.teamCache={}; if(!state.teamCache[clan]) state.teamCache[clan]=teamLocal(clan); return state.teamCache[clan]; }
+
+async function syncTeam(clan){
+  if(!clan || !(Cloud.enabled && me().live)) return;   // sin nube/clan → modo local
+  try{
+    const [tasks,reminders]=await Promise.all([Cloud.teamTasks(clan),Cloud.reminders(clan)]);
+    if(!state.teamCache) state.teamCache={};
+    state.teamCache[clan]={
+      tasks: tasks.map(t=>({id:t.id,title:t.title,assignee:t.assignee,status:t.status||"Pendiente",_cloud:true})),
+      reminders: reminders.map(r=>({id:r.id,title:r.title,due:r.due_at,assignee:r.assignee,done:!!r.done,_cloud:true})),
+      _cloud:true
+    };
+    if(state.view==="equipo"||state.view==="recordatorios") renderView();
+  }catch(e){ /* tablas aún no creadas (falta 0006) → se mantiene lo local */ }
+}
+
+async function addTeamTask(){
+  if(!canLead()){ alert("Solo el Líder del Clan puede crear tareas del equipo."); return; }
+  const clan=me().clan; if(!clan){ alert("Necesitas pertenecer a un Clan."); return; }
+  const title=prompt("Tarea para el equipo:"); if(!title||!title.trim()) return;
+  const assignee=(prompt("¿Para quién? (nombre, opcional)","")||"").trim()||null;
+  const row={title:title.trim(),assignee,status:"Pendiente"};
+  if(Cloud.enabled && me().live){ try{ await Cloud.addTeamTask(clan,row); await syncTeam(clan); return; }catch(e){} }
+  const d=teamCache(clan); d.tasks.unshift({id:"l"+Date.now(),...row}); teamSaveLocal(clan,d); renderView();
+}
+async function cycleTask(id){
+  const clan=me().clan; const d=teamCache(clan); const t=d.tasks.find(x=>x.id===id); if(!t) return;
+  const order=["Pendiente","En curso","Hecho"]; t.status=order[(order.indexOf(t.status)+1)%order.length];
+  if(t._cloud && Cloud.enabled){ try{ await Cloud.updateTeamTask(id,{status:t.status}); }catch(e){} }
+  teamSaveLocal(clan,d); renderView();
+}
+async function delTeamTask(id){
+  if(!canLead()){ alert("Solo el Líder puede eliminar tareas."); return; }
+  const clan=me().clan; const d=teamCache(clan); const t=d.tasks.find(x=>x.id===id);
+  d.tasks=d.tasks.filter(x=>x.id!==id);
+  if(t&&t._cloud&&Cloud.enabled){ try{ await Cloud.deleteTeamTask(id); }catch(e){} }
+  teamSaveLocal(clan,d); renderView();
+}
+async function addReminder(){
+  const clan=me().clan; if(!clan){ alert("Necesitas pertenecer a un Clan."); return; }
+  const title=prompt("Recordatorio del Clan:"); if(!title||!title.trim()) return;
+  const due=(prompt("Fecha (AAAA-MM-DD, opcional):","")||"").trim()||null;
+  const assignee=(prompt("¿Para quién? (opcional):","")||"").trim()||null;
+  const row={title:title.trim(),due_at:due,assignee,done:false};
+  if(Cloud.enabled && me().live){ try{ await Cloud.addReminder(clan,row); await syncTeam(clan); return; }catch(e){} }
+  const d=teamCache(clan); d.reminders.unshift({id:"l"+Date.now(),title:row.title,due:row.due_at,assignee:row.assignee,done:false}); teamSaveLocal(clan,d); renderView();
+}
+async function toggleReminder(id){
+  const clan=me().clan; const d=teamCache(clan); const r=d.reminders.find(x=>x.id===id); if(!r) return; r.done=!r.done;
+  if(r._cloud&&Cloud.enabled){ try{ await Cloud.updateReminder(id,{done:r.done}); }catch(e){} }
+  teamSaveLocal(clan,d); renderView();
+}
+async function delReminder(id){
+  if(!canLead()){ alert("Solo el Líder puede eliminar recordatorios."); return; }
+  const clan=me().clan; const d=teamCache(clan); const r=d.reminders.find(x=>x.id===id);
+  d.reminders=d.reminders.filter(x=>x.id!==id);
+  if(r&&r._cloud&&Cloud.enabled){ try{ await Cloud.deleteReminder(id); }catch(e){} }
+  teamSaveLocal(clan,d); renderView();
+}
+
+function vEquipo(a){
+  const clan=a.clan;
+  if(!clan){
+    return `<div class="grid"><div class="card s12">
+      <span class="pill gold">Clan · Nivel 2</span>
+      <h2 style="letter-spacing:-.03em;margin:8px 0">Aún no perteneces a un Clan</h2>
+      <p class="muted" style="max-width:620px">Un Clan reúne de 2 a 8 Almas para crear juntas: miembros, roles, tablero de tareas y recordatorios compartidos. ${isCreator?'Asígnate (o asigna a un Alma) un clan desde la <b>Consola</b>.':'Pide a tu Líder o al Creador que te sume a un Clan.'}</p>
+      ${isCreator?'<button class="btn gold" data-view="consola" style="margin-top:10px">Ir a la Consola →</button>':''}</div></div>`;
+  }
+  const seed=SEED_CLANS.find(c=>c.name===clan);
+  const members=clanMembers(clan);
+  const d=teamCache(clan);
+  const can=canLead();
+  const roster=members.length?members.map(m=>{
+    const lv=levelByKey(m.level); const role=(m===me()&&isCreator)?'CREADOR':((m.team_role)||"MIEMBRO");
+    return `<div class="row"><span class="avatar sm" style="background:linear-gradient(145deg,${m.color||'#888'},${shade(m.color||'#888',-22)})">${initials(m.name)}</span>
+      <div class="grow"><b>${esc(m.name)}</b> ${roleBadge(role)}<br><small class="muted">${lv.emoji} ${esc(m.level)} · ${esc(m.role||m.country||'')}</small></div></div>`;
+  }).join(""):`<p class="muted">Todavía eres la única Alma de este Clan. Cuando se sumen más, aparecerán aquí.</p>`;
+  const board=`<div class="card s12"><div class="section-title"><h2>Tablero del equipo</h2><div class="spacer"></div>
+      ${can?`<button class="btn sm gold" data-teamadd="1">+ Tarea</button>`:`<span class="pill">Solo lectura</span>`}</div>
+      ${d.tasks.length?d.tasks.map(t=>{
+        const stc={Pendiente:'#8a8170','En curso':'#3a6f8a',Hecho:'#3a8a5f'}[t.status]||'#8a8170';
+        return `<div class="row task-row"><button class="task-dot" data-taskcycle="${t.id}" style="--tc:${stc}" title="Cambiar estado">${t.status==='Hecho'?'✓':''}</button>
+          <div class="grow"><b style="${t.status==='Hecho'?'text-decoration:line-through;opacity:.6':''}">${esc(t.title)}</b><br><small class="muted">${esc(t.assignee||'Sin asignar')} · ${esc(t.status)}</small></div>
+          ${can?`<button class="icon-btn" data-taskdel="${t.id}" title="Eliminar">✕</button>`:''}</div>`;
+      }).join(""):`<p class="muted">Sin tareas. ${can?'Crea la primera con “+ Tarea”.':'El Líder aún no agrega tareas.'}</p>`}</div>`;
+  return `<div class="grid">
+    <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
+      <div class="section-title"><h2>${seed?seed.emoji:'❂'} ${esc(clan)}</h2><div class="spacer"></div>${planBadge('CLAN')}<span class="pill">${members.length||1} Alma(s)</span></div>
+      <p class="muted">${seed?esc(seed.desc):'Tu Clan: un equipo de Almas que crean juntas.'}</p>
+      ${can?'<p class="muted" style="font-size:12.5px;margin-top:6px">Eres <b>Líder</b> de este Clan: puedes crear y asignar tareas, y gestionar recordatorios.</p>':'<p class="muted" style="font-size:12.5px;margin-top:6px">Eres <b>Miembro</b>: colaboras en el tablero y compartes recordatorios.</p>'}</div>
+    <div class="card s5"><div class="section-title"><h2>Miembros</h2></div>${roster}</div>
+    <div class="card s7"><div class="section-title"><h2>Roles del Clan</h2></div>
+      <p class="muted" style="font-size:13px">Cada Alma conserva su espacio privado. Los roles definen quién organiza al equipo.</p>
+      ${ROLES.map(([k,l])=>`<div class="row"><span class="grow"><b>${l}</b> <small class="muted">${({MIEMBRO:'Crea y colabora en su espacio',LIDER:'Organiza tareas y recordatorios',ADMIN:'Coordina varios Clanes (Santuario)'})[k]}</small></span><span class="chip">${members.filter(m=>((m.team_role)||'MIEMBRO')===k).length}</span></div>`).join("")}</div>
+    ${board}</div>`;
+}
+function vRecordatorios(a){
+  const clan=a.clan;
+  if(!clan){ return `<div class="grid"><div class="card s12"><span class="pill gold">Recordatorios</span><h2 style="margin:8px 0;letter-spacing:-.03em">Sin Clan</h2><p class="muted" style="max-width:600px">Los recordatorios son compartidos por el Clan. Únete a un Clan para usarlos.</p></div></div>`; }
+  const d=teamCache(clan); const pend=d.reminders.filter(r=>!r.done), done=d.reminders.filter(r=>r.done);
+  const item=r=>`<div class="row rem-row"><button class="task-dot" data-remtoggle="${r.id}" style="--tc:${r.done?'#3a8a5f':'#c0703a'}" title="Marcar">${r.done?'✓':''}</button>
+      <div class="grow"><b style="${r.done?'text-decoration:line-through;opacity:.6':''}">${esc(r.title)}</b><br><small class="muted">${r.due?'⏰ '+esc(r.due):'Sin fecha'}${r.assignee?' · '+esc(r.assignee):''}</small></div>
+      ${canLead()?`<button class="icon-btn" data-remdel="${r.id}" title="Eliminar">✕</button>`:''}</div>`;
+  const sub=(Cloud.enabled&&me().live)?'Se sincronizan por Clan en la nube si aplicaste la migración 0006; si no, quedan en este dispositivo.':'Guardados en este dispositivo.';
+  return `<div class="grid">
+    <div class="card s12"><div class="section-title"><h2>⏰ Recordatorios · ${esc(clan)}</h2><div class="spacer"></div><button class="btn sm gold" data-remadd="1">+ Recordatorio</button></div>
+      <p class="muted" style="font-size:12.5px">Compartidos por todo el Clan. ${sub}</p></div>
+    <div class="card s12"><div class="section-title"><h2>Pendientes</h2><div class="spacer"></div><span class="pill">${pend.length}</span></div>
+      ${pend.length?pend.map(item).join(""):`<p class="muted">Nada pendiente. ✨</p>`}</div>
+    ${done.length?`<div class="card s12"><div class="section-title"><h2>Hechos</h2><div class="spacer"></div><span class="pill">${done.length}</span></div>${done.map(item).join("")}</div>`:''}</div>`;
+}
+
+/* ===========================================================
    EDITOR UNIVERSAL DE REGISTROS (crear / editar / eliminar)
    =========================================================== */
 const EDITORS = {
@@ -1011,7 +1190,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
    RENDER + EVENTOS
    =========================================================== */
 function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); }
-function go(view){ state.view=view; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); if(view==="comunidad") loadPosts(); }
+function go(view){ state.view=view; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); if(view==="comunidad") loadPosts(); if(view==="equipo"||view==="recordatorios") syncTeam(me().clan); }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 function openLumbre(){ drawer().classList.add("open"); dbg().classList.add("open"); renderLumbre(); }
@@ -1022,6 +1201,12 @@ document.addEventListener("click", e=>{
   const rn=e.target.closest("[data-reino]"); if(rn){ toggleReino(rn.dataset.reino); return; }
   const va=e.target.closest("[data-viewas]"); if(va){ setViewAs(va.dataset.viewas); return; }
   const cs=e.target.closest("[data-cssave]"); if(cs){ consolaSave(cs.dataset.cssave); return; }
+  if(e.target.closest("[data-teamadd]")){ addTeamTask(); return; }
+  const tcy=e.target.closest("[data-taskcycle]"); if(tcy){ cycleTask(tcy.dataset.taskcycle); return; }
+  const tdl=e.target.closest("[data-taskdel]"); if(tdl){ delTeamTask(tdl.dataset.taskdel); return; }
+  if(e.target.closest("[data-remadd]")){ addReminder(); return; }
+  const rtg=e.target.closest("[data-remtoggle]"); if(rtg){ toggleReminder(rtg.dataset.remtoggle); return; }
+  const rdl=e.target.closest("[data-remdel]"); if(rdl){ delReminder(rdl.dataset.remdel); return; }
   const ed=e.target.closest("[data-edit]"); if(ed){ const [k,i]=ed.dataset.edit.split(":"); openRecord(k,+i); return; }
   const dl=e.target.closest("[data-del]"); if(dl){ const [k,i]=dl.dataset.del.split(":"); deleteRecord(k,+i); return; }
   const st=e.target.closest("[data-star]"); if(st){ _fbRating=+st.dataset.star; renderStars(); return; }
