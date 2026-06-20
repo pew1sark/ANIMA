@@ -30,7 +30,7 @@ const Cloud = {
   async allAlmas(){
     if(!_sb) return [];
     const { data } = await _sb.from("almas")
-      .select("id,slug,name,role,crew_role,avatar_url,city,country,bio,color,level,xp,clan,plan,team_role,tags,is_founding,created_at")
+      .select("id,slug,name,role,crew_role,avatar_url,city,country,bio,color,level,xp,clan,santuario,plan,team_role,sparks,tags,is_founding,created_at")
       .eq("is_founding", false)
       .order("created_at", { ascending:false });
     return data || [];
@@ -131,7 +131,23 @@ const Cloud = {
   async teamTasks(clan){ const { data, error } = await _sb.from("team_tasks").select("*").eq("clan", clan).order("created_at",{ascending:false}); if(error) throw error; return data||[]; },
   async addTeamTask(clan, row){ const { data, error } = await _sb.from("team_tasks").insert({ clan, ...row }).select().single(); if(error) throw error; return data; },
   async updateTeamTask(id, patch){ const { error } = await _sb.from("team_tasks").update(patch).eq("id", id); if(error) throw error; },
-  async deleteTeamTask(id){ const { error } = await _sb.from("team_tasks").delete().eq("id", id); if(error) throw error; }
+  async deleteTeamTask(id){ const { error } = await _sb.from("team_tasks").delete().eq("id", id); if(error) throw error; },
+
+  /* Clan: calendario sincronizado y proyectos (migración 0011) */
+  async clanEvents(clan){ const { data, error } = await _sb.from("clan_events").select("*").eq("clan", clan).order("at_date",{ascending:true}); if(error) throw error; return data||[]; },
+  async addClanEvent(clan, row){ const { data, error } = await _sb.from("clan_events").insert({ clan, ...row }).select().single(); if(error) throw error; return data; },
+  async updateClanEvent(id, patch){ const { error } = await _sb.from("clan_events").update(patch).eq("id", id); if(error) throw error; },
+  async deleteClanEvent(id){ const { error } = await _sb.from("clan_events").delete().eq("id", id); if(error) throw error; },
+  async clanProjects(clan){ const { data, error } = await _sb.from("clan_projects").select("*").eq("clan", clan).order("created_at",{ascending:false}); if(error) throw error; return data||[]; },
+  async addClanProject(clan, row){ const { data, error } = await _sb.from("clan_projects").insert({ clan, ...row }).select().single(); if(error) throw error; return data; },
+  async updateClanProject(id, patch){ const { error } = await _sb.from("clan_projects").update(patch).eq("id", id); if(error) throw error; },
+  async deleteClanProject(id){ const { error } = await _sb.from("clan_projects").delete().eq("id", id); if(error) throw error; },
+
+  /* Clan: códigos de invitación (migración 0011) */
+  async clanInvites(clan){ const { data, error } = await _sb.from("clan_invites").select("*").eq("clan", clan).order("created_at",{ascending:false}); if(error) throw error; return data||[]; },
+  async createInvite(row){ const { data, error } = await _sb.from("clan_invites").insert(row).select().single(); if(error) throw error; return data; },
+  async deleteInvite(id){ const { error } = await _sb.from("clan_invites").delete().eq("id", id); if(error) throw error; },
+  async joinByCode(code){ const { data, error } = await _sb.rpc("join_clan_by_code", { p_code: code }); if(error) throw error; return data; }
 };
 
 /* DB → forma en memoria que usan las vistas */
@@ -140,7 +156,7 @@ function dbAlmaToState(row, m){
     id: "me-"+row.id, almaId: row.id, live: true,
     name: row.name, color: row.color || "#111111", level: row.level || "EMBER", xp: row.xp || 0,
     role: row.role || "Creador", city: row.city || "", country: row.country || "",
-    bio: row.bio || "", tags: row.tags || [], clan: row.clan || null,
+    bio: row.bio || "", tags: row.tags || [], clan: row.clan || null, santuario: row.santuario || null,
     plan: row.plan || "ALMA", team_role: row.team_role || null,
     photo: row.avatar_url || "", banner: row.banner_url || "", discipline: row.discipline || "", specialty: row.specialty || "",
     handle: row.handle || "", territory: row.territory || "", website: row.website || "",

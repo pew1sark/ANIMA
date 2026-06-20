@@ -318,6 +318,25 @@
 .pf-pubtoggle .toggle.on span{left:17px}
 .pf-pubtoggle:hover{transform:translateY(-1px)}
 
+/* Mi Plan · roles · herramientas de Clan */
+.plan-pick{display:flex;flex-direction:column;transition:.22s ease}
+.plan-pick:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.plan-pick.on{border-color:rgba(208,170,99,.5);box-shadow:0 22px 70px rgba(208,170,99,.16)}
+.plan-pick .feat{list-style:none;padding:0;margin:14px 0;line-height:1.5;flex:1}
+.plan-pick .feat li{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--line);font-size:13.5px}
+.plan-pick .feat li:first-child{border-top:0}
+.plan-pick .feat .ck{color:var(--gold);font-weight:900;flex:0 0 auto}
+.plan-pick .btn{width:100%}
+.role-sel{border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13px;font-family:inherit;background:#fff;outline:none;cursor:pointer}
+.role-sel:focus{border-color:var(--gold)}
+.join-box{display:flex;gap:8px;flex-wrap:wrap}
+.join-box input{flex:1;min-width:200px;border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;font-family:inherit;background:#fff;outline:none;text-transform:uppercase}
+.join-box input:focus{border-color:var(--gold)}
+.invite-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;font-size:14px;letter-spacing:.04em;background:rgba(208,170,99,.14);color:#7b5920;border:1px solid rgba(208,170,99,.3);padding:6px 11px;border-radius:10px;flex:0 0 auto}
+.ev-row .ev-date{flex:0 0 auto;width:58px;text-align:center;display:flex;flex-direction:column;line-height:1.1}
+.ev-row .ev-date b{font-size:13px;letter-spacing:-.02em}
+.ev-row .ev-date small{color:var(--muted);font-size:11px}
+
 
 /* ---------- Mapamundi de Almas ---------- */
 .worldmap{position:relative;width:100%;aspect-ratio:2/1;border-radius:20px;overflow:hidden;border:1px solid var(--line);
