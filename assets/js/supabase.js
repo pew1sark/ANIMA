@@ -21,7 +21,7 @@ const Cloud = {
 
   async session(){ if(!_sb) return null; const { data } = await _sb.auth.getSession(); return data.session; },
   async user(){ if(!_sb) return null; const { data } = await _sb.auth.getUser(); return data.user; },
-  signUp(email, password, name){ return _sb.auth.signUp({ email, password, options:{ data:{ name } } }); },
+  signUp(email, password, name, affinity){ return _sb.auth.signUp({ email, password, options:{ data:{ name, affinity:affinity||null } } }); },
   signIn(email, password){ return _sb.auth.signInWithPassword({ email, password }); },
   signOut(){ return _sb.auth.signOut(); },
   onAuth(cb){ if(_sb) _sb.auth.onAuthStateChange((_e, s)=>cb(s)); },
@@ -79,6 +79,11 @@ const Cloud = {
   addLibrary(almaId, title, kind){ return _sb.from("library").insert({ alma_id:almaId, title, kind }); },
   setXP(almaId, xp){ return _sb.from("almas").update({ xp }).eq("id", almaId); },
   updateAlma(almaId, patch){ return _sb.from("almas").update(patch).eq("id", almaId); },
+
+  /* Esencia (camino ceremonial). add_essence suma de forma atómica al Alma
+     del usuario autenticado (migración 0012) y devuelve la Esencia nueva. */
+  async addEssence(amount){ if(!_sb) return null; const { data } = await _sb.rpc("add_essence", { p_amount:amount }); return data; },
+  setEssence(almaId, essence){ return _sb.from("almas").update({ essence }).eq("id", almaId); },
 
   /* Consola del Creador: edita otra Alma. .select() permite saber si
      RLS dejó pasar el cambio (data vacío = bloqueado, falta migración 0005). */
@@ -150,6 +155,10 @@ const Cloud = {
   async joinByCode(code){ const { data, error } = await _sb.rpc("join_clan_by_code", { p_code: code }); if(error) throw error; return data; }
 };
 
+/* Exponer Cloud en window para que anima-state.js (capa del rito) pueda
+   sincronizar la Esencia y la Afinidad sin acoplarse al studio. */
+window.Cloud = Cloud;
+
 /* DB → forma en memoria que usan las vistas */
 function dbAlmaToState(row, m){
   return {
@@ -163,6 +172,7 @@ function dbAlmaToState(row, m){
     instagram: row.instagram || "", portfolio_url: row.portfolio_url || "", shop_url: row.shop_url || "",
     headline: row.headline || "", availability: row.availability || "",
     sparks: row.sparks || 0, created_at: row.created_at || null,
+    essence: row.essence || 0, affinity: row.affinity || "",
     visibility: row.visibility || {},
     finance: {
       income:  (m.income  || []).map(x => ({ _id:x.id, t:x.title, a:Number(x.amount), d:x.period, cat:x.category, on:x.occurred_at, method:x.method, notes:x.notes })),

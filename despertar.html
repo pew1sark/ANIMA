@@ -152,7 +152,7 @@
     // continúa igual — ANIMA no depende obligatoriamente de internet.
     try {
       if (typeof Cloud !== "undefined" && Cloud.enabled) {
-        var res = await Cloud.signUp(form.email, form.pass, form.name);
+        var res = await Cloud.signUp(form.email, form.pass, form.name, form.affinity);
         if (res && res.error && !/registered|already/i.test(res.error.message || "")) {
           // error no fatal: lo registramos pero seguimos en local
           console.warn("ANIMA signUp:", res.error.message);

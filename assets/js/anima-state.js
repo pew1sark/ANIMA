@@ -76,6 +76,7 @@
       name: "", email: "", affinity: "", code: "",
       esencia: 0, createdAt: null,
       steps: { despertar: false, nacer: false, primerDespertar: false, tutorial: false, logro: false },
+      awarded: {},   // claves de acciones de Esencia que solo se otorgan una vez
       synced: false
     };
   }
@@ -86,7 +87,8 @@
       if (s && typeof s === "object") {
         var d = defaults();
         d.steps = Object.assign(d.steps, s.steps || {});
-        return Object.assign(d, s, { steps: d.steps });
+        d.awarded = Object.assign(d.awarded, s.awarded || {});
+        return Object.assign(d, s, { steps: d.steps, awarded: d.awarded });
       }
     } catch (e) {}
     return defaults();
@@ -137,17 +139,38 @@
       return AFINIDADES.filter(function (a) { return a.key === key; })[0] || null;
     },
 
-    /* --- Esencia --- */
+    /* --- Esencia ---
+       Suma local inmediata (la primera etapa de la vida del Alma vive en el
+       dispositivo) y, si hay sesión en la nube, suma de forma atómica con el
+       RPC add_essence y reconcilia con el valor servidor (fuente de verdad). */
     addEsencia: function (amount, reason) {
       var s = load();
       s.esencia = Math.max(0, (s.esencia || 0) + (amount || 0));
       save(s);
-      API.syncCloud(s);
+      try {
+        var C = global.Cloud;
+        if (C && C.enabled && amount) {
+          C.session().then(function (sess) {
+            if (!sess) return;
+            C.addEssence(amount).then(function (serverEssence) {
+              if (serverEssence != null) { var s2 = load(); s2.esencia = serverEssence; s2.synced = true; save(s2); }
+            }).catch(function () {});
+          }).catch(function () {});
+        }
+      } catch (e) {}
       return API.progress();
+    },
+    /* Otorga Esencia una sola vez por clave (perfil completo, primera chispa…). */
+    addEsenciaOnce: function (key, amount, reason) {
+      var s = load();
+      if (s.awarded[key]) return API.progress();
+      s.awarded[key] = true; save(s);
+      return API.addEsencia(amount, reason);
     },
     setEsencia: function (value) {
       var s = load(); s.esencia = Math.max(0, value || 0); save(s); return API.progress();
     },
+    wasAwarded: function (key) { return !!load().awarded[key]; },
 
     /* --- Niveles --- */
     levelOf: function (esencia) { return LEVELS[levelOf(esencia == null ? load().esencia : esencia)]; },
@@ -175,22 +198,31 @@
       return s;
     },
 
-    /* Sincroniza con Supabase si hay sesión. Nunca bloquea el rito:
-       si falla o no hay nube, el Alma sigue viviendo en localStorage. */
-    syncCloud: function (s) {
-      s = s || load();
+    /* Puente local → nube: cuando hay sesión, sube la Esencia y la Afinidad
+       acumuladas en el rito (sin tocar xp del studio). La Esencia servidor
+       queda como el máximo entre local y nube; luego el servidor manda.
+       Nunca bloquea: si falla o no hay nube, el Alma sigue en localStorage. */
+    syncCloud: function (row) {
+      var s = load();
       try {
-        if (typeof global.Cloud === "undefined" || !global.Cloud.enabled) return Promise.resolve(false);
-        return global.Cloud.session().then(function (sess) {
+        var C = global.Cloud;
+        if (!C || !C.enabled) return Promise.resolve(false);
+        var apply = function (r) {
+          if (!r) return false;
+          var patch = {};
+          var merged = Math.max(r.essence || 0, s.esencia || 0);
+          if (merged !== (r.essence || 0)) patch.essence = merged;
+          if (s.affinity && !r.affinity) patch.affinity = s.affinity;
+          // reconciliar local hacia el valor efectivo del servidor
+          if (merged !== s.esencia) { s.esencia = merged; }
+          s.synced = true; save(s);
+          if (!Object.keys(patch).length) return true;
+          return C.updateAlma(r.id, patch).then(function () { return true; }).catch(function () { return false; });
+        };
+        if (row) return Promise.resolve(apply(row));
+        return C.session().then(function (sess) {
           if (!sess) return false;
-          return global.Cloud.myAlma().then(function (row) {
-            if (!row) return false;
-            var patch = { xp: Math.max(row.xp || 0, s.esencia || 0) };
-            // affinity -> etiqueta no destructiva si el Alma no tiene tags
-            return global.Cloud.updateAlma(row.id, patch).then(function () {
-              s.synced = true; save(s); return true;
-            }).catch(function () { return false; });
-          }).catch(function () { return false; });
+          return C.myAlma().then(apply).catch(function () { return false; });
         }).catch(function () { return false; });
       } catch (e) { return Promise.resolve(false); }
     },

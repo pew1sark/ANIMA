@@ -8,6 +8,8 @@
   <title>Home — ANIMA</title>
   <meta name="description" content="El Home de tu Alma: nivel, esencia y lo que has desbloqueado en ANIMA." />
   <link rel="stylesheet" href="assets/css/umbral.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase.js"></script>
   <script src="assets/js/anima-state.js"></script>
 </head>
 <body class="rite" style="display:block;align-items:stretch;justify-content:flex-start">
@@ -129,6 +131,23 @@
   }
 
   render();
+
+  /* Reconciliar con la nube: si esta Alma tiene sesión, la Esencia y la
+     Afinidad del servidor mandan. Best-effort, nunca bloquea el Home. */
+  (function cloudRefresh(){
+    try{
+      if(typeof Cloud==="undefined" || !Cloud.enabled) return;
+      Cloud.myAlma().then(function(row){
+        if(!row) return;
+        var st=AnimaState.get();
+        if(row.affinity) st.affinity=row.affinity;
+        if(row.name) st.name=row.name;
+        AnimaState.save(st);
+        // sube la Esencia local si va por delante; luego usa el valor efectivo
+        AnimaState.syncCloud(row).then(function(){ render(); });
+      }).catch(function(){});
+    }catch(e){}
+  })();
   </script>
 </body>
 </html>
