@@ -14,6 +14,7 @@
   <meta property="og:title" content="EL UMBRAL — ANIMA TSC" />
   <meta property="og:description" content="Aquí no existen usuarios. Existen Almas. Cruza el umbral." />
   <link rel="stylesheet" href="assets/css/anima.css" />
+  <script src="assets/js/anima-state.js"></script>
   <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script>
   <style>
     /* ===== EL UMBRAL — portada cinematográfica ===== */
@@ -188,5 +189,22 @@
       </div>
     </div>
   </main>
+
+  <!-- Router del Umbral: el acceso pasa por el rito de entrada (req. 11).
+       Primera vez → El Umbral. Alma que ya despertó → su Home de ANIMA. -->
+  <script>
+  (function(){
+    var done = window.AnimaState && AnimaState.isCompleted();
+    var dest = (window.AnimaState ? AnimaState.entryHref() : "umbral.html");
+    document.querySelectorAll('a[href="studio.html"]').forEach(function(a){
+      a.setAttribute("href", dest);
+      var t = (a.textContent||"").trim();
+      // Solo renombramos los grandes llamados a la acción, no enlaces de texto.
+      if(/cruzar el umbral/i.test(t)){
+        a.textContent = done ? "Entrar a ANIMA →" : "Entrar al Umbral →";
+      }
+    });
+  })();
+  </script>
 </body>
 </html>

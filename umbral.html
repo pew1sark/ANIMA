@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#08080b" />
+  <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
+  <title>El Umbral — ANIMA</title>
+  <meta name="description" content="Toda Alma deja una Huella. Pero pocas despiertan. Cruza el umbral de ANIMA." />
+  <link rel="stylesheet" href="assets/css/umbral.css" />
+  <script src="assets/js/anima-state.js"></script>
+</head>
+<body class="rite">
+  <div class="field"><div class="core"></div></div>
+
+  <main class="rite-wrap">
+    <span class="eyebrow"><span class="ln"></span>El Umbral<span class="ln"></span></span>
+
+    <div class="lumbre-core">
+      <span class="halo"></span>
+      <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
+      <img src="assets/img/lumbre.svg" width="120" height="142" alt="LUMBRE, la chispa de ANIMA" />
+    </div>
+
+    <p class="rite-sub" style="margin-top:2px">Soy <b style="color:var(--gold)">LUMBRE</b>, la chispa de ANIMA.<br>Te he estado esperando.</p>
+
+    <p class="rite-lede">Toda Alma deja una Huella.<br>Pero pocas despiertan.</p>
+
+    <div class="actions">
+      <a class="cbtn" href="despertar.html" id="despertarBtn">Despertar ✦</a>
+    </div>
+
+    <div class="glyph-row">✶ ▦ ☽ ➶ ♟</div>
+    <p class="seal">🜂 The Founding Era · Las primeras Almas de ANIMA</p>
+  </main>
+
+  <script src="assets/js/rite.js"></script>
+  <script>
+    // Si esta Alma ya despertó, no repetimos el rito (req. 11).
+    if (AnimaState.isCompleted()) location.replace("home.html");
+
+    document.getElementById("despertarBtn").addEventListener("click", function (e) {
+      e.preventDefault();
+      Rite.go("despertar.html");
+    });
+  </script>
+</body>
+</html>
