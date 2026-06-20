@@ -38,7 +38,7 @@ const money = n => "$" + Number(n||0).toLocaleString("es-CL");
 const SEED_ALMAS = [{
   id:"guest", name:"Invitada", color:"#9a8c70", level:"EMBER", xp:0,
   role:"", city:"", country:"", bio:"Entra o crea tu Alma para empezar a construir tu mundo.",
-  tags:[], clan:null,
+  tags:[], clan:null, plan:"SANTUARIO", team_role:null,
   finance:{ income:[], expense:[] }, projects:[], portfolio:[], trajectory:[],
   memories:[], library:[], agenda:[], clients:[]
 }];

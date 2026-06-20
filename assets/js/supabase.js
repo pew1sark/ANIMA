@@ -30,7 +30,7 @@ const Cloud = {
   async allAlmas(){
     if(!_sb) return [];
     const { data } = await _sb.from("almas")
-      .select("id,slug,name,role,crew_role,avatar_url,city,country,bio,color,level,xp,clan,tags,is_founding,created_at")
+      .select("id,slug,name,role,crew_role,avatar_url,city,country,bio,color,level,xp,clan,plan,team_role,tags,is_founding,created_at")
       .eq("is_founding", false)
       .order("created_at", { ascending:false });
     return data || [];
@@ -103,7 +103,19 @@ const Cloud = {
 
   /* Comunidad */
   async posts(){ const { data } = await _sb.from("posts").select("*").order("created_at",{ascending:false}).limit(100); return data||[]; },
-  async comments(postId){ const { data } = await _sb.from("comments").select("*").eq("post_id", postId).order("created_at",{ascending:true}); return data||[]; }
+  async comments(postId){ const { data } = await _sb.from("comments").select("*").eq("post_id", postId).order("created_at",{ascending:true}); return data||[]; },
+
+  /* Clan: recordatorios y tablero del equipo (Fase 4, tablas de migración 0006).
+     Si la tabla no existe aún, lanza error y el front cae a modo local. */
+  async reminders(clan){ const { data, error } = await _sb.from("reminders").select("*").eq("clan", clan).order("due_at",{ascending:true}); if(error) throw error; return data||[]; },
+  async addReminder(clan, row){ const { data, error } = await _sb.from("reminders").insert({ clan, ...row }).select().single(); if(error) throw error; return data; },
+  async updateReminder(id, patch){ const { error } = await _sb.from("reminders").update(patch).eq("id", id); if(error) throw error; },
+  async deleteReminder(id){ const { error } = await _sb.from("reminders").delete().eq("id", id); if(error) throw error; },
+
+  async teamTasks(clan){ const { data, error } = await _sb.from("team_tasks").select("*").eq("clan", clan).order("created_at",{ascending:false}); if(error) throw error; return data||[]; },
+  async addTeamTask(clan, row){ const { data, error } = await _sb.from("team_tasks").insert({ clan, ...row }).select().single(); if(error) throw error; return data; },
+  async updateTeamTask(id, patch){ const { error } = await _sb.from("team_tasks").update(patch).eq("id", id); if(error) throw error; },
+  async deleteTeamTask(id){ const { error } = await _sb.from("team_tasks").delete().eq("id", id); if(error) throw error; }
 };
 
 /* DB → forma en memoria que usan las vistas */
@@ -113,6 +125,7 @@ function dbAlmaToState(row, m){
     name: row.name, color: row.color || "#111111", level: row.level || "EMBER", xp: row.xp || 0,
     role: row.role || "Creador", city: row.city || "", country: row.country || "",
     bio: row.bio || "", tags: row.tags || [], clan: row.clan || null,
+    plan: row.plan || "ALMA", team_role: row.team_role || null,
     photo: row.avatar_url || "", discipline: row.discipline || "", specialty: row.specialty || "",
     handle: row.handle || "", territory: row.territory || "", website: row.website || "",
     instagram: row.instagram || "", portfolio_url: row.portfolio_url || "", shop_url: row.shop_url || "",
