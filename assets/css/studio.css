@@ -265,6 +265,33 @@
 @media(max-width:900px){.pf-grid{columns:2}}
 @media(max-width:560px){.pf-grid{columns:1}}
 
+/* Portafolio — hero estilo Behance */
+.pf-hero{padding:0;overflow:hidden}
+.pf-hero-banner{height:180px;background-size:cover;background-position:center}
+.pf-hero-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  padding:0 22px 18px;margin-top:-34px}
+.pf-hero-id{display:flex;align-items:flex-end;gap:14px;min-width:0}
+.pf-hero-id .avatar{border:4px solid var(--card-solid);box-shadow:0 10px 30px rgba(0,0,0,.14)}
+.pf-hero-acts{display:flex;gap:8px;align-items:center;padding-bottom:4px}
+@media(max-width:560px){.pf-hero-banner{height:130px}.pf-hero-bar{margin-top:-28px}}
+
+/* Portafolio — estado vacío */
+.pf-empty{text-align:center;padding:48px 24px}
+.pf-empty-ico{font-size:40px;color:var(--gold);display:inline-block;
+  width:74px;height:74px;line-height:74px;border-radius:22px;border:1px solid var(--line);
+  background:linear-gradient(145deg,#fff,#ece8df)}
+
+/* Subida de imágenes en alta calidad (Storage) */
+.img-up{display:flex;flex-direction:column;gap:8px}
+.img-prev{aspect-ratio:16/10;border-radius:14px;border:1px dashed var(--line-strong);
+  background:rgba(0,0,0,.03);background-size:cover;background-position:center;
+  display:grid;place-items:center;color:var(--muted);font-size:12px;font-weight:700}
+.img-prev.has{border-style:solid;border-color:var(--line)}
+.img-pick{cursor:pointer;align-self:flex-start}
+.img-pick input{display:none}
+.img-hint{font-size:11px}
+
+
 /* ---------- Mapamundi de Almas ---------- */
 .worldmap{position:relative;width:100%;aspect-ratio:2/1;border-radius:20px;overflow:hidden;border:1px solid var(--line);
   background:radial-gradient(circle at 28% 18%,rgba(208,170,99,.14),transparent 46%),linear-gradient(160deg,#15161c,#20222b)}

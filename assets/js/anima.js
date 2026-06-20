@@ -351,11 +351,12 @@ function vAlmaIdentidad(a){
     <div style="display:flex;gap:10px"><div style="flex:1">${f("id_port","Portafolio",a.portfolio_url)}</div><div style="flex:1">${f("id_shop","Tienda / catálogo",a.shop_url)}</div></div>
     <button class="btn" id="idSave" style="width:100%;margin-top:6px">Guardar identidad</button>
   </div>
-  <div class="card s4" style="align-self:start;text-align:center">
-    <small class="muted" style="font-weight:850;letter-spacing:.05em;text-transform:uppercase;font-size:10.5px">Foto de perfil</small>
-    <div style="margin:14px 0">${avatarHTML(a,"lg")}</div>
-    <div class="field"><label>URL de la foto</label><input id="id_photo" value="${esc(a.photo||"")}" placeholder="https://…/foto.jpg"></div>
-    <p class="muted" style="font-size:11.5px">Pega el enlace de una imagen (Instagram, Drive público, etc.). La subida de archivos llega pronto.</p>
+  <div class="card s4" style="align-self:start">
+    <div class="section-title"><h2 style="font-size:16px">Imagen de tu Alma</h2></div>
+    <div style="text-align:center;margin:4px 0 14px">${avatarHTML(a,"lg")}</div>
+    ${imgUpField("id_photo","Foto de perfil", a.photo, "perfil")}
+    ${imgUpField("id_banner","Banner / portada", a.banner, "banner")}
+    <p class="muted" style="font-size:11.5px;margin-top:4px">Sube fotos en <b>alta calidad</b> para que tu portafolio público se vea profesional. También puedes pegar un enlace.</p>
   </div>`;
 }
 function vAlmaPublica(a){
@@ -387,12 +388,12 @@ async function saveIdentity(){
   const a=me(); if(!a.live) return;
   const g=id=>{const e=document.getElementById(id);return e?e.value.trim():"";};
   const patch={ name:g("id_name"), discipline:g("id_disc"), specialty:g("id_spec"), handle:g("id_handle"),
-    territory:g("id_terr"), bio:g("id_bio"), avatar_url:g("id_photo"), website:g("id_web"),
+    territory:g("id_terr"), bio:g("id_bio"), avatar_url:g("id_photo"), banner_url:g("id_banner"), website:g("id_web"),
     instagram:g("id_ig"), portfolio_url:g("id_port"), shop_url:g("id_shop"),
     tags:g("id_tags").split(",").map(s=>s.trim()).filter(Boolean) };
   try{ await Cloud.updateAlma(a.almaId,patch);
     a.name=patch.name; a.discipline=patch.discipline; a.specialty=patch.specialty; a.handle=patch.handle;
-    a.territory=patch.territory; a.bio=patch.bio; a.photo=patch.avatar_url; a.website=patch.website;
+    a.territory=patch.territory; a.bio=patch.bio; a.photo=patch.avatar_url; a.banner=patch.banner_url; a.website=patch.website;
     a.instagram=patch.instagram; a.portfolio_url=patch.portfolio_url; a.shop_url=patch.shop_url; a.tags=patch.tags;
     a.role=patch.discipline||a.role;
     renderAll(); updateAuthUI(await Cloud.session()); alert("Identidad guardada ✓");
@@ -413,19 +414,71 @@ function vTrayectoria(a){
 }
 
 /* --- Portafolio (galería tipo Behance) --- */
-function isImgUrl(u){ return u && /\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i.test(u); }
+function isImgUrl(u){ return u && (/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i.test(u) || /\/storage\/v1\/object\/public\/media\//.test(u)); }
+
+/* Campo de subida de imagen en ALTA CALIDAD (Supabase Storage, bucket "media").
+   Reutilizable: portada de obra, foto de perfil y banner. Permite subir archivo
+   o pegar un enlace; muestra vista previa en vivo. */
+function imgUpField(inputId, label, val, folder){
+  const has = val && isImgUrl(val);
+  return `<div class="field"><label>${label}</label>
+    <div class="img-up">
+      <div class="img-prev ${has?'has':''}" id="prev_${inputId}" style="${has?`background-image:url('${esc(val)}')`:''}">${has?'':'Sin imagen'}</div>
+      <label class="btn sm secondary img-pick">⤒ Subir foto<input type="file" accept="image/*" hidden data-imgfield="1" data-imgfolder="${folder||'obra'}" data-imgtarget="${inputId}" data-imgprev="prev_${inputId}" data-imgstatus="up_${inputId}"></label>
+      <input id="${inputId}" data-imgurl="prev_${inputId}" type="text" placeholder="o pega el enlace de una imagen" value="${esc(val||'')}">
+    </div>
+    <small class="muted img-hint" id="up_${inputId}">JPG · PNG · WebP — hasta 15 MB, en alta calidad.</small></div>`;
+}
+async function uploadImgField(fileInput){
+  const file = fileInput.files && fileInput.files[0]; if(!file) return;
+  const a = me();
+  const status = document.getElementById(fileInput.dataset.imgstatus||"");
+  const setS = t => { if(status) status.textContent = t; };
+  const done = ()=>{ try{ fileInput.value=""; }catch(e){} };
+  if(!a.live || !Cloud.enabled){ setS("Para subir fotos en alta calidad entra a tu Alma en la nube. También puedes pegar un enlace."); return done(); }
+  if(!/^image\//.test(file.type||"")){ setS("Elige un archivo de imagen."); return done(); }
+  if(file.size > 15*1024*1024){ setS("La imagen supera 15 MB. Sube una versión más liviana."); return done(); }
+  setS("Subiendo en alta calidad…");
+  try{
+    const url = await Cloud.uploadMedia(file, fileInput.dataset.imgfolder);
+    const inp = document.getElementById(fileInput.dataset.imgtarget); if(inp) inp.value = url;
+    const prev = document.getElementById(fileInput.dataset.imgprev); if(prev){ prev.style.backgroundImage = `url('${url}')`; prev.textContent = ""; prev.classList.add("has"); }
+    setS("Listo ✓ Imagen en alta calidad.");
+  }catch(err){ setS("No se pudo subir: "+(err.message||err)); }
+  done();
+}
 function vPortafolio(a){
-  return `<div class="grid"><div class="card s12">
-    <div class="section-title"><h2>Portafolio</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px;margin-right:10px">${a.portfolio.length} obras</span><button class="btn sm" data-add="obra">+ Obra</button></div>
-    ${a.portfolio.length?`<div class="pf-grid">${a.portfolio.map((p,i)=>{
-      const cover=isImgUrl(p.link)?`background-image:url('${esc(p.link)}');background-size:cover;background-position:center`
-        :`background:linear-gradient(145deg,${p.c},${shade(p.c,-28)})`;
-      return `<div class="pf-card">
-        <div class="pf-cover" style="${cover}">${isImgUrl(p.link)?"":`<span>${initials(p.t)}</span>`}<div class="pf-acts">${acts("obra",i)}</div></div>
-        <div class="pf-cap"><b>${esc(p.t)}</b><small>${esc([p.k,p.year].filter(Boolean).join(" · "))}</small>${p.desc?`<p>${esc(p.desc)}</p>`:""}${p.link&&!isImgUrl(p.link)?`<a href="${esc(p.link)}" target="_blank" rel="noopener" class="pf-link">Ver →</a>`:""}</div>
-      </div>`; }).join("")}</div>`
-    :`<p class="muted">Aún no hay obras. Agrega tu primera (puedes pegar el enlace de una imagen como portada).</p>`}
-  </div></div>`;
+  const banner = (a.banner && isImgUrl(a.banner))
+    ? `background-image:url('${esc(a.banner)}')`
+    : `background:linear-gradient(135deg,${a.color||'#b8a892'},${shade(a.color||'#b8a892',-40)})`;
+  const hero = `<div class="card s12 pf-hero">
+      <div class="pf-hero-banner" style="${banner}"></div>
+      <div class="pf-hero-bar">
+        <div class="pf-hero-id">${avatarHTML(a,"lg")}
+          <div><h2 style="margin:0;font-size:24px;letter-spacing:-.04em">${esc(a.name)}</h2>
+            <small class="muted">${esc([a.discipline||a.role,a.specialty].filter(Boolean).join(" · ")||"Tu portafolio")} · ${a.portfolio.length} obra${a.portfolio.length===1?"":"s"}</small></div>
+        </div>
+        <div class="pf-hero-acts">
+          ${a.live?`<button class="btn ghost sm" id="sharePf">↗ Compartir</button>`:""}
+          <button class="btn gold sm" data-add="obra">＋ Subir obra</button>
+        </div>
+      </div>
+    </div>`;
+  const grid = a.portfolio.length
+    ? `<div class="card s12"><div class="pf-grid">${a.portfolio.map((p,i)=>{
+        const cover=isImgUrl(p.link)?`background-image:url('${esc(p.link)}');background-size:cover;background-position:center`
+          :`background:linear-gradient(145deg,${p.c},${shade(p.c,-28)})`;
+        return `<div class="pf-card">
+          <div class="pf-cover" style="${cover}">${isImgUrl(p.link)?"":`<span>${initials(p.t)}</span>`}<div class="pf-acts">${acts("obra",i)}</div></div>
+          <div class="pf-cap"><b>${esc(p.t)}</b><small>${esc([p.k,p.year].filter(Boolean).join(" · "))}</small>${p.desc?`<p>${esc(p.desc)}</p>`:""}${p.link&&!isImgUrl(p.link)?`<a href="${esc(p.link)}" target="_blank" rel="noopener" class="pf-link">Ver →</a>`:""}</div>
+        </div>`; }).join("")}</div></div>`
+    : `<div class="card s12 pf-empty">
+        <span class="pf-empty-ico">▦</span>
+        <h2 style="margin:10px 0 4px;letter-spacing:-.03em">Tu portafolio empieza aquí</h2>
+        <p class="muted" style="max-width:440px;margin:0 auto 18px">Sube tus obras en <b>alta calidad</b> — así se verán en tu perfil público, profesional como en Behance. Cada obra suma XP.</p>
+        <button class="btn gold" data-add="obra">＋ Subir mi primera obra</button>
+      </div>`;
+  return `<div class="grid">${hero}${grid}</div>`;
 }
 
 /* --- Proyectos: Flujo de trabajo (kanban) --- */
@@ -1094,7 +1147,7 @@ const EDITORS = {
   hito:{ title:"Hito", table:"trajectory", get:a=>a.trajectory, push:"push", xp:50,
     fields:[{k:"y",l:"Año"},{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({year:v.y,title:v.t,detail:v.d}) },
   obra:{ title:"Obra", table:"portfolio", get:a=>a.portfolio, push:"push", xp:40,
-    fields:[{k:"t",l:"Título"},{k:"k",l:"Tipo / técnica"},{k:"year",l:"Año"},{k:"c",l:"Color",color:true},{k:"link",l:"Enlace"},{k:"desc",l:"Descripción",ta:true}],
+    fields:[{k:"t",l:"Título"},{k:"k",l:"Tipo / técnica"},{k:"year",l:"Año"},{k:"c",l:"Color de respaldo",color:true},{k:"link",l:"Imagen de la obra (alta calidad)",img:true,folder:"obra"},{k:"desc",l:"Descripción",ta:true}],
     toRow:v=>({title:v.t,kind:v.k,color:v.c,year:v.year,link:v.link,description:v.desc}) },
   cita:{ title:"Cita", table:"agenda", get:a=>a.agenda, push:"push", xp:0,
     fields:[{k:"h",l:"Hora (ej: 15:00)"},{k:"t",l:"Actividad"},{k:"date",l:"Fecha",date:true},{k:"notes",l:"Notas",ta:true}], toRow:v=>({at_time:v.h,title:v.t,on_date:v.date||null,notes:v.notes}) },
@@ -1113,6 +1166,7 @@ function openRecord(kind, idx=null){
     if(f.sel) return `<div class="field"><label>${f.l}</label><select id="rec_${f.k}">${f.sel.map(o=>`<option ${o==val?'selected':''}>${o}</option>`).join("")}</select></div>`;
     if(f.ta)  return `<div class="field"><label>${f.l}</label><textarea id="rec_${f.k}" rows="3">${esc(val)}</textarea></div>`;
     if(f.color) return `<div class="field"><label>${f.l}</label><input type="color" id="rec_${f.k}" value="${val||a.color||'#b8a892'}"></div>`;
+    if(f.img) return imgUpField("rec_"+f.k, f.l, val, f.folder||"obra");
     if(f.date) return `<div class="field"><label>${f.l}</label><input id="rec_${f.k}" type="date" value="${esc(val)}"></div>`;
     return `<div class="field"><label>${f.l}</label><input id="rec_${f.k}" type="${f.num?'number':'text'}" value="${esc(val)}"></div>`;
   }).join("");
@@ -1382,7 +1436,14 @@ document.addEventListener("keydown", e=>{
 });
 document.addEventListener("change", e=>{
   const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); return; }
-  const qf=e.target.closest("#q_fmt"); if(qf){ readQuoteForm(); renderView(); }
+  const qf=e.target.closest("#q_fmt"); if(qf){ readQuoteForm(); renderView(); return; }
+  const fu=e.target.closest("input[type=file][data-imgfield]"); if(fu){ uploadImgField(fu); return; }
+});
+document.addEventListener("input", e=>{
+  const iu=e.target.closest("input[data-imgurl]"); if(!iu) return;
+  const prev=document.getElementById(iu.dataset.imgurl); if(!prev) return;
+  if(isImgUrl(iu.value)){ prev.style.backgroundImage=`url('${iu.value}')`; prev.textContent=""; prev.classList.add("has"); }
+  else { prev.style.backgroundImage=""; prev.textContent="Sin imagen"; prev.classList.remove("has"); }
 });
 function sendLumbre(){ const i=document.getElementById("lumbreInput"), v=i.value.trim(); if(!v)return; i.value=""; lumbreAsk(v); }
 
