@@ -21,7 +21,10 @@ const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
 
 /* ---------- Avatar ---------- */
 function initials(name){ return (name||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
-function avatarHTML(a, cls=""){ return `<span class="avatar ${cls}" style="background:linear-gradient(145deg,${a.color},${shade(a.color,-22)})">${initials(a.name)}</span>`; }
+function avatarHTML(a, cls=""){
+  if(a.photo) return `<span class="avatar ${cls}" style="background-image:url('${esc(a.photo)}');background-size:cover;background-position:center"></span>`;
+  return `<span class="avatar ${cls}" style="background:linear-gradient(145deg,${a.color},${shade(a.color,-22)})">${initials(a.name)}</span>`;
+}
 function shade(hex,p){ hex=hex||"#111111"; const n=parseInt(hex.slice(1),16); let r=(n>>16)+p,g=(n>>8&255)+p,b=(n&255)+p;
   r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));
   return "#"+(0x1000000+(r<<16)+(g<<8)+b).toString(16).slice(1); }
@@ -56,7 +59,7 @@ function caminoPixelHTML(lp){
 const cfgKey = a => "anima_cfg_"+(a.almaId||a.id);
 function getCfg(a){
   const def={ modules:{trayectoria:true,portafolio:true,proyectos:true,finanzas:true,clientes:true,cotizador:true,agenda:true,memoria:true,biblioteca:true},
-              cards:{constelacion:true,kpis:true,camino:true,hoy:true,memoria:true} };
+              cards:{constelacion:true,kpis:true,camino:true,graficos:true,hoy:true,memoria:true} };
   try{ const c=JSON.parse(localStorage.getItem(cfgKey(a))); if(c){ return { modules:{...def.modules,...c.modules}, cards:{...def.cards,...c.cards} }; } }catch(e){}
   return def;
 }
@@ -160,72 +163,136 @@ function renderView(){
 
 /* --- Mi Alma --- */
 function vMiAlma(a){
-  const lp=levelProgress(a.xp), lv=levelByKey(a.level), cfg=getCfg(a);
-  const inc=sum(a.finance.income), exp=sum(a.finance.expense);
+  const lp=levelProgress(a.xp), lv=levelByKey(a.level); const tab=state.almaTab||"resumen";
+  const idline=[a.discipline||a.role, a.specialty].filter(Boolean).join(" · ");
+  const header=`<div class="card s12">
+    <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+      ${avatarHTML(a,"lg")}
+      <div style="flex:1;min-width:200px">
+        <span class="level-badge" style="border-color:${lv.color}55;color:${lv.color}">${lv.emoji} ${lv.label} · ${lv.name}</span>
+        <h2 style="font-size:30px;letter-spacing:-.05em;margin:10px 0 2px">${esc(a.name)}</h2>
+        <div class="muted">${esc(idline||"")}${(a.territory||a.country)?" · "+esc(a.territory||a.country):""}</div>
+        ${a.handle?`<div class="muted" style="font-size:12.5px;margin-top:2px">${esc(a.handle)}</div>`:""}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <span class="pixel-font" style="font-size:10px;color:#7b5920">${a.xp.toLocaleString("es-CL")} XP</span>
+        <div class="bar" style="width:170px"><span style="width:${lp.pct}%"></span></div>
+        <small class="muted" style="font-size:11px">${lp.next?`hacia ${lp.next.label}`:"Alma Despierta ∞"}</small>
+      </div>
+    </div>
+    ${a.bio?`<p style="margin:14px 0 0">${esc(a.bio)}</p>`:""}
+    <div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      ${(a.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}
+      ${linksHTML(a)}<span style="flex:1"></span>
+      <button class="btn ghost sm" data-export>⤓ PDF</button>
+    </div>
+  </div>`;
+  const tabs=[["resumen","Resumen"],["identidad","Identidad"],["publica","Vista pública"],["ajustes","Ajustes"]];
+  const tabbar=`<div class="card s12 tabbar">${tabs.map(([k,l])=>`<button class="tabbtn ${tab===k?'on':''}" data-tab="${k}">${l}</button>`).join("")}</div>`;
+  const body = tab==="identidad"?vAlmaIdentidad(a) : tab==="publica"?vAlmaPublica(a) : tab==="ajustes"?vConfigBody(a) : vAlmaResumen(a,lp);
+  return `<div class="grid">${header}${tabbar}${body}</div>`;
+}
+function linksHTML(a){
+  const L=[]; if(a.website)L.push(["Sitio",a.website]); if(a.instagram)L.push(["Instagram",a.instagram.startsWith("http")?a.instagram:"https://instagram.com/"+a.instagram.replace("@","")]);
+  if(a.portfolio_url)L.push(["Portafolio",a.portfolio_url]); if(a.shop_url)L.push(["Tienda",a.shop_url]);
+  return L.map(([t,u])=>`<a class="chip" href="${esc(u)}" target="_blank" rel="noopener">${t} ↗</a>`).join("");
+}
+function vAlmaResumen(a,lp){
+  const cfg=getCfg(a); const inc=sum(a.finance.income), exp=sum(a.finance.expense);
   const active=a.projects.filter(p=>!["Entregado","Cerrado","Terminado"].includes(p.st)).length;
-  const createCTA = (!a.live && Cloud.enabled) ? `
-    <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
+  const createCTA=(!a.live && Cloud.enabled)?`<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
       <span class="pill gold">Estás viendo una Alma de muestra</span>
-      <p style="margin:8px 0 0">Crea tu propia Alma para empezar a construir tu trayectoria real y aparecer en la constelación.</p>
-      <div style="margin-top:12px"><button class="btn" id="createAlmaBtn">✦ Crear mi Alma</button></div>
-    </div>`:``;
-  const onboarding = (a.live && a.memories.length===0 && a.projects.length===0) ? `
-    <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
+      <p style="margin:8px 0 0">Crea tu propia Alma para construir tu trayectoria real y aparecer en la constelación.</p>
+      <div style="margin-top:12px"><button class="btn" id="createAlmaBtn">✦ Crear mi Alma</button></div></div>`:``;
+  const onboarding=(a.live && a.memories.length===0 && a.projects.length===0)?`<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
       <span class="pill gold">Bienvenida, Alma nueva</span>
-      <p style="margin:8px 0 0">Tu Alma nació en <b>EMBER</b>. Dale vida: edita tu perfil, crea tu primer proyecto o una memoria. Cada acción te da XP.</p>
+      <p style="margin:8px 0 0">Empieza por <b>Identidad</b>: pon tu foto y datos. Luego crea tu primer trabajo o memoria. Cada acción da XP.</p>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn sm" id="editBtn">✎ Editar mi perfil</button>
-        <button class="btn secondary sm" data-add="proyecto">+ Primer proyecto</button>
-        <button class="btn secondary sm" data-add="memoria">+ Primera memoria</button>
-      </div></div>`:``;
-  return `<div class="grid">
-    <div class="card s8">
-      <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
-        ${avatarHTML(a,"lg")}
-        <div style="flex:1;min-width:200px">
-          <span class="level-badge" style="border-color:${lv.color}55;color:${lv.color}">${lv.emoji} ${a.level} · ${lv.name}</span>
-          <h2 style="font-size:30px;letter-spacing:-.05em;margin:10px 0 2px">${esc(a.name)}</h2>
-          <div class="muted">${esc(a.role||"")} · ${esc(a.country||"")}</div>
-        </div>
-      </div>
-      <p style="margin:16px 0 0">${esc(a.bio||"")}</p>
-      <div style="margin-top:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        ${(a.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}
-        <span style="flex:1"></span>
-        <button class="btn ghost sm" id="editBtn">✎ Editar Alma</button>
-        <button class="btn ghost sm" data-export>⤓ Exportar PDF</button>
-      </div>
-    </div>
-
-    <div class="card s4">
-      <span class="pill gold">Camino del creador</span>
-      <div class="kpi">${a.xp.toLocaleString("es-CL")} XP</div>
-      <div class="bar"><span style="width:${lp.pct}%"></span></div>
-      <div class="muted" style="font-size:12.5px;margin-top:8px">${lp.next?`${lp.pct}% hacia <b>${lp.next.key}</b> · ${lp.next.name}`:"Nivel máximo: Alma Despierta ∞"}</div>
-      <p class="muted" style="font-size:12.5px;margin-top:12px">${lv.desc}</p>
-    </div>
-
-    ${createCTA}${onboarding}
-
-    ${cfg.cards.constelacion!==false?constelacionHTML():``}
-
+        <button class="btn sm" data-tab="identidad">✎ Completar identidad</button>
+        <button class="btn secondary sm" data-add="proyecto">+ Primer trabajo</button></div></div>`:``;
+  return `${createCTA}${onboarding}
     ${cfg.cards.kpis!==false?`
-    <div class="card s3"><div class="stat"><span class="num">${active}</span><span class="lbl">Proyectos en curso</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num">${active}</span><span class="lbl">Trabajos activos</span></div></div>
     <div class="card s3"><div class="stat"><span class="num" style="color:var(--ok)">${money(inc)}</span><span class="lbl">Ingresos</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${money(inc-exp)}</span><span class="lbl">Ganancia</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${a.clan?esc(a.clan):"—"}</span><span class="lbl">${a.clan?"Tu Clan":"Sin Clan aún"}</span></div></div>`:``}
-
     ${cfg.cards.camino!==false?`<div class="card s12 camino-card">${caminoPixelHTML(lp)}</div>`:``}
-
-    ${cfg.cards.hoy!==false?`
-    <div class="card s6"><div class="section-title"><h2>Hoy</h2><div class="spacer"></div><button class="btn sm" data-add="cita">+ Cita</button></div>
+    ${cfg.cards.graficos!==false?`
+    <div class="card s6"><div class="section-title"><h2>Finanzas por mes</h2></div>${chartFinance(a)}</div>
+    <div class="card s6"><div class="section-title"><h2>Trabajos por estado</h2></div>${chartProjects(a)}</div>`:``}
+    ${cfg.cards.constelacion!==false?constelacionHTML():``}
+    ${cfg.cards.hoy!==false?`<div class="card s6"><div class="section-title"><h2>Hoy</h2><div class="spacer"></div><button class="btn sm" data-add="cita">+ Cita</button></div>
       ${a.agenda.map((x,i)=>`<div class="row"><b style="color:var(--gold);width:60px">${esc(x.h)}</b><div class="grow">${esc(x.t)}</div>${acts("cita",i)}</div>`).join("")||`<p class="muted">Sin agenda hoy.</p>`}</div>`:``}
-
-    ${cfg.cards.memoria!==false?`
-    <div class="card s6"><div class="section-title"><h2>Última memoria</h2><div class="spacer"></div><button class="btn sm" data-add="memoria">+ Memoria</button></div>
+    ${cfg.cards.memoria!==false?`<div class="card s6"><div class="section-title"><h2>Última memoria</h2><div class="spacer"></div><button class="btn sm" data-add="memoria">+ Memoria</button></div>
       ${a.memories[0]?`<b>${esc(a.memories[0].t)}</b><p class="muted" style="margin:6px 0 0">${esc(a.memories[0].d)}</p>`:`<p class="muted">Aún no hay memorias.</p>`}
-      <div style="margin-top:16px"><button class="btn ghost sm" data-go="memoria">Ver memorias →</button></div></div>`:``}
+      <div style="margin-top:16px"><button class="btn ghost sm" data-go="memoria">Ver memorias →</button></div></div>`:``}`;
+}
+function vAlmaIdentidad(a){
+  if(!a.live) return `<div class="card s12"><p class="muted">Entra o crea tu Alma para editar tu identidad. <button class="btn sm" id="createAlmaBtn" style="margin-left:8px">Crear mi Alma</button></p></div>`;
+  const f=(id,l,v,ph="")=>`<div class="field"><label>${l}</label><input id="${id}" value="${esc(v||"")}" placeholder="${ph}"></div>`;
+  return `<div class="card s8">
+    <div class="section-title"><h2>Identidad creativa</h2></div>
+    ${f("id_name","Nombre creativo",a.name)}
+    <div style="display:flex;gap:10px"><div style="flex:1">${f("id_disc","Rama artística",a.discipline||a.role,"Muralismo, tattoo…")}</div><div style="flex:1">${f("id_spec","Especialidad",a.specialty)}</div></div>
+    <div style="display:flex;gap:10px"><div style="flex:1">${f("id_handle","Alias público",a.handle,"@tualias")}</div><div style="flex:1">${f("id_terr","Territorio",a.territory||a.country,"Ciudad, país")}</div></div>
+    <div class="field"><label>Bio</label><textarea id="id_bio" rows="3">${esc(a.bio||"")}</textarea></div>
+    ${f("id_tags","Etiquetas (separadas por coma)",(a.tags||[]).join(", "))}
+    <div class="section-title" style="margin-top:8px"><h2 style="font-size:16px">Enlaces</h2></div>
+    <div style="display:flex;gap:10px"><div style="flex:1">${f("id_web","Sitio web",a.website)}</div><div style="flex:1">${f("id_ig","Instagram",a.instagram)}</div></div>
+    <div style="display:flex;gap:10px"><div style="flex:1">${f("id_port","Portafolio",a.portfolio_url)}</div><div style="flex:1">${f("id_shop","Tienda / catálogo",a.shop_url)}</div></div>
+    <button class="btn" id="idSave" style="width:100%;margin-top:6px">Guardar identidad</button>
+  </div>
+  <div class="card s4" style="align-self:start;text-align:center">
+    <small class="muted" style="font-weight:850;letter-spacing:.05em;text-transform:uppercase;font-size:10.5px">Foto de perfil</small>
+    <div style="margin:14px 0">${avatarHTML(a,"lg")}</div>
+    <div class="field"><label>URL de la foto</label><input id="id_photo" value="${esc(a.photo||"")}" placeholder="https://…/foto.jpg"></div>
+    <p class="muted" style="font-size:11.5px">Pega el enlace de una imagen (Instagram, Drive público, etc.). La subida de archivos llega pronto.</p>
   </div>`;
+}
+function vAlmaPublica(a){
+  if(!a.live) return `<div class="card s12"><p class="muted">Entra a tu Alma para configurar tu vista pública.</p></div>`;
+  const v=a.visibility||{}; const on=k=>v[k]!==false;
+  const rows=[["bio","Mostrar mi bio"],["tags","Mostrar mis etiquetas"],["trajectory","Mostrar mi trayectoria"],["portfolio","Mostrar mi portafolio"],["links","Mostrar mis enlaces"]];
+  return `<div class="card s12"><span class="pill gold">Vista pública</span>
+    <p class="muted" style="max-width:640px">Controla qué ven las demás Almas cuando visitan tu perfil en la comunidad. Tus finanzas, agenda, memorias y clientes <b>siempre son privados</b>.</p>
+    ${rows.map(([k,l])=>`<div class="row"><div class="grow"><b>${l}</b></div><button class="toggle ${on(k)?'on':''}" data-pubcfg="${k}"><span></span></button></div>`).join("")}
+  </div>`;
+}
+/* Gráficos simples */
+function chartFinance(a){
+  const map={};
+  a.finance.income.forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k){(map[k]=map[k]||{i:0,e:0}).i+=x.a;}});
+  a.finance.expense.forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k){(map[k]=map[k]||{i:0,e:0}).e+=x.a;}});
+  const keys=Object.keys(map).sort().slice(-6);
+  if(!keys.length) return `<p class="muted">Aún no hay datos de finanzas.</p>`;
+  const max=Math.max(1,...keys.map(k=>Math.max(map[k].i,map[k].e)));
+  return `<div class="chart">${keys.map(k=>`<div class="cbar"><div class="cbars"><span class="ci" style="height:${Math.round(map[k].i/max*100)}%" title="Ingresos ${money(map[k].i)}"></span><span class="ce" style="height:${Math.round(map[k].e/max*100)}%" title="Egresos ${money(map[k].e)}"></span></div><small>${k.slice(2)}</small></div>`).join("")}</div>
+    <div class="muted" style="font-size:11px;margin-top:8px"><b style="color:var(--ok)">■</b> Ingresos &nbsp; <b style="color:var(--danger)">■</b> Egresos</div>`;
+}
+function chartProjects(a){
+  const counts=FLOW.map(s=>({s,n:a.projects.filter(p=>flowOf(p.st)===s).length}));
+  const max=Math.max(1,...counts.map(c=>c.n));
+  return `<div>${counts.map(c=>`<div class="hbar"><small>${c.s}</small><div class="hb"><span style="width:${Math.round(c.n/max*100)}%"></span></div><b>${c.n}</b></div>`).join("")}</div>`;
+}
+async function saveIdentity(){
+  const a=me(); if(!a.live) return;
+  const g=id=>{const e=document.getElementById(id);return e?e.value.trim():"";};
+  const patch={ name:g("id_name"), discipline:g("id_disc"), specialty:g("id_spec"), handle:g("id_handle"),
+    territory:g("id_terr"), bio:g("id_bio"), avatar_url:g("id_photo"), website:g("id_web"),
+    instagram:g("id_ig"), portfolio_url:g("id_port"), shop_url:g("id_shop"),
+    tags:g("id_tags").split(",").map(s=>s.trim()).filter(Boolean) };
+  try{ await Cloud.updateAlma(a.almaId,patch);
+    a.name=patch.name; a.discipline=patch.discipline; a.specialty=patch.specialty; a.handle=patch.handle;
+    a.territory=patch.territory; a.bio=patch.bio; a.photo=patch.avatar_url; a.website=patch.website;
+    a.instagram=patch.instagram; a.portfolio_url=patch.portfolio_url; a.shop_url=patch.shop_url; a.tags=patch.tags;
+    a.role=patch.discipline||a.role;
+    renderAll(); updateAuthUI(await Cloud.session()); alert("Identidad guardada ✓");
+  }catch(e){ alert("No se pudo guardar (¿aplicaste la migración 0003?): "+(e.message||e)); }
+}
+async function togglePublic(key){
+  const a=me(); if(!a.live) return; a.visibility=a.visibility||{}; a.visibility[key]=(a.visibility[key]===false);
+  try{ await Cloud.updateAlma(a.almaId,{visibility:a.visibility}); }catch(e){}
+  renderAll();
 }
 
 /* --- Trayectoria --- */
@@ -318,18 +385,17 @@ function vBiblioteca(a){
 }
 
 /* --- Personalizar --- */
-function vConfig(a){
+function vConfigBody(a){
   const cfg=getCfg(a);
-  const mod=[["trayectoria","Trayectoria"],["portafolio","Portafolio"],["proyectos","Proyectos"],["finanzas","Finanzas"],["cotizador","Cotizador"],["agenda","Agenda"],["memoria","Memorias"],["biblioteca","Biblioteca"]];
-  const card=[["constelacion","Mapa Constelación"],["kpis","Indicadores rápidos"],["camino","Camino del creador (XP y nivel)"],["hoy","Agenda de hoy"],["memoria","Última memoria"]];
+  const mod=[["trayectoria","Trayectoria"],["portafolio","Portafolio"],["proyectos","Flujo de trabajo"],["finanzas","Finanzas"],["clientes","Clientes"],["cotizador","Cotizador"],["agenda","Agenda"],["memoria","Memorias"],["biblioteca","Biblioteca"]];
+  const card=[["constelacion","Mapa de Almas"],["kpis","Indicadores rápidos"],["camino","Camino (pixel art)"],["graficos","Gráficos"],["hoy","Agenda de hoy"],["memoria","Última memoria"]];
   const tg=(g,k,l,on)=>`<div class="row"><div class="grow"><b>${l}</b></div><button class="toggle ${on?'on':''}" data-cfg="${g}:${k}"><span></span></button></div>`;
-  return `<div class="grid">
-    <div class="card s12"><span class="pill gold">Personalización</span>
-      <p class="muted" style="max-width:640px">Aquí configuras tu Alma: qué módulos aparecen en tu menú y qué secciones se muestran en tu panel. Lo que no necesitas, lo ocultas. Es tu espacio.</p></div>
+  return `<div class="card s12"><span class="pill gold">Personalización</span>
+      <p class="muted" style="max-width:640px">Configura tu espacio: qué módulos aparecen en tu menú y qué secciones se muestran en tu panel.</p></div>
     <div class="card s6"><div class="section-title"><h2>Módulos del menú</h2></div>${mod.map(([k,l])=>tg("modules",k,l,cfg.modules[k]!==false)).join("")}</div>
-    <div class="card s6"><div class="section-title"><h2>Secciones de Mi Alma</h2></div>${card.map(([k,l])=>tg("cards",k,l,cfg.cards[k]!==false)).join("")}</div>
-  </div>`;
+    <div class="card s6"><div class="section-title"><h2>Secciones de Mi Alma</h2></div>${card.map(([k,l])=>tg("cards",k,l,cfg.cards[k]!==false)).join("")}</div>`;
 }
+function vConfig(a){ return `<div class="grid">${vConfigBody(a)}</div>`; }
 
 /* --- Clientes --- */
 function vClientes(a){
@@ -770,17 +836,19 @@ async function saveEdit(){ const a=me(); const g=id=>document.getElementById(id)
 /* --- Perfil público --- */
 async function openPublic(id){
   const row=(state.cloudAlmas||[]).find(x=>x.id===id); if(!row) return;
-  const lv=levelByKey(row.level); document.getElementById("publicModal").classList.add("open");
+  const lv=levelByKey(row.level); const vis=row.visibility||{}; const show=k=>vis[k]!==false;
+  const av=row.avatar_url?`background-image:url('${esc(row.avatar_url)}');background-size:cover;background-position:center`:`background:linear-gradient(145deg,${row.color},${shade(row.color,-22)})`;
+  document.getElementById("publicModal").classList.add("open");
   document.getElementById("pubBody").innerHTML=`<div style="text-align:center">
-      <span class="avatar lg" style="margin:0 auto 10px;background:linear-gradient(145deg,${row.color},${shade(row.color,-22)})">${initials(row.name)}</span>
-      <h2 style="margin:0;letter-spacing:-.04em">${esc(row.name)}</h2><div class="muted">${esc(row.role||"")} · ${esc(row.country||"")}</div>
-      <span class="level-badge" style="margin-top:8px;border-color:${lv.color}55;color:${lv.color}">${lv.emoji} ${row.level}</span></div>
-    <p style="margin-top:14px">${esc(row.bio||"")}</p><div>${(row.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>
-    <div id="pubExtra" class="muted" style="font-size:12.5px;margin-top:12px">Cargando trayectoria…</div>`;
+      <span class="avatar lg" style="margin:0 auto 10px;${av}">${row.avatar_url?"":initials(row.name)}</span>
+      <h2 style="margin:0;letter-spacing:-.04em">${esc(row.name)}</h2><div class="muted">${esc([row.discipline||row.role,row.specialty].filter(Boolean).join(" · "))} · ${esc(row.territory||row.country||"")}</div>
+      <span class="level-badge" style="margin-top:8px;border-color:${lv.color}55;color:${lv.color}">${lv.emoji} ${lv.label}</span></div>
+    ${show("bio")?`<p style="margin-top:14px">${esc(row.bio||"")}</p>`:""}${show("tags")?`<div>${(row.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}
+    <div id="pubExtra" class="muted" style="font-size:12.5px;margin-top:12px">Cargando…</div>`;
   try{ const m=await Cloud.loadModules(id);
-    const tj=(m.trajectory||[]).map(x=>`<div class="node"><div class="yr">${esc(x.year)}</div><b>${esc(x.title)}</b><p class="muted" style="margin:2px 0 0">${esc(x.detail||"")}</p></div>`).join("");
-    const pf=(m.portfolio||[]).map(x=>`<span class="chip">${esc(x.title)} · ${esc(x.kind)}</span>`).join("");
-    document.getElementById("pubExtra").innerHTML=(tj?`<h3 style="font-size:15px;margin:8px 0 4px">Trayectoria</h3><div class="tl">${tj}</div>`:"")+(pf?`<h3 style="font-size:15px;margin:14px 0 6px">Portafolio</h3><div>${pf}</div>`:"")||"Sin trayectoria pública aún.";
+    const tj=show("trajectory")?(m.trajectory||[]).map(x=>`<div class="node"><div class="yr">${esc(x.year)}</div><b>${esc(x.title)}</b><p class="muted" style="margin:2px 0 0">${esc(x.detail||"")}</p></div>`).join(""):"";
+    const pf=show("portfolio")?(m.portfolio||[]).map(x=>`<span class="chip">${esc(x.title)} · ${esc(x.kind)}</span>`).join(""):"";
+    document.getElementById("pubExtra").innerHTML=(tj?`<h3 style="font-size:15px;margin:8px 0 4px">Trayectoria</h3><div class="tl">${tj}</div>`:"")+(pf?`<h3 style="font-size:15px;margin:14px 0 6px">Portafolio</h3><div>${pf}</div>`:"")||"Perfil público.";
   }catch(e){ document.getElementById("pubExtra").textContent=""; }
 }
 function closePublic(){ document.getElementById("publicModal").classList.remove("open"); }
@@ -813,6 +881,8 @@ document.addEventListener("click", e=>{
   const dl=e.target.closest("[data-del]"); if(dl){ const [k,i]=dl.dataset.del.split(":"); deleteRecord(k,+i); return; }
   const st=e.target.closest("[data-star]"); if(st){ _fbRating=+st.dataset.star; renderStars(); return; }
   const cf=e.target.closest("[data-cfg]"); if(cf){ toggleCfg(cf.dataset.cfg); return; }
+  const tb=e.target.closest("[data-tab]"); if(tb){ state.almaTab=tb.dataset.tab; state.view="mialma"; renderAll(); return; }
+  const pcf=e.target.closest("[data-pubcfg]"); if(pcf){ togglePublic(pcf.dataset.pubcfg); return; }
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
   const ql=e.target.closest("[data-qload]"); if(ql){ qLoad(ql.dataset.qload); return; }
   const qx=e.target.closest("[data-qdelete]"); if(qx){ qDeleteSaved(qx.dataset.qdelete); return; }
@@ -829,7 +899,8 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#q_new")) qNew();
   if(e.target.closest("#q_save")) qSave();
   if(e.target.closest("#q_export")) qExport();
-  if(e.target.closest("#editBtn")||e.target.closest("#createAlmaBtn")) openEdit();
+  if(e.target.closest("#createAlmaBtn")) openAuth();
+  if(e.target.closest("#idSave")) saveIdentity();
   if(e.target.closest("#edSave")) saveEdit();
   if(e.target.closest("#edClose")||e.target.id==="editModal") closeEdit();
   if(e.target.closest("#recSave")) saveRecord();
