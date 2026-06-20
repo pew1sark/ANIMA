@@ -70,5 +70,29 @@
   }
 
   global.Rite = { particles: particles, go: go, pullToRefresh: pullToRefresh };
-  document.addEventListener("DOMContentLoaded", function () { particles(); });
+
+  /* ---------- Instalar / Añadir al inicio (abre siempre en el Home) ----------
+     La PWA tiene start_url=home.html, así que el icono instalado abre el Home.
+     Capturamos el prompt nativo (Android/escritorio) y damos instrucciones
+     claras en iOS, donde "Agregar a inicio" guarda la página actual. */
+  var deferredInstall = null;
+  function isStandalone(){ return (global.matchMedia && global.matchMedia("(display-mode: standalone)").matches) || global.navigator.standalone === true; }
+  function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); }
+  function install(){
+    if (deferredInstall){ deferredInstall.prompt(); deferredInstall.userChoice.then(function(){ deferredInstall = null; }); return; }
+    if (isIOS()){
+      alert("Añade ANIMA a tu inicio (iPhone/iPad · Safari):\n\n1) Toca el botón Compartir ⬆️ (el cuadro con la flecha).\n2) Elige \"Agregar a inicio\".\n\nEl icono abrirá ANIMA siempre desde tu Home.");
+      return;
+    }
+    alert("Instala ANIMA como app:\n\n• Android (Chrome): menú ⋮ → \"Instalar app\" / \"Agregar a pantalla principal\".\n• Computador (Chrome/Edge): icono de instalar ⊕ en la barra de direcciones.\n\nSe abrirá siempre desde tu Home.");
+  }
+  function initInstall(){
+    if (isStandalone()){ document.querySelectorAll("[data-install]").forEach(function(b){ b.style.display = "none"; }); return; }
+    document.querySelectorAll("[data-install]").forEach(function(b){ if (b.dataset.iw) return; b.dataset.iw = "1"; b.addEventListener("click", function(e){ e.preventDefault(); install(); }); });
+  }
+  global.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); deferredInstall = e; });
+  global.addEventListener("appinstalled", function(){ deferredInstall = null; document.querySelectorAll("[data-install]").forEach(function(b){ b.style.display = "none"; }); });
+  Rite.install = install; Rite.initInstall = initInstall; Rite.isStandalone = isStandalone;
+
+  document.addEventListener("DOMContentLoaded", function () { particles(); initInstall(); });
 })(window);
