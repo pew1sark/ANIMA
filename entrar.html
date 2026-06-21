@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f5f5f7" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/img/icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="ANIMA" />
+  <title>Entrar — ANIMA</title>
+  <meta name="description" content="Entra a tu Alma en ANIMA." />
+  <link rel="stylesheet" href="assets/css/umbral.css" />
+  <style>
+    .auth-card{position:relative;z-index:2;width:100%;max-width:420px;margin:0 auto;padding:34px 26px 30px;
+      background:var(--card);border:1px solid var(--line);border-radius:26px;backdrop-filter:blur(10px);
+      box-shadow:0 24px 60px rgba(0,0,0,.08);animation:rise .8s var(--ease) both}
+    .auth-mark{display:flex;justify-content:center;margin-bottom:6px}
+    .auth-mark svg{width:38px;height:38px}
+    .auth-card h1{text-align:center;font-size:24px;letter-spacing:-.02em;margin:8px 0 2px}
+    .auth-card .sub{text-align:center;color:var(--muted);font-size:13.5px;margin:0 0 22px}
+    .fld{margin-bottom:14px}
+    .fld label{display:block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--gold-deep);margin-bottom:6px}
+    .fld input{width:100%;padding:13px 14px;border:1px solid var(--line-2);border-radius:13px;background:#fff;font-size:15px;color:var(--ink);outline:none;transition:.15s}
+    .fld input:focus{border-color:var(--gold)}
+    .row-between{display:flex;justify-content:flex-end;margin:-6px 0 16px}
+    .link{background:none;border:0;color:var(--gold-deep);font-size:12.5px;cursor:pointer;text-decoration:none;font-weight:700;padding:0}
+    .link:hover{text-decoration:underline}
+    .auth-msg{min-height:18px;font-size:13px;margin:4px 0 0;text-align:center}
+    .auth-msg.err{color:#c0392b}.auth-msg.ok{color:#2e7d32}
+    .auth-foot{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
+    .cbtn.block{display:block;width:100%;text-align:center;padding:14px;font-size:15px}
+    .topbrand{position:relative;z-index:2;text-align:center;margin:30px 0 22px;font-weight:850;letter-spacing:.04em}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase.js"></script>
+</head>
+<body class="rite" style="display:block;align-items:stretch;justify-content:flex-start">
+  <div class="field"><div class="core"></div></div>
+
+  <div class="topbrand"><a href="index.html" style="text-decoration:none;color:inherit">ANIMA</a></div>
+
+  <main class="auth-card">
+    <div class="auth-mark"><svg viewBox="23 27 54 48" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h1>Entra a tu Alma</h1>
+    <p class="sub">Tu espacio privado, en la nube.</p>
+
+    <form id="loginForm" autocomplete="on">
+      <div class="fld"><label>Correo</label>
+        <input id="email" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" required /></div>
+      <div class="fld"><label>Contraseña</label>
+        <input id="pass" type="password" placeholder="••••••••" autocomplete="current-password" required /></div>
+      <div class="row-between"><a class="link" href="recuperar.html">¿Olvidaste tu contraseña?</a></div>
+      <button class="cbtn block" id="loginBtn" type="submit">Entrar ✦</button>
+      <div class="auth-msg" id="msg"></div>
+    </form>
+
+    <div class="auth-foot">
+      ¿Aún no tienes un Alma?<br>
+      <a class="link" href="umbral.html">Despertar una nueva Alma →</a>
+    </div>
+    <p class="seal" style="margin-top:22px">🔒 Tus finanzas, memorias y proyectos son privados.</p>
+  </main>
+
+  <script>
+  var $=function(id){ return document.getElementById(id); };
+  function setMsg(t, ok){ var m=$("msg"); m.textContent=t||""; m.className="auth-msg"+(t?(ok?" ok":" err"):""); }
+
+  // Si ya hay sesión, no tiene sentido el login: al Home.
+  (async function(){
+    try{ if(typeof Cloud!=="undefined" && Cloud.enabled){ var s=await Cloud.session(); if(s) location.replace("home.html"); } }catch(e){}
+  })();
+
+  $("loginForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+    var email=$("email").value.trim(), pass=$("pass").value;
+    if(!email || !pass){ setMsg("Ingresa tu correo y contraseña."); return; }
+    if(typeof Cloud==="undefined" || !Cloud.enabled){ setMsg("No hay conexión con la nube de ANIMA."); return; }
+    var btn=$("loginBtn"); btn.disabled=true; setMsg("Entrando…", true);
+    try{
+      var r=await Cloud.signIn(email, pass);
+      if(r.error) throw r.error;
+      setMsg("✦ Bienvenida de vuelta.", true);
+      location.href="home.html";
+    }catch(err){
+      btn.disabled=false;
+      var m=(err && err.message)||"No se pudo entrar.";
+      if(/invalid login/i.test(m)) m="Correo o contraseña incorrectos.";
+      else if(/email not confirmed/i.test(m)) m="Confirma tu correo antes de entrar (revisa tu bandeja).";
+      setMsg(m);
+    }
+  });
+  </script>
+</body>
+</html>

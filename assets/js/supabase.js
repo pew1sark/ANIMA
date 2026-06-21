@@ -26,6 +26,14 @@ const Cloud = {
   signOut(){ return _sb.auth.signOut(); },
   onAuth(cb){ if(_sb) _sb.auth.onAuthStateChange((_e, s)=>cb(s)); },
 
+  /* Recuperación de contraseña.
+     resetPassword envía el correo con un enlace a redirectTo (que debe estar
+     en la lista de Redirect URLs de Supabase Auth). updatePassword fija la
+     nueva clave una vez que el enlace abrió una sesión de recuperación. */
+  resetPassword(email, redirectTo){ if(!_sb) return Promise.reject(new Error("Sin conexión a la nube.")); return _sb.auth.resetPasswordForEmail(email, redirectTo?{ redirectTo }:{}); },
+  updatePassword(password){ if(!_sb) return Promise.reject(new Error("Sin conexión a la nube.")); return _sb.auth.updateUser({ password }); },
+  onPasswordRecovery(cb){ if(_sb) _sb.auth.onAuthStateChange((event, session)=>{ if(event==="PASSWORD_RECOVERY") cb(session); }); },
+
   /* Constelación pública VIVA — solo Almas reales (sin las fundadoras demo) */
   async allAlmas(){
     if(!_sb) return [];

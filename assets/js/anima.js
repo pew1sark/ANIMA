@@ -1951,6 +1951,20 @@ async function doAuth(mode){
     closeAuth(); await refreshAuth();
   }catch(e){ msg.textContent=e.message||"No se pudo completar."; }
 }
+/* Recuperar contraseña desde el modal: usa el correo escrito (si lo hay)
+   y envía el enlace; si no, lleva a la página de recuperación. */
+async function doForgot(){
+  const msg=document.getElementById("authMsg");
+  const email=(document.getElementById("authEmail").value||"").trim();
+  if(!email){ location.href="recuperar.html"; return; }
+  if(!Cloud.enabled){ msg.textContent="No hay conexión con la nube."; return; }
+  msg.textContent="Enviando enlace de recuperación…";
+  try{
+    const redirect=location.origin + location.pathname.replace(/[^/]*$/, "") + "recuperar.html";
+    const { error }=await Cloud.resetPassword(email, redirect); if(error) throw error;
+    msg.textContent="✦ Te enviamos un enlace para crear una contraseña nueva. Revisa tu correo.";
+  }catch(e){ msg.textContent=e.message||"No se pudo enviar el enlace."; }
+}
 /* Cerrar sesión → vuelve al Home de ANIMA (la página principal por defecto). */
 async function logout(){ if(!confirm("¿Cerrar sesión de tu Alma?"))return; try{await Cloud.log("logout");}catch(e){} try{await Cloud.signOut();}catch(e){} try{sessionStorage.removeItem("anima_logged_login");}catch(e){} location.href="home.html"; }
 /* Cambiar de Alma → cierra sesión y abre el acceso para entrar con otra. */
@@ -2103,6 +2117,7 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#authClose")||e.target.id==="authModal") closeAuth();
   if(e.target.closest("#authSignIn")) doAuth("in");
   if(e.target.closest("#authSignUp")) doAuth("up");
+  if(e.target.closest("#authForgot")) doForgot();
   if(e.target.closest("#lumbreSend")) sendLumbre();
 });
 document.addEventListener("keydown", e=>{

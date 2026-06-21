@@ -16,6 +16,8 @@ Este repositorio contiene la **primera Alpha** de ANIMA (The Founding Era), semb
 | Archivo | Qué es |
 |---|---|
 | `index.html` | Portada pública de ANIMA TSC |
+| `entrar.html` | **Entrar** — inicio de sesión del Alma |
+| `recuperar.html` | **Recuperar contraseña** — pide enlace y fija la nueva clave |
 | `studio.html` | **La Alpha** — la app del Studio con las 10 Almas |
 | `arbol.html` | **Árbol de Almas** — mapa vivo por país, contador `X / 100`, Ecos de ANIMA y LUMBRE despertando |
 | `fundador.html` | **Panel del Fundador** — comunidad, activos, obras, feedback y estado (solo el Creador) |

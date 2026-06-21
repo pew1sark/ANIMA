@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f5f5f7" />
+  <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
+  <meta name="apple-mobile-web-app-title" content="ANIMA" />
+  <title>Recuperar contraseña — ANIMA</title>
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="assets/css/umbral.css" />
+  <style>
+    .auth-card{position:relative;z-index:2;width:100%;max-width:420px;margin:0 auto;padding:34px 26px 30px;
+      background:var(--card);border:1px solid var(--line);border-radius:26px;backdrop-filter:blur(10px);
+      box-shadow:0 24px 60px rgba(0,0,0,.08);animation:rise .8s var(--ease) both}
+    .auth-mark{display:flex;justify-content:center;margin-bottom:6px}.auth-mark svg{width:38px;height:38px}
+    .auth-card h1{text-align:center;font-size:23px;letter-spacing:-.02em;margin:8px 0 2px}
+    .auth-card .sub{text-align:center;color:var(--muted);font-size:13.5px;margin:0 0 22px;line-height:1.5}
+    .fld{margin-bottom:14px}
+    .fld label{display:block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--gold-deep);margin-bottom:6px}
+    .fld input{width:100%;padding:13px 14px;border:1px solid var(--line-2);border-radius:13px;background:#fff;font-size:15px;color:var(--ink);outline:none;transition:.15s}
+    .fld input:focus{border-color:var(--gold)}
+    .auth-msg{min-height:18px;font-size:13px;margin:8px 0 0;text-align:center}
+    .auth-msg.err{color:#c0392b}.auth-msg.ok{color:#2e7d32}
+    .auth-foot{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
+    .link{background:none;border:0;color:var(--gold-deep);font-size:13px;cursor:pointer;text-decoration:none;font-weight:700}
+    .link:hover{text-decoration:underline}
+    .cbtn.block{display:block;width:100%;text-align:center;padding:14px;font-size:15px}
+    .topbrand{position:relative;z-index:2;text-align:center;margin:30px 0 22px;font-weight:850;letter-spacing:.04em}
+    [hidden]{display:none !important}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase.js"></script>
+</head>
+<body class="rite" style="display:block;align-items:stretch;justify-content:flex-start">
+  <div class="field"><div class="core"></div></div>
+  <div class="topbrand"><a href="index.html" style="text-decoration:none;color:inherit">ANIMA</a></div>
+
+  <main class="auth-card">
+    <div class="auth-mark"><svg viewBox="23 27 54 48" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+    <!-- PASO 1 · pedir enlace -->
+    <form id="reqForm">
+      <h1>Recuperar contraseña</h1>
+      <p class="sub">Te enviaremos un enlace a tu correo para crear una contraseña nueva.</p>
+      <div class="fld"><label>Correo</label>
+        <input id="email" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" required /></div>
+      <button class="cbtn block" id="reqBtn" type="submit">Enviar enlace ✦</button>
+      <div class="auth-msg" id="reqMsg"></div>
+      <div class="auth-foot"><a class="link" href="entrar.html">← Volver a entrar</a></div>
+    </form>
+
+    <!-- PASO 2 · fijar nueva contraseña (al abrir el enlace del correo) -->
+    <form id="setForm" hidden>
+      <h1>Nueva contraseña</h1>
+      <p class="sub">Elige una contraseña nueva para tu Alma.</p>
+      <div class="fld"><label>Nueva contraseña</label>
+        <input id="p1" type="password" placeholder="••••••••" autocomplete="new-password" minlength="6" required /></div>
+      <div class="fld"><label>Repítela</label>
+        <input id="p2" type="password" placeholder="••••••••" autocomplete="new-password" minlength="6" required /></div>
+      <button class="cbtn block" id="setBtn" type="submit">Guardar contraseña ✦</button>
+      <div class="auth-msg" id="setMsg"></div>
+    </form>
+  </main>
+
+  <script>
+  var $=function(id){ return document.getElementById(id); };
+  function msg(el, t, ok){ var m=$(el); m.textContent=t||""; m.className="auth-msg"+(t?(ok?" ok":" err"):""); }
+  function showReset(){ $("reqForm").hidden=true; $("setForm").hidden=false; }
+
+  // El enlace del correo trae #access_token&type=recovery; supabase-js abre una
+  // sesión de recuperación y dispara PASSWORD_RECOVERY → mostramos el paso 2.
+  if(typeof Cloud!=="undefined" && Cloud.enabled){
+    Cloud.onPasswordRecovery(function(){ showReset(); });
+  }
+  if(/type=recovery/.test(location.hash)) showReset();
+
+  // Paso 1: pedir enlace
+  $("reqForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+    var email=$("email").value.trim();
+    if(!email){ msg("reqMsg","Ingresa tu correo."); return; }
+    if(typeof Cloud==="undefined" || !Cloud.enabled){ msg("reqMsg","No hay conexión con la nube."); return; }
+    var btn=$("reqBtn"); btn.disabled=true; msg("reqMsg","Enviando…", true);
+    try{
+      var redirect=location.origin + location.pathname; // …/recuperar.html
+      var r=await Cloud.resetPassword(email, redirect);
+      if(r.error) throw r.error;
+      msg("reqMsg","✦ Si ese correo tiene un Alma, te enviamos el enlace. Revisa tu bandeja (y spam).", true);
+    }catch(err){ btn.disabled=false; msg("reqMsg",(err&&err.message)||"No se pudo enviar el enlace."); }
+  });
+
+  // Paso 2: fijar nueva contraseña
+  $("setForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+    var p1=$("p1").value, p2=$("p2").value;
+    if(p1.length<6){ msg("setMsg","La contraseña debe tener al menos 6 caracteres."); return; }
+    if(p1!==p2){ msg("setMsg","Las contraseñas no coinciden."); return; }
+    var btn=$("setBtn"); btn.disabled=true; msg("setMsg","Guardando…", true);
+    try{
+      var r=await Cloud.updatePassword(p1);
+      if(r.error) throw r.error;
+      msg("setMsg","✦ Contraseña actualizada. Entrando…", true);
+      setTimeout(function(){ location.href="home.html"; }, 900);
+    }catch(err){
+      btn.disabled=false;
+      var m=(err&&err.message)||"No se pudo guardar.";
+      if(/Auth session missing|session/i.test(m)) m="El enlace expiró o no es válido. Pide uno nuevo.";
+      msg("setMsg",m);
+    }
+  });
+  </script>
+</body>
+</html>
