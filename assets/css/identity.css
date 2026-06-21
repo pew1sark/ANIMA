@@ -1,0 +1,55 @@
+/* ===========================================================
+   ANIMA — Identidad visual: iconos pixel art + pulido de menú
+   y dashboard. Capa aditiva (se carga después de studio.css):
+   minimalista, limpia, profesional. El pixel art rompe la
+   formalidad sin ensuciar.
+   =========================================================== */
+
+/* ---------- Iconos pixel (SVG, currentColor) ---------- */
+.ai{display:inline-block;vertical-align:-0.1em}
+.nav-item .ico,
+.nav-group .ico{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:7px;flex:0 0 auto;transition:background .16s ease,color .16s ease}
+.nav-item .ico .ai{width:17px;height:17px}
+.nav-item.sub .ico .ai{width:15px;height:15px}
+.nav-group .ico .ai{width:17px;height:17px}
+/* Los iconos de reino llevan un tono dorado para marcar jerarquía. */
+.nav-group .ico{color:var(--gold-deep,#7b5920)}
+
+/* ---------- Menú: más estilizado, mismo minimalismo ---------- */
+.nav-item{border-radius:12px;transition:background .16s ease,color .16s ease,box-shadow .16s ease}
+.nav-item:hover{background:rgba(208,170,99,.10)}
+.nav-item:hover .ico{background:rgba(208,170,99,.16)}
+.nav-item.active{background:linear-gradient(135deg,#1b1714,#2c251d);color:#fff;box-shadow:0 6px 18px rgba(20,17,12,.18)}
+.nav-item.active .ico{background:rgba(255,255,255,.14);color:#fff}
+.nav-group{border-radius:12px}
+.nav-group:hover{background:rgba(208,170,99,.08)}
+.nav-group:hover .ico{background:rgba(208,170,99,.16)}
+.nav-group.has-active{background:rgba(208,170,99,.06)}
+.nav-label{opacity:.85}
+/* El acento del submenú combina con el dorado del universo. */
+.nav-item.sub{border-left-color:var(--line)}
+.nav-item.sub.active{border-left-color:var(--gold,#d0aa63)}
+.nav-item.sub.active .ico{background:transparent}
+
+/* La ficha del Alma (avatar + nombre) en el menú, más definida. */
+.side .who{border-radius:16px;transition:box-shadow .18s ease,border-color .18s ease}
+.side .who:hover{border-color:rgba(208,170,99,.4)}
+
+/* ---------- Dashboard / tarjetas: pulido sutil ---------- */
+.section-title h2{font-weight:850}
+.section-title .pill{font-weight:800}
+/* Cifras (KPIs) con jerarquía más limpia y profesional. */
+.stat .num{letter-spacing:-.03em}
+.stat .lbl{letter-spacing:.03em;text-transform:uppercase;font-size:10.5px}
+/* Un realce muy leve al pasar por las tarjetas con acción. */
+.card.map-card,.card.wt-card{transition:box-shadow .2s ease}
+
+/* Camino del Alma (símbolos oficiales) con respiración. */
+.ptile b{letter-spacing:.02em}
+
+/* En pantallas grandes, el icono activo gana un punto de marca. */
+@media(min-width:1024px){
+  .nav-item.active{position:relative}
+  .nav-item.active::before{content:"";position:absolute;left:-8px;top:50%;transform:translateY(-50%);
+    width:3px;height:16px;border-radius:3px;background:var(--gold,#d0aa63)}
+}
