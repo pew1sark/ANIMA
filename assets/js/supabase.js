@@ -152,7 +152,65 @@ const Cloud = {
   async clanInvites(clan){ const { data, error } = await _sb.from("clan_invites").select("*").eq("clan", clan).order("created_at",{ascending:false}); if(error) throw error; return data||[]; },
   async createInvite(row){ const { data, error } = await _sb.from("clan_invites").insert(row).select().single(); if(error) throw error; return data; },
   async deleteInvite(id){ const { error } = await _sb.from("clan_invites").delete().eq("id", id); if(error) throw error; },
-  async joinByCode(code){ const { data, error } = await _sb.rpc("join_clan_by_code", { p_code: code }); if(error) throw error; return data; }
+  async joinByCode(code){ const { data, error } = await _sb.rpc("join_clan_by_code", { p_code: code }); if(error) throw error; return data; },
+
+  /* ===========================================================
+     ALPHA 2026 (migración 0013)
+     =========================================================== */
+
+  /* El Umbral: "34 / 100 Almas". Cuenta solo Almas reales. */
+  async soulsCount(){ if(!_sb) return null; const { data } = await _sb.rpc("souls_count"); return data; },
+  /* Árbol de Almas: [{country, n}, …] ordenado por cantidad. */
+  async soulsByCountry(){ if(!_sb) return []; const { data } = await _sb.rpc("souls_by_country"); return data || []; },
+
+  /* Ecos de ANIMA — el espacio vivo (lectura pública, sin login). */
+  async echoes(limit){ if(!_sb) return []; const { data } = await _sb.from("echoes").select("*").order("created_at",{ascending:false}).limit(limit||40); return data || []; },
+  async emitEcho(kind, text){ if(!_sb) return null; const { data, error } = await _sb.rpc("emit_echo", { p_kind:kind, p_text:text }); if(error) throw error; return data; },
+  /* Ecos en vivo (Realtime). cb recibe cada Eco nuevo. Devuelve el canal. */
+  subscribeEchoes(cb){ if(!_sb) return null;
+    try{ return _sb.channel("echoes-live")
+      .on("postgres_changes", { event:"INSERT", schema:"public", table:"echoes" }, p=>{ try{ cb(p.new); }catch(e){} })
+      .subscribe(); }catch(e){ return null; } },
+
+  /* Cronología del Alma — "Porque ANIMA recordará." */
+  async timeline(){ if(!_sb) return []; const u = await this.user(); if(!u) return []; const { data } = await _sb.from("soul_timeline").select("*").eq("user_id", u.id).order("created_at",{ascending:false}); return data || []; },
+  async logTimeline(event, title, desc){ if(!_sb) return null; const { data } = await _sb.rpc("log_timeline", { p_event:event, p_title:title, p_desc:desc||null }); return data; },
+
+  /* Insignias secretas — catálogo + las descubiertas por el Alma. */
+  async badgeCatalog(){ if(!_sb) return []; const { data } = await _sb.from("badges").select("*"); return data || []; },
+  async myBadges(){ if(!_sb) return []; const u = await this.user(); if(!u) return []; const { data } = await _sb.from("soul_badges").select("code,earned_at").eq("user_id", u.id); return data || []; },
+  async awardBadge(code){ if(!_sb) return false; const { data } = await _sb.rpc("award_badge", { p_code:code }); return !!data; },
+  /* Insignias por tiempo (Persistencia: 30 días habitando ANIMA). */
+  async claimTimeBadges(){ if(!_sb) return false; try{ const { data } = await _sb.rpc("claim_time_badges"); return !!data; }catch(e){ return false; } },
+
+  /* Sistema de logs — registra una acción del Alma (silencioso si falla). */
+  async log(action, meta){ if(!_sb) return; try{ await _sb.rpc("log_activity", { p_action:action, p_meta:meta||{} }); }catch(e){} },
+
+  /* Límite de almacenamiento del nivel: {images, pdfs, mb}. */
+  async storageQuota(level){ if(!_sb) return null; const { data } = await _sb.rpc("storage_quota", { p_level:level||"FOUNDING" }); return data; },
+
+  /* Subir un archivo a un bucket separado (avatars | portfolio | temp),
+     siempre dentro de la carpeta /<uid>/… Devuelve la URL pública. */
+  async uploadTo(bucket, file, folder){
+    if(!_sb) throw new Error("Sin conexión a la nube.");
+    const { data:ud } = await _sb.auth.getUser();
+    const uid = ud && ud.user && ud.user.id;
+    if(!uid) throw new Error("Inicia sesión para subir archivos.");
+    const ext = ((file.name||"").split(".").pop()||"bin").toLowerCase().replace(/[^a-z0-9]/g,"") || "bin";
+    const path = `${uid}/${folder||"file"}-${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;
+    const { error } = await _sb.storage.from(bucket).upload(path, file, { cacheControl:"31536000", upsert:false, contentType:file.type||"application/octet-stream" });
+    if(error) throw error;
+    const { data } = _sb.storage.from(bucket).getPublicUrl(path);
+    return data.publicUrl;
+  },
+
+  /* Panel del Fundador — agregados (solo el Creador; si no, lanza error). */
+  async founderStats(){ if(!_sb) return null; const { data, error } = await _sb.rpc("founder_stats"); if(error) throw error; return data; },
+
+  /* Consejo de Almas — propuestas y votaciones (migración 0015). */
+  async proposals(){ if(!_sb) return []; try{ const { data } = await _sb.rpc("list_proposals"); return data || []; }catch(e){ return []; } },
+  async createProposal(title, desc){ if(!_sb) return null; const { data, error } = await _sb.rpc("create_proposal", { p_title:title, p_desc:desc||null }); if(error) throw error; return data; },
+  async castVote(id, value){ if(!_sb) return; const { error } = await _sb.rpc("cast_vote", { p_proposal:id, p_value:value }); if(error) throw error; }
 };
 
 /* Exponer Cloud en window para que anima-state.js (capa del rito) pueda
@@ -172,6 +230,7 @@ function dbAlmaToState(row, m){
     instagram: row.instagram || "", portfolio_url: row.portfolio_url || "", shop_url: row.shop_url || "",
     headline: row.headline || "", availability: row.availability || "",
     sparks: row.sparks || 0, created_at: row.created_at || null,
+    council: row.council === true,
     essence: row.essence || 0, affinity: row.affinity || "",
     visibility: row.visibility || {},
     finance: {

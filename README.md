@@ -17,7 +17,35 @@ Este repositorio contiene la **primera Alpha** de ANIMA (The Founding Era), semb
 |---|---|
 | `index.html` | Portada pública de ANIMA TSC |
 | `studio.html` | **La Alpha** — la app del Studio con las 10 Almas |
+| `arbol.html` | **Árbol de Almas** — mapa vivo por país, contador `X / 100`, Ecos de ANIMA y LUMBRE despertando |
+| `fundador.html` | **Panel del Fundador** — comunidad, activos, obras, feedback y estado (solo el Creador) |
 | `roadmap.html` | Master Roadmap V6 · The Founding Era |
+
+### Arquitectura Alpha 2026
+
+La Alpha oficial está limitada a **100 Almas** (exclusividad por diseño) y añade:
+
+- **Cronología del Alma** (`soul_timeline`) — *"Porque ANIMA recordará."* Cada hito
+  (despertar, obra, nivel, insignia) queda escrito y se ve en el Studio → Esencia → Cronología.
+- **Ecos de ANIMA** (`echoes`) — el espacio vivo: *"✦ Alicia despertó en España"*. Feed
+  suave **en tiempo real** (Supabase Realtime), sin scroll infinito.
+- **Árbol de Almas** — el mapa de Almas (puntos sobre el planeta) es la referencia dentro
+  de la ventana de **Comunidad**, con panel de Ecos, conteo por país y contador `X / 100`.
+  `arbol.html` es la versión pública de la misma pantalla.
+- **Insignias secretas** (`badges` / `soul_badges`) — no se anuncian, se descubren
+  (Primer Latido, Alma Fundadora, Explorador, Eco Vivo, Guardián, Persistencia).
+- **Consejo de Almas** — las primeras **50** Almas (`almas.council`) reciben la insignia
+  *Alma Fundadora* y acceden a **Votaciones**: proponen funciones y votan cambios
+  (`proposals` / `votes`, vista *Consejo* en el Studio).
+- **Sistema de logs** (`activity_log`) — registro privado de cada acción (login, logout,
+  obra subida, nivel desbloqueado…).
+- **Navegación que crece con el nivel** — el menú revela ventanas a medida que el Alma sube.
+- **Almacenamiento por nivel** — `storage_quota(level)` + **buckets separados**
+  (`avatars` ≤ 2 MB, `portfolio` ≤ 10 MB, `temp` privado).
+- **Panel del Fundador** — `founder_stats()` (gated por el correo del Creador).
+
+Todo vive en la **migración `0013_alpha_2026.sql`** (idempotente): Supabase → SQL Editor →
+pega TODO → Run.
 
 El frontend es **estático** (HTML + CSS + JS, sin build). El backend es **Supabase**
 (Postgres + Auth) para auth real y persistencia. Si no hay conexión, ANIMA sigue

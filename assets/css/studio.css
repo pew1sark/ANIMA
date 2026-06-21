@@ -496,3 +496,52 @@
   .path{grid-template-columns:repeat(4,1fr)}
   .thumbs{grid-template-columns:1fr 1fr}
 }
+
+/* ===========================================================
+   ALPHA 2026 — Cronología · Insignias · navegación que crece
+   =========================================================== */
+a.nav-item{text-decoration:none;color:inherit}
+.nav-next{margin:14px 6px 4px;padding:11px 12px;border:1px dashed var(--line-strong,rgba(0,0,0,.14));
+  border-radius:12px;font-size:11.5px;line-height:1.45;color:var(--muted);
+  background:radial-gradient(circle at 0% 0%,rgba(208,170,99,.08),transparent 70%)}
+.nav-next b{color:var(--gold-deep,#7b5920)}
+
+/* Cronología del Alma */
+.tl-soul{position:relative;margin:6px 0 2px;padding-left:6px}
+.tl-soul::before{content:"";position:absolute;left:15px;top:6px;bottom:6px;width:1px;
+  background:linear-gradient(180deg,rgba(208,170,99,.55),var(--line))}
+.tl-node{position:relative;display:flex;gap:16px;padding:12px 0 12px 0}
+.tl-glyph{flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  background:#fff;border:1px solid var(--line);box-shadow:0 0 0 4px rgba(208,170,99,.08);
+  font-size:14px;color:var(--gold-deep,#7b5920);position:relative;z-index:1}
+.tl-body b{font-size:15px;letter-spacing:-.01em}
+
+/* Insignias */
+.badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:6px}
+.badge-card{border:1px solid var(--line);border-radius:18px;padding:18px 14px;text-align:center;
+  background:rgba(255,255,255,.6);transition:.2s;display:flex;flex-direction:column;gap:5px;align-items:center}
+.badge-card .badge-glyph{font-size:26px;line-height:1;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;margin-bottom:4px}
+.badge-card.on{border-color:rgba(208,170,99,.5);box-shadow:0 6px 22px rgba(208,170,99,.16)}
+.badge-card.on .badge-glyph{background:radial-gradient(circle,rgba(208,170,99,.22),transparent 70%);color:var(--gold-deep,#7b5920)}
+.badge-card.off{opacity:.62;filter:grayscale(.4)}
+.badge-card.off .badge-glyph{background:rgba(0,0,0,.04);color:var(--muted)}
+.badge-card.secret .badge-glyph{font-size:22px}
+.badge-card b{font-size:14px;letter-spacing:-.01em}
+.badge-card small{font-size:11.5px;line-height:1.4}
+.badge-when{color:var(--gold-deep,#7b5920);font-weight:700;margin-top:2px}
+
+/* Consejo de Almas — votaciones */
+.prop-card{border-left:3px solid rgba(208,170,99,.4)}
+.prop-vote{display:flex;gap:8px;flex-wrap:wrap}
+.prop-vote .btn.sm{padding:7px 13px}
+
+/* Comunidad — panel del Árbol de Almas (Ecos + países) */
+.arbol-aside .ecos-mini{display:flex;flex-direction:column;gap:2px}
+.eco-row{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+.eco-row:last-child{border-bottom:0}
+.eco-ico{flex:0 0 auto;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(208,170,99,.12);color:var(--gold-deep,#7b5920);font-size:13px;margin-top:1px}
+.country-rows{display:flex;flex-direction:column;gap:2px}
+.country-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.country-row:last-child{border-bottom:0}
+.country-row b{color:var(--gold-deep,#7b5920)}

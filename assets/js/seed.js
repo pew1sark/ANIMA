@@ -15,6 +15,21 @@ const LEVELS = [
   { key:"ANIMA",    label:"ANIMA",  name:"Alma Despierta",emoji:"∞",  color:"#111111", xp:21000, desc:"Alma despierta. El círculo se completa." }
 ];
 const levelByKey = k => LEVELS.find(l => l.key === k) || LEVELS[0];
+const levelRank = k => { const i = LEVELS.findIndex(l => l.key === k); return i < 0 ? 0 : i; };
+
+/* --- Almacenamiento por nivel (Alpha 2026) --- */
+/* Espeja public.storage_quota() del backend (migración 0013). */
+const LEVEL_STORAGE = {
+  FOUNDING:{ images:3,  pdfs:1, mb:30  },   // ORIGEN
+  EMBER:   { images:5,  pdfs:1, mb:50  },   // CHISPA
+  ROOT:    { images:7,  pdfs:2, mb:80  },   // RAÍZ
+  WILD:    { images:7,  pdfs:2, mb:80  },   // PULSO
+  TOTEM:   { images:8,  pdfs:2, mb:90  },   // HUELLA
+  AETHER:  { images:9,  pdfs:2, mb:95  },   // TÓTEM
+  SPIRIT:  { images:10, pdfs:2, mb:100 },   // AURA
+  ANIMA:   { images:10, pdfs:2, mb:100 }    // ANIMA
+};
+const storageLimit = k => LEVEL_STORAGE[k] || LEVEL_STORAGE.FOUNDING;
 function levelProgress(xp){
   let cur = LEVELS[0];
   for(const l of LEVELS){ if(xp >= l.xp) cur = l; }
