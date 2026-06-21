@@ -109,6 +109,17 @@
       // Accesos
       '<div class="entry-grid">' + entries + '</div>' +
 
+      // El Umbral: X / 100 Almas + acceso al Árbol de Almas
+      '<div class="hcard" style="margin-top:16px">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">' +
+          '<div><div style="font-size:22px;font-weight:850;letter-spacing:-.01em"><span id="homeSouls">·</span> <span style="color:var(--muted);font-weight:700">/ 100 Almas</span></div>' +
+          '<div class="hint" id="homeSoulsSub" style="margin:4px 0 0">El Umbral de ANIMA.</div></div>' +
+          '<a class="cbtn ghost" href="arbol.html" style="padding:9px 15px;font-size:13px">✦ Árbol de Almas</a>' +
+        '</div>' +
+        '<div class="ebar" style="margin-top:14px"><span id="homeSoulsBar" style="background:linear-gradient(90deg,var(--gold,#d0aa63),var(--gold-deep,#7b5920))"></span></div>' +
+        (ctx.isCreator ? '<div style="margin-top:14px"><a class="cbtn ghost" href="fundador.html" style="padding:9px 15px;font-size:13px">⬡ Panel del Fundador</a></div>' : '') +
+      '</div>' +
+
       '<div class="home-foot">' +
         '<strong>ANIMA TSC — The Soul of Creativity</strong> · The Founding Era<br>' +
         '<a href="index.html">Inicio</a>·<a href="planes.html">Planes</a>·<a href="legal.html#privacidad">Privacidad</a><br>' +
@@ -117,6 +128,7 @@
 
     var bar = home.querySelector(".ebar > span");
     if (bar) setTimeout(function () { bar.style.width = (bar.dataset.pct || 0) + "%"; }, 250);
+    fillSouls();
     if (window.Rite && Rite.initInstall) Rite.initInstall(); // botón "Instalar app" (inyectado)
 
     // Menú del Alma (abrir/cerrar + acciones)
@@ -133,6 +145,21 @@
       var lo = document.getElementById("logoutAlma");
       if (lo) lo.addEventListener("click", async function () { try { await Cloud.signOut(); } catch (e) {} render(); });
     }
+  }
+
+  /* El Umbral: "X / 100 Almas" — contador vivo desde la nube. */
+  async function fillSouls(){
+    var nEl = document.getElementById("homeSouls");
+    if (!nEl) return;
+    var n = 0;
+    try { if (typeof Cloud !== "undefined" && Cloud.enabled) n = (await Cloud.soulsCount()) || 0; } catch (e) {}
+    nEl.textContent = n;
+    var sub = document.getElementById("homeSoulsSub");
+    if (sub) sub.textContent = n >= 100 ? "El Umbral está completo."
+      : n >= 90 ? "El Umbral está casi completo. " + n + " Almas han despertado."
+      : "Quedan " + (100 - n) + " lugares en ANIMA.";
+    var b = document.getElementById("homeSoulsBar");
+    if (b) setTimeout(function(){ b.style.width = Math.max(2, Math.round(n)) + "%"; }, 260);
   }
 
   /* Init: reconcilia con la nube (sesión/plan/esencia) y pinta una vez. */

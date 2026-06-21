@@ -126,6 +126,24 @@ function planAllows(view){
   if(!GATED_VIEWS.includes(view)) return true;            // espacio individual: todos
   return PLAN_UNLOCKS[effectivePlan()].includes(view);
 }
+
+/* ===========================================================
+   NIVEL Y NAVEGACIÓN QUE CRECE (Alpha 2026)
+   -----------------------------------------------------------
+   "El menú no debe mostrar todo. Debe crecer con la persona."
+   Cada vista pide un nivel mínimo; al subir de nivel, ANIMA
+   revela nuevas ventanas. El Creador (sin previsualizar) ve todo.
+   Las Almas nacen en CHISPA (EMBER), así que el espacio base
+   nunca queda oculto: el crecimiento se nota en lo que se abre. */
+const VIEW_MIN_LEVEL = {
+  cronologia:"EMBER", insignias:"EMBER"        // RAÍZ en el ideario; abiertas desde CHISPA para que toda Alma recuerde.
+};
+function levelAllows(view){
+  if(isCreator && !state.viewAs) return true;
+  const need = VIEW_MIN_LEVEL[view];
+  if(!need) return true;
+  return levelRank(me().level) >= levelRank(need);
+}
 /* ¿La sesión puede gestionar el equipo? (Líder, Admin o Creador) */
 function canLead(){
   if(isCreator && !state.viewAs) return true;
@@ -143,6 +161,8 @@ const NAV_TREE = [
   { type:"reino", key:"esencia", ico:"✦", t:"Esencia", children:[
       {v:"trayectoria",ico:"⤴",t:"Trayectoria"},
       {v:"portafolio", ico:"▦",t:"Portafolio"},
+      {v:"cronologia", ico:"☷",t:"Cronología"},
+      {v:"insignias",  ico:"✷",t:"Insignias"},
       {v:"memoria",    ico:"✦",t:"Memorias"},
       {v:"biblioteca", ico:"❏",t:"Biblioteca"}
   ]},
@@ -171,7 +191,7 @@ function renderNav(){
   let h=`<div class="nav-label">Mi Alma</div>`;
   NAV_TREE.forEach(node=>{
     if(node.type==="item"){ h+=navItem(node); return; }
-    const kids=node.children.filter(c=>cfg.modules[c.v]!==false && planAllows(c.v));
+    const kids=node.children.filter(c=>cfg.modules[c.v]!==false && planAllows(c.v) && levelAllows(c.v));
     if(!kids.length) return;
     const activeInside=kids.some(c=>c.v===state.view);
     const open=reinoOpen(node.key)||activeInside;
@@ -182,7 +202,14 @@ function renderNav(){
   let world="";
   if(planAllows("comunidad")) world+=navItem({v:"comunidad",ico:"❂",t:"Comunidad"});
   if(planAllows("santuario")) world+=navItem({v:"santuario",ico:"🜁",t:"Santuario"});
+  // Ecos de ANIMA + Árbol de Almas viven en su propia pantalla (espacio vivo).
+  world+=`<a class="nav-item" href="arbol.html"><span class="ico">✦</span>Árbol de Almas</a>`;
   if(world) h+=`<div class="nav-label">Mundo</div>`+world;
+  // "El menú crece con la persona": muestra qué se abre al subir de nivel.
+  const lpNav=levelProgress(me().xp);
+  if(lpNav.next && UNLOCKS[lpNav.next.key]){
+    h+=`<div class="nav-next">✦ Al alcanzar <b>${lpNav.next.label}</b>: ${UNLOCKS[lpNav.next.key]}</div>`;
+  }
   // El bloque Creador se oculta mientras se previsualiza un plan (vista fiel).
   if(isCreator && !state.viewAs){
     h+=`<div class="nav-label">Creador</div>`
@@ -210,6 +237,8 @@ const TITLES = {
   agenda:["Agenda","Tu día, ordenado."],
   memoria:["Memorias","Ideas, frases y referencias que no quieres perder."],
   biblioteca:["Biblioteca","Tus documentos y archivos."],
+  cronologia:["Cronología","Porque ANIMA recordará. La historia viva de tu Alma."],
+  insignias:["Insignias","No se anuncian. Se descubren."],
   config:["Personalizar","Tú decides qué muestra tu Alma."],
   consola:["Consola del Creador","Planes, roles, nivel y clan · vista omnipresente."],
   miplan:["Mi Plan","Elige tu umbral y desbloquea sus funciones."],
@@ -277,8 +306,11 @@ function renderView(){
   if((state.view==="config"||state.view==="consola") && (!isCreator || state.viewAs)) state.view="mialma";
   // Gating por plan: si el plan (real o previsualizado) no incluye la vista, vuelve a Mi Alma.
   if(!planAllows(state.view)) state.view="mialma";
+  // Gating por nivel: una ventana aún no abierta por el camino vuelve a Mi Alma.
+  if(!levelAllows(state.view)) state.view="mialma";
   const fn = { mialma:vMiAlma, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
     finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
+    cronologia:vCronologia, insignias:vInsignias,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, santuario:vSantuario }[state.view] || vMiAlma;
   document.getElementById("view").innerHTML = previewBanner() + fn(me());
@@ -447,6 +479,13 @@ function imgUpField(inputId, label, val, folder){
     </div>
     <small class="muted img-hint" id="up_${inputId}">JPG · PNG · WebP — hasta 15 MB, en alta calidad.</small></div>`;
 }
+/* Buckets separados (Alpha 2026): cada tipo de archivo en su sitio,
+   con su propio límite. avatars ≤ 2 MB · portfolio ≤ 10 MB. */
+const UPLOAD_BUCKETS = {
+  perfil:{ bucket:"avatars",   maxMB:2,  folder:"avatar" },
+  obra:  { bucket:"portfolio", maxMB:10, folder:"obra" },
+  banner:{ bucket:"media",     maxMB:10, folder:"banner" }
+};
 async function uploadImgField(fileInput){
   const file = fileInput.files && fileInput.files[0]; if(!file) return;
   const a = me();
@@ -455,10 +494,22 @@ async function uploadImgField(fileInput){
   const done = ()=>{ try{ fileInput.value=""; }catch(e){} };
   if(!a.live || !Cloud.enabled){ setS("Para subir fotos en alta calidad entra a tu Alma en la nube. También puedes pegar un enlace."); return done(); }
   if(!/^image\//.test(file.type||"")){ setS("Elige un archivo de imagen."); return done(); }
-  if(file.size > 15*1024*1024){ setS("La imagen supera 15 MB. Sube una versión más liviana."); return done(); }
+  const dest = UPLOAD_BUCKETS[fileInput.dataset.imgfolder] || UPLOAD_BUCKETS.banner;
+  if(file.size > dest.maxMB*1024*1024){ setS(`La imagen supera ${dest.maxMB} MB. Sube una versión más liviana.`); return done(); }
+  // Límite de obras por nivel: una nueva huella no debe exceder el umbral del Alma.
+  if(fileInput.dataset.imgfolder==="obra"){
+    const lim = storageLimit(a.level).images;
+    const isNew = !(recordCtx && recordCtx.idx!=null);
+    if(isNew && (a.portfolio||[]).length >= lim){
+      setS(`Has alcanzado el límite de ${lim} obras para tu nivel (${levelByKey(a.level).label}). Sube de nivel para guardar más.`);
+      return done();
+    }
+  }
   setS("Subiendo en alta calidad…");
   try{
-    const url = await Cloud.uploadMedia(file, fileInput.dataset.imgfolder);
+    const url = dest.bucket==="media"
+      ? await Cloud.uploadMedia(file, dest.folder)
+      : await Cloud.uploadTo(dest.bucket, file, dest.folder);
     const inp = document.getElementById(fileInput.dataset.imgtarget); if(inp) inp.value = url;
     const prev = document.getElementById(fileInput.dataset.imgprev); if(prev){ prev.style.backgroundImage = `url('${url}')`; prev.textContent = ""; prev.classList.add("has"); }
     setS("Listo ✓ Imagen en alta calidad.");
@@ -1082,6 +1133,56 @@ function almaMini(m){
     <div class="muted" style="font-size:11px;margin-top:6px">${esc(m.country||"")}</div></div>`;
 }
 
+/* ===========================================================
+   CRONOLOGÍA DEL ALMA (Alpha 2026) — "Porque ANIMA recordará."
+   =========================================================== */
+const TL_ICON = { despertar:"✦", obra:"▦", huella:"▦", nivel:"⤴", insignia:"✷", eco:"◎" };
+function vCronologia(a){
+  if(!a.live){ return `<div class="grid"><div class="card s12"><p class="muted">Entra a tu Alma en la nube para ver tu Cronología.</p></div></div>`; }
+  const tl = state.cloudTimeline;
+  if(tl==null){ loadTimeline(); return `<div class="grid"><div class="card s12"><p class="muted">Cargando tu historia…</p></div></div>`; }
+  const body = tl.length
+    ? `<div class="tl-soul">${tl.map(e=>{
+        const d=new Date(e.created_at); const day=isNaN(d)?"":d.toLocaleDateString("es-CL",{day:"numeric",month:"long"});
+        return `<div class="tl-node"><span class="tl-glyph">${TL_ICON[e.event_type]||"·"}</span>
+          <div class="tl-body"><b>${esc(e.title)}</b>${e.description?`<p class="muted" style="margin:2px 0 0;font-size:13px">${esc(e.description)}</p>`:""}
+          <small class="muted" style="display:block;margin-top:3px">${esc(day)}</small></div></div>`;
+      }).join("")}</div>`
+    : `<p class="muted">Tu historia empieza ahora. Cada hito quedará escrito aquí.</p>`;
+  return `<div class="grid"><div class="card s12">
+    <div class="section-title"><h2>La memoria de tu Alma</h2><div class="spacer"></div><span class="pill">${tl.length} recuerdo${tl.length===1?"":"s"}</span></div>
+    ${body}</div></div>`;
+}
+async function loadTimeline(){ if(!Cloud.enabled) return; try{ state.cloudTimeline=await Cloud.timeline(); if(state.view==="cronologia") renderView(); }catch(e){ state.cloudTimeline=[]; } }
+
+/* ===========================================================
+   INSIGNIAS SECRETAS (Alpha 2026) — "No se anuncian. Se descubren."
+   =========================================================== */
+function vInsignias(a){
+  if(!a.live){ return `<div class="grid"><div class="card s12"><p class="muted">Entra a tu Alma en la nube para descubrir tus Insignias.</p></div></div>`; }
+  if(state.cloudBadges==null){ loadBadges(); return `<div class="grid"><div class="card s12"><p class="muted">Buscando tus insignias…</p></div></div>`; }
+  const cat = state.badgeCatalog||[]; const earned = state.cloudBadges||[];
+  const earnedSet = new Set(earned.map(b=>b.code));
+  const earnedAt = c => { const r=earned.find(b=>b.code===c); return r?new Date(r.earned_at).toLocaleDateString("es-CL",{day:"numeric",month:"long"}):""; };
+  // Orden: descubiertas primero; el resto, misterio.
+  const cards = cat.slice().sort((x,y)=> (earnedSet.has(y.code)?1:0)-(earnedSet.has(x.code)?1:0)).map(b=>{
+    const has=earnedSet.has(b.code);
+    if(has) return `<div class="badge-card on"><span class="badge-glyph">${esc(b.glyph||"✦")}</span>
+        <b>${esc(b.name)}</b><small class="muted">${esc(b.description||"")}</small><small class="badge-when">Descubierta · ${esc(earnedAt(b.code))}</small></div>`;
+    if(b.secret) return `<div class="badge-card off secret"><span class="badge-glyph">✦</span><b>Insignia secreta</b><small class="muted">Sigue creando para descubrirla.</small></div>`;
+    return `<div class="badge-card off"><span class="badge-glyph">${esc(b.glyph||"✦")}</span><b>${esc(b.name)}</b><small class="muted">${esc(b.description||"")}</small></div>`;
+  }).join("");
+  return `<div class="grid"><div class="card s12">
+    <div class="section-title"><h2>Tus Insignias</h2><div class="spacer"></div><span class="pill ${earned.length?'gold':''}">${earned.length} de ${cat.length}</span></div>
+    <p class="muted" style="margin:-4px 0 14px;font-size:13px">No se anuncian todas. Algunas esperan a ser descubiertas.</p>
+    <div class="badge-grid">${cards}</div></div></div>`;
+}
+async function loadBadges(){
+  if(!Cloud.enabled){ state.cloudBadges=[]; return; }
+  try{ const r=await Promise.all([Cloud.badgeCatalog(),Cloud.myBadges()]); state.badgeCatalog=r[0]; state.cloudBadges=r[1]; if(state.view==="insignias") renderView(); }
+  catch(e){ state.cloudBadges=[]; }
+}
+
 /* --- Santuario --- */
 function vSantuario(a){
   if(a.live && a.santuario) return vSantuarioLive(a);
@@ -1479,18 +1580,49 @@ async function saveRecord(){
   const first=cfg.fields[0];
   if(first && !String(v[first.k]).trim()){ document.getElementById("recMsg").textContent="Completa: "+first.l; return; }
   const arr=cfg.get(a);
+  // Límite de obras por nivel (Alpha 2026): la nueva huella no excede el umbral.
+  if(kind==="obra" && idx==null){
+    const lim = storageLimit(a.level).images;
+    if((a.portfolio||[]).length >= lim){
+      document.getElementById("recMsg").textContent = `Límite de ${lim} obras para tu nivel (${levelByKey(a.level).label}). Sube de nivel para guardar más.`;
+      return;
+    }
+  }
   try{
     if(idx==null){
       const item={...v};
       if(a.live){ const row=await Cloud.insertRow(cfg.table, {...cfg.toRow(v), alma_id:a.almaId}); item._id=row.id; }
       arr[cfg.push==="push"?"push":"unshift"](item);
       if(cfg.xp){ a.xp=(a.xp||0)+cfg.xp; if(a.live){ try{await Cloud.setXP(a.almaId,a.xp);}catch(e){} } await syncLevel(a); }
+      if(a.live) recordAlphaEvents(kind, v, arr);
     }else{
       const item=arr[idx]; Object.assign(item,v);
       if(a.live && item._id){ await Cloud.updateRow(cfg.table,item._id,cfg.toRow(v)); }
     }
     save(); closeRecord(); renderAll();
   }catch(e){ document.getElementById("recMsg").textContent="No se pudo guardar: "+(e.message||e); }
+}
+
+/* ===========================================================
+   EVENTOS ALPHA 2026 — log + cronología + insignias + ecos.
+   Se dispara al crear algo en la nube. Silencioso (fire-and-forget).
+   =========================================================== */
+function recordAlphaEvents(kind, v, arr){
+  try{
+    const a=me(); const nick=(a.name||"Alma").split(" ")[0];
+    Cloud.log(kind+"_creado", { titulo: v.t || v.name || v.title || "" });
+    if(kind==="obra"){
+      const first = (arr||[]).length===1;
+      Cloud.log("obra_subida", { titulo:v.t||"" });
+      Cloud.logTimeline("obra", first?"Dejaste tu primera huella":"Dejaste una nueva huella", v.t||"");
+      if(first) Cloud.awardBadge("primer_latido");
+      Cloud.emitEcho("huella", "✦ "+nick+(first?" dejó su primera huella":" dejó una nueva huella")).catch(()=>{});
+    } else if(kind==="hito"){
+      Cloud.logTimeline("nivel", "Sumaste un hito a tu trayectoria", v.t||"");
+    }
+    // Invalida cachés para que Cronología e Insignias se refresquen al entrar.
+    state.cloudTimeline=null; state.cloudBadges=null;
+  }catch(e){}
 }
 async function deleteRecord(kind,idx){
   const cfg=EDITORS[kind]; const a=me(); const arr=cfg.get(a); const item=arr[idx];
@@ -1502,7 +1634,21 @@ async function deleteRecord(kind,idx){
 }
 async function syncLevel(a){
   const cur=levelProgress(a.xp).cur.key;
-  if(cur!==a.level){ a.level=cur; if(a.live){ try{await Cloud.updateAlma(a.almaId,{level:cur});}catch(e){} } save(); setTimeout(()=>alert("✦ Tu Alma evolucionó a nivel "+cur),60); }
+  if(cur!==a.level){
+    a.level=cur;
+    if(a.live){
+      try{await Cloud.updateAlma(a.almaId,{level:cur});}catch(e){}
+      // Alpha 2026: el nivel desbloqueado deja huella en log, cronología y ecos.
+      try{
+        const lv=levelByKey(cur), nick=(a.name||"Alma").split(" ")[0];
+        Cloud.log("nivel_desbloqueado", { level:cur });
+        Cloud.logTimeline("nivel", "Alcanzaste "+lv.label, lv.name);
+        Cloud.emitEcho("nivel", "✦ "+nick+" alcanzó "+lv.label).catch(()=>{});
+        state.cloudTimeline=null;
+      }catch(e){}
+    }
+    save(); setTimeout(()=>alert("✦ Tu Alma evolucionó a nivel "+cur),60);
+  }
 }
 
 /* ===========================================================
@@ -1572,6 +1718,8 @@ async function loadMyAlma(){
   try{ const p=await Cloud.getPrefs(row.id); if(p) localStorage.setItem("anima_cfg_"+row.id, JSON.stringify(p)); }catch(e){}
   state.almas=[a];   // tu Alma viva, limpia (las de muestra no se mezclan)
   state.currentId=a.id; state.view="mialma"; state.chat=[]; renderAll();
+  // Sistema de logs (Alpha 2026): registra el inicio de sesión una vez por sesión.
+  try{ if(!sessionStorage.getItem("anima_logged_login")){ Cloud.log("login"); sessionStorage.setItem("anima_logged_login","1"); } }catch(e){}
   // Puente con el camino ceremonial (Esencia + Afinidad del rito de entrada)
   if(window.AnimaState){ try{
     const st=AnimaState.get(); if(a.name) st.name=a.name; if(a.affinity) st.affinity=a.affinity; AnimaState.save(st);
@@ -1673,7 +1821,7 @@ async function doAuth(mode){
   }catch(e){ msg.textContent=e.message||"No se pudo completar."; }
 }
 /* Cerrar sesión → vuelve al Home de ANIMA (la página principal por defecto). */
-async function logout(){ if(!confirm("¿Cerrar sesión de tu Alma?"))return; try{await Cloud.signOut();}catch(e){} location.href="home.html"; }
+async function logout(){ if(!confirm("¿Cerrar sesión de tu Alma?"))return; try{await Cloud.log("logout");}catch(e){} try{await Cloud.signOut();}catch(e){} try{sessionStorage.removeItem("anima_logged_login");}catch(e){} location.href="home.html"; }
 /* Cambiar de Alma → cierra sesión y abre el acceso para entrar con otra. */
 async function switchAlmaSession(){ try{await Cloud.signOut();}catch(e){}
   isCreator=false; state.viewAs=null; state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; state.view="mialma"; save(); renderAll(); updateAuthUI(null); openAuth(); }

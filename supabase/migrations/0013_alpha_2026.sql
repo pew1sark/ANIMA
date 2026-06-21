@@ -456,4 +456,23 @@ end;
 $$;
 grant execute on function public.founder_stats() to authenticated;
 
+
+-- ===========================================================
+-- 11. ENDURECIMIENTO DE GRANTS
+-- Por defecto, CREATE FUNCTION concede EXECUTE a PUBLIC (incl. anon).
+-- Las funciones de ESCRITURA del Alma deben requerir sesión: se revoca
+-- anon/public y se deja solo authenticated. Las lecturas públicas
+-- (souls_count, souls_by_country, storage_quota) sí quedan para anon.
+-- ===========================================================
+revoke execute on function public.log_timeline(text, text, text) from public, anon;
+revoke execute on function public.emit_echo(text, text)         from public, anon;
+revoke execute on function public.award_badge(text)             from public, anon;
+revoke execute on function public.log_activity(text, jsonb)     from public, anon;
+revoke execute on function public.founder_stats()               from public, anon;
+grant execute on function public.log_timeline(text, text, text) to authenticated;
+grant execute on function public.emit_echo(text, text)         to authenticated;
+grant execute on function public.award_badge(text)             to authenticated;
+grant execute on function public.log_activity(text, jsonb)     to authenticated;
+grant execute on function public.founder_stats()               to authenticated;
+
 -- Fin 0013.
