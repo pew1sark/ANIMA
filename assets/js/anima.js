@@ -158,38 +158,38 @@ function canCollaborate(){ if(isCreator && !state.viewAs) return true; return ro
 function canAdminSantuario(){ if(isCreator && !state.viewAs) return true; return almaRole(me())==="ADMIN"; }
 
 const NAV_TREE = [
-  { type:"item",  v:"mialma", ico:"◆", t:"Mi Alma" },
-  { type:"item",  v:"miplan", ico:"❖", t:"Mi Plan" },
-  { type:"reino", key:"esencia", ico:"✦", t:"Esencia", children:[
-      {v:"trayectoria",ico:"⤴",t:"Trayectoria"},
-      {v:"portafolio", ico:"▦",t:"Portafolio"},
-      {v:"cronologia", ico:"☷",t:"Cronología"},
-      {v:"insignias",  ico:"✷",t:"Insignias"},
-      {v:"memoria",    ico:"✦",t:"Memorias"},
-      {v:"biblioteca", ico:"❏",t:"Biblioteca"}
+  { type:"item",  v:"mialma", ico:"◆", ic:"alma", t:"Mi Alma" },
+  { type:"item",  v:"miplan", ico:"❖", ic:"plan", t:"Mi Plan" },
+  { type:"reino", key:"esencia", ico:"✦", ic:"esencia", t:"Esencia", children:[
+      {v:"trayectoria",ico:"⤴",ic:"ruta",t:"Trayectoria"},
+      {v:"portafolio", ico:"▦",ic:"huellas",t:"Portafolio"},
+      {v:"cronologia", ico:"☷",ic:"tiempo",t:"Cronología"},
+      {v:"insignias",  ico:"✷",ic:"insignia",t:"Insignias"},
+      {v:"memoria",    ico:"✦",ic:"memoria",t:"Memorias"},
+      {v:"biblioteca", ico:"❏",ic:"archivo",t:"Biblioteca"}
   ]},
-  { type:"reino", key:"taller", ico:"₵", t:"Taller", children:[
-      {v:"proyectos",  ico:"◷",t:"Proyectos"},
-      {v:"clientes",   ico:"☺",t:"Vínculos"},
-      {v:"cotizador",  ico:"₵",t:"Cotizador"},
-      {v:"finanzas",   ico:"🌱",t:"Raíz"},
-      {v:"agenda",     ico:"☰",t:"Agenda"}
+  { type:"reino", key:"taller", ico:"₵", ic:"taller", t:"Taller", children:[
+      {v:"proyectos",  ico:"◷",ic:"proceso",t:"Proyectos"},
+      {v:"clientes",   ico:"☺",ic:"constelacion",t:"Vínculos"},
+      {v:"cotizador",  ico:"₵",ic:"documento",t:"Cotizador"},
+      {v:"finanzas",   ico:"🌱",ic:"raiz",t:"Raíz"},
+      {v:"agenda",     ico:"☰",ic:"agenda",t:"Agenda"}
   ]},
   // Reino Clan: solo aparece en planes Clan/Santuario (gating por planAllows).
-  { type:"reino", key:"clan", ico:"❂", t:"Clan", children:[
-      {v:"clanpanel",     ico:"⬡",t:"Panel"},
-      {v:"equipo",        ico:"▦",t:"Plan de trabajo"},
-      {v:"calendario",    ico:"☷",t:"Calendario"},
-      {v:"proyectos_clan",ico:"◷",t:"Proyectos"},
-      {v:"recordatorios", ico:"⏰",t:"Recordatorios"}
+  { type:"reino", key:"clan", ico:"❂", ic:"constelacion", t:"Clan", children:[
+      {v:"clanpanel",     ico:"⬡",ic:"panel",t:"Panel"},
+      {v:"equipo",        ico:"▦",ic:"obra",t:"Plan de trabajo"},
+      {v:"calendario",    ico:"☷",ic:"agenda",t:"Calendario"},
+      {v:"proyectos_clan",ico:"◷",ic:"proceso",t:"Proyectos"},
+      {v:"recordatorios", ico:"⏰",ic:"susurro",t:"Recordatorios"}
   ]}
 ];
-function navItem(n, sub){ return `<div class="nav-item ${sub?'sub':''} ${state.view===n.v?'active':''}" data-view="${n.v}"><span class="ico">${n.ico}</span>${n.t}</div>`; }
+function navItem(n, sub){ return `<div class="nav-item ${sub?'sub':''} ${state.view===n.v?'active':''}" data-view="${n.v}"><span class="ico">${ANIMA_ICON(n.ic, n.ico)}</span>${n.t}</div>`; }
 /* Ítem bloqueado por nivel: visible (para que el Alma sepa qué viene) pero
    con candado y el nivel que lo abre. Al tocarlo, explica cómo desbloquearlo. */
 function navItemLocked(n, sub){
   const need=VIEW_MIN_LEVEL[n.v]; const lv=levelByKey(need);
-  return `<div class="nav-item ${sub?'sub':''} locked" data-view="${n.v}" title="Se abre en ${lv.label}"><span class="ico">🔒</span>${n.t}<span class="lock-lv">${lv.emoji} ${lv.label}</span></div>`;
+  return `<div class="nav-item ${sub?'sub':''} locked" data-view="${n.v}" title="Se abre en ${lv.label}"><span class="ico">${ANIMA_ICON("lock","🔒")}</span>${n.t}<span class="lock-lv">${lv.emoji} ${lv.label}</span></div>`;
 }
 /* Los reinos arrancan COLABSADOS: el Alma los despliega para descubrir. */
 function reinoOpen(key){ if(!state.navOpen) state.navOpen={}; return state.navOpen[key]===true; }
@@ -206,16 +206,16 @@ function renderNav(){
     const activeInside=kids.some(c=>c.v===state.view);
     const open=reinoOpen(node.key)||activeInside;
     h+=`<div class="nav-group ${open?'open':''} ${activeInside?'has-active':''}" data-reino="${node.key}">
-        <span class="ico">${node.ico}</span><span class="rt">${node.t}</span><span class="caret">⌄</span></div>`;
+        <span class="ico">${ANIMA_ICON(node.ic, node.ico)}</span><span class="rt">${node.t}</span><span class="caret">⌄</span></div>`;
     h+=`<div class="nav-sub ${open?'open':''}"><div class="nav-sub-inner">${kids.map(c=>levelAllows(c.v)?navItem(c,true):navItemLocked(c,true)).join("")}</div></div>`;
   });
   let world="";
-  if(planAllows("comunidad")) world+=navItem({v:"comunidad",ico:"❂",t:"Comunidad"});
+  if(planAllows("comunidad")) world+=navItem({v:"comunidad",ico:"❂",ic:"nucleo",t:"Comunidad"});
   // Consejo de Almas: solo las Almas Fundadoras (Consejo) y el Creador.
-  if(me().council || (isCreator && !state.viewAs)) world+=navItem({v:"consejo",ico:"⚖",t:"Consejo"});
-  if(planAllows("santuario")) world+=navItem({v:"santuario",ico:"🜁",t:"Santuario"});
+  if(me().council || (isCreator && !state.viewAs)) world+=navItem({v:"consejo",ico:"⚖",ic:"consejo",t:"Consejo"});
+  if(planAllows("santuario")) world+=navItem({v:"santuario",ico:"🜁",ic:"santuario",t:"Santuario"});
   // Planificación del Santuario: para Almas que pertenecen a un Santuario.
-  if(planAllows("santuario") && me().santuario) world+=navItem({v:"sant_plan",ico:"❖",t:"Planificar"});
+  if(planAllows("santuario") && me().santuario) world+=navItem({v:"sant_plan",ico:"❖",ic:"plan",t:"Planificar"});
   if(world) h+=`<div class="nav-label">Mundo</div>`+world;
   // "El menú crece con la persona": muestra qué se abre al subir de nivel.
   const lpNav=levelProgress(me().xp);
@@ -225,8 +225,8 @@ function renderNav(){
   // El bloque Creador se oculta mientras se previsualiza un plan (vista fiel).
   if(isCreator && !state.viewAs){
     h+=`<div class="nav-label">Creador</div>`
-      +navItem({v:"consola",ico:"⬡",t:"Consola"})
-      +navItem({v:"config",ico:"⚙",t:"Personalizar"});
+      +navItem({v:"consola",ico:"⬡",ic:"panel",t:"Consola"})
+      +navItem({v:"config",ico:"⚙",ic:"config",t:"Personalizar"});
   }
   document.getElementById("nav").innerHTML=h;
 }
