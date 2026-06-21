@@ -15,8 +15,7 @@ Este repositorio contiene la **primera Alpha** de ANIMA (The Founding Era), semb
 
 | Archivo | Qué es |
 |---|---|
-| `alpha.html` | **ANIMA · Alpha** — la experiencia definitiva del *Prompt Maestro Final*: Origen ceremonial (una sola vez), menú definitivo (Mi Alma · Taller · Clan · Mundo · Mi Plan), la Esencia única, los Despertares y el Árbol vivo en pixel art |
-| `PROMPT-MAESTRO.md` | **Prompt Maestro Final** — el canon de la Alpha (junto a `BIBLIA.md`) |
+| `PROMPT-MAESTRO.md` | **Prompt Maestro Final** — el canon de la Alpha (junto a `BIBLIA.md`). La experiencia se construye **sobre** `studio.html`, reusando Supabase |
 | `index.html` | Portada pública de ANIMA TSC |
 | `entrar.html` | **Entrar** — inicio de sesión del Alma |
 | `recuperar.html` | **Recuperar contraseña** — pide enlace y fija la nueva clave |
