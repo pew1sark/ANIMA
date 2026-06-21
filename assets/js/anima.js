@@ -159,19 +159,27 @@ function canCollaborate(){ if(isCreator && !state.viewAs) return true; return ro
 /* ¿La sesión coordina el Santuario? (Admin o Creador) */
 function canAdminSantuario(){ if(isCreator && !state.viewAs) return true; return almaRole(me())==="ADMIN"; }
 
+/* ===========================================================
+   MENÚ DEFINITIVO (Prompt Maestro Final)
+   -----------------------------------------------------------
+   Solo existen 5 entradas: MI ALMA · TALLER · CLAN · MUNDO · MI PLAN.
+   Todo lo demás vive DENTRO. Esto es un reordenamiento visual:
+   ninguna vista, dato, plan ni política cambia — solo cómo se agrupan.
+   =========================================================== */
 const NAV_TREE = [
-  { type:"item",  v:"mialma", ico:"◆", ic:"alma", t:"Mi Alma" },
-  { type:"item",  v:"miplan", ico:"❖", ic:"plan", t:"Mi Plan" },
-  { type:"reino", key:"esencia", ico:"✦", ic:"esencia", t:"Esencia", children:[
-      {v:"trayectoria",ico:"⤴",ic:"ruta",t:"Trayectoria"},
-      {v:"portafolio", ico:"▦",ic:"huellas",t:"Portafolio"},
-      {v:"cronologia", ico:"☷",ic:"tiempo",t:"Cronología"},
-      {v:"insignias",  ico:"✷",ic:"insignia",t:"Insignias"},
+  // 1 · MI ALMA — la identidad (todo lo que era "Esencia" vive aquí dentro).
+  { type:"reino", key:"mialma", ico:"◆", ic:"alma", t:"Mi Alma", children:[
+      {v:"mialma",      ico:"◆",ic:"alma",t:"Resumen"},
+      {v:"trayectoria", ico:"⤴",ic:"ruta",t:"Trayectoria"},
+      {v:"portafolio",  ico:"▦",ic:"huellas",t:"Portafolio"},
+      {v:"cronologia",  ico:"☷",ic:"tiempo",t:"Cronología"},
+      {v:"insignias",   ico:"✷",ic:"insignia",t:"Insignias"},
       {v:"estadisticas",ico:"📊",ic:"grafico",t:"Estadísticas"},
       {v:"visibilidad", ico:"👁",ic:"vista",t:"Visibilidad"},
-      {v:"memoria",    ico:"✦",ic:"memoria",t:"Memorias"},
-      {v:"biblioteca", ico:"❏",ic:"archivo",t:"Biblioteca"}
+      {v:"memoria",     ico:"✦",ic:"memoria",t:"Memorias"},
+      {v:"biblioteca",  ico:"❏",ic:"archivo",t:"Biblioteca"}
   ]},
+  // 2 · TALLER — lo que creo.
   { type:"reino", key:"taller", ico:"₵", ic:"taller", t:"Taller", children:[
       {v:"proyectos",  ico:"◷",ic:"proceso",t:"Proyectos"},
       {v:"clientes",   ico:"☺",ic:"constelacion",t:"Vínculos"},
@@ -179,7 +187,7 @@ const NAV_TREE = [
       {v:"finanzas",   ico:"🌱",ic:"raiz",t:"Raíz"},
       {v:"agenda",     ico:"☰",ic:"agenda",t:"Agenda"}
   ]},
-  // Reino Clan: solo aparece en planes Clan/Santuario (gating por planAllows).
+  // 3 · CLAN — con quién creo (solo en planes Clan/Santuario; gating por planAllows).
   { type:"reino", key:"clan", ico:"❂", ic:"constelacion", t:"Clan", children:[
       {v:"clanpanel",     ico:"⬡",ic:"panel",t:"Panel"},
       {v:"equipo",        ico:"▦",ic:"obra",t:"Plan de trabajo"},
@@ -187,6 +195,7 @@ const NAV_TREE = [
       {v:"proyectos_clan",ico:"◷",ic:"proceso",t:"Proyectos"},
       {v:"recordatorios", ico:"⏰",ic:"susurro",t:"Recordatorios"}
   ]}
+  // 4 · MUNDO y 5 · MI PLAN se construyen en renderNav (dependen de plan/consejo/creador).
 ];
 function navItem(n, sub){ return `<div class="nav-item ${sub?'sub':''} ${state.view===n.v?'active':''}" data-view="${n.v}"><span class="ico">${ANIMA_ICON(n.ic, n.ico)}</span>${n.t}</div>`; }
 /* Ítem bloqueado por nivel: visible (para que el Alma sepa qué viene) pero
@@ -198,29 +207,34 @@ function navItemLocked(n, sub){
 /* Los reinos arrancan COLABSADOS: el Alma los despliega para descubrir. */
 function reinoOpen(key){ if(!state.navOpen) state.navOpen={}; return state.navOpen[key]===true; }
 function toggleReino(key){ if(!state.navOpen) state.navOpen={}; state.navOpen[key]=!reinoOpen(key); save(); renderNav(); }
+/* Reino colapsable genérico (lo usan Mi Alma, Taller, Clan y Mundo). */
+function navReino(key, ico, ic, t, kids){
+  if(!kids.length) return "";
+  const activeInside=kids.some(c=>c.v===state.view);
+  const open=reinoOpen(key)||activeInside;
+  return `<div class="nav-group ${open?'open':''} ${activeInside?'has-active':''}" data-reino="${key}">
+      <span class="ico">${ANIMA_ICON(ic, ico)}</span><span class="rt">${t}</span><span class="caret">⌄</span></div>`
+    + `<div class="nav-sub ${open?'open':''}"><div class="nav-sub-inner">${kids.map(c=>levelAllows(c.v)?navItem(c,true):navItemLocked(c,true)).join("")}</div></div>`;
+}
 function renderNav(){
   const cfg=getCfg(me());
-  let h=`<div class="nav-label">Mi Alma</div>`;
+  let h="";
+  // 1-3 · Mi Alma, Taller, Clan — el menú definitivo: 5 entradas, todo vive dentro.
   NAV_TREE.forEach(node=>{
-    if(node.type==="item"){ h+=navItem(node); return; }
     // Visibles según plan/personalización; las que aún no alcanza el nivel
     // se muestran BLOQUEADAS (no se ocultan) para que el menú "crezca a la vista".
     const kids=node.children.filter(c=>cfg.modules[c.v]!==false && planAllows(c.v));
-    if(!kids.length) return;
-    const activeInside=kids.some(c=>c.v===state.view);
-    const open=reinoOpen(node.key)||activeInside;
-    h+=`<div class="nav-group ${open?'open':''} ${activeInside?'has-active':''}" data-reino="${node.key}">
-        <span class="ico">${ANIMA_ICON(node.ic, node.ico)}</span><span class="rt">${node.t}</span><span class="caret">⌄</span></div>`;
-    h+=`<div class="nav-sub ${open?'open':''}"><div class="nav-sub-inner">${kids.map(c=>levelAllows(c.v)?navItem(c,true):navItemLocked(c,true)).join("")}</div></div>`;
+    h+=navReino(node.key, node.ico, node.ic, node.t, kids);
   });
-  let world="";
-  if(planAllows("comunidad")) world+=navItem({v:"comunidad",ico:"❂",ic:"nucleo",t:"Comunidad"});
-  // Consejo de Almas: solo las Almas Fundadoras (Consejo) y el Creador.
-  if(me().council || (isCreator && !state.viewAs)) world+=navItem({v:"consejo",ico:"⚖",ic:"consejo",t:"Consejo"});
-  if(planAllows("santuario")) world+=navItem({v:"santuario",ico:"🜁",ic:"santuario",t:"Santuario"});
-  // Planificación del Santuario: para Almas que pertenecen a un Santuario.
-  if(planAllows("santuario") && me().santuario) world+=navItem({v:"sant_plan",ico:"❖",ic:"plan",t:"Planificar"});
-  if(world) h+=`<div class="nav-label">Mundo</div>`+world;
+  // 4 · MUNDO — el mundo que habito (Constelación, Árbol y Ecos viven en Comunidad).
+  const worldKids=[];
+  if(planAllows("comunidad")) worldKids.push({v:"comunidad",ico:"❂",ic:"nucleo",t:"Constelación"});
+  if(me().council || (isCreator && !state.viewAs)) worldKids.push({v:"consejo",ico:"⚖",ic:"consejo",t:"Consejo"});
+  if(planAllows("santuario")) worldKids.push({v:"santuario",ico:"🜁",ic:"santuario",t:"Santuario"});
+  if(planAllows("santuario") && me().santuario) worldKids.push({v:"sant_plan",ico:"❖",ic:"plan",t:"Planificar"});
+  h+=navReino("mundo", "❂", "nucleo", "Mundo", worldKids);
+  // 5 · MI PLAN — lo que puedo llegar a ser.
+  h+=navItem({v:"miplan",ico:"❖",ic:"plan",t:"Mi Plan"});
   // "El menú crece con la persona": muestra qué se abre al subir de nivel.
   const lpNav=levelProgress(me().xp);
   if(lpNav.next && UNLOCKS[lpNav.next.key]){
@@ -267,7 +281,7 @@ const TITLES = {
   calendario:["Calendario","Eventos y turnos sincronizados del Clan."],
   proyectos_clan:["Proyectos del Clan","Encargos compartidos y su avance."],
   recordatorios:["Recordatorios","Lo que el Clan no puede olvidar."],
-  comunidad:["Comunidad","Tu Clan y la constelación de Almas."],
+  comunidad:["Mundo","La constelación de Almas, el Árbol vivo y los Ecos del mundo."],
   santuario:["Santuario","Nivel 3: la organización completa de ANIMA."]
 };
 function renderTop(){ const [t,s]=TITLES[state.view]||["ANIMA",""]; document.getElementById("topTitle").innerHTML=`<h1>${t}</h1><div class="sub">${s}</div>`; }

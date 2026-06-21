@@ -2,8 +2,16 @@
 
 > Documento maestro de la Alpha. Define la experiencia definitiva.
 > Cuando exista una contradicción con cualquier otra especificación, **este documento
-> y `BIBLIA.md` tienen prioridad**. La implementación viva de esta visión es
-> **[`alpha.html`](alpha.html)**.
+> y `BIBLIA.md` tienen prioridad**. La implementación viva de esta visión es la app
+> existente **[`studio.html`](studio.html)** (frontend estático + Supabase): la Alpha
+> se construye **sobre** esa base, sin reescribir backend, auth ni esquema.
+>
+> **Regla técnica:** esta Alpha debe sentirse completamente nueva para el usuario, pero
+> técnicamente respeta la base existente. No se reescribe la arquitectura, no se rompe
+> Supabase, no se cambian estructuras críticas sin aprobación. El trabajo es transformar
+> la experiencia, no destruir los cimientos. El mapeo de lenguaje (users→Almas,
+> profiles→Mi Alma, projects→Proyectos/Taller, posts→Ecos, teams→Clan) es **visual y
+> narrativo**, nunca destructivo: no se renombran tablas ni columnas reales.
 
 ---
 
