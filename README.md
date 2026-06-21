@@ -48,6 +48,17 @@ La Alpha oficial está limitada a **100 Almas** (exclusividad por diseño) y añ
   (`avatars` ≤ 2 MB, `portfolio` ≤ 10 MB, `temp` privado).
 - **Panel del Fundador** — `founder_stats()` (gated por el correo del Creador).
 
+- **El Árbol Vivo del Mundo** (`world_tree_state` · `world_tree_events` · `world_tree_nodes`
+  · `world_tree_connections`) — el **corazón vivo** de ANIMA dentro de la ventana de
+  **Comunidad** (la vista *Mundo*). No es decoración ni una barra de progreso: un Árbol
+  en **pixel art** que reacciona a cada acción de las Almas. *Toda acción deja una Huella;
+  toda Huella altera el Árbol.* Cada Huella, Chispa, Eco, Memoria, Constelación, nivel o
+  Ritual entrega **Esencia** al Árbol, enciende hojas/flores/frutos/raíces, recalcula el
+  **Estado del Mundo** (Latente · Sereno · Resonando · Floreciendo · Luminoso · Despertar)
+  y puede desatar **Fenómenos** (Lluvia de Ecos, Nueva Rama, Fruto del Árbol, Nueva
+  Estrella, Aurora, Latido Mayor, Origen Renacido). Motor: `assets/js/world-tree.js`
+  (`WorldTreeSystem`), con respaldo **local** si no hay nube. Migración: `0020_world_tree.sql`.
+
 Todo vive en la **migración `0013_alpha_2026.sql`** (idempotente): Supabase → SQL Editor →
 pega TODO → Run.
 

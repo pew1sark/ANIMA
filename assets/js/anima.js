@@ -338,6 +338,7 @@ function renderView(){
     recordatorios:vRecordatorios, comunidad:vComunidad, santuario:vSantuario,
     sant_plan:vSantPlan }[state.view] || vMiAlma;
   document.getElementById("view").innerHTML = previewBanner() + fn(me());
+  if(state.view==="comunidad" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
 }
 /* Ventana bloqueada por nivel — explica qué la abre. */
 function vLocked(view){
@@ -1126,42 +1127,141 @@ function vComunidad(a){
             <small class="muted">${esc(timeAgo(e.created_at))}</small></div></div>`).join("")
         : `<p class="muted" style="font-size:13px">Aún no hay Ecos. Cuando una Alma despierte o deje una huella, aparecerá aquí.</p>`);
 
-  // EL ÁRBOL DE ALMAS — mapa (referencia) + panel lateral.
-  const arbol = `<div class="card s8 map-card">
-      <div class="map-bar">
-        <span class="pixel-font" style="font-size:11px;color:#e9d9a8">✦ ÁRBOL DE ALMAS</span>
-        <span class="pill ${liveMode()?'gold':''}" style="margin-left:6px">${n} / 100</span>
-        <div class="spacer" style="flex:1"></div>
-        <div class="map-sizes">${["sm","md","lg"].map(s=>`<button class="msz ${sz===s?'on':''}" data-mapsize="${s}">${s.toUpperCase()}</button>`).join("")}</div>
+  // Cifras vivas del Mundo.
+  const todayKey=new Date().toISOString().slice(0,10);
+  const ecosToday=ecos.filter(e=>(e.created_at||"").slice(0,10)===todayKey).length;
+  const clanesCount=new Set(list.map(x=>x.clan).filter(Boolean)).size;
+  const santuariosCount=new Set(list.map(x=>x.santuario).filter(Boolean)).size;
+  const paisesCount=countriesArr.length;
+  const weekAgo=Date.now()-7*864e5;
+  const newWeek=list.filter(x=>x.created_at && new Date(x.created_at).getTime()>=weekAgo).length;
+  const nivelesCount=new Set(list.map(x=>x.level).filter(Boolean)).size;
+
+  // EL ÁRBOL VIVO — corazón del Mundo (pixel art reactivo).
+  const tree = `<div class="card s8 wt-card">
+      <div class="wt-head">
+        <span class="wt-title">🌳 Árbol de Almas</span>
+        <span class="pill ${liveMode()?'gold':''}">${n} / 100</span>
+        <div class="wt-sizes">${["sm","md","lg"].map(s=>`<button class="wt-msz ${sz===s?'on':''}" data-mapsize="${s}">${s.toUpperCase()}</button>`).join("")}</div>
       </div>
-      ${soulMapWorld(sz)}
-      <div class="muted" style="font-size:12px;margin-top:10px">${n>=90?"El Umbral está casi completo. ":""}${n} Almas habitan actualmente ANIMA · quedan ${Math.max(0,100-n)} lugares.</div>
+      <div class="wt-stage ${sz}">
+        <canvas id="worldTreeCanvas" class="wt-canvas"></canvas>
+        <div class="wt-state" id="wtState"><span class="glyph">○</span><span class="lbl">Latente</span><span class="sub">El Mundo descansa.</span></div>
+        <div class="wt-essence"><b id="wtEssN">0</b><small id="wtEssTier">Latente</small></div>
+        <div class="wt-phenom hidden" id="wtPhenom"><span class="pglyph">✦</span><span><span class="pn" id="wtPhenomN"></span> · <span class="pd" id="wtPhenomD"></span></span></div>
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:10px" id="wtLatido">${n} Almas habitan ANIMA · ${Math.max(0,100-n)} lugares libres. Cada acción deja una Huella en el Árbol.</div>
+      <div class="wt-tiles">
+        <div class="wt-tile"><div class="n" id="wtAlmas">${n}</div><span class="k"><span class="ic">☺</span>Almas</span></div>
+        <div class="wt-tile"><div class="n" id="wtEcos">${ecosToday}</div><span class="k"><span class="ic">◎</span>Ecos hoy</span></div>
+        <div class="wt-tile"><div class="n">${clanesCount}</div><span class="k"><span class="ic">❂</span>Clanes</span></div>
+        <div class="wt-tile"><div class="n">${paisesCount}</div><span class="k"><span class="ic">✦</span>Países</span></div>
+        <div class="wt-tile"><div class="n" id="wtEnergy">0</div><span class="k"><span class="ic">🌱</span>Esencia</span></div>
+      </div>
     </div>`;
   const aside = `<div class="card s4 arbol-aside">
       <div class="section-title"><h2 style="font-size:15px">Ecos de ANIMA</h2></div>
       <div class="ecos-mini">${ecosHTML}</div>
-      <div class="section-title" style="margin-top:14px"><h2 style="font-size:15px">Países</h2></div>
-      <div class="country-rows">${countriesArr.length?countriesArr.map(([c,k])=>`<div class="country-row"><span>${esc(c)}</span><b>${k}</b></div>`).join(""):`<p class="muted" style="font-size:13px">Todavía sin geografía.</p>`}</div>
     </div>`;
+
+  // RESUMEN DEL MUNDO — panorama de la semana.
+  const week = `<div class="card s8"><div class="section-title"><h2>Resumen del Mundo</h2></div>
+      <div class="wt-week">
+        <div><div class="num">${newWeek}</div><span class="lbl">Almas nuevas esta semana</span></div>
+        <div><div class="num">${clanesCount}</div><span class="lbl">Clanes activos</span></div>
+        <div><div class="num">${santuariosCount}</div><span class="lbl">Santuarios activos</span></div>
+        <div><div class="num">${nivelesCount}</div><span class="lbl">Niveles habitando el Mundo</span></div>
+      </div></div>`;
+  // ALMAS CONECTADAS — constelación viva.
+  const connect = `<div class="card s4"><div class="section-title"><h2 style="font-size:15px">Almas conectadas</h2></div>${constelMini(list)}</div>`;
+
+  // DISTRIBUCIÓN POR PAÍS — barras.
+  const maxC=countriesArr.length?countriesArr[0][1]:1;
+  const paisCard = `<div class="card s6"><div class="section-title"><h2 style="font-size:15px">Distribución por país</h2></div>
+      <div class="wt-bars">${countriesArr.length?countriesArr.slice(0,7).map(([c,k])=>`<div class="wt-bar"><span>${esc(c)}</span><span class="track"><span class="fill" style="width:${Math.max(6,Math.round(k/maxC*100))}%"></span></span><b>${k}</b></div>`).join(""):`<p class="muted" style="font-size:13px">Todavía sin geografía.</p>`}</div></div>`;
+
+  // RITUAL ACTIVO — la vela encendida del Mundo.
+  const ritual = `<div class="card s6 wt-ritual"><div class="section-title"><h2 style="font-size:15px">Ritual activo</h2><div class="spacer"></div><span class="pill gold">Vela encendida</span></div>
+      <div class="rt-name">Ritual del Eco</div>
+      <p>¿Qué creaste esta semana? Comparte tu Huella con el Mundo y deja que el Árbol resuene contigo.</p>
+      ${a.live?`<button class="btn" data-ritual="eco">✦ Participar en el Ritual</button>`:`<p class="muted" style="font-size:13px">Entra a tu Alma para participar en el Ritual.</p>`}</div>`;
 
   const create = a.live ? `<div class="card s12"><div class="section-title"><h2>Comparte con la comunidad</h2></div>
       <div class="field"><input id="postTitle" placeholder="Título (opcional)"></div>
       <div class="field"><textarea id="postBody" rows="2" placeholder="¿Qué estás creando? Comparte un proyecto, idea o pregunta…"></textarea></div>
-      <button class="btn" id="postSend">Publicar</button></div>`
-    : `<div class="card s12"><p class="muted">Entra a tu Alma para publicar en la comunidad.</p></div>`;
-  const wall = `<div class="card s12"><div class="section-title"><h2>Muro de la comunidad</h2><div class="spacer"></div><span class="pill ${liveMode()?'gold':''}">${feed.length} publicaciones</span></div>
+      <button class="btn" id="postSend">Dejar mi Huella</button></div>`
+    : `<div class="card s12"><p class="muted">Entra a tu Alma para dejar tu Huella en la comunidad.</p></div>`;
+  const wall = `<div class="card s12"><div class="section-title"><h2>Muro de la comunidad</h2><div class="spacer"></div><span class="pill ${liveMode()?'gold':''}">${feed.length} Huellas</span></div>
       ${feed.length?feed.map(p=>{ const au=authorOf(p.author_alma_id);
         return `<div class="post" data-openpost="${p.id}"><span class="avatar sm" style="background:linear-gradient(145deg,${au.color},${shade(au.color,-22)})">${initials(au.name)}</span>
           <div class="grow"><b>${esc(p.title||au.name)}</b><br><small class="muted">${esc(au.name)} · ${timeAgo(p.created_at)}</small>
           <p style="margin:6px 0 0">${esc((p.body||"").slice(0,160))}${(p.body||"").length>160?"…":""}</p></div></div>`;
-      }).join(""):`<p class="muted">Aún no hay publicaciones.${a.live?" ¡Crea la primera!":""}</p>`}</div>`;
+      }).join(""):`<p class="muted">Aún no hay Huellas.${a.live?" ¡Deja la primera!":""}</p>`}</div>`;
   const clanCard = a.clan ? `<div class="card s12"><div class="section-title"><h2>${clan?clan.emoji:"🖤"} ${esc(a.clan)}</h2><div class="spacer"></div><span class="pill">Clan · Nivel 2</span></div>
       <p class="muted">${clan?clan.desc:"Comunidad privada por invitación (2 a 8 Almas)."}</p>
       <div class="alma-grid" style="margin-top:14px">${members.map(almaMini).join("")}</div></div>`
     : "";
-  // RESUMEN DEL MUNDO — solo Almas con acceso (lo concede el Fundador) o el Creador.
+  // RESUMEN DEL MUNDO (clanes/santuarios) — solo Almas con acceso o el Creador.
   const worldCard = (a.world_access || (isCreator && !state.viewAs)) ? worldSummaryCard(list) : "";
-  return `<div class="grid">${arbol}${aside}${worldCard}${create}${wall}${clanCard}</div>`;
+  return `<div class="grid">${tree}${aside}${week}${connect}${paisCard}${ritual}${create}${wall}${clanCard}${worldCard}</div>`;
+}
+/* Glifos del Estado del Mundo (símbolos oficiales del Árbol). */
+const WT_GLYPH={ LATENTE:"○", SERENO:"🌱", RESONANDO:"〰", FLORECIENDO:"✧", LUMINOSO:"◎", DESPERTAR:"∞" };
+const PHENOM_DESC={
+  "Lluvia de Ecos":"100 Chispas en 1 hora.",
+  "Nueva Rama":"10 colaboraciones en 24 horas.",
+  "Fruto del Árbol":"50 Memorias guardadas en el día.",
+  "Nueva Estrella":"Primer Alma de un nuevo país.",
+  "Aurora":"Alguien alcanzó el último nivel.",
+  "Latido Mayor":"1.000 Almas conectadas.",
+  "Origen Renacido":"El Árbol alcanzó su máxima evolución."
+};
+/* Constelación mini — Almas conectadas alrededor de un centro. */
+function constelMini(list){
+  const top=(list||[]).slice(0,7);
+  if(top.length<2) return `<div class="wt-constel"><div style="position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px">Aún no hay constelaciones.</div></div>`;
+  const cx=50, cy=48; let links="", stars="";
+  const pts=top.map((m,i)=>{ if(i===0) return {x:cx,y:cy,m}; const ang=((i-1)/(top.length-1))*Math.PI*2; return {x:cx+Math.cos(ang)*32, y:cy+Math.sin(ang)*34, m}; });
+  pts.forEach((p,i)=>{ if(i===0) return; const dx=p.x-cx, dy=p.y-cy; const len=Math.sqrt(dx*dx+dy*dy); const ang=Math.atan2(dy,dx)*180/Math.PI; links+=`<span class="wt-link" style="left:${cx}%;top:${cy}%;width:${len}%;transform:rotate(${ang}deg)"></span>`; });
+  pts.forEach(p=>{ const c=p.m.color||"#888"; stars+=`<span class="wt-star" style="left:${p.x}%;top:${p.y}%;background:linear-gradient(145deg,${c},${shade(c,-22)})">${initials(p.m.name)}</span>`; });
+  return `<div class="wt-constel">${links}${stars}</div>`;
+}
+/* Monta el Árbol Vivo y enlaza el Estado del Mundo con el DOM (en vivo). */
+function updateWtDom(s){
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  set("wtEnergy", Math.round(s.energy).toLocaleString("es-CL"));
+  set("wtEssN", Math.round(s.energy).toLocaleString("es-CL"));
+  set("wtEssTier", s.essenceTier);
+  const st=document.getElementById("wtState");
+  if(st){ st.querySelector(".lbl").textContent=s.world_label; st.querySelector(".sub").textContent=s.world_sub; st.querySelector(".glyph").textContent=WT_GLYPH[s.world_state]||"○"; }
+  const ph=document.getElementById("wtPhenom");
+  if(ph){ if(s.phenomenon){ ph.classList.remove("hidden"); set("wtPhenomN",s.phenomenon); set("wtPhenomD",PHENOM_DESC[s.phenomenon]||""); } else ph.classList.add("hidden"); }
+  const lat=document.getElementById("wtLatido");
+  if(lat && s.events && s.events[0]) lat.textContent="Último latido — "+s.events[0].description;
+}
+function initWorldTreeView(){
+  if(!window.WorldTree) return;
+  const canvas=document.getElementById("worldTreeCanvas"); if(!canvas) return;
+  const n = state.cloudSoulsCount!=null ? state.cloudSoulsCount : roster().length;
+  try{ WorldTree.hydrate({almas:n}); }catch(e){}
+  WorldTree.mount(canvas);
+  if(!state._wtBound){ state._wtBound=true; WorldTree.onChange(updateWtDom); }
+  updateWtDom(WorldTree.snapshot());
+}
+/* Participar en el Ritual activo: enciende el corazón del Árbol. */
+function doRitual(kind){
+  const a=me(); if(!a.live){ alert("Entra a tu Alma para participar en el Ritual."); return; }
+  if(window.WorldTree) WorldTree.onRitual({ almaName:a.name, country:a.country });
+  if(window.AnimaState){ AnimaState.addEsencia(12,"Participar en un Ritual"); setTimeout(maybeLevelGuide,400); }
+  if(Cloud.enabled){ const nick=(a.name||"Alma").split(" ")[0]; Cloud.emitEcho("ritual","🜂 "+nick+" completó el Ritual del Eco").catch(()=>{}); }
+  toast("🜂 El Árbol resonó con tu Ritual.");
+}
+/* Aviso breve y suave (no satura la pantalla). */
+function toast(msg){
+  let t=document.getElementById("wtToast");
+  if(!t){ t=document.createElement("div"); t.id="wtToast"; t.style.cssText="position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:9999;background:rgba(18,16,24,.92);color:#f5ecd2;padding:11px 18px;border-radius:14px;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.3);opacity:0;transition:opacity .3s,transform .3s"; document.body.appendChild(t); }
+  t.textContent=msg; requestAnimationFrame(()=>{ t.style.opacity="1"; t.style.transform="translateX(-50%) translateY(-4px)"; });
+  clearTimeout(t._h); t._h=setTimeout(()=>{ t.style.opacity="0"; t.style.transform="translateX(-50%)"; },2600);
 }
 /* Resumen general del Mundo (clanes, santuarios, panorama). Acceso restringido. */
 function worldSummaryCard(list){
@@ -1214,8 +1314,21 @@ async function sendPost(){
   if(!title && !body) return;
   try{ await Cloud.insertRow("posts",{author_alma_id:a.almaId,kind:"post",title,body});
     if(window.AnimaState){ AnimaState.addEsencia(15,"Publicar en comunidad"); setTimeout(maybeLevelGuide,400); }
+    if(window.WorldTree) WorldTree.onHuella({ almaName:a.name, branch:branchOf(a), country:a.country, targetId:a.almaId });
     await loadPosts(); }
   catch(e){ alert("No se pudo publicar: "+(e.message||e)); }
+}
+/* La Rama creativa del Alma (camino) a partir de su disciplina. */
+function branchOf(a){
+  const d=((a&&(a.discipline||a.role))||"").toLowerCase();
+  if(/mural/.test(d)) return "Muralismo";
+  if(/foto/.test(d)) return "Fotografía";
+  if(/ilustr|dibuj/.test(d)) return "Ilustración";
+  if(/m[uú]sic|sonid/.test(d)) return "Música";
+  if(/moda|dise[nñ]o|streetwear|textil/.test(d)) return "Moda";
+  if(/escrit|poes|letra|guion/.test(d)) return "Escritura";
+  if(/3d|render|model/.test(d)) return "3D";
+  return (window.WorldTree && WorldTree.branches[Math.floor(Math.random()*WorldTree.branches.length)]) || "Muralismo";
 }
 function openPost(id){
   const p=(state.cloudPosts||[]).find(x=>x.id===id); if(!p) return; const au=authorOf(p.author_alma_id);
@@ -1243,6 +1356,7 @@ async function sendComment(postId){
   const el=document.getElementById("commentInput"); const body=el.value.trim(); if(!body) return; el.value="";
   try{ await Cloud.insertRow("comments",{post_id:postId,author_alma_id:a.almaId,body});
     if(window.AnimaState){ AnimaState.addEsencia(5,"Dejar un Eco en comunidad"); setTimeout(maybeLevelGuide,400); }
+    if(window.WorldTree) WorldTree.onEco({ almaName:a.name, country:a.country });
     // Alpha 2026: ayudar/responder a otra Alma descubre la insignia Guardián y emite una señal.
     const post=(state.cloudPosts||[]).find(x=>x.id===postId);
     if(post && post.author_alma_id!==a.almaId){
@@ -1897,6 +2011,9 @@ function recordAlphaEvents(kind, v, arr){
       Cloud.logTimeline("obra", first?"Dejaste tu primera huella":"Dejaste una nueva huella", v.t||"");
       if(first) Cloud.awardBadge("primer_latido");
       Cloud.emitEcho("huella", "✦ "+nick+(first?" dejó su primera huella":" dejó una nueva huella")).catch(()=>{});
+      if(window.WorldTree) WorldTree.onHuella({ almaName:a.name, branch:branchOf(a), country:a.country });
+    } else if(kind==="memoria"){
+      if(window.WorldTree) WorldTree.onMemoria({ almaName:a.name, country:a.country });
     } else if(kind==="hito"){
       Cloud.logTimeline("nivel", "Sumaste un hito a tu trayectoria", v.t||"");
     }
@@ -1916,6 +2033,7 @@ async function syncLevel(a){
   const cur=levelProgress(a.xp).cur.key;
   if(cur!==a.level){
     a.level=cur;
+    if(window.WorldTree){ const lvUp=levelByKey(cur); WorldTree.onLevelUp({ almaName:a.name, level:(lvUp&&lvUp.label)||cur, country:a.country }); }
     if(a.live){
       try{await Cloud.updateAlma(a.almaId,{level:cur});}catch(e){}
       // Alpha 2026: el nivel desbloqueado deja huella en log, cronología y ecos.
@@ -2237,6 +2355,7 @@ document.addEventListener("click", e=>{
   const tb=e.target.closest("[data-tab]"); if(tb){ state.almaTab=tb.dataset.tab; state.view="mialma"; renderAll(); return; }
   const pcf=e.target.closest("[data-pubcfg]"); if(pcf){ togglePublic(pcf.dataset.pubcfg); return; }
   const mz=e.target.closest("[data-mapsize]"); if(mz){ setMapSize(mz.dataset.mapsize); return; }
+  const rit=e.target.closest("[data-ritual]"); if(rit){ doRitual(rit.dataset.ritual); return; }
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
   if(e.target.closest("[data-pfedit]")){ portfolioEdit(); return; }
   if(e.target.closest("[data-pfcancel]")){ portfolioCancel(); return; }

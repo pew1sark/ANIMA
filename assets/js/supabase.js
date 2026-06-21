@@ -231,7 +231,36 @@ const Cloud = {
   /* Consejo de Almas — propuestas y votaciones (migración 0015). */
   async proposals(){ if(!_sb) return []; try{ const { data } = await _sb.rpc("list_proposals"); return data || []; }catch(e){ return []; } },
   async createProposal(title, desc){ if(!_sb) return null; const { data, error } = await _sb.rpc("create_proposal", { p_title:title, p_desc:desc||null }); if(error) throw error; return data; },
-  async castVote(id, value){ if(!_sb) return; const { error } = await _sb.rpc("cast_vote", { p_proposal:id, p_value:value }); if(error) throw error; }
+  async castVote(id, value){ if(!_sb) return; const { error } = await _sb.rpc("cast_vote", { p_proposal:id, p_value:value }); if(error) throw error; },
+
+  /* ===========================================================
+     ÁRBOL VIVO DEL MUNDO (migración 0020)
+     El estado global del Árbol + el registro de cada acción.
+     Si la migración no está aplicada, falla en silencio y el
+     Árbol sigue vivo en el dispositivo (localStorage).
+     =========================================================== */
+  async worldTreeGet(){
+    if(!_sb) return null;
+    try{ const { data } = await _sb.rpc("world_tree_get"); return data || null; }catch(e){ return null; }
+  },
+  async worldTreeEvent(type, opts){
+    if(!_sb) return null; opts = opts || {};
+    try{
+      const { data } = await _sb.rpc("world_tree_record", {
+        p_type: type, p_branch: opts.branch || null, p_target: opts.target_id || null,
+        p_energy: opts.energy || 0, p_title: opts.title || null, p_desc: opts.description || null
+      });
+      return data || null;
+    }catch(e){ return null; }
+  },
+  /* Eventos del Árbol en vivo (Realtime): cada acción de cualquier Alma. */
+  subscribeWorldTree(cb){
+    if(!_sb) return null;
+    try{ return _sb.channel("world-tree-live")
+      .on("postgres_changes", { event:"INSERT", schema:"public", table:"world_tree_events" }, p=>{ try{ cb({ event:p.new }); }catch(e){} })
+      .on("postgres_changes", { event:"UPDATE", schema:"public", table:"world_tree_state" }, p=>{ try{ cb({ state:p.new }); }catch(e){} })
+      .subscribe(); }catch(e){ return null; }
+  }
 };
 
 /* Exponer Cloud en window para que anima-state.js (capa del rito) pueda
