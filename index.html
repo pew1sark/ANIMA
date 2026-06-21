@@ -347,11 +347,9 @@
 
   <script>
   (function(){
-    /* --- destino fiel al flujo existente: primera vez → Umbral; ya despertó → Home --- */
-    function entryHref(){
-      try{ if(window.AnimaState) return AnimaState.entryHref(); }catch(e){}
-      return "umbral.html";
-    }
+    /* --- todos cruzan el Umbral: el gate (despertar.html) decide con la nube
+           si esta Alma ya despertó (→ su Alma) o debe vivir el Primer Despertar. --- */
+    function entryHref(){ return "despertar.html"; }
     /* --- Portal inmersivo negro→blanco, luego navega --- */
     var navigating=false;
     function enter(e){

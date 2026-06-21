@@ -59,13 +59,61 @@
         'Todavía pueden existir errores. Las primeras Almas ayudarán a perfeccionar ANIMA.</p>' +
         '<div style="margin:18px 0 4px"><span class="code-chip">' + AnimaState.ALPHA_CODE + '</span></div>' +
         '<p class="hint" style="text-align:center">Guarda este código. Lo necesitarás para nacer.</p>' +
-        '<div class="actions" style="margin-top:22px">' +
-          '<button class="cbtn" id="acceptBtn">Acepto despertar</button>' +
+        '<div class="actions" style="margin-top:22px;flex-direction:column;gap:10px">' +
+          '<button class="cbtn" id="acceptBtn">Crear mi Alma ✦</button>' +
+          '<button class="cbtn ghost" id="haveBtn">Ya tengo un Alma · Entrar</button>' +
         '</div>' +
       '</div>' +
       '<p class="seal">Acceso por invitación · The Founding Era</p>',
-      function () { bind("acceptBtn", sceneCrear); }
+      function () { bind("acceptBtn", sceneCrear); bind("haveBtn", sceneLogin); }
     );
+  }
+
+  /* ---------- 1·b · ENTRAR A UN ALMA EXISTENTE (todos cruzan el Umbral) ---------- */
+  function sceneLogin() {
+    render(
+      '<span class="eyebrow"><span class="ln"></span>Entrar<span class="ln"></span></span>' +
+      '<div class="brand-mark"><span class="peak">' + PEAK + '</span>' +
+        '<h1 class="wordmark">ANIMA</h1></div>' +
+      '<h1 class="rite" style="font-size:clamp(26px,5vw,42px);margin-top:14px">Entra a tu Alma</h1>' +
+      '<p class="rite-sub">Tu Alma te espera donde la dejaste. Aquí nada se reinicia: tu Esencia sigue habitando ANIMA.</p>' +
+      '<form class="panel" id="loginForm" style="margin-top:22px" autocomplete="on" novalidate>' +
+        '<div class="field-row"><label>Correo</label>' +
+          '<input id="l_email" name="email" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" /></div>' +
+        '<div class="field-row"><label>Clave</label>' +
+          '<input id="l_pass" name="password" type="password" placeholder="Tu clave secreta" autocomplete="current-password" /></div>' +
+        '<div class="err" id="l_err"></div>' +
+        '<div style="text-align:center;margin:6px 0 0"><a href="recuperar.html" class="hint" style="color:var(--gold-deep)">¿Olvidaste tu clave?</a></div>' +
+        '<div class="actions" style="margin-top:14px">' +
+          '<button type="button" class="cbtn ghost" id="l_back">Volver</button>' +
+          '<button type="submit" class="cbtn" id="l_btn">Entrar ✦</button>' +
+        '</div>' +
+      '</form>',
+      function () {
+        bind("l_back", sceneAlpha);
+        document.getElementById("loginForm").addEventListener("submit", function (e) { e.preventDefault(); entrar(); });
+      }
+    );
+  }
+
+  async function entrar() {
+    var email = (document.getElementById("l_email").value || "").trim();
+    var pass = document.getElementById("l_pass").value;
+    var err = document.getElementById("l_err");
+    if (!email || !/.+@.+\..+/.test(email)) { err.textContent = "Necesitamos un correo válido."; return; }
+    if (!pass) { err.textContent = "Escribe tu clave."; return; }
+    if (typeof Cloud === "undefined" || !Cloud.enabled) { err.textContent = "Sin conexión a la nube. Intenta más tarde."; return; }
+    var btn = document.getElementById("l_btn"); btn.disabled = true; btn.textContent = "Entrando…"; err.textContent = "";
+    try {
+      var res = await Cloud.signIn(email, pass);
+      if (res && res.error) { err.textContent = "No pudimos entrar: " + (res.error.message || "revisa tus datos."); btn.disabled = false; btn.textContent = "Entrar ✦"; return; }
+      form.email = email;
+      var alma = await Cloud.myAlma();
+      if (alma && alma.awakening_completed) { goHome(); }   // ya cruzó el Umbral → directo a su Alma
+      else { scenePrimerDespertar(); }                      // tiene cuenta pero aún no despierta
+    } catch (e) {
+      err.textContent = "Algo falló al entrar. Intenta de nuevo."; btn.disabled = false; btn.textContent = "Entrar ✦";
+    }
   }
 
   /* ---------- 2 · CREAR ALMA ---------- */
@@ -232,19 +280,37 @@
   function sceneLogro() {
     var s = AnimaState.get(); s.steps.logro = true; AnimaState.save(s);
     AnimaState.markCompleted();
+    /* El Primer Despertar queda guardado EN LA NUBE (una sola vez por Alma). */
+    persistAwakening();
     var p = AnimaState.progress();
     render(
       '<span class="eyebrow"><span class="ln"></span>Logro desbloqueado<span class="ln"></span></span>' +
       '<div class="medal">🏆</div>' +
       '<h1 class="rite" style="font-size:clamp(28px,6vw,52px)">Primer Despertar</h1>' +
-      '<p class="rite-lede">Has comprendido la esencia de ANIMA.</p>' +
-      '<p class="rite-sub">Nivel alcanzado: <b style="color:var(--gold-deep)">' + p.level.glyph + ' ' + p.level.name.toUpperCase() + '</b></p>' +
+      '<p class="rite-lede">Tu Alma ha despertado. Ahora formas parte del Origen.</p>' +
+      '<p class="rite-sub" id="originLine">El Árbol ha reconocido tu presencia.</p>' +
       essenceHTML() +
       '<div class="actions"><button class="cbtn" id="enterBtn">Entrar a ANIMA ✦</button></div>' +
-      '<p class="seal">Tu viaje apenas comienza. Sigue creando para despertar nuevos niveles.</p>',
-      function () { bind("enterBtn", function () { Rite.go("home.html"); }); animateEssence(); }
+      '<p class="seal">Tu viaje apenas comienza. Sigue creando para dejar huella en ANIMA.</p>',
+      function () { bind("enterBtn", goHome); animateEssence(); }
     );
   }
+
+  /* Persiste el Primer Despertar en la nube (idempotente). Si origin_soul,
+     muestra el número del Origen. Nunca bloquea la entrada si la nube falla. */
+  async function persistAwakening() {
+    try {
+      if (typeof Cloud !== "undefined" && Cloud.enabled) {
+        var alma = await Cloud.completeAwakening();
+        if (alma && alma.origin_soul) {
+          var ln = document.getElementById("originLine");
+          if (ln) ln.innerHTML = 'Eres el <b style="color:var(--gold-deep)">Alma del Origen Nº ' + alma.origin_number + '</b>. Serás recordada para siempre.';
+        }
+      }
+    } catch (e) { console.warn("ANIMA · Primer Despertar (nube):", e); }
+  }
+  /* Tras cruzar el Umbral, el Alma entra a su mundo (la app). */
+  function goHome() { if (window.Rite && Rite.go) Rite.go("studio.html"); else location.href = "studio.html"; }
 
   /* ---------- Esencia (barra) ---------- */
   function essenceHTML() {
@@ -259,13 +325,26 @@
     if (bar) setTimeout(function () { bar.style.width = (bar.dataset.pct || 0) + "%"; }, 200);
   }
 
-  /* ---------- Boot: reanuda donde quedó el rito ---------- */
-  (function boot() {
-    if (AnimaState.isCompleted()) { location.replace("home.html"); return; }
+  /* ---------- Boot: la NUBE decide quién cruzó el Umbral ---------- */
+  function resumeLocal() {
+    if (AnimaState.isCompleted()) { goHome(); return; }
     var s = AnimaState.get();
     if (s.steps.tutorial) sceneLogro();
     else if (s.steps.nacer) scenePrimerDespertar();
     else sceneAlpha();
+  }
+  (function boot() {
+    if (typeof Cloud !== "undefined" && Cloud.enabled) {
+      Cloud.session().then(function (sess) {
+        if (!sess) { sceneAlpha(); return; }                 // sin sesión → puertas (crear / entrar)
+        Cloud.myAlma().then(function (alma) {
+          if (alma && alma.awakening_completed) { goHome(); } // ya despertó → directo a su Alma
+          else { form.email = (sess.user && sess.user.email) || ""; scenePrimerDespertar(); }
+        }).catch(resumeLocal);
+      }).catch(resumeLocal);
+    } else {
+      resumeLocal();
+    }
   })();
   </script>
 </body>

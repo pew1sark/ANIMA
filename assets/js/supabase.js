@@ -88,6 +88,11 @@ const Cloud = {
   setXP(almaId, xp){ return _sb.from("almas").update({ xp }).eq("id", almaId); },
   updateAlma(almaId, patch){ return _sb.from("almas").update(patch).eq("id", almaId); },
 
+  /* Primer Despertar (migración 0021). Marca en la NUBE que esta Alma cruzó
+     el Umbral — una sola vez, idempotente. Asigna su número del Origen (≤30) y
+     sube la Esencia a 1. Nunca toca id/user_id. Devuelve la fila del Alma. */
+  async completeAwakening(){ if(!_sb) return null; const { data, error } = await _sb.rpc("complete_awakening"); if(error) throw error; return data; },
+
   /* Esencia (camino ceremonial). add_essence suma de forma atómica al Alma
      del usuario autenticado (migración 0012) y devuelve la Esencia nueva. */
   async addEssence(amount){ if(!_sb) return null; const { data } = await _sb.rpc("add_essence", { p_amount:amount }); return data; },
