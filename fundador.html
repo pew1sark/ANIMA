@@ -69,6 +69,7 @@
 
   <script>
   var esc=function(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});};
+  function fmtBytes(n){ n=Number(n)||0; if(n<1024) return n+" B"; var u=["KB","MB","GB","TB"], i=-1; do{ n/=1024; i++; }while(n>=1024 && i<u.length-1); return (n>=10?Math.round(n):n.toFixed(1))+" "+u[i]; }
   var body=document.getElementById("body");
 
   function gate(msg){
@@ -112,7 +113,9 @@
           '<h2>Obras</h2>'+
           '<div class="big">'+(s.works||0)+'</div>'+
           '<div class="muted" style="font-size:13px;margin-top:6px">Obras en portafolios</div>'+
-          '<div class="row" style="margin-top:14px"><span class="muted">Límite Alpha</span><b>~10 GB</b></div>'+
+          '<div class="row" style="margin-top:14px"><span class="muted">Espacio usado</span><b>'+fmtBytes(s.storage_bytes||0)+' / '+fmtBytes(s.storage_limit_bytes||10737418240)+'</b></div>'+
+          '<div class="bar"><span id="storeBar"></span></div>'+
+          ((s.storage_by_bucket||[]).length?'<div style="margin-top:12px">'+(s.storage_by_bucket||[]).map(function(b){return '<div class="row"><span class="muted">'+esc(b.bucket)+' · '+(b.files||0)+'</span><b>'+fmtBytes(b.bytes||0)+'</b></div>';}).join('')+'</div>':'')+
         '</div>'+
 
         '<div class="card">'+
@@ -144,7 +147,8 @@
       '</div>'+
       '<div class="foot"><strong>ANIMA TSC</strong> · Panel privado del Fundador</div>';
 
-    setTimeout(function(){ var b=document.getElementById("soulsBar"); if(b) b.style.width=Math.max(2,pct)+"%"; }, 200);
+    setTimeout(function(){ var b=document.getElementById("soulsBar"); if(b) b.style.width=Math.max(2,pct)+"%";
+      var sb=document.getElementById("storeBar"); if(sb){ var sp=Math.min(100,Math.round(((s.storage_bytes||0)/(s.storage_limit_bytes||10737418240))*100)); sb.style.width=Math.max(1,sp)+"%"; } }, 200);
   }
 
   (async function(){
