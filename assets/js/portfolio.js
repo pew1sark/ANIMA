@@ -86,7 +86,7 @@ function render(a, port, traj){
         <div class="pf-stats">
           <div class="pf-stat"><b id="sparkStat">${(a.sparks||0).toLocaleString("es-CL")}</b><small>Chispas</small></div>
           <div class="pf-stat"><b>${port.length}</b><small>Obras</small></div>
-          <div class="pf-stat"><b>${(a.xp||0).toLocaleString("es-CL")}</b><small>XP</small></div>
+          <div class="pf-stat"><b>${(a.xp||0).toLocaleString("es-CL")}</b><small>Esencia</small></div>
           ${since?`<div class="pf-stat"><b style="font-size:13px;font-weight:800">${esc(since)}</b><small>Desde</small></div>`:""}
         </div>
         ${show("bio")&&a.bio?`<div class="pf-section-t">Sobre mí</div><p style="font-size:14px;line-height:1.5;margin:0 0 4px">${esc(a.bio)}</p>`:""}

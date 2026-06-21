@@ -180,4 +180,15 @@ Si la respuesta es no, **no pertenece a ANIMA**.
 
 ---
 
+## 📖 La Biblia del Universo
+
+El canon fundacional de ANIMA vive en **[`BIBLIA.md`](BIBLIA.md)** — filosofía,
+cosmogonía, el Árbol del Alma, símbolos, glosario oficial, iconografía, colores,
+sonidos, Rituales, el sistema de Esencia y las reglas del universo.
+
+> Toda nueva función deberá nacer desde esta Biblia. Si algo contradice ese
+> documento, **la Biblia tiene prioridad absoluta**.
+
+---
+
 *SARK · Creator of ANIMA · First Soul of ANIMA*

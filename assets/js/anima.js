@@ -46,8 +46,8 @@ function pixelSprite(l){
   g.forEach((row,y)=>{ [...row].forEach((ch,x)=>{ const c=pal[ch]; if(c) r+=`<rect x="${x}" y="${y}" width="1.04" height="1.04" fill="${c}"/>`; }); });
   return `<svg class="pix" viewBox="0 0 9 9" shape-rendering="crispEdges">${r}</svg>`;
 }
-const UNLOCKS={ FOUNDING:"Tu Alma, portafolio y memoria", EMBER:"Cotizador y finanzas", ROOT:"Clientes y flujo de trabajo",
-  WILD:"Publicar en la comunidad", TOTEM:"Crear o unirte a un Clan", AETHER:"Mentorías y perfil destacado",
+const UNLOCKS={ FOUNDING:"Tu Alma, portafolio y memoria", EMBER:"Cotizador y Raíz", ROOT:"Vínculos y flujo de trabajo",
+  WILD:"Publicar en la comunidad", TOTEM:"Crear o unirte a un Clan", AETHER:"Mentorías y Alma destacada",
   SPIRIT:"Academia: enseñar y cursos", ANIMA:"Santuario e IA conectada (LUMBRE)" };
 function caminoPixelHTML(lp){
   const nx=lp.next; const falta=nx?Math.max(0,nx.xp-me().xp):0;
@@ -57,12 +57,12 @@ function caminoPixelHTML(lp){
     <div class="camino-track">${LEVELS.map((l,i)=>`<div class="ptile ${i===lp.idx?'cur':''} ${i<lp.idx?'passed':''}">
       <span class="pn pixel-font">${i+1}</span>${pixelSprite(l)}<b class="pixel-font">${l.label}</b></div>`).join("")}</div>
     <div class="camino-prog"><div class="bar"><span style="width:${lp.pct}%"></span></div>
-      <small class="muted">${nx?`${lp.pct}% — faltan ${falta.toLocaleString("es-CL")} XP para <b>${nx.label}</b>`:"Alma Despierta · nivel máximo ∞"}</small></div>
+      <small class="muted">${nx?`${lp.pct}% — faltan ${falta.toLocaleString("es-CL")} Esencia para <b>${nx.label}</b>`:"Alma Despierta · nivel máximo ∞"}</small></div>
   </div>`;
 }
 function openLevels(){
-  document.getElementById("levelBody").innerHTML=`<p class="muted" style="font-size:13px">Tu Alma evoluciona con tu actividad. Cada acción (crear trabajos, memorias, hitos) da XP y desbloquea nuevas ventanas dentro de ANIMA.</p>
-    ${LEVELS.map(l=>`<div class="row"><div style="width:40px">${pixelSprite(l)}</div><div class="grow"><b>${l.label}</b> <small class="muted">· ${l.name} · ${l.xp.toLocaleString("es-CL")} XP</small><br><small class="muted">Desbloquea: ${UNLOCKS[l.key]||""}</small></div></div>`).join("")}`;
+  document.getElementById("levelBody").innerHTML=`<p class="muted" style="font-size:13px">Tu Alma evoluciona con tu actividad. Cada acción (crear trabajos, memorias, hitos) da Esencia y desbloquea nuevas ventanas dentro de ANIMA.</p>
+    ${LEVELS.map(l=>`<div class="row"><div style="width:40px">${pixelSprite(l)}</div><div class="grow"><b>${l.label}</b> <small class="muted">· ${l.name} · ${l.xp.toLocaleString("es-CL")} Esencia</small><br><small class="muted">Desbloquea: ${UNLOCKS[l.key]||""}</small></div></div>`).join("")}`;
   document.getElementById("levelModal").classList.add("open");
 }
 function closeLevels(){ document.getElementById("levelModal").classList.remove("open"); }
@@ -170,9 +170,9 @@ const NAV_TREE = [
   ]},
   { type:"reino", key:"taller", ico:"₵", t:"Taller", children:[
       {v:"proyectos",  ico:"◷",t:"Proyectos"},
-      {v:"clientes",   ico:"☺",t:"Clientes"},
+      {v:"clientes",   ico:"☺",t:"Vínculos"},
       {v:"cotizador",  ico:"₵",t:"Cotizador"},
-      {v:"finanzas",   ico:"$",t:"Finanzas"},
+      {v:"finanzas",   ico:"🌱",t:"Raíz"},
       {v:"agenda",     ico:"☰",t:"Agenda"}
   ]},
   // Reino Clan: solo aparece en planes Clan/Santuario (gating por planAllows).
@@ -243,8 +243,8 @@ const TITLES = {
   trayectoria:["Trayectoria","La historia de tu Alma, hito a hito."],
   portafolio:["Portafolio","Las obras que te representan."],
   proyectos:["Proyectos","Lo que está vivo ahora mismo."],
-  finanzas:["Finanzas","Ingresos, egresos y ganancia — privado."],
-  clientes:["Clientes","Tu cartera de clientes y contactos."],
+  finanzas:["Raíz","Ingresos, egresos y ganancia — privado. El sustento del Alma."],
+  clientes:["Vínculos","Tu cartera de vínculos y contactos."],
   cotizador:["Centro documental","Cotizaciones, propuestas y documentos profesionales · exporta en PDF."],
   agenda:["Agenda","Tu día, ordenado."],
   memoria:["Memorias","Ideas, frases y referencias que no quieres perder."],
@@ -367,7 +367,7 @@ function vMiAlma(a){
         ${a.handle?`<div class="muted" style="font-size:12.5px;margin-top:2px">${esc(a.handle)}</div>`:""}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-        <span class="pixel-font" style="font-size:10px;color:#7b5920">${a.xp.toLocaleString("es-CL")} XP</span>
+        <span class="pixel-font" style="font-size:10px;color:#7b5920">${a.xp.toLocaleString("es-CL")} Esencia</span>
         <div class="bar" style="width:170px"><span style="width:${lp.pct}%"></span></div>
         <small class="muted" style="font-size:11px">${lp.next?`hacia ${lp.next.label}`:"Alma Despierta ∞"}</small>
       </div>
@@ -400,7 +400,7 @@ function vAlmaResumen(a,lp){
       <div style="margin-top:12px"><button class="btn" id="createAlmaBtn">✦ Crear mi Alma</button></div></div>`:``;
   const onboarding=(a.live && a.memories.length===0 && a.projects.length===0)?`<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
       <span class="pill gold">Bienvenida, Alma nueva</span>
-      <p style="margin:8px 0 0">Empieza por <b>Identidad</b>: pon tu foto y datos. Luego crea tu primer trabajo o memoria. Cada acción da XP.</p>
+      <p style="margin:8px 0 0">Empieza por <b>Identidad</b>: pon tu foto y datos. Luego crea tu primer trabajo o memoria. Cada acción da Esencia.</p>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn sm" data-tab="identidad">✎ Completar identidad</button>
         <button class="btn secondary sm" data-add="proyecto">+ Primer trabajo</button></div></div>`:``;
@@ -412,7 +412,7 @@ function vAlmaResumen(a,lp){
     <div class="card s3"><div class="stat"><span class="num">${a.clan?esc(a.clan):"—"}</span><span class="lbl">${a.clan?"Tu Clan":"Sin Clan aún"}</span></div></div>`:``}
     ${cfg.cards.camino!==false?`<div class="card s12 camino-card">${caminoPixelHTML(lp)}</div>`:``}
     ${cfg.cards.graficos!==false?`
-    <div class="card s6"><div class="section-title"><h2>Finanzas por mes</h2></div>${chartFinance(a)}</div>
+    <div class="card s6"><div class="section-title"><h2>Raíz por mes</h2></div>${chartFinance(a)}</div>
     <div class="card s6"><div class="section-title"><h2>Trabajos por estado</h2></div>${chartProjects(a)}</div>`:``}
     ${cfg.cards.hoy!==false?`<div class="card s6"><div class="section-title"><h2>Hoy</h2><div class="spacer"></div><button class="btn sm" data-add="cita">+ Cita</button></div>
       ${a.agenda.map((x,i)=>`<div class="row"><b style="color:var(--gold);width:60px">${esc(x.h)}</b><div class="grow">${esc(x.t)}</div>${acts("cita",i)}</div>`).join("")||`<p class="muted">Sin agenda hoy.</p>`}</div>`:``}
@@ -436,9 +436,9 @@ function vAlmaIdentidad(a){
     <button class="btn" id="idSave" style="width:100%;margin-top:6px">Guardar identidad</button>
   </div>
   <div class="card s4" style="align-self:start">
-    <div class="section-title"><h2 style="font-size:16px">Foto de perfil</h2></div>
+    <div class="section-title"><h2 style="font-size:16px">Foto del Alma</h2></div>
     <div style="text-align:center;margin:4px 0 14px">${avatarHTML(a,"lg")}</div>
-    ${imgUpField("id_photo","Foto de perfil", a.photo, "perfil")}
+    ${imgUpField("id_photo","Foto del Alma", a.photo, "perfil")}
     <p class="muted" style="font-size:11.5px;margin-top:4px">Súbela en <b>alta calidad</b>. El <b>banner</b> de tu portafolio se edita en la ventana <b>Portafolio → ✎ Personalizar</b>.</p>
   </div>`;
 }
@@ -447,7 +447,7 @@ function vAlmaPublica(a){
   const v=a.visibility||{}; const on=k=>v[k]!==false;
   const rows=[["bio","Mostrar mi bio"],["tags","Mostrar mis etiquetas"],["trajectory","Mostrar mi trayectoria"],["portfolio","Mostrar mi portafolio"],["links","Mostrar mis enlaces"]];
   return `<div class="card s12"><span class="pill gold">Vista pública</span>
-    <p class="muted" style="max-width:640px">Controla qué ven las demás Almas cuando visitan tu perfil en la comunidad. Tus finanzas, agenda, memorias y clientes <b>siempre son privados</b>.</p>
+    <p class="muted" style="max-width:640px">Controla qué ven las demás Almas cuando visitan tu Alma en la comunidad. Tu Raíz, agenda, memorias y vínculos <b>siempre son privados</b>.</p>
     ${rows.map(([k,l])=>`<div class="row"><div class="grow"><b>${l}</b></div><button class="toggle ${on(k)?'on':''}" data-pubcfg="${k}"><span></span></button></div>`).join("")}
   </div>`;
 }
@@ -457,7 +457,7 @@ function chartFinance(a){
   a.finance.income.forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k){(map[k]=map[k]||{i:0,e:0}).i+=x.a;}});
   a.finance.expense.forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k){(map[k]=map[k]||{i:0,e:0}).e+=x.a;}});
   const keys=Object.keys(map).sort().slice(-6);
-  if(!keys.length) return `<p class="muted">Aún no hay datos de finanzas.</p>`;
+  if(!keys.length) return `<p class="muted">Aún no hay datos de Raíz.</p>`;
   const max=Math.max(1,...keys.map(k=>Math.max(map[k].i,map[k].e)));
   return `<div class="chart">${keys.map(k=>`<div class="cbar"><div class="cbars"><span class="ci" style="height:${Math.round(map[k].i/max*100)}%" title="Ingresos ${money(map[k].i)}"></span><span class="ce" style="height:${Math.round(map[k].e/max*100)}%" title="Egresos ${money(map[k].e)}"></span></div><small>${k.slice(2)}</small></div>`).join("")}</div>
     <div class="muted" style="font-size:11px;margin-top:8px"><b style="color:var(--ok)">■</b> Ingresos &nbsp; <b style="color:var(--danger)">■</b> Egresos</div>`;
@@ -480,7 +480,7 @@ async function saveIdentity(){
     a.instagram=patch.instagram; a.portfolio_url=patch.portfolio_url; a.shop_url=patch.shop_url; a.tags=patch.tags;
     a.role=patch.discipline||a.role;
     // Esencia: completar el perfil con lo esencial (una sola vez)
-    if(window.AnimaState && patch.bio && patch.discipline && (patch.tags||[]).length){ AnimaState.addEsenciaOnce("perfil",20,"Completar perfil"); setTimeout(maybeLevelGuide,400); }
+    if(window.AnimaState && patch.bio && patch.discipline && (patch.tags||[]).length){ AnimaState.addEsenciaOnce("perfil",20,"Completar tu Alma"); setTimeout(maybeLevelGuide,400); }
     renderAll(); updateAuthUI(await Cloud.session()); alert("Identidad guardada ✓");
   }catch(e){ alert("No se pudo guardar (¿aplicaste la migración 0003?): "+(e.message||e)); }
 }
@@ -601,7 +601,7 @@ function pfInfoCard(a){
     <div class="pf-info-stats">
       <div><b>✦ ${(a.sparks||0).toLocaleString("es-CL")}</b><small>Chispas</small></div>
       <div><b>${a.portfolio.length}</b><small>Obras</small></div>
-      <div><b>${(a.xp||0).toLocaleString("es-CL")}</b><small>XP</small></div>
+      <div><b>${(a.xp||0).toLocaleString("es-CL")}</b><small>Esencia</small></div>
     </div>
     ${a.bio?`<div class="pf-info-sec"><span class="pf-info-h">Sobre mí</span><p>${esc(a.bio)}</p></div>`:""}
     ${services.length?`<div class="pf-info-sec"><span class="pf-info-h">Servicios</span><div class="pf-chips">${services.map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div>`:""}
@@ -616,12 +616,12 @@ function pfEditor(a){
   return `<div class="card s12">
     <div class="section-title"><h2 style="font-size:18px">Personaliza tu portafolio</h2><div class="spacer"></div>
       <button class="btn ghost sm" data-pfcancel>Cancelar</button><button class="btn sm" id="pfSave">Guardar</button></div>
-    <div class="row" style="border:0;padding:2px 0 12px"><div class="grow"><b>Portafolio público</b><br><small class="muted">${a.live?"Si lo apagas, tu enlace muestra el perfil como privado para las demás Almas.":"Entra a tu Alma en la nube para publicar tu portafolio."}</small></div>
+    <div class="row" style="border:0;padding:2px 0 12px"><div class="grow"><b>Portafolio público</b><br><small class="muted">${a.live?"Si lo apagas, tu enlace muestra tu Alma como privada para las demás Almas.":"Entra a tu Alma en la nube para publicar tu portafolio."}</small></div>
       <button class="toggle ${isPublicPf(a)?'on':''}" data-pfpublic></button></div>
     <div style="display:flex;gap:16px;flex-wrap:wrap">
       <div style="flex:2;min-width:240px">${imgUpField("pf_banner","Banner / portada", a.banner, "banner")}
         <small class="muted">Medidas recomendadas: <b>1600 × 400 px</b> (proporción 4:1). JPG o PNG, hasta 15 MB. Deja el centro despejado: en móvil se recorta a los lados.</small></div>
-      <div style="flex:1;min-width:180px">${imgUpField("pf_photo","Foto de perfil", a.photo, "perfil")}
+      <div style="flex:1;min-width:180px">${imgUpField("pf_photo","Foto del Alma", a.photo, "perfil")}
         <small class="muted">Recomendado: <b>400 × 400 px</b>, cuadrada.</small></div>
     </div>
     <div class="section-title" style="margin-top:12px"><h2 style="font-size:16px">Tarjeta de información</h2></div>
@@ -647,7 +647,7 @@ function pfWorks(a){
     : `<div class="card s8 pf-empty">
         <span class="pf-empty-ico">▦</span>
         <h2 style="margin:10px 0 4px;letter-spacing:-.03em">Tu portafolio empieza aquí</h2>
-        <p class="muted" style="max-width:440px;margin:0 auto 18px">Sube tus obras en <b>alta calidad</b> — se verán en tu perfil público, profesional como en Behance. Cada obra suma XP.</p>
+        <p class="muted" style="max-width:440px;margin:0 auto 18px">Sube tus obras en <b>alta calidad</b> — se verán en tu Alma pública, profesional como en Behance. Cada obra suma Esencia.</p>
         <button class="btn gold" data-add="obra">＋ Subir mi primera obra</button>
       </div>`;
 }
@@ -714,7 +714,7 @@ function vFinanzas(a){
       ${a.finance.income.map((x,i)=>`<div class="row"><div class="grow"><b>${esc(x.t)}</b><br><small>${esc(x.d)}</small></div><span class="amt in">+${money(x.a)}</span>${acts("ingreso",i)}</div>`).join("")||`<p class="muted">Sin ingresos.</p>`}</div>
     <div class="card s6"><div class="section-title"><h2>Egresos</h2><div class="spacer"></div><button class="btn sm secondary" data-add="egreso">+ Egreso</button></div>
       ${a.finance.expense.map((x,i)=>`<div class="row"><div class="grow"><b>${esc(x.t)}</b><br><small>${esc(x.d)}</small></div><span class="amt out">−${money(x.a)}</span>${acts("egreso",i)}</div>`).join("")||`<p class="muted">Sin egresos.</p>`}</div>
-    <div class="card s12 muted" style="font-size:12.5px">🔒 Tus finanzas son privadas. Mi Alma ≠ Mi Clan. Nada se comparte automáticamente.</div>
+    <div class="card s12 muted" style="font-size:12.5px">🔒 Tu Raíz es privada. Mi Alma ≠ Mi Clan. Nada se comparte automáticamente.</div>
   </div>`;
 }
 
@@ -746,7 +746,7 @@ function vBiblioteca(a){
 /* --- Personalizar --- */
 function vConfigBody(a){
   const cfg=getCfg(a);
-  const mod=[["trayectoria","Trayectoria"],["portafolio","Portafolio"],["proyectos","Flujo de trabajo"],["finanzas","Finanzas"],["clientes","Clientes"],["cotizador","Cotizador"],["agenda","Agenda"],["memoria","Memorias"],["biblioteca","Biblioteca"]];
+  const mod=[["trayectoria","Trayectoria"],["portafolio","Portafolio"],["proyectos","Flujo de trabajo"],["finanzas","Raíz"],["clientes","Vínculos"],["cotizador","Cotizador"],["agenda","Agenda"],["memoria","Memorias"],["biblioteca","Biblioteca"]];
   const card=[["kpis","Indicadores rápidos"],["camino","Camino (pixel art)"],["graficos","Gráficos"],["hoy","Agenda de hoy"],["memoria","Última memoria"]];
   const tg=(g,k,l,on)=>`<div class="row"><div class="grow"><b>${l}</b></div><button class="toggle ${on?'on':''}" data-cfg="${g}:${k}"><span></span></button></div>`;
   return `<div class="card s12"><span class="pill gold">Personalización</span>
@@ -781,7 +781,7 @@ function vConsola(a){
 
   const note=`<div class="card s12" style="background:linear-gradient(145deg,rgba(58,138,95,.12),rgba(255,255,255,.6))">
       <span class="pill" style="background:rgba(58,138,95,.16);border:1px solid rgba(58,138,95,.4);color:#2f7a52">Backend conectado ✓</span>
-      <p class="muted" style="max-width:680px;margin-top:8px">Estás conectado a Supabase. Puedes asignar <b>Plan</b>, <b>Rol</b>, nivel, XP, rol-crew y clan a cualquier Alma; se guarda en la nube al instante.
+      <p class="muted" style="max-width:680px;margin-top:8px">Estás conectado a Supabase. Puedes asignar <b>Plan</b>, <b>Rol</b>, nivel, Esencia, rol-crew y clan a cualquier Alma; se guarda en la nube al instante.
         Para gestionar Almas necesitas haber entrado con el correo del Creador (<b>${esc(CREATOR_EMAIL)}</b>).</p></div>`;
 
   const almas=state.cloudAlmas||[];
@@ -794,13 +794,13 @@ function vConsola(a){
     return `<div class="card s12 cs-row">
         <div class="row" style="align-items:flex-start;margin-bottom:10px">
           <span class="avatar sm" style="background:linear-gradient(145deg,${x.color||'#888'},${shade(x.color||'#888',-22)})">${initials(x.name)}</span>
-          <div class="grow"><b>${esc(x.name)}</b> ${planBadge(x.plan||'ALMA')} ${roleBadge(x.team_role||'MIEMBRO')}<br><small class="muted">${lv.emoji} ${esc(x.level||'EMBER')} · ${x.xp||0} XP${x.clan?` · ${esc(x.clan)}`:""}${x.crew_role?` · ${esc(x.crew_role)}`:""}</small></div>
+          <div class="grow"><b>${esc(x.name)}</b> ${planBadge(x.plan||'ALMA')} ${roleBadge(x.team_role||'MIEMBRO')}<br><small class="muted">${lv.emoji} ${esc(x.level||'EMBER')} · ${x.xp||0} Esencia${x.clan?` · ${esc(x.clan)}`:""}${x.crew_role?` · ${esc(x.crew_role)}`:""}</small></div>
         </div>
         <div class="cs-fields">
           <label class="fld"><span>Plan</span><select id="cs_plan_${x.id}">${popts}</select></label>
           <label class="fld"><span>Rol</span><select id="cs_trole_${x.id}">${ropts}</select></label>
           <label class="fld"><span>Nivel</span><select id="cs_level_${x.id}">${lopts}</select></label>
-          <label class="fld"><span>XP</span><input id="cs_xp_${x.id}" type="number" min="0" value="${x.xp||0}"></label>
+          <label class="fld"><span>Esencia</span><input id="cs_xp_${x.id}" type="number" min="0" value="${x.xp||0}"></label>
           <label class="fld"><span>Rol (crew)</span><input id="cs_role_${x.id}" type="text" value="${esc(x.crew_role||'')}" placeholder="FOUNDING / rol"></label>
           <label class="fld"><span>Clan</span><input id="cs_clan_${x.id}" type="text" value="${esc(x.clan||'')}" placeholder="slug del clan"></label>
           <label class="fld"><span>Acceso al Mundo</span><select id="cs_world_${x.id}"><option value="no" ${!x.world_access?'selected':''}>No</option><option value="si" ${x.world_access?'selected':''}>Sí — ve el resumen general</option></select></label>
@@ -844,10 +844,10 @@ async function consolaSave(almaId){
 function vClientes(a){
   const list=a.clients||[];
   return `<div class="grid"><div class="card s12">
-    <div class="section-title"><h2>Clientes</h2><div class="spacer"></div><button class="btn sm" data-add="cliente">+ Nuevo cliente</button></div>
+    <div class="section-title"><h2>Vínculos</h2><div class="spacer"></div><button class="btn sm" data-add="cliente">+ Nuevo vínculo</button></div>
     ${list.length?list.map((c,i)=>`<div class="row"><span class="avatar sm" style="background:linear-gradient(145deg,${a.color},${shade(a.color,-22)})">${initials(c.name)}</span>
         <div class="grow"><b>${esc(c.name)}</b><br><small>${esc(c.email||"")}${c.email&&c.phone?" · ":""}${esc(c.phone||"")}</small>${c.notes?`<br><small class="muted">${esc(c.notes)}</small>`:""}</div>${acts("cliente",i)}</div>`).join("")
-      :`<p class="muted">Aún no tienes clientes. Se crean solos al guardar una cotización, o agrégalos aquí.</p>`}
+      :`<p class="muted">Aún no tienes vínculos. Se crean solos al guardar una cotización, o agrégalos aquí.</p>`}
   </div></div>`;
 }
 
@@ -1006,7 +1006,7 @@ function vCotEditor(a){
         <div class="field" style="flex:1;min-width:120px"><label>Fecha</label><input id="q_date" type="date" value="${esc(quoteDraft.date)}"></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <div class="field" style="flex:2;min-width:180px"><label>Cliente</label><input id="q_client" placeholder="Nombre del cliente" value="${esc(quoteDraft.client)}"></div>
+        <div class="field" style="flex:2;min-width:180px"><label>Vínculo</label><input id="q_client" placeholder="Nombre del vínculo" value="${esc(quoteDraft.client)}"></div>
         <div class="field" style="flex:2;min-width:160px"><label>Disciplina / rama</label><input id="q_disc" placeholder="Mural, tattoo, branding, música…" value="${esc(quoteDraft.discipline)}"></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -1062,7 +1062,7 @@ async function qSaveCloud(a){
     else { const qrow=await Cloud.insertRow("quotes",payload); quoteDraft.id=qrow.id; }
     quoteDraft.client_id=clientId; quoteDraft.project_id=projectId;
     state.cloudQuotes=await Cloud.quotes(a.almaId);
-    renderAll(); alert("Cotización guardada en la nube ✓ Cliente y proyecto vinculados.");
+    renderAll(); alert("Cotización guardada en la nube ✓ Vínculo y proyecto enlazados.");
   }catch(e){ alert("No se pudo guardar la cotización: "+(e.message||e)); }
 }
 function qLoad(id){
@@ -1085,7 +1085,7 @@ function qExport(){
   document.getElementById("printArea").innerHTML=`
     <div class="p-head"><div class="brand"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>ANIMA · ${esc(a.name)}</div><small>${esc(docFmt(quoteDraft.docType).t)} · ${esc(quoteDraft.date)}</small></div>
     <h1 class="p-name">${esc(quoteDraft.title)}</h1>
-    <div class="p-sub">${esc(quoteDraft.discipline||a.role||"")} · Cliente: ${esc(quoteDraft.client||"—")}</div>
+    <div class="p-sub">${esc(quoteDraft.discipline||a.role||"")} · Vínculo: ${esc(quoteDraft.client||"—")}</div>
     <table class="p-table"><thead><tr><th>Concepto</th><th>Cant.</th><th>Unidad</th><th>P. unitario</th><th>Subtotal</th></tr></thead><tbody>
       ${quoteDraft.items.map(it=>`<tr><td>${esc(it.desc)}</td><td>${it.qty}</td><td>${esc(it.unit)}</td><td>${fmtq(it.price,cur)}</td><td>${fmtq((+it.qty||0)*(+it.price||0),cur)}</td></tr>`).join("")}
     </tbody></table>
@@ -1226,23 +1226,23 @@ function openPost(id){
       <div><b>${esc(au.name)}</b><br><small class="muted">${timeAgo(p.created_at)}</small></div></div>
     ${p.title?`<h2 style="margin:12px 0 4px;letter-spacing:-.03em">${esc(p.title)}</h2>`:""}
     <p style="white-space:pre-wrap">${esc(p.body||"")}</p>
-    <div class="section-title" style="margin-top:14px"><h3 style="font-size:14px;margin:0">Comentarios</h3></div>
+    <div class="section-title" style="margin-top:14px"><h3 style="font-size:14px;margin:0">Ecos</h3></div>
     <div id="postComments" class="muted">Cargando…</div>
-    <div class="lum-input" style="margin-top:10px"><input id="commentInput" placeholder="Escribe un comentario…"><button class="btn" id="commentSend" data-post="${id}">↑</button></div>`;
+    <div class="lum-input" style="margin-top:10px"><input id="commentInput" placeholder="Escribe un Eco…"><button class="btn" id="commentSend" data-post="${id}">↑</button></div>`;
   loadComments(id);
 }
 async function loadComments(postId){
   try{ const cs=await Cloud.comments(postId); const box=document.getElementById("postComments"); if(!box) return;
     box.innerHTML=cs.length?cs.map(c=>{ const au=authorOf(c.author_alma_id);
       return `<div class="row"><span class="avatar sm" style="background:linear-gradient(145deg,${au.color},${shade(au.color,-22)})">${initials(au.name)}</span><div class="grow"><b>${esc(au.name)}</b> <small class="muted">${timeAgo(c.created_at)}</small><br>${esc(c.body)}</div></div>`;
-    }).join(""):`<p class="muted">Sé la primera Alma en comentar.</p>`;
+    }).join(""):`<p class="muted">Sé la primera Alma en dejar un Eco.</p>`;
   }catch(e){}
 }
 async function sendComment(postId){
-  const a=me(); if(!a.live){ alert("Entra a tu Alma para comentar."); return; }
+  const a=me(); if(!a.live){ alert("Entra a tu Alma para dejar un Eco."); return; }
   const el=document.getElementById("commentInput"); const body=el.value.trim(); if(!body) return; el.value="";
   try{ await Cloud.insertRow("comments",{post_id:postId,author_alma_id:a.almaId,body});
-    if(window.AnimaState){ AnimaState.addEsencia(5,"Comentar en comunidad"); setTimeout(maybeLevelGuide,400); }
+    if(window.AnimaState){ AnimaState.addEsencia(5,"Dejar un Eco en comunidad"); setTimeout(maybeLevelGuide,400); }
     // Alpha 2026: ayudar/responder a otra Alma descubre la insignia Guardián y emite una señal.
     const post=(state.cloudPosts||[]).find(x=>x.id===postId);
     if(post && post.author_alma_id!==a.almaId){
@@ -1390,16 +1390,16 @@ function vSantuario(a){
         return `<div class="row"><span style="font-size:22px">${c.emoji}</span><div class="grow"><b>${c.name}</b><br><small>${n} Almas · ${c.desc}</small></div></div>`;}).join("")}</div>
     <div class="card s5"><div class="section-title"><h2>Departamentos</h2></div>
       ${S.departments.map(d=>{const l=list.find(x=>x.slug===d.lead)||state.almas.find(x=>x.id===d.lead);return `<div class="row"><div class="grow"><b>${d.t}</b><br><small>Lidera: ${l?esc(l.name):"—"}</small></div></div>`;}).join("")}</div>
-    <div class="card s7"><div class="section-title"><h2>Finanzas generales</h2><div class="spacer"></div><span class="pill">${live?'Privadas':'Agregado'}</span></div>
-      ${live?`<p class="muted" style="font-size:13px">🔒 En el sistema vivo las finanzas de cada Alma son <b>privadas</b>. Estos números corresponden sólo a tu Alma.</p>`:``}
+    <div class="card s7"><div class="section-title"><h2>Raíz general</h2><div class="spacer"></div><span class="pill">${live?'Privadas':'Agregado'}</span></div>
+      ${live?`<p class="muted" style="font-size:13px">🔒 En el sistema vivo la Raíz de cada Alma es <b>privada</b>. Estos números corresponden sólo a tu Alma.</p>`:``}
       <div class="grid" style="gap:14px;margin-top:${live?'10px':'0'}">
         <div class="s4"><div class="stat"><span class="num" style="color:var(--ok);font-size:22px">${money(totalInc)}</span><span class="lbl">Ingresos</span></div></div>
         <div class="s4"><div class="stat"><span class="num" style="color:var(--danger);font-size:22px">${money(totalExp)}</span><span class="lbl">Egresos</span></div></div>
         <div class="s4"><div class="stat"><span class="num" style="font-size:22px">${money(totalInc-totalExp)}</span><span class="lbl">Neto</span></div></div></div></div>
     <div class="card s5"><div class="section-title"><h2>Distribución por nivel</h2></div>
       ${dist.map(d=>`<div class="row"><span style="font-size:18px">${d.l.emoji}</span><div class="grow"><b>${d.l.key}</b></div><span class="chip">${d.n}</span></div>`).join("")}</div>
-    <div class="card s12"><div class="section-title"><h2>Almas destacadas (XP)</h2></div>
-      ${top.map((m,i)=>`<div class="row"><b style="color:var(--gold);width:24px">${i+1}</b>${avatarHTML(m,"sm")}<div class="grow"><b>${esc(m.name)}</b><br><small>${esc(m.role||"")}</small></div><span class="chip">${m.xp.toLocaleString("es-CL")} XP</span></div>`).join("")}</div>
+    <div class="card s12"><div class="section-title"><h2>Almas destacadas (Esencia)</h2></div>
+      ${top.map((m,i)=>`<div class="row"><b style="color:var(--gold);width:24px">${i+1}</b>${avatarHTML(m,"sm")}<div class="grow"><b>${esc(m.name)}</b><br><small>${esc(m.role||"")}</small></div><span class="chip">${m.xp.toLocaleString("es-CL")} Esencia</span></div>`).join("")}</div>
   </div>`;
 }
 
@@ -1567,7 +1567,7 @@ function vProyectosClan(a){
   </div>`;
 }
 const PLAN_PICK_FEATURES={
-  ALMA:["Tu espacio individual completo","Portafolio público + Chispas","Centro documental y finanzas privadas","Comunidad y constelación"],
+  ALMA:["Tu espacio individual completo","Portafolio público + Chispas","Centro documental y Raíz privada","Comunidad y constelación"],
   CLAN:["Todo lo de Alma para cada miembro","Panel: miembros, roles y códigos","Plan de trabajo y calendario sincronizados","Proyectos y recordatorios del Clan"],
   SANTUARIO:["Todo lo de Clan a gran escala","Varios Clanes y departamentos","Panel del Santuario con métricas","Coordinación con rol Admin"]
 };
@@ -1813,7 +1813,7 @@ function vRecordatorios(a){
    =========================================================== */
 const EDITORS = {
   proyecto:{ title:"Trabajo", table:"projects", get:a=>a.projects, push:"unshift", xp:60,
-    fields:[{k:"t",l:"Trabajo"},{k:"client",l:"Cliente"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
+    fields:[{k:"t",l:"Trabajo"},{k:"client",l:"Vínculo"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
     toRow:v=>({title:v.t,client:v.client,status:v.st,pct:+v.pct||0,budget:v.budget?+v.budget:null,started_at:v.start||null,due_at:v.due||null,description:v.desc}) },
   memoria:{ title:"Memoria", table:"memories", get:a=>a.memories, push:"unshift", xp:40,
     fields:[{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({title:v.t,detail:v.d}) },
@@ -1832,7 +1832,7 @@ const EDITORS = {
     fields:[{k:"h",l:"Hora (ej: 15:00)"},{k:"t",l:"Actividad"},{k:"date",l:"Fecha",date:true},{k:"notes",l:"Notas",ta:true}], toRow:v=>({at_time:v.h,title:v.t,on_date:v.date||null,notes:v.notes}) },
   doc:{ title:"Documento", table:"library", get:a=>a.library, push:"push", xp:0,
     fields:[{k:"t",l:"Nombre"},{k:"k",l:"Tipo (Contrato, Brief…)"},{k:"url",l:"Enlace / URL"},{k:"notes",l:"Notas",ta:true}], toRow:v=>({title:v.t,kind:v.k,url:v.url,notes:v.notes}) },
-  cliente:{ title:"Cliente", table:"clients", get:a=>(a.clients||(a.clients=[])), push:"unshift", xp:0,
+  cliente:{ title:"Vínculo", table:"clients", get:a=>(a.clients||(a.clients=[])), push:"unshift", xp:0,
     fields:[{k:"name",l:"Nombre"},{k:"email",l:"Correo"},{k:"phone",l:"Teléfono"},{k:"notes",l:"Notas",ta:true}], toRow:v=>({name:v.name,email:v.email,phone:v.phone,notes:v.notes}) }
 };
 let recordCtx=null;
@@ -1939,13 +1939,13 @@ function exportPDF(){
   document.getElementById("printArea").innerHTML=`
     <div class="p-head"><div class="brand"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>ANIMA TSC</div><small>Dossier de Alma · ${new Date().toLocaleDateString("es-CL")}</small></div>
     <h1 class="p-name">${esc(a.name)}</h1>
-    <div class="p-sub">${lv.emoji} ${a.level} · ${lv.name} · ${a.xp.toLocaleString("es-CL")} XP — ${esc(a.role||"")} · ${esc(a.country||"")}</div>
+    <div class="p-sub">${lv.emoji} ${a.level} · ${lv.name} · ${a.xp.toLocaleString("es-CL")} Esencia — ${esc(a.role||"")} · ${esc(a.country||"")}</div>
     <p>${esc(a.bio||"")}</p>
     <div class="p-tags">${(a.tags||[]).map(t=>`<span>${esc(t)}</span>`).join("")}</div>
     <h2>Trayectoria</h2>${a.trajectory.map(n=>`<p><b>${esc(n.y)} · ${esc(n.t)}</b> — ${esc(n.d)}</p>`).join("")||"<p>—</p>"}
     <h2>Proyectos</h2>${a.projects.map(p=>`<p><b>${esc(p.t)}</b> (${esc(p.st)}, ${p.pct}%) — ${esc(p.client)}</p>`).join("")||"<p>—</p>"}
     <h2>Portafolio</h2><p>${a.portfolio.map(p=>esc(p.t)+" ("+esc(p.k)+")").join(" · ")||"—"}</p>
-    <h2>Finanzas</h2><p>Ingresos: ${money(inc)} · Egresos: ${money(exp)} · <b>Ganancia: ${money(inc-exp)}</b></p>
+    <h2>Raíz</h2><p>Ingresos: ${money(inc)} · Egresos: ${money(exp)} · <b>Ganancia: ${money(inc-exp)}</b></p>
     <div class="p-foot">ANIMA TSC — The Soul of Creativity · The Founding Era</div>`;
   window.print();
 }
@@ -1957,7 +1957,7 @@ function renderLumbre(){
   const a=me();
   document.getElementById("lumbreMode").innerHTML=LUMBRE_MODES.map(m=>`<div class="mode ${state.lumbreMode===m.key?'on':''}" data-mode="${m.key}"><b>${m.name}</b><small>${m.desc}</small></div>`).join("");
   const body=document.getElementById("lumbreChat");
-  const intro=`<div class="msg lum"><b>LUMBRE</b><br>Soy el motor de ANIMA para <b>${esc(a.name)}</b>. Modo: <b>${modeName()}</b>. Pregúntame por finanzas, proyectos, trayectoria o pídeme sugerencias.</div>`;
+  const intro=`<div class="msg lum"><b>LUMBRE</b><br>Soy el motor de ANIMA para <b>${esc(a.name)}</b>. Modo: <b>${modeName()}</b>. Pregúntame por Raíz, proyectos, trayectoria o pídeme sugerencias.</div>`;
   body.innerHTML=intro+state.chat.map(m=>`<div class="msg ${m.role==='you'?'you':'lum'}">${m.role==='lum'?'<b>LUMBRE</b><br>':''}${m.text}</div>`).join("");
   body.scrollTop=body.scrollHeight;
 }
@@ -1967,15 +1967,15 @@ function lumbreThink(q){
   const a=me(), t=q.toLowerCase();
   if(state.lumbreMode==="OFF") return "Estoy en modo <b>OFF</b>: solo organización manual. Actívame en Básico, IA Local o IA Conectada.";
   const inc=sum(a.finance.income), exp=sum(a.finance.expense), ai=(state.lumbreMode==="LOCAL"||state.lumbreMode==="CLOUD");
-  if(/finanz|ingreso|egreso|ganan|plata|dinero|gast/.test(t)){ const m=exp>inc*0.7?" Tus egresos son altos respecto a tus ingresos.":" Tu margen está sano."; return `Finanzas: ingresos ${money(inc)}, egresos ${money(exp)}, <b>ganancia ${money(inc-exp)}</b>.${ai?m:""}`; }
+  if(/finanz|ingreso|egreso|ganan|plata|dinero|gast|ra[ií]z/.test(t)){ const m=exp>inc*0.7?" Tus egresos son altos respecto a tus ingresos.":" Tu margen está sano."; return `Raíz: ingresos ${money(inc)}, egresos ${money(exp)}, <b>ganancia ${money(inc-exp)}</b>.${ai?m:""}`; }
   if(/cotiz|presupuesto|precio/.test(t)) return `Abre el <b>Cotizador</b> para armar un presupuesto profesional y exportarlo en PDF. ${ai?"Puedo sugerir precios según tus proyectos anteriores.":""}`;
   if(/proyect|trabajo|encargo/.test(t)){ const act=a.projects.filter(p=>p.st==="En curso"); const s=ai&&act[0]?` Enfócate en "${esc(act[0].t)}" (${act[0].pct}%).`:""; return `Tienes ${act.length} proyecto(s) en curso de ${a.projects.length}.${s}`; }
   if(/trayectoria|historia|hito/.test(t)){ const l=a.trajectory[a.trajectory.length-1]; return l?`Tu último hito: <b>${esc(l.t)}</b> (${esc(l.y)}).`:"Aún no tienes hitos. Agrega el primero en Trayectoria."; }
   if(/portafolio|obra/.test(t)) return `Tu portafolio tiene ${a.portfolio.length} obras.`;
-  if(/nivel|xp|sube|progreso/.test(t)){ const lp=levelProgress(a.xp); return lp.next?`Estás en <b>${a.level}</b> con ${a.xp.toLocaleString("es-CL")} XP. Te faltan ${(lp.next.xp-a.xp).toLocaleString("es-CL")} para <b>${lp.next.key}</b>.`:`Eres <b>ANIMA</b>. Nivel máximo. ∞`; }
+  if(/nivel|xp|esencia|sube|progreso/.test(t)){ const lp=levelProgress(a.xp); return lp.next?`Estás en <b>${a.level}</b> con ${a.xp.toLocaleString("es-CL")} Esencia. Te faltan ${(lp.next.xp-a.xp).toLocaleString("es-CL")} para <b>${lp.next.key}</b>.`:`Eres <b>ANIMA</b>. Nivel máximo. ∞`; }
   if(/resumen|reporte/.test(t)) return `Resumen: ${a.projects.filter(p=>p.st==="En curso").length} proyectos activos · ganancia ${money(inc-exp)} · nivel ${a.level} · ${a.memories.length} memorias.`;
-  if(/hola|hey|buenas/.test(t)) return `Hola, ${esc(a.name.split(" ")[0])}. ¿Reviso tus finanzas, proyectos o tu siguiente nivel?`;
-  return ai?`Puedo ayudarte con finanzas, cotizaciones, proyectos, trayectoria, niveles y reportes.`:"En modo Básico organizo finanzas, proyectos, documentos y portafolio.";
+  if(/hola|hey|buenas/.test(t)) return `Hola, ${esc(a.name.split(" ")[0])}. ¿Reviso tu Raíz, proyectos o tu siguiente nivel?`;
+  return ai?`Puedo ayudarte con Raíz, cotizaciones, proyectos, trayectoria, niveles y reportes.`:"En modo Básico organizo Raíz, proyectos, documentos y portafolio.";
 }
 
 /* ===========================================================
@@ -2048,7 +2048,7 @@ function lumbreLevelTip(l){
   const u=(l.unlocks||[]).join(", ");
   const map={
     CHISPA:`Encendiste tu <b>Chispa</b> ✨. Empieza por <b>Mi Alma</b>: completa tu identidad y sube tu primera obra. Cada acción te da Esencia y te acerca al siguiente nivel.`,
-    RAIZ:`¡Subiste a <b>Raíz</b> 🌱! Desbloqueaste <b>${u}</b>. Guarda tus clientes y contactos aquí para no perder ningún vínculo.`,
+    RAIZ:`¡Subiste a <b>Raíz</b> 🌱! Desbloqueaste <b>${u}</b>. Guarda tus vínculos y contactos aquí para no perder ninguna conexión.`,
     PULSO:`Tu Alma late: nivel <b>Pulso</b> 💓. Ahora tienes <b>${u}</b>. Crea tu primer proyecto y muévele los estados a medida que avanza.`,
     HUELLA:`Dejas <b>Huella</b> 📜. Se abrió tu <b>${u}</b>. Sube PDFs e imágenes y arma tu portafolio para mostrar al mundo.`,
     TOTEM:`Despertó <b>Tótem</b> 🔥… y conmigo, <b>LUMBRE</b>, como tu IA. Pídeme leer archivos y ordenar ideas. Desbloqueaste: <b>${u}</b>.`,
@@ -2173,7 +2173,7 @@ async function openPublic(id){
   try{ const m=await Cloud.loadModules(id);
     const tj=show("trajectory")?(m.trajectory||[]).map(x=>`<div class="node"><div class="yr">${esc(x.year)}</div><b>${esc(x.title)}</b><p class="muted" style="margin:2px 0 0">${esc(x.detail||"")}</p></div>`).join(""):"";
     const pf=show("portfolio")?(m.portfolio||[]).map(x=>`<span class="chip">${esc(x.title)} · ${esc(x.kind)}</span>`).join(""):"";
-    document.getElementById("pubExtra").innerHTML=(tj?`<h3 style="font-size:15px;margin:8px 0 4px">Trayectoria</h3><div class="tl">${tj}</div>`:"")+(pf?`<h3 style="font-size:15px;margin:14px 0 6px">Portafolio</h3><div>${pf}</div>`:"")||"Perfil público.";
+    document.getElementById("pubExtra").innerHTML=(tj?`<h3 style="font-size:15px;margin:8px 0 4px">Trayectoria</h3><div class="tl">${tj}</div>`:"")+(pf?`<h3 style="font-size:15px;margin:14px 0 6px">Portafolio</h3><div>${pf}</div>`:"")||"Alma pública.";
   }catch(e){ document.getElementById("pubExtra").textContent=""; }
 }
 function closePublic(){ document.getElementById("publicModal").classList.remove("open"); }
@@ -2337,11 +2337,11 @@ function sharePortfolio(){ const a=me(); if(!a.live){ alert("Crea tu Alma para t
 
 /* ---------- Tutorial guiado por LUMBRE ---------- */
 const TOUR=[
-  {sel:"#nav", title:"Tu menú", text:"Aquí vive tu Alma: trayectoria, portafolio, finanzas, cotizador, clientes y más. Lo que no uses, lo ocultas en Ajustes."},
-  {sel:".tabbar", title:"Tu perfil", text:"Mi Alma tiene pestañas: Resumen, Identidad (tu foto y datos), Vista pública (qué muestras) y Ajustes."},
+  {sel:"#nav", title:"Tu menú", text:"Aquí vive tu Alma: trayectoria, portafolio, Raíz, cotizador, vínculos y más. Lo que no uses, lo ocultas en Ajustes."},
+  {sel:".tabbar", title:"Tu Alma", text:"Mi Alma tiene pestañas: Resumen, Identidad (tu foto y datos), Vista pública (qué muestras) y Ajustes."},
   {sel:".camino-card", title:"Tu camino", text:"Subes de nivel creando. Cada nivel desbloquea nuevas ventanas. Toca la ⓘ para ver el mapa de niveles."},
   {sel:'[data-view="comunidad"]', title:"El mundo", text:"En Comunidad vive el Árbol de Almas: el mapa de quienes habitan ANIMA, los Ecos en vivo y el conteo por país."},
-  {sel:"#lumbreFab", title:"Soy LUMBRE ✦", text:"Tu chispa compañera. Tócame cuando quieras: te ayudo con finanzas, proyectos y tu siguiente nivel. ¡Bienvenida a ANIMA!"}
+  {sel:"#lumbreFab", title:"Soy LUMBRE ✦", text:"Tu chispa compañera. Tócame cuando quieras: te ayudo con Raíz, proyectos y tu siguiente nivel. ¡Bienvenida a ANIMA!"}
 ];
 function startTour(){ closeLumbre(); state.view="mialma"; state.almaTab="resumen"; renderAll(); setTimeout(()=>tourStep(0),360); }
 function tourStep(i){
