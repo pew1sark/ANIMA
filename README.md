@@ -41,7 +41,9 @@ La Alpha oficial está limitada a **100 Almas** (exclusividad por diseño) y añ
   (`proposals` / `votes`, vista *Consejo* en el Studio).
 - **Sistema de logs** (`activity_log`) — registro privado de cada acción (login, logout,
   obra subida, nivel desbloqueado…).
-- **Navegación que crece con el nivel** — el menú revela ventanas a medida que el Alma sube.
+- **Navegación que crece con el nivel** — el menú revela ventanas a medida que el Alma sube; las que aún no alcanza aparecen **bloqueadas** (candado + nivel que las abre) y muestran una pantalla explicativa.
+- **Planificación del Santuario** — los ADMIN de un Santuario coordinan a gran escala (tablero, proyectos y calendario): `santuario_tasks` / `santuario_projects` / `santuario_events` (RLS por `in_my_santuario` / `admin_santuario`).
+- **Resumen del Mundo** — en Comunidad, panorama de Clanes/Santuarios/niveles; acceso restringido que **concede el Fundador** desde la Consola (`almas.world_access`).
 - **Almacenamiento por nivel** — `storage_quota(level)` + **buckets separados**
   (`avatars` ≤ 2 MB, `portfolio` ≤ 10 MB, `temp` privado).
 - **Panel del Fundador** — `founder_stats()` (gated por el correo del Creador).

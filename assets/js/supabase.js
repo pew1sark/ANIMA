@@ -38,7 +38,7 @@ const Cloud = {
   async allAlmas(){
     if(!_sb) return [];
     const { data } = await _sb.from("almas")
-      .select("id,slug,name,role,crew_role,avatar_url,city,country,bio,color,level,xp,clan,santuario,plan,team_role,sparks,tags,is_founding,created_at")
+      .select("id,slug,name,role,crew_role,avatar_url,city,country,bio,color,level,xp,clan,santuario,plan,team_role,sparks,tags,is_founding,council,world_access,created_at")
       .eq("is_founding", false)
       .order("created_at", { ascending:false });
     return data || [];
@@ -162,6 +162,19 @@ const Cloud = {
   async deleteInvite(id){ const { error } = await _sb.from("clan_invites").delete().eq("id", id); if(error) throw error; },
   async joinByCode(code){ const { data, error } = await _sb.rpc("join_clan_by_code", { p_code: code }); if(error) throw error; return data; },
 
+  /* Planificación del Santuario (migración 0019) — scope por santuario. */
+  async santTasks(s){ const { data, error } = await _sb.from("santuario_tasks").select("*").eq("santuario", s).order("created_at",{ascending:false}); if(error) throw error; return data||[]; },
+  async addSantTask(s, row){ const { data, error } = await _sb.from("santuario_tasks").insert({ santuario:s, ...row }).select().single(); if(error) throw error; return data; },
+  async updateSantTask(id, patch){ const { error } = await _sb.from("santuario_tasks").update(patch).eq("id", id); if(error) throw error; },
+  async deleteSantTask(id){ const { error } = await _sb.from("santuario_tasks").delete().eq("id", id); if(error) throw error; },
+  async santProjects(s){ const { data, error } = await _sb.from("santuario_projects").select("*").eq("santuario", s).order("created_at",{ascending:false}); if(error) throw error; return data||[]; },
+  async addSantProject(s, row){ const { data, error } = await _sb.from("santuario_projects").insert({ santuario:s, ...row }).select().single(); if(error) throw error; return data; },
+  async updateSantProject(id, patch){ const { error } = await _sb.from("santuario_projects").update(patch).eq("id", id); if(error) throw error; },
+  async deleteSantProject(id){ const { error } = await _sb.from("santuario_projects").delete().eq("id", id); if(error) throw error; },
+  async santEvents(s){ const { data, error } = await _sb.from("santuario_events").select("*").eq("santuario", s).order("at_date",{ascending:true}); if(error) throw error; return data||[]; },
+  async addSantEvent(s, row){ const { data, error } = await _sb.from("santuario_events").insert({ santuario:s, ...row }).select().single(); if(error) throw error; return data; },
+  async deleteSantEvent(id){ const { error } = await _sb.from("santuario_events").delete().eq("id", id); if(error) throw error; },
+
   /* ===========================================================
      ALPHA 2026 (migración 0013)
      =========================================================== */
@@ -238,7 +251,7 @@ function dbAlmaToState(row, m){
     instagram: row.instagram || "", portfolio_url: row.portfolio_url || "", shop_url: row.shop_url || "",
     headline: row.headline || "", availability: row.availability || "",
     sparks: row.sparks || 0, created_at: row.created_at || null,
-    council: row.council === true,
+    council: row.council === true, world_access: row.world_access === true,
     essence: row.essence || 0, affinity: row.affinity || "",
     visibility: row.visibility || {},
     finance: {

@@ -1,0 +1,11 @@
+-- ===========================================================
+-- ANIMA TSC — Migración 0018: Acceso al "Resumen del Mundo"
+--
+-- El Fundador decide qué Almas pueden ver el resumen general del
+-- mundo (clanes, santuarios, panorama) dentro de Comunidad.
+--   · almas.world_access → lo concede el Creador desde la Consola.
+--
+-- CÓMO APLICAR: Supabase → SQL Editor → pega TODO → Run. (Idempotente)
+-- ===========================================================
+alter table public.almas add column if not exists world_access boolean not null default false;
+-- Fin 0018.

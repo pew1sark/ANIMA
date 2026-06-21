@@ -545,3 +545,11 @@ a.nav-item{text-decoration:none;color:inherit}
 .country-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
 .country-row:last-child{border-bottom:0}
 .country-row b{color:var(--gold-deep,#7b5920)}
+
+/* Bloqueo por nivel (Alpha 2026) */
+.nav-item.locked{opacity:.6;cursor:pointer}
+.nav-item.locked:hover{opacity:.85}
+.nav-item.locked .lock-lv{margin-left:auto;font-size:9.5px;font-weight:850;letter-spacing:.03em;
+  color:var(--gold-deep,#7b5920);background:rgba(208,170,99,.14);padding:2px 7px;border-radius:999px;white-space:nowrap}
+.locked-view{text-align:center;padding:48px 24px}
+.locked-view .locked-glyph{font-size:44px;opacity:.5;line-height:1}
