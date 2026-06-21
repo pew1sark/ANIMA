@@ -175,6 +175,8 @@ const Cloud = {
   async badgeCatalog(){ if(!_sb) return []; const { data } = await _sb.from("badges").select("*"); return data || []; },
   async myBadges(){ if(!_sb) return []; const u = await this.user(); if(!u) return []; const { data } = await _sb.from("soul_badges").select("code,earned_at").eq("user_id", u.id); return data || []; },
   async awardBadge(code){ if(!_sb) return false; const { data } = await _sb.rpc("award_badge", { p_code:code }); return !!data; },
+  /* Insignias por tiempo (Persistencia: 30 días habitando ANIMA). */
+  async claimTimeBadges(){ if(!_sb) return false; try{ const { data } = await _sb.rpc("claim_time_badges"); return !!data; }catch(e){ return false; } },
 
   /* Sistema de logs — registra una acción del Alma (silencioso si falla). */
   async log(action, meta){ if(!_sb) return; try{ await _sb.rpc("log_activity", { p_action:action, p_meta:meta||{} }); }catch(e){} },

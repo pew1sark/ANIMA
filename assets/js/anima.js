@@ -1122,6 +1122,16 @@ async function sendComment(postId){
   const el=document.getElementById("commentInput"); const body=el.value.trim(); if(!body) return; el.value="";
   try{ await Cloud.insertRow("comments",{post_id:postId,author_alma_id:a.almaId,body});
     if(window.AnimaState){ AnimaState.addEsencia(5,"Comentar en comunidad"); setTimeout(maybeLevelGuide,400); }
+    // Alpha 2026: ayudar/responder a otra Alma descubre la insignia Guardián y emite una señal.
+    const post=(state.cloudPosts||[]).find(x=>x.id===postId);
+    if(post && post.author_alma_id!==a.almaId){
+      try{
+        const nick=(a.name||"Alma").split(" ")[0];
+        Cloud.awardBadge("guardian").then(g=>{ if(g) state.cloudBadges=null; });
+        Cloud.log("comentario", { post:postId });
+        Cloud.emitEcho("senal", "✦ "+nick+" envió una señal").catch(()=>{});
+      }catch(e){}
+    }
     loadComments(postId); }catch(e){ alert("No se pudo comentar: "+(e.message||e)); }
 }
 function closePost(){ document.getElementById("postModal").classList.remove("open"); }
@@ -1720,6 +1730,8 @@ async function loadMyAlma(){
   state.currentId=a.id; state.view="mialma"; state.chat=[]; renderAll();
   // Sistema de logs (Alpha 2026): registra el inicio de sesión una vez por sesión.
   try{ if(!sessionStorage.getItem("anima_logged_login")){ Cloud.log("login"); sessionStorage.setItem("anima_logged_login","1"); } }catch(e){}
+  // Insignia Persistencia: 30 días habitando ANIMA (best-effort).
+  try{ Cloud.claimTimeBadges().then(g=>{ if(g) state.cloudBadges=null; }); }catch(e){}
   // Puente con el camino ceremonial (Esencia + Afinidad del rito de entrada)
   if(window.AnimaState){ try{
     const st=AnimaState.get(); if(a.name) st.name=a.name; if(a.affinity) st.affinity=a.affinity; AnimaState.save(st);
