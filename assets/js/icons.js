@@ -35,6 +35,7 @@
 
     /* 07 · Tipos de Huella / contenido */
     archivo:["XXXXXXXXX","X.......X","XXXXXXXXX","X..XXX..X","X.......X","XXXXXXXXX","X..XXX..X","X.......X","XXXXXXXXX"],
+    grafico:[".........",".......XX",".......XX","....XX.XX","....XX.XX",".XX.XX.XX",".XX.XX.XX",".XX.XX.XX","XXXXXXXXX"],
 
     /* 08 · Sistema / navegación auxiliares y reinos */
     ruta:   [".........","......XX.","......XX.","...XX....","...XX....","XX.......","XX.......",".........","........."],
