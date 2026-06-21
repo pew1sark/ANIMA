@@ -2,349 +2,439 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f5f5f7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/img/icon.svg" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="ANIMA" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <title>Despertar — ANIMA</title>
-  <meta name="description" content="El rito de inicio de ANIMA: despierta, crea tu Alma y comienza tu viaje." />
-  <link rel="stylesheet" href="assets/css/umbral.css" />
+  <title>Primer Despertar — ANIMA</title>
+  <meta name="description" content="El rito del Origen. No estás entrando a una app: estás cruzando el Umbral de ANIMA." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cormorant+Garamond:wght@300;500&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase.js"></script>
   <script src="assets/js/anima-state.js"></script>
-</head>
-<body class="rite">
-  <div class="field"><div class="core"></div></div>
-  <main class="rite-wrap" id="scene"><!-- las escenas se inyectan aquí --></main>
+  <style>
+    :root{
+      --bg:#ffffff; --ink:#0a0a0b; --soft:#6b6b70; --faint:#9a9aa0;
+      --line:rgba(10,10,11,.12); --line-2:rgba(10,10,11,.07); --seed:#3f7d4f;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);overflow-x:hidden;
+      font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      line-height:1.6;-webkit-font-smoothing:antialiased;letter-spacing:-.01em;
+      display:grid;place-items:center;min-height:100svh}
+    .serif{font-family:"Cormorant Garamond",serif;font-weight:300}
+    .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;text-transform:uppercase;
+      letter-spacing:.34em;font-size:10.5px;color:var(--faint)}
+    button{font-family:inherit;cursor:pointer}
+    a{color:inherit}
 
-  <script src="assets/js/rite.js"></script>
+    /* haz de luz sutil (portal) detrás del rito */
+    .veil{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+    .veil::before{content:"";position:absolute;top:-20%;left:50%;width:60vmax;height:60vmax;
+      transform:translateX(-50%);
+      background:radial-gradient(circle,rgba(10,10,11,.05),transparent 60%);
+      filter:blur(30px);animation:breathe 7s ease-in-out infinite}
+    @keyframes breathe{0%,100%{opacity:.5}50%{opacity:1}}
+
+    .stage{position:relative;z-index:1;width:100%;max-width:540px;padding:48px 28px;text-align:center;
+      opacity:0;transform:translateY(12px);transition:opacity .9s ease,transform .9s ease}
+    .stage.in{opacity:1;transform:none}
+    .eyebrow{margin-bottom:30px}
+    .pix-wrap{display:flex;justify-content:center;margin:0 auto 26px}
+    .pix-wrap svg{image-rendering:pixelated;filter:drop-shadow(0 0 0 transparent)}
+    .big{font-family:"Cormorant Garamond",serif;font-weight:300;letter-spacing:-.01em;
+      font-size:clamp(30px,6.4vw,54px);line-height:1.08;margin:0}
+    .big em{font-style:italic}
+    .word{font-size:clamp(40px,12vw,84px);letter-spacing:.14em;font-weight:300;
+      font-family:"Cormorant Garamond",serif;margin:4px 0}
+    .sub{color:var(--soft);font-size:16px;max-width:420px;margin:16px auto 0}
+    .reveal{opacity:0;animation:fadeUp 1.4s ease forwards}
+    @keyframes fadeUp{to{opacity:1;transform:none}}
+    .line{font-size:clamp(17px,3vw,21px);color:var(--ink);margin:6px 0;opacity:0;animation:fadeUp 1.2s ease forwards}
+    .contrast{font-size:16px;color:var(--soft);margin:8px 0;opacity:0;animation:fadeUp 1.2s ease forwards}
+    .contrast b{color:var(--ink);font-weight:500}
+    .pact{text-align:left;border:1px solid var(--line-2);border-radius:3px;padding:26px 28px;
+      margin:8px auto 26px;max-width:460px;background:#fbfbfc}
+    .pact p{margin:0 0 12px;font-size:15.5px;color:var(--ink)}
+    .pact p:last-child{margin:0}
+
+    .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+    .cbtn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:2px;
+      padding:13px 26px;font-size:14px;font-weight:500;letter-spacing:.03em;transition:.2s}
+    .cbtn:hover{transform:translateY(-1px);opacity:.92}
+    .cbtn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+    .cbtn.ghost:hover{border-color:var(--ink)}
+    .cbtn:disabled{opacity:.32;cursor:not-allowed;transform:none}
+    .tiny-link{display:inline-block;margin-top:20px;font-size:12.5px;color:var(--faint);
+      border-bottom:1px solid var(--line-2);padding-bottom:2px}
+    .tiny-link:hover{color:var(--ink)}
+
+    /* formularios minimalistas */
+    .form{max-width:380px;margin:26px auto 0;text-align:left}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+      color:var(--faint);margin-bottom:7px;font-family:ui-monospace,monospace}
+    .field input{width:100%;border:1px solid var(--line);background:#fff;border-radius:2px;
+      padding:13px 15px;font-size:15px;color:var(--ink);font-family:inherit}
+    .field input:focus{outline:none;border-color:var(--ink)}
+    .code-chip{display:inline-block;border:1px dashed var(--line);border-radius:2px;
+      padding:5px 12px;font-family:ui-monospace,monospace;letter-spacing:.18em;font-size:13px;color:var(--ink)}
+    .check{display:flex;gap:11px;align-items:flex-start;text-align:left;max-width:460px;
+      margin:0 auto;font-size:14px;color:var(--ink);cursor:pointer;user-select:none}
+    .check input{margin-top:3px;width:16px;height:16px;accent-color:var(--ink);flex:0 0 auto}
+    .err{color:#b23b3b;font-size:13px;min-height:18px;margin:6px 0 0;text-align:center}
+
+    /* Esencia: 1 */
+    .essence-num{display:flex;align-items:center;justify-content:center;gap:14px;margin:22px 0}
+    .essence-num .n{font-family:"Cormorant Garamond",serif;font-size:clamp(48px,14vw,96px);
+      font-weight:300;line-height:1}
+    .essence-label{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.28em;
+      text-transform:uppercase;color:var(--faint)}
+
+    /* crecimiento pixel (raíz/árbol): revela de abajo hacia arriba */
+    .grow svg rect{opacity:0;animation:appear .05s linear forwards}
+    @keyframes appear{to{opacity:1}}
+
+    /* desvanecer a blanco al entrar a ANIMA */
+    #flash{position:fixed;inset:0;background:#fff;z-index:50;opacity:0;visibility:hidden;
+      transition:opacity .7s ease}
+    #flash.on{opacity:1;visibility:visible}
+
+    @media (prefers-reduced-motion: reduce){
+      .veil::before,.reveal,.line,.contrast,.grow svg rect{animation:none;opacity:1}
+      .stage{transition:none;opacity:1;transform:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="veil"></div>
+  <main class="stage" id="scene" aria-live="polite"></main>
+  <div id="flash"></div>
+
   <script>
   /* ===========================================================
-     EL RITO DE ENTRADA — controlador de escenas
-     Despertar → Crear Alma → Primer Despertar → Tutorial → Logro
+     PRIMER DESPERTAR — el rito del Origen (cloud-gated)
+     ANIMA · blanco · negro · gris · pixel art · letras pro
+     ===========================================================
+     Pantallas: ANIMA → La Raíz → El Mundo → Almas del Origen →
+                Pacto del Origen → Crear Alma → Lumbre te observa.
+     La nube decide quién ya cruzó el Umbral (awakening_completed).
      =========================================================== */
   var scene = document.getElementById("scene");
-  var form = { name: "", email: "", pass: "", code: "", affinity: "" };
+  var form = { name:"", email:"", pass:"", code:"" };
+  var ctx  = { existing:false };     // existing = sesión sin despertar (no recrear cuenta)
+  var ALPHA = (window.AnimaState && AnimaState.ALPHA_CODE) || "ANIMA-2026";
 
-  /* Logo ANIMA: marca limpia (caret), viewBox ajustado a sus límites. Nunca se altera. */
-  var PEAK = '<svg viewBox="23 27 54 48" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-  /* render inyecta el HTML y SOLO entonces ejecuta onReady (bind de botones). */
-  function render(html, onReady) {
-    scene.classList.add("fade-out");
-    setTimeout(function () {
-      scene.innerHTML = html;
-      scene.classList.remove("fade-out");
-      scene.scrollTop = 0; window.scrollTo(0, 0);
-      if (typeof onReady === "function") onReady();
-    }, 260);
-  }
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
-  function bind(id, fn) { var el = document.getElementById(id); if (el) el.addEventListener("click", fn); }
+  function bind(id, fn){ var e=document.getElementById(id); if(e) e.addEventListener("click", fn); }
+  function render(html, onReady){
+    scene.classList.remove("in");
+    setTimeout(function(){
+      scene.innerHTML = html; window.scrollTo(0,0);
+      requestAnimationFrame(function(){ scene.classList.add("in"); });
+      if(typeof onReady==="function") onReady();
+    }, 320);
+  }
 
-  /* ---------- 1 · DESPERTAR / ALPHA ---------- */
-  function sceneAlpha() {
+  /* ---------- PIXEL ART (svg crisp · sin trofeos) ---------- */
+  function px(map, opts){
+    opts=opts||{}; var c=opts.color||"var(--ink)", sd=opts.seed||"var(--seed)", sz=opts.size||9;
+    var rows=map.replace(/^\n|\n$/g,"").split("\n"); var w=rows[0].length, h=rows.length, r="";
+    rows.forEach(function(row,y){ for(var x=0;x<row.length;x++){ var ch=row[x];
+      var fill = ch==="#" ? c : (ch==="+" ? sd : null);
+      if(fill) r+='<rect x="'+x+'" y="'+y+'" width="1.03" height="1.03" fill="'+fill+'" style="animation-delay:'+((h-y)*60)+'ms"/>';
+    }});
+    return '<svg viewBox="0 0 '+w+' '+h+'" width="'+(w*sz)+'" height="'+(h*sz)+'" shape-rendering="crispEdges">'+r+'</svg>';
+  }
+  var SPR = {
+    apex:
+      "...##...\n"+
+      "..####..\n"+
+      "..#..#..\n"+
+      ".##..##.\n"+
+      ".#....#.\n"+
+      "##....##\n"+
+      "#......#\n"+
+      "#......#",
+    chispa:
+      "....#....\n"+
+      "....#....\n"+
+      "..#.#.#..\n"+
+      "...###...\n"+
+      "##..+..##\n"+
+      "...###...\n"+
+      "..#.#.#..\n"+
+      "....#....\n"+
+      "....#....",
+    raiz:
+      "...+++...\n"+
+      "...+++...\n"+
+      "....#....\n"+
+      "....#....\n"+
+      "....#....\n"+
+      "...#.#...\n"+
+      "..#...#..\n"+
+      ".#.....#.\n"+
+      "#...#...#\n"+
+      "...#.#...\n"+
+      "..#...#..",
+    arbol:
+      "....#####....\n"+
+      "...#######...\n"+
+      "..####+####..\n"+
+      ".###########.\n"+
+      "..##+####+##.\n"+
+      "...#######...\n"+
+      "....#####....\n"+
+      "......#......\n"+
+      "......#......\n"+
+      "......#......\n"+
+      ".....#.#.....\n"+
+      "....#...#....\n"+
+      "...#.....#..."
+  };
+
+  /* ---------- PANTALLA 1 · ANIMA ---------- */
+  function sANIMA(){
     render(
-      '<span class="eyebrow"><span class="ln"></span>Despertar<span class="ln"></span></span>' +
-      '<div class="brand-mark"><span class="peak">' + PEAK + '</span>' +
-        '<h1 class="wordmark">ANIMA</h1>' +
-        '<span class="version-tag">Alpha · versión experimental</span></div>' +
-      '<div class="panel center" style="margin-top:26px">' +
-        '<p class="rite-sub" style="margin-top:0;font-size:16px">Bienvenido a ANIMA. Esta es una versión experimental. ' +
-        'Todavía pueden existir errores. Las primeras Almas ayudarán a perfeccionar ANIMA.</p>' +
-        '<div style="margin:18px 0 4px"><span class="code-chip">' + AnimaState.ALPHA_CODE + '</span></div>' +
-        '<p class="hint" style="text-align:center">Guarda este código. Lo necesitarás para nacer.</p>' +
-        '<div class="actions" style="margin-top:22px;flex-direction:column;gap:10px">' +
-          '<button class="cbtn" id="acceptBtn">Crear mi Alma ✦</button>' +
-          '<button class="cbtn ghost" id="haveBtn">Ya tengo un Alma · Entrar</button>' +
-        '</div>' +
-      '</div>' +
-      '<p class="seal">Acceso por invitación · The Founding Era</p>',
-      function () { bind("acceptBtn", sceneCrear); bind("haveBtn", sceneLogin); }
-    );
-  }
-
-  /* ---------- 1·b · ENTRAR A UN ALMA EXISTENTE (todos cruzan el Umbral) ---------- */
-  function sceneLogin() {
-    render(
-      '<span class="eyebrow"><span class="ln"></span>Entrar<span class="ln"></span></span>' +
-      '<div class="brand-mark"><span class="peak">' + PEAK + '</span>' +
-        '<h1 class="wordmark">ANIMA</h1></div>' +
-      '<h1 class="rite" style="font-size:clamp(26px,5vw,42px);margin-top:14px">Entra a tu Alma</h1>' +
-      '<p class="rite-sub">Tu Alma te espera donde la dejaste. Aquí nada se reinicia: tu Esencia sigue habitando ANIMA.</p>' +
-      '<form class="panel" id="loginForm" style="margin-top:22px" autocomplete="on" novalidate>' +
-        '<div class="field-row"><label>Correo</label>' +
-          '<input id="l_email" name="email" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" /></div>' +
-        '<div class="field-row"><label>Clave</label>' +
-          '<input id="l_pass" name="password" type="password" placeholder="Tu clave secreta" autocomplete="current-password" /></div>' +
-        '<div class="err" id="l_err"></div>' +
-        '<div style="text-align:center;margin:6px 0 0"><a href="recuperar.html" class="hint" style="color:var(--gold-deep)">¿Olvidaste tu clave?</a></div>' +
-        '<div class="actions" style="margin-top:14px">' +
-          '<button type="button" class="cbtn ghost" id="l_back">Volver</button>' +
-          '<button type="submit" class="cbtn" id="l_btn">Entrar ✦</button>' +
-        '</div>' +
-      '</form>',
-      function () {
-        bind("l_back", sceneAlpha);
-        document.getElementById("loginForm").addEventListener("submit", function (e) { e.preventDefault(); entrar(); });
-      }
-    );
-  }
-
-  async function entrar() {
-    var email = (document.getElementById("l_email").value || "").trim();
-    var pass = document.getElementById("l_pass").value;
-    var err = document.getElementById("l_err");
-    if (!email || !/.+@.+\..+/.test(email)) { err.textContent = "Necesitamos un correo válido."; return; }
-    if (!pass) { err.textContent = "Escribe tu clave."; return; }
-    if (typeof Cloud === "undefined" || !Cloud.enabled) { err.textContent = "Sin conexión a la nube. Intenta más tarde."; return; }
-    var btn = document.getElementById("l_btn"); btn.disabled = true; btn.textContent = "Entrando…"; err.textContent = "";
-    try {
-      var res = await Cloud.signIn(email, pass);
-      if (res && res.error) { err.textContent = "No pudimos entrar: " + (res.error.message || "revisa tus datos."); btn.disabled = false; btn.textContent = "Entrar ✦"; return; }
-      form.email = email;
-      var alma = await Cloud.myAlma();
-      if (alma && alma.awakening_completed) { goHome(); }   // ya cruzó el Umbral → directo a su Alma
-      else { scenePrimerDespertar(); }                      // tiene cuenta pero aún no despierta
-    } catch (e) {
-      err.textContent = "Algo falló al entrar. Intenta de nuevo."; btn.disabled = false; btn.textContent = "Entrar ✦";
-    }
-  }
-
-  /* ---------- 2 · CREAR ALMA ---------- */
-  function sceneCrear() {
-    var afn = AnimaState.AFINIDADES.map(function (a) {
-      return '<button type="button" class="afn" data-afn="' + a.key + '">' +
-        '<span class="g">' + a.glyph + '</span><b>' + a.name + '</b><small>' + esc(a.desc) + '</small></button>';
-    }).join("");
-
-    render(
-      '<span class="eyebrow"><span class="ln"></span>Crear Alma<span class="ln"></span></span>' +
-      '<h1 class="rite" style="font-size:clamp(30px,6vw,52px)">Da forma a tu Alma</h1>' +
-      '<p class="rite-sub">Aquí no hay usuarios. Hay Almas. Esto es lo único que necesitamos para que nazcas.</p>' +
-      '<form class="panel" id="crearForm" style="margin-top:24px" autocomplete="on" novalidate>' +
-        '<div class="field-row"><label>Nombre del Alma</label>' +
-          '<input id="f_name" name="name" placeholder="¿Cómo te llamarás dentro de ANIMA?" autocomplete="name" /></div>' +
-        '<div class="field-row"><label>Correo</label>' +
-          '<input id="f_email" name="email" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" /></div>' +
-        '<div class="field-row"><label>Clave</label>' +
-          '<input id="f_pass" name="password" type="password" placeholder="Una clave secreta" autocomplete="new-password" /></div>' +
-        '<div class="field-row"><label>Código Alpha</label>' +
-          '<input id="f_code" name="code" placeholder="' + AnimaState.ALPHA_CODE + '" autocomplete="off" /></div>' +
-
-        '<div class="field-row" style="margin-top:24px"><label>Tu Afinidad</label>' +
-          '<p class="hint" style="margin-top:0">Tu naturaleza creadora. No te limita: define con qué energía empiezas el camino.</p>' +
-          '<div class="afn-grid">' + afn + '</div></div>' +
-
-        '<div class="trust">' +
-          '<h4>🔒 Tu Alma es tuya</h4>' +
-          '<ul>' +
-            '<li>Nunca compartiremos ni venderemos ningún dato de tu Alma.</li>' +
-            '<li>Tú decides qué se hace público y qué permanece privado.</li>' +
-            '<li>Tu Raíz, memorias y proyectos son privados por defecto.</li>' +
-            '<li>Tu clave se cifra; ni el equipo de ANIMA puede verla.</li>' +
-            '<li>Puedes borrar tu Alma y todos tus datos cuando quieras.</li>' +
-          '</ul>' +
-          '<label class="agree"><input type="checkbox" id="f_agree" />' +
-            '<span>Acepto las <a href="legal.html#privacidad" target="_blank" style="color:var(--gold-deep)">políticas de privacidad</a> ' +
-            'y <a href="legal.html#terminos" target="_blank" style="color:var(--gold-deep)">términos</a> de ANIMA. ' +
-            'Entiendo que mi Alma controla su información.</span></label>' +
-        '</div>' +
-
-        '<div class="err" id="f_err"></div>' +
-        '<div class="actions" style="margin-top:8px">' +
-          '<button type="button" class="cbtn ghost" id="backBtn">Volver</button>' +
-          '<button type="submit" class="cbtn" id="nacerBtn">Nacer ✦</button>' +
-        '</div>' +
-      '</form>',
-      function () {
-        // restaurar valores y afinidad
-        document.getElementById("f_name").value = form.name;
-        document.getElementById("f_email").value = form.email;
-        document.getElementById("f_code").value = form.code;
-        if (form.affinity) {
-          var sel = scene.querySelector('[data-afn="' + form.affinity + '"]');
-          if (sel) sel.classList.add("on");
-        }
-        scene.querySelectorAll("[data-afn]").forEach(function (b) {
-          b.addEventListener("click", function () {
-            scene.querySelectorAll(".afn").forEach(function (x) { x.classList.remove("on"); });
-            b.classList.add("on"); form.affinity = b.dataset.afn;
-          });
-        });
-        bind("backBtn", sceneAlpha);
-        document.getElementById("crearForm").addEventListener("submit", function (e) { e.preventDefault(); nacer(); });
-      }
-    );
-  }
-
-  async function nacer() {
-    var g = function (id) { return (document.getElementById(id).value || "").trim(); };
-    form.name = g("f_name"); form.email = g("f_email"); form.pass = document.getElementById("f_pass").value;
-    form.code = g("f_code");
-    var agree = document.getElementById("f_agree").checked;
-    var err = document.getElementById("f_err");
-
-    if (!form.name) { err.textContent = "Toda Alma necesita un nombre."; return; }
-    if (!form.email || !/.+@.+\..+/.test(form.email)) { err.textContent = "Necesitamos un correo válido para tu Alma."; return; }
-    if (!form.pass || form.pass.length < 6) { err.textContent = "Tu clave debe tener al menos 6 caracteres."; return; }
-    if (!AnimaState.checkAlphaCode(form.code)) { err.textContent = "Código inválido. Esta Alma aún no ha sido convocada."; return; }
-    if (!form.affinity) { err.textContent = "Elige la Afinidad con la que despiertas."; return; }
-    if (!agree) { err.textContent = "Acepta las políticas para que tu Alma pueda nacer."; return; }
-
-    var btn = document.getElementById("nacerBtn");
-    btn.disabled = true; btn.textContent = "Naciendo…"; err.textContent = "";
-
-    // Guarda local (primera etapa de la vida del Alma) + esencia por crear (req. 9)
-    AnimaState.createAlma({ name: form.name, email: form.email, affinity: form.affinity, code: form.code });
-    AnimaState.addEsencia(40, "Crear Alma");
-    var s = AnimaState.get(); s.steps.despertar = true; AnimaState.save(s);
-
-    // Nube sin fricción: crea la cuenta real en Supabase (auto-confirmada,
-    // sesión inmediata). Si el correo ya existe, iniciamos sesión en el acto.
-    try {
-      if (typeof Cloud !== "undefined" && Cloud.enabled) {
-        var res = await Cloud.signUp(form.email, form.pass, form.name, form.affinity);
-        var exists = res && res.error && /registered|already/i.test(res.error.message || "");
-        var hasSession = res && res.data && res.data.session;
-        if (exists || (!hasSession && !(res && res.error))) {
-          try { await Cloud.signIn(form.email, form.pass); } catch (e2) {}
-        } else if (res && res.error && !exists) {
-          console.warn("ANIMA signUp:", res.error.message);
-        }
-      }
-    } catch (e) { console.warn("ANIMA nube:", e); }
-
-    scenePrimerDespertar();
-  }
-
-  /* ---------- 3 · PRIMER DESPERTAR ---------- */
-  function scenePrimerDespertar() {
-    var s = AnimaState.get(); s.steps.primerDespertar = true; AnimaState.save(s);
-    render(
-      '<span class="eyebrow"><span class="ln"></span>Primer Despertar<span class="ln"></span></span>' +
-      '<div class="lumbre-core"><span class="halo"></span><span class="ring r1"></span>' +
-        '<span class="ring r2"></span><span class="ring r3"></span>' +
-        '<img src="assets/img/lumbre.svg" width="110" height="130" alt="LUMBRE" /></div>' +
-      '<h1 class="rite" style="font-size:clamp(32px,7vw,60px)">Has nacido</h1>' +
-      '<p class="rite-lede">Pero todavía eres una chispa.</p>' +
-      '<p class="rite-sub">Cada experiencia dentro de ANIMA expandirá tu conciencia.</p>' +
-      essenceHTML() +
-      '<div class="actions"><button class="cbtn" id="viajeBtn">Comenzar viaje ✦</button></div>',
-      function () { bind("viajeBtn", function () { sceneTutorial(0); }); animateEssence(); }
-    );
-  }
-
-  /* ---------- 4 · RITO DE INICIO / TUTORIAL ---------- */
-  var TUTORIAL = [
-    { ico: "✨", t: "Qué es Mi Alma", d: "Mi Alma es tu espacio vivo: tu identidad, tu Alma y el pulso de lo que creas. Todo nace y se recuerda aquí. No es un Núcleo de control: es tu reflejo dentro de ANIMA." },
-    { ico: "🜂", t: "Qué son los niveles", d: "Tu Alma crece por niveles, de Chispa a ANIMA. Subir no es un trofeo: cada nivel despierta nuevas capacidades del sistema. Empiezas como Chispa." },
-    { ico: "🔓", t: "Qué se desbloquea", d: "Constelación, Proyectos, Huella (biblioteca y portafolio), LUMBRE (tu presencia), Automatizaciones y, al final, el ecosistema completo. Se abren a medida que avanzas." },
-    { ico: "💠", t: "Cómo ganas Esencia", d: "La Esencia es tu energía de crecimiento. Ganas Esencia al interactuar: completar tu Alma, dar chispas a otras Almas, publicar en la comunidad y crear. Mientras más vives ANIMA, más rápido despiertas." },
-    { ico: "∞", t: "Cómo entrar a ANIMA", d: "Al terminar este rito entrarás a tu Home: verás tu nivel, tu Esencia y lo que tienes desbloqueado. Desde ahí exploras ANIMA a tu ritmo." }
-  ];
-  function sceneTutorial(i) {
-    var step = TUTORIAL[i];
-    var dots = TUTORIAL.map(function (_, k) { return '<i class="' + (k === i ? "on" : "") + '"></i>'; }).join("");
-    var last = i === TUTORIAL.length - 1;
-    render(
-      '<span class="eyebrow"><span class="ln"></span>Rito de Inicio · ' + (i + 1) + '/' + TUTORIAL.length + '<span class="ln"></span></span>' +
-      '<div class="dots">' + dots + '</div>' +
-      '<div class="panel center">' +
-        '<div class="step-ico">' + step.ico + '</div>' +
-        '<h1 class="rite" style="font-size:clamp(26px,5vw,40px)">' + step.t + '</h1>' +
-        '<p class="rite-sub" style="font-size:16px">' + step.d + '</p>' +
-        '<div class="actions" style="margin-top:24px">' +
-          (i > 0 ? '<button class="cbtn ghost" id="tprev">Atrás</button>' : '') +
-          '<button class="cbtn" id="tnext">' + (last ? "Entrar a ANIMA ✦" : "Siguiente") + '</button>' +
-        '</div>' +
+      '<div class="eyebrow mono">El Umbral</div>'+
+      '<div class="pix-wrap">'+px(SPR.apex,{size:9})+'</div>'+
+      '<h1 class="word">ANIMA</h1>'+
+      '<p class="sub">Todavía está despertando.</p>'+
+      '<div class="reveal" style="animation-delay:1.8s;margin-top:30px">'+
+        '<p class="big" style="font-size:clamp(22px,4.4vw,34px)">No has sido invitado a probar una aplicación.<br><em>Has sido invitado a habitar un mundo.</em></p>'+
+        '<div class="actions"><button class="cbtn" id="b1">Continuar</button></div>'+
+        '<a class="tiny-link" id="haveAlma">Ya tengo un Alma · Entrar</a>'+
       '</div>',
-      function () {
-        if (i > 0) bind("tprev", function () { sceneTutorial(i - 1); });
-        bind("tnext", function () { last ? completarTutorial() : sceneTutorial(i + 1); });
+      function(){ bind("b1", sRaiz); bind("haveAlma", sLogin); }
+    );
+  }
+
+  /* ---------- PANTALLA 2 · LA RAÍZ ---------- */
+  function sRaiz(){
+    render(
+      '<div class="eyebrow mono">La Raíz</div>'+
+      '<div class="pix-wrap grow">'+px(SPR.raiz,{size:9})+'</div>'+
+      '<p class="line" style="animation-delay:.4s">Antes de existir los Clanes,</p>'+
+      '<p class="line" style="animation-delay:1.1s">antes de los Ecos,</p>'+
+      '<p class="line" style="animation-delay:1.8s">antes del Árbol,</p>'+
+      '<p class="line" style="animation-delay:2.5s;color:var(--soft)">existió una pregunta:</p>'+
+      '<p class="big reveal" style="animation-delay:3.4s;margin-top:18px">¿Qué huella deja un Alma en el mundo?</p>'+
+      '<div class="reveal" style="animation-delay:4.2s"><div class="actions"><button class="cbtn" id="b2">Escuchar</button></div></div>',
+      function(){ bind("b2", sMundo); }
+    );
+  }
+
+  /* ---------- PANTALLA 3 · EL MUNDO ---------- */
+  function sMundo(){
+    render(
+      '<div class="eyebrow mono">El Mundo</div>'+
+      '<div class="pix-wrap grow">'+px(SPR.arbol,{size:9})+'</div>'+
+      '<p class="big" style="font-size:clamp(24px,5vw,38px)">ANIMA es un mundo vivo.</p>'+
+      '<div style="margin-top:22px">'+
+        '<p class="contrast" style="animation-delay:.8s">Aquí no existen usuarios. <b>Existen Almas.</b></p>'+
+        '<p class="contrast" style="animation-delay:1.5s">No existen seguidores. <b>Existen Ecos.</b></p>'+
+        '<p class="contrast" style="animation-delay:2.2s">No existen puntos. <b>Existe Esencia.</b></p>'+
+      '</div>'+
+      '<div class="reveal" style="animation-delay:3s"><div class="actions"><button class="cbtn" id="b3">Comprendo</button></div></div>',
+      function(){ bind("b3", sOrigen); }
+    );
+  }
+
+  /* ---------- PANTALLA 4 · ALMAS DEL ORIGEN ---------- */
+  function sOrigen(){
+    render(
+      '<div class="eyebrow mono">Serán recordadas para siempre</div>'+
+      '<p class="big">Las primeras 30 Almas<br><em>serán recordadas para siempre.</em></p>'+
+      '<div class="mono" style="margin-top:34px;letter-spacing:.4em">Almas del Origen</div>'+
+      '<div class="word" id="originCount" style="font-size:clamp(30px,9vw,64px);margin-top:6px">— / 30</div>'+
+      '<div class="actions"><button class="cbtn" id="b4">Deseo habitar ANIMA</button></div>',
+      function(){
+        bind("b4", sPacto);
+        try{ if(window.Cloud && Cloud.enabled && Cloud.soulsCount){
+          Cloud.soulsCount().then(function(n){ var el=document.getElementById("originCount");
+            if(el && n!=null){ el.textContent = Math.min(n,30) + " / 30"; } });
+        } }catch(e){}
       }
     );
   }
-  function completarTutorial() {
-    var s = AnimaState.get();
-    if (!s.steps.tutorial) { s.steps.tutorial = true; AnimaState.save(s); AnimaState.addEsencia(60, "Completar tutorial"); }
-    sceneLogro();
-  }
 
-  /* ---------- 5 · PRIMER LOGRO ---------- */
-  function sceneLogro() {
-    var s = AnimaState.get(); s.steps.logro = true; AnimaState.save(s);
-    AnimaState.markCompleted();
-    /* El Primer Despertar queda guardado EN LA NUBE (una sola vez por Alma). */
-    persistAwakening();
-    var p = AnimaState.progress();
+  /* ---------- PANTALLA 5 · PACTO DEL ORIGEN ---------- */
+  function sPacto(){
     render(
-      '<span class="eyebrow"><span class="ln"></span>Logro desbloqueado<span class="ln"></span></span>' +
-      '<div class="medal">🏆</div>' +
-      '<h1 class="rite" style="font-size:clamp(28px,6vw,52px)">Primer Despertar</h1>' +
-      '<p class="rite-lede">Tu Alma ha despertado. Ahora formas parte del Origen.</p>' +
-      '<p class="rite-sub" id="originLine">El Árbol ha reconocido tu presencia.</p>' +
-      essenceHTML() +
-      '<div class="actions"><button class="cbtn" id="enterBtn">Entrar a ANIMA ✦</button></div>' +
-      '<p class="seal">Tu viaje apenas comienza. Sigue creando para dejar huella en ANIMA.</p>',
-      function () { bind("enterBtn", goHome); animateEssence(); }
+      '<div class="eyebrow mono">El Pacto del Origen</div>'+
+      '<p class="big">El Pacto del Origen</p>'+
+      '<div class="pact" style="margin-top:26px">'+
+        '<p>ANIMA aún está despertando. Sus raíces son jóvenes. Sus ramas todavía buscan el cielo.</p>'+
+        '<p>Tu presencia ayudará a darle forma. Tu Esencia permanecerá aquí.</p>'+
+        '<p>Y si decides cruzar el Umbral, formarás parte de las <b>Almas del Origen</b>.</p>'+
+      '</div>'+
+      '<label class="check"><input type="checkbox" id="pactChk" /> <span>Acepto convertirme en un Alma del Origen.</span></label>'+
+      '<div class="actions"><button class="cbtn" id="b5" disabled>Continuar</button></div>',
+      function(){
+        var chk=document.getElementById("pactChk"), b=document.getElementById("b5");
+        chk.addEventListener("change", function(){ b.disabled = !chk.checked; });
+        bind("b5", function(){ if(!chk.checked) return; ctx.existing ? sFinal() : sCrear(); });
+      }
     );
   }
 
-  /* Persiste el Primer Despertar en la nube (idempotente). Si origin_soul,
-     muestra el número del Origen. Nunca bloquea la entrada si la nube falla. */
-  async function persistAwakening() {
-    try {
-      if (typeof Cloud !== "undefined" && Cloud.enabled) {
+  /* ---------- PANTALLA 6 · CREAR ALMA ---------- */
+  function sCrear(){
+    render(
+      '<div class="eyebrow mono">Crear Alma</div>'+
+      '<p class="big">Da forma a tu Alma</p>'+
+      '<p class="sub">Aquí no hay usuarios. Hay Almas. Esto es lo único que necesitamos para que nazcas.</p>'+
+      '<form class="form" id="crearForm" autocomplete="on" novalidate>'+
+        '<div class="field"><label>Nombre del Alma</label><input id="f_name" name="name" placeholder="¿Cómo te llamarás dentro de ANIMA?" autocomplete="name" /></div>'+
+        '<div class="field"><label>Correo</label><input id="f_email" name="email" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" /></div>'+
+        '<div class="field"><label>Contraseña</label><input id="f_pass" name="password" type="password" placeholder="Una clave secreta (mín. 6)" autocomplete="new-password" /></div>'+
+        '<div class="field"><label>Código del Origen</label><input id="f_code" name="code" placeholder="'+esc(ALPHA)+'" autocomplete="off" /></div>'+
+        '<div style="text-align:center;margin:4px 0 2px"><span class="code-chip">'+esc(ALPHA)+'</span></div>'+
+        '<div class="err" id="f_err"></div>'+
+        '<div class="actions" style="margin-top:14px">'+
+          '<button type="button" class="cbtn ghost" id="b_back">Volver</button>'+
+          '<button type="submit" class="cbtn" id="b_nacer">Crear Alma</button>'+
+        '</div>'+
+      '</form>',
+      function(){
+        document.getElementById("f_name").value=form.name;
+        document.getElementById("f_email").value=form.email;
+        document.getElementById("f_code").value=form.code;
+        bind("b_back", sPacto);
+        document.getElementById("crearForm").addEventListener("submit", function(e){ e.preventDefault(); nacer(); });
+      }
+    );
+  }
+
+  async function nacer(){
+    var g=function(id){ return (document.getElementById(id).value||"").trim(); };
+    form.name=g("f_name"); form.email=g("f_email"); form.pass=document.getElementById("f_pass").value; form.code=g("f_code");
+    var err=document.getElementById("f_err");
+    if(!form.name){ err.textContent="Toda Alma necesita un nombre."; return; }
+    if(!form.email || !/.+@.+\..+/.test(form.email)){ err.textContent="Necesitamos un correo válido."; return; }
+    if(!form.pass || form.pass.length<6){ err.textContent="Tu clave debe tener al menos 6 caracteres."; return; }
+    var okCode = window.AnimaState ? AnimaState.checkAlphaCode(form.code) : (form.code.toUpperCase()===ALPHA);
+    if(!okCode){ err.textContent="Código inválido. Esta Alma aún no ha sido convocada."; return; }
+
+    var btn=document.getElementById("b_nacer"); btn.disabled=true; btn.textContent="Naciendo…"; err.textContent="";
+    if(typeof Cloud==="undefined" || !Cloud.enabled){ err.textContent="Sin conexión a la nube. Intenta más tarde."; btn.disabled=false; btn.textContent="Crear Alma"; return; }
+    try{
+      var res = await Cloud.signUp(form.email, form.pass, form.name, null);
+      var exists = res && res.error && /registered|already/i.test(res.error.message||"");
+      var hasSession = res && res.data && res.data.session;
+      if(exists){
+        var si = await Cloud.signIn(form.email, form.pass);
+        if(si && si.error){ err.textContent="Este correo ya tiene un Alma, pero la clave no coincide."; btn.disabled=false; btn.textContent="Crear Alma"; return; }
+      } else if(res && res.error){
+        err.textContent="No pudimos crear tu Alma: "+(res.error.message||"intenta de nuevo."); btn.disabled=false; btn.textContent="Crear Alma"; return;
+      } else if(!hasSession){
+        try{ await Cloud.signIn(form.email, form.pass); }catch(e2){}
+      }
+    }catch(e){ err.textContent="Algo falló al crear tu Alma. Intenta de nuevo."; btn.disabled=false; btn.textContent="Crear Alma"; return; }
+    sFinal();
+  }
+
+  /* ---------- ENTRAR A UN ALMA EXISTENTE ---------- */
+  function sLogin(){
+    render(
+      '<div class="eyebrow mono">Entrar</div>'+
+      '<div class="pix-wrap">'+px(SPR.apex,{size:7})+'</div>'+
+      '<p class="big">Entra a tu Alma</p>'+
+      '<p class="sub">Tu Alma te espera donde la dejaste. Aquí nada se reinicia: tu Esencia sigue habitando ANIMA.</p>'+
+      '<form class="form" id="loginForm" autocomplete="on" novalidate>'+
+        '<div class="field"><label>Correo</label><input id="l_email" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" /></div>'+
+        '<div class="field"><label>Clave</label><input id="l_pass" type="password" placeholder="Tu clave secreta" autocomplete="current-password" /></div>'+
+        '<div class="err" id="l_err"></div>'+
+        '<div style="text-align:center;margin-top:2px"><a class="tiny-link" href="recuperar.html">¿Olvidaste tu clave?</a></div>'+
+        '<div class="actions" style="margin-top:14px">'+
+          '<button type="button" class="cbtn ghost" id="l_back">Volver</button>'+
+          '<button type="submit" class="cbtn" id="l_btn">Entrar</button>'+
+        '</div>'+
+      '</form>',
+      function(){
+        bind("l_back", sANIMA);
+        document.getElementById("loginForm").addEventListener("submit", function(e){ e.preventDefault(); entrar(); });
+      }
+    );
+  }
+
+  async function entrar(){
+    var email=(document.getElementById("l_email").value||"").trim();
+    var pass=document.getElementById("l_pass").value;
+    var err=document.getElementById("l_err");
+    if(!email || !/.+@.+\..+/.test(email)){ err.textContent="Necesitamos un correo válido."; return; }
+    if(!pass){ err.textContent="Escribe tu clave."; return; }
+    if(typeof Cloud==="undefined" || !Cloud.enabled){ err.textContent="Sin conexión a la nube. Intenta más tarde."; return; }
+    var btn=document.getElementById("l_btn"); btn.disabled=true; btn.textContent="Entrando…"; err.textContent="";
+    try{
+      var res=await Cloud.signIn(email, pass);
+      if(res && res.error){ err.textContent="No pudimos entrar: "+(res.error.message||"revisa tus datos."); btn.disabled=false; btn.textContent="Entrar"; return; }
+      form.email=email;
+      var alma=await Cloud.myAlma();
+      if(alma && alma.awakening_completed){ goHome(); }      // ya cruzó el Umbral → su Alma
+      else { ctx.existing=true; sRaiz(); }                   // tiene cuenta, aún no despierta → rito
+    }catch(e){ err.textContent="Algo falló al entrar. Intenta de nuevo."; btn.disabled=false; btn.textContent="Entrar"; }
+  }
+
+  /* ---------- FINAL · LUMBRE TE OBSERVA ---------- */
+  function sFinal(){
+    render(
+      '<div class="eyebrow mono">Lumbre te observa</div>'+
+      '<div class="pix-wrap grow">'+px(SPR.chispa,{size:9})+'</div>'+
+      '<p class="big">Tu Alma ha despertado.</p>'+
+      '<div class="essence-num reveal" style="animation-delay:1s">'+
+        '<div class="pix-wrap" style="margin:0">'+px(SPR.chispa,{size:5,color:"var(--seed)"})+'</div>'+
+        '<div><div class="essence-label">Esencia</div><div class="n">1</div></div>'+
+      '</div>'+
+      '<div class="reveal" style="animation-delay:2s">'+
+        '<div class="pix-wrap grow" style="margin-bottom:14px">'+px(SPR.arbol,{size:7})+'</div>'+
+        '<p class="line" style="animation-delay:2.2s">El Árbol brota.</p>'+
+        '<p class="big" style="font-size:clamp(22px,4.4vw,32px);margin-top:10px">Bienvenido.<br><em id="originLine">Ahora formas parte del Origen.</em></p>'+
+        '<div class="actions"><button class="cbtn" id="bEnter">Entrar a ANIMA</button></div>'+
+      '</div>',
+      function(){ bind("bEnter", finish); persistAwakening(); }
+    );
+  }
+
+  /* Persiste el Primer Despertar en la nube (idempotente, una sola vez). */
+  async function persistAwakening(){
+    try{ if(window.AnimaState) AnimaState.markCompleted(); }catch(e){}
+    try{
+      if(typeof Cloud!=="undefined" && Cloud.enabled){
         var alma = await Cloud.completeAwakening();
-        if (alma && alma.origin_soul) {
-          var ln = document.getElementById("originLine");
-          if (ln) ln.innerHTML = 'Eres el <b style="color:var(--gold-deep)">Alma del Origen Nº ' + alma.origin_number + '</b>. Serás recordada para siempre.';
+        if(alma && alma.origin_soul){
+          var ln=document.getElementById("originLine");
+          if(ln) ln.innerHTML = 'Eres el <span style="font-style:normal">Alma del Origen Nº '+alma.origin_number+'</span>.';
         }
       }
-    } catch (e) { console.warn("ANIMA · Primer Despertar (nube):", e); }
-  }
-  /* Tras cruzar el Umbral, el Alma entra a su mundo (la app). */
-  function goHome() { if (window.Rite && Rite.go) Rite.go("studio.html"); else location.href = "studio.html"; }
-
-  /* ---------- Esencia (barra) ---------- */
-  function essenceHTML() {
-    var p = AnimaState.progress();
-    return '<div class="essence">' +
-      '<div class="top"><span>ALMA · Nivel actual: <span class="lvl">' + p.level.glyph + ' ' + p.level.name.toUpperCase() + '</span></span>' +
-      '<span>Esencia: ' + p.into + ' / ' + p.span + '</span></div>' +
-      '<div class="ebar"><span data-pct="' + p.pct + '"></span></div></div>';
-  }
-  function animateEssence() {
-    var bar = scene.querySelector(".ebar > span");
-    if (bar) setTimeout(function () { bar.style.width = (bar.dataset.pct || 0) + "%"; }, 200);
+    }catch(e){ console.warn("ANIMA · Primer Despertar (nube):", e); }
   }
 
-  /* ---------- Boot: la NUBE decide quién cruzó el Umbral ---------- */
-  function resumeLocal() {
-    if (AnimaState.isCompleted()) { goHome(); return; }
-    var s = AnimaState.get();
-    if (s.steps.tutorial) sceneLogro();
-    else if (s.steps.nacer) scenePrimerDespertar();
-    else sceneAlpha();
+  function finish(){
+    var btn=document.getElementById("bEnter"); if(btn) btn.disabled=true;
+    var f=document.getElementById("flash"); f.classList.add("on");   // desvanece a blanco
+    setTimeout(goHome, 720);
   }
-  (function boot() {
-    if (typeof Cloud !== "undefined" && Cloud.enabled) {
-      Cloud.session().then(function (sess) {
-        if (!sess) { sceneAlpha(); return; }                 // sin sesión → puertas (crear / entrar)
-        Cloud.myAlma().then(function (alma) {
-          if (alma && alma.awakening_completed) { goHome(); } // ya despertó → directo a su Alma
-          else { form.email = (sess.user && sess.user.email) || ""; scenePrimerDespertar(); }
-        }).catch(resumeLocal);
-      }).catch(resumeLocal);
-    } else {
-      resumeLocal();
-    }
+  function goHome(){ location.href="studio.html"; }
+
+  /* ---------- BOOT: la NUBE decide quién cruzó el Umbral ---------- */
+  (function boot(){
+    if(typeof Cloud!=="undefined" && Cloud.enabled){
+      Cloud.session().then(function(sess){
+        if(!sess){ sANIMA(); return; }                         // sin sesión → rito desde el inicio
+        Cloud.myAlma().then(function(alma){
+          if(alma && alma.awakening_completed){ goHome(); }     // ya despertó → su Alma
+          else { ctx.existing=true; form.email=(sess.user&&sess.user.email)||""; sANIMA(); }
+        }).catch(function(){ sANIMA(); });
+      }).catch(function(){ sANIMA(); });
+    } else { sANIMA(); }
   })();
   </script>
 </body>
