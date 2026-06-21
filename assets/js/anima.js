@@ -204,8 +204,6 @@ function renderNav(){
   // Consejo de Almas: solo las Almas Fundadoras (Consejo) y el Creador.
   if(me().council || (isCreator && !state.viewAs)) world+=navItem({v:"consejo",ico:"⚖",t:"Consejo"});
   if(planAllows("santuario")) world+=navItem({v:"santuario",ico:"🜁",t:"Santuario"});
-  // Ecos de ANIMA + Árbol de Almas viven en su propia pantalla (espacio vivo).
-  world+=`<a class="nav-item" href="arbol.html"><span class="ico">✦</span>Árbol de Almas</a>`;
   if(world) h+=`<div class="nav-label">Mundo</div>`+world;
   // "El menú crece con la persona": muestra qué se abre al subir de nivel.
   const lpNav=levelProgress(me().xp);
@@ -268,7 +266,9 @@ const COUNTRY_COORDS={ "chile":[-35,-71],"argentina":[-38,-63],"colombia":[4,-73
 const deburr=s=>(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u{1F1E6}-\u{1F1FF}]/gu,"").trim().toLowerCase();
 function almaLatLng(m){ const c=deburr(m.city); if(CITY_COORDS[c]) return CITY_COORDS[c];
   const co=deburr(m.country); if(COUNTRY_COORDS[co]) return COUNTRY_COORDS[co]; return [15,-20]; }
-function constelacionHTML(){
+/* El mapa de Almas (puntos sobre el planeta). Compartido por el dashboard
+   y por el Árbol de Almas de la ventana de Comunidad. */
+function soulMapWorld(sz){
   const list=roster();
   const recent=[...list].sort((a,b)=>new Date(b.created_at||0).getTime()-new Date(a.created_at||0).getTime()).slice(0,5);
   const nodes=list.map(m=>{
@@ -279,6 +279,11 @@ function constelacionHTML(){
     const act=(liveMode()&&!m.live)?`data-pub="${m.id}"`:`data-alma="${m.id}"`;
     return `<button class="wn ${isNew?'new':''}" ${act} style="left:${x}%;top:${y}%;--c:${m.color}" title="${esc(m.name)} · ${esc(m.city||m.country||"")} · ${m.level}">${initials(m.name)}</button>`;
   }).join("");
+  return `<div class="worldmap ${sz}"><img src="${WORLD_IMG}" alt="" loading="lazy" onerror="this.style.display='none'">${nodes}</div>`;
+}
+function constelacionHTML(){
+  const list=roster();
+  const recent=[...list].sort((a,b)=>new Date(b.created_at||0).getTime()-new Date(a.created_at||0).getTime()).slice(0,5);
   const chips=recent.map(m=>`<span class="chip"><b style="color:${m.color}">●</b> ${esc(m.name)} · ${esc(deburr(m.city)?m.city:m.country||"")} ${m.created_at?"· "+timeAgo(m.created_at):""}</span>`).join("");
   const sz=getCfg(me()).mapSize||"md";
   return `<div class="card s12 map-card">
@@ -288,7 +293,7 @@ function constelacionHTML(){
       <div class="spacer" style="flex:1"></div>
       <div class="map-sizes">${["sm","md","lg"].map(s=>`<button class="msz ${sz===s?'on':''}" data-mapsize="${s}">${s.toUpperCase()}</button>`).join("")}</div>
     </div>
-    <div class="worldmap ${sz}"><img src="${WORLD_IMG}" alt="" loading="lazy" onerror="this.style.display='none'">${nodes}</div>
+    ${soulMapWorld(sz)}
     <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
       <small class="pixel-font" style="font-size:8px;color:#7b5920">ENTRANDO AL MUNDO</small>
       ${chips}
@@ -1067,10 +1072,51 @@ function qExport(){
 function roster(){ return (state.cloudAlmas && state.cloudAlmas.length) ? state.cloudAlmas : state.almas; }
 const liveMode = () => !!(state.cloudAlmas && state.cloudAlmas.length);
 function authorOf(id){ return (state.cloudAlmas||[]).find(x=>x.id===id) || {name:"Alma",color:"#888"}; }
+/* ===========================================================
+   COMUNIDAD — el Árbol de Almas como referencia + Ecos + países.
+   "Esto forma parte de la ventana de Comunidad." (Alpha 2026)
+   =========================================================== */
+const ECO_ICON={ despertar:"✦", huella:"▦", nivel:"⤴", eco:"◎", senal:"➶", consejo:"⚖" };
 function vComunidad(a){
   const list=roster(); const clan=SEED_CLANS.find(c=>c.name===a.clan);
   const members=a.clan?list.filter(m=>m.clan===a.clan):[];
   const feed=state.cloudPosts||[];
+  const sz=getCfg(me()).mapSize||"md";
+
+  // Contador X / 100 (vivo) + países desde las Almas presentes.
+  const n = state.cloudSoulsCount!=null ? state.cloudSoulsCount : list.length;
+  const counts={}; list.forEach(m=>{ const c=(m.country&&m.country.trim())?m.country.trim():"En tránsito"; counts[c]=(counts[c]||0)+1; });
+  const countriesArr=Object.entries(counts).sort((x,y)=>y[1]-x[1]);
+
+  // Ecos (carga diferida).
+  if(state.cloudEcos==null) loadCommunityExtras();
+  const ecos=state.cloudEcos||[];
+  const ecosHTML = (state.cloudEcos==null)
+    ? `<p class="muted" style="font-size:13px">Escuchando los Ecos…</p>`
+    : (ecos.length
+        ? ecos.slice(0,10).map(e=>`<div class="eco-row"><span class="eco-ico">${ECO_ICON[e.kind]||"·"}</span>
+            <div><div style="font-size:13.5px">${esc(e.text||("✦ "+(e.alma_name||"Una Alma")))}</div>
+            <small class="muted">${esc(timeAgo(e.created_at))}</small></div></div>`).join("")
+        : `<p class="muted" style="font-size:13px">Aún no hay Ecos. Cuando una Alma despierte o deje una huella, aparecerá aquí.</p>`);
+
+  // EL ÁRBOL DE ALMAS — mapa (referencia) + panel lateral.
+  const arbol = `<div class="card s8 map-card">
+      <div class="map-bar">
+        <span class="pixel-font" style="font-size:11px;color:#e9d9a8">✦ ÁRBOL DE ALMAS</span>
+        <span class="pill ${liveMode()?'gold':''}" style="margin-left:6px">${n} / 100</span>
+        <div class="spacer" style="flex:1"></div>
+        <div class="map-sizes">${["sm","md","lg"].map(s=>`<button class="msz ${sz===s?'on':''}" data-mapsize="${s}">${s.toUpperCase()}</button>`).join("")}</div>
+      </div>
+      ${soulMapWorld(sz)}
+      <div class="muted" style="font-size:12px;margin-top:10px">${n>=90?"El Umbral está casi completo. ":""}${n} Almas habitan actualmente ANIMA · quedan ${Math.max(0,100-n)} lugares.</div>
+    </div>`;
+  const aside = `<div class="card s4 arbol-aside">
+      <div class="section-title"><h2 style="font-size:15px">Ecos de ANIMA</h2></div>
+      <div class="ecos-mini">${ecosHTML}</div>
+      <div class="section-title" style="margin-top:14px"><h2 style="font-size:15px">Países</h2></div>
+      <div class="country-rows">${countriesArr.length?countriesArr.map(([c,k])=>`<div class="country-row"><span>${esc(c)}</span><b>${k}</b></div>`).join(""):`<p class="muted" style="font-size:13px">Todavía sin geografía.</p>`}</div>
+    </div>`;
+
   const create = a.live ? `<div class="card s12"><div class="section-title"><h2>Comparte con la comunidad</h2></div>
       <div class="field"><input id="postTitle" placeholder="Título (opcional)"></div>
       <div class="field"><textarea id="postBody" rows="2" placeholder="¿Qué estás creando? Comparte un proyecto, idea o pregunta…"></textarea></div>
@@ -1085,13 +1131,27 @@ function vComunidad(a){
   const clanCard = a.clan ? `<div class="card s12"><div class="section-title"><h2>${clan?clan.emoji:"🖤"} ${esc(a.clan)}</h2><div class="spacer"></div><span class="pill">Clan · Nivel 2</span></div>
       <p class="muted">${clan?clan.desc:"Comunidad privada por invitación (2 a 8 Almas)."}</p>
       <div class="alma-grid" style="margin-top:14px">${members.map(almaMini).join("")}</div></div>`
-    : `<div class="card s12"><div class="section-title"><h2>Sin Clan aún</h2></div><p class="muted">Un Clan es una comunidad privada por invitación (2 a 8 Almas).</p></div>`;
-  return `<div class="grid">${create}${wall}${clanCard}
-    <div class="card s12"><div class="section-title"><h2>Constelación de Almas</h2><div class="spacer"></div>
-      <span class="pill ${liveMode()?'gold':''}">${liveMode()?'🜂 En vivo · '+list.length+' Almas':'Founding · '+list.length+' Almas'}</span></div>
-      <div class="alma-grid">${list.map(almaMini).join("")}</div></div></div>`;
+    : "";
+  return `<div class="grid">${arbol}${aside}${create}${wall}${clanCard}</div>`;
 }
 async function loadPosts(){ if(!Cloud.enabled) return; try{ state.cloudPosts=await Cloud.posts(); if(state.view==="comunidad") renderView(); }catch(e){} }
+async function loadCommunityExtras(){
+  if(!Cloud.enabled){ state.cloudEcos=[]; return; }
+  try{ const r=await Promise.all([Cloud.echoes(12), Cloud.soulsCount()]); state.cloudEcos=r[0]; state.cloudSoulsCount=r[1]; ensureEcoRealtime(); if(state.view==="comunidad") renderView(); }
+  catch(e){ state.cloudEcos=[]; }
+}
+/* Ecos en vivo: un solo canal para toda la sesión. */
+function ensureEcoRealtime(){
+  if(window.__ecoSub) return;
+  window.__ecoSub = Cloud.subscribeEchoes(function(eco){
+    if(!eco) return;
+    const cur = state.cloudEcos || [];
+    if(cur.some(e=>e.id===eco.id)) return;
+    state.cloudEcos = [eco, ...cur].slice(0,30);
+    if(eco.kind==="despertar" && state.cloudSoulsCount!=null) state.cloudSoulsCount++;
+    if(state.view==="comunidad") renderView();
+  });
+}
 async function sendPost(){
   const a=me(); if(!a.live){ alert("Entra a tu Alma para publicar."); return; }
   const title=document.getElementById("postTitle").value.trim(), body=document.getElementById("postBody").value.trim();

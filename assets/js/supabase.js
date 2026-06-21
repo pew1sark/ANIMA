@@ -166,6 +166,11 @@ const Cloud = {
   /* Ecos de ANIMA — el espacio vivo (lectura pública, sin login). */
   async echoes(limit){ if(!_sb) return []; const { data } = await _sb.from("echoes").select("*").order("created_at",{ascending:false}).limit(limit||40); return data || []; },
   async emitEcho(kind, text){ if(!_sb) return null; const { data, error } = await _sb.rpc("emit_echo", { p_kind:kind, p_text:text }); if(error) throw error; return data; },
+  /* Ecos en vivo (Realtime). cb recibe cada Eco nuevo. Devuelve el canal. */
+  subscribeEchoes(cb){ if(!_sb) return null;
+    try{ return _sb.channel("echoes-live")
+      .on("postgres_changes", { event:"INSERT", schema:"public", table:"echoes" }, p=>{ try{ cb(p.new); }catch(e){} })
+      .subscribe(); }catch(e){ return null; } },
 
   /* Cronología del Alma — "Porque ANIMA recordará." */
   async timeline(){ if(!_sb) return []; const u = await this.user(); if(!u) return []; const { data } = await _sb.from("soul_timeline").select("*").eq("user_id", u.id).order("created_at",{ascending:false}); return data || []; },

@@ -28,7 +28,10 @@ La Alpha oficial está limitada a **100 Almas** (exclusividad por diseño) y añ
 - **Cronología del Alma** (`soul_timeline`) — *"Porque ANIMA recordará."* Cada hito
   (despertar, obra, nivel, insignia) queda escrito y se ve en el Studio → Esencia → Cronología.
 - **Ecos de ANIMA** (`echoes`) — el espacio vivo: *"✦ Alicia despertó en España"*. Feed
-  suave, sin scroll infinito.
+  suave **en tiempo real** (Supabase Realtime), sin scroll infinito.
+- **Árbol de Almas** — el mapa de Almas (puntos sobre el planeta) es la referencia dentro
+  de la ventana de **Comunidad**, con panel de Ecos, conteo por país y contador `X / 100`.
+  `arbol.html` es la versión pública de la misma pantalla.
 - **Insignias secretas** (`badges` / `soul_badges`) — no se anuncian, se descubren
   (Primer Latido, Alma Fundadora, Explorador, Eco Vivo, Guardián, Persistencia).
 - **Consejo de Almas** — las primeras **50** Almas (`almas.council`) reciben la insignia

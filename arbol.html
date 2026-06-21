@@ -182,6 +182,7 @@
       }
     }catch(e){ console.warn(e); }
 
+    window.__soulsN = n;
     document.getElementById("soulsN").textContent = n;
     var pct = Math.min(100, Math.round((n/100)*100));
     var sub = n>=100 ? "El Umbral está completo. 100 Almas habitan ANIMA."
@@ -193,6 +194,27 @@
     renderSky(by, n);
     renderCountries(by);
     renderEcos(ecos);
+
+    // Ecos en tiempo real: aparecen arriba con un fundido suave.
+    try{
+      if(typeof Cloud!=="undefined" && Cloud.enabled && Cloud.subscribeEchoes){
+        Cloud.subscribeEchoes(function(eco){
+          if(!eco) return;
+          var box=document.getElementById("ecos");
+          var empty=box.querySelector(".ecos-empty"); if(empty) empty.remove();
+          var el=document.createElement("div");
+          el.className="eco"; el.style.animationDelay="0s";
+          el.innerHTML=esc(eco.text||("✦ "+(eco.alma_name||"Una Alma")))+'<span class="when">hace un momento</span>';
+          box.insertBefore(el, box.firstChild);
+          while(box.children.length>40) box.removeChild(box.lastChild);
+          if(eco.kind==="despertar"){
+            window.__soulsN=(window.__soulsN||0)+1;
+            document.getElementById("soulsN").textContent=window.__soulsN;
+            var bar=document.getElementById("umbralBar"); if(bar) bar.style.width=Math.min(100,window.__soulsN)+"%";
+          }
+        });
+      }
+    }catch(e){}
   })();
   </script>
 </body>
