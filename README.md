@@ -32,7 +32,8 @@ La Alpha oficial está limitada a **100 Almas** (exclusividad por diseño) y añ
 - **Insignias secretas** (`badges` / `soul_badges`) — no se anuncian, se descubren
   (Primer Latido, Alma Fundadora, Explorador, Eco Vivo, Guardián, Persistencia).
 - **Consejo de Almas** — las primeras **50** Almas (`almas.council`) reciben la insignia
-  *Alma Fundadora*.
+  *Alma Fundadora* y acceden a **Votaciones**: proponen funciones y votan cambios
+  (`proposals` / `votes`, vista *Consejo* en el Studio).
 - **Sistema de logs** (`activity_log`) — registro privado de cada acción (login, logout,
   obra subida, nivel desbloqueado…).
 - **Navegación que crece con el nivel** — el menú revela ventanas a medida que el Alma sube.

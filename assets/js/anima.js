@@ -201,6 +201,8 @@ function renderNav(){
   });
   let world="";
   if(planAllows("comunidad")) world+=navItem({v:"comunidad",ico:"❂",t:"Comunidad"});
+  // Consejo de Almas: solo las Almas Fundadoras (Consejo) y el Creador.
+  if(me().council || (isCreator && !state.viewAs)) world+=navItem({v:"consejo",ico:"⚖",t:"Consejo"});
   if(planAllows("santuario")) world+=navItem({v:"santuario",ico:"🜁",t:"Santuario"});
   // Ecos de ANIMA + Árbol de Almas viven en su propia pantalla (espacio vivo).
   world+=`<a class="nav-item" href="arbol.html"><span class="ico">✦</span>Árbol de Almas</a>`;
@@ -239,6 +241,7 @@ const TITLES = {
   biblioteca:["Biblioteca","Tus documentos y archivos."],
   cronologia:["Cronología","Porque ANIMA recordará. La historia viva de tu Alma."],
   insignias:["Insignias","No se anuncian. Se descubren."],
+  consejo:["Consejo de Almas","Las primeras Almas escriben la historia de ANIMA."],
   config:["Personalizar","Tú decides qué muestra tu Alma."],
   consola:["Consola del Creador","Planes, roles, nivel y clan · vista omnipresente."],
   miplan:["Mi Plan","Elige tu umbral y desbloquea sus funciones."],
@@ -308,9 +311,11 @@ function renderView(){
   if(!planAllows(state.view)) state.view="mialma";
   // Gating por nivel: una ventana aún no abierta por el camino vuelve a Mi Alma.
   if(!levelAllows(state.view)) state.view="mialma";
+  // Consejo de Almas: reservado a las Almas Fundadoras (Consejo) y al Creador.
+  if(state.view==="consejo" && !(me().council || (isCreator && !state.viewAs))) state.view="mialma";
   const fn = { mialma:vMiAlma, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
     finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
-    cronologia:vCronologia, insignias:vInsignias,
+    cronologia:vCronologia, insignias:vInsignias, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, santuario:vSantuario }[state.view] || vMiAlma;
   document.getElementById("view").innerHTML = previewBanner() + fn(me());
@@ -1193,6 +1198,60 @@ async function loadBadges(){
   catch(e){ state.cloudBadges=[]; }
 }
 
+/* ===========================================================
+   CONSEJO DE ALMAS (Alpha 2026) — proponer y votar.
+   "Las primeras Almas ayudaron a escribir la historia de ANIMA."
+   =========================================================== */
+function vConsejo(a){
+  const can = a.council || (isCreator && !state.viewAs);
+  const intro = `<div class="card s12">
+    <div class="section-title"><h2>⚖ Consejo de Almas</h2><div class="spacer"></div>
+      <span class="pill gold">✦ Alma Fundadora</span></div>
+    <p class="muted" style="margin:0">Las primeras 50 Almas proponen funciones, votan cambios y eligen el rumbo de ANIMA.</p></div>`;
+  const form = can ? `<div class="card s12">
+      <div class="section-title"><h2>Proponer una idea</h2></div>
+      <div class="field"><input id="propTitle" placeholder="Título de la propuesta"></div>
+      <div class="field"><textarea id="propBody" rows="2" placeholder="¿Qué deberíamos construir o cambiar en ANIMA?"></textarea></div>
+      <button class="btn gold" id="propSend">Proponer al Consejo</button></div>` : "";
+  const props = state.cloudProposals;
+  let list;
+  if(props==null){ loadProposals(); list = `<div class="card s12"><p class="muted">Cargando propuestas…</p></div>`; }
+  else if(!props.length){ list = `<div class="card s12"><p class="muted">Aún no hay propuestas. ${can?"Sé la primera Alma en proponer.":""}</p></div>`; }
+  else {
+    list = props.map(p=>{
+      const fav=p.favor||0, con=p.contra||0, mine=p.my_vote||0;
+      const d=new Date(p.created_at); const day=isNaN(d)?"":d.toLocaleDateString("es-CL",{day:"numeric",month:"long"});
+      const voteBtns = can ? `<div class="prop-vote">
+          <button class="btn sm ${mine>0?'gold':'secondary'}" data-vote="${p.id}" data-val="1">▲ A favor · ${fav}</button>
+          <button class="btn sm ${mine<0?'gold':'secondary'}" data-vote="${p.id}" data-val="-1">▼ En contra · ${con}</button>
+        </div>` : `<div class="prop-vote muted" style="font-size:12.5px">A favor ${fav} · En contra ${con}</div>`;
+      return `<div class="card s12 prop-card">
+        <div class="section-title"><h2 style="font-size:17px">${esc(p.title)}</h2><div class="spacer"></div>
+          <span class="pill ${p.status==='abierta'?'':'gold'}">${esc(p.status)}</span></div>
+        ${p.description?`<p style="margin:2px 0 10px">${esc(p.description)}</p>`:""}
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          ${voteBtns}<small class="muted">${esc(day)}</small></div></div>`;
+    }).join("");
+  }
+  return `<div class="grid">${intro}${form}${list}</div>`;
+}
+async function loadProposals(){ if(!Cloud.enabled){ state.cloudProposals=[]; return; } try{ state.cloudProposals=await Cloud.proposals(); if(state.view==="consejo") renderView(); }catch(e){ state.cloudProposals=[]; } }
+async function sendProposal(){
+  const a=me(); if(!(a.council||isCreator)){ alert("Solo el Consejo de Almas puede proponer."); return; }
+  const title=(document.getElementById("propTitle")||{}).value, body=(document.getElementById("propBody")||{}).value;
+  if(!title || !title.trim()){ alert("Escribe un título para tu propuesta."); return; }
+  try{
+    await Cloud.createProposal(title.trim(), (body||"").trim());
+    if(window.AnimaState){ AnimaState.addEsencia(20,"Proponer al Consejo"); }
+    state.cloudProposals=null; state.cloudTimeline=null; renderView();
+  }catch(e){ alert("No se pudo proponer: "+(e.message||e)); }
+}
+async function vote(id, val){
+  const a=me(); if(!(a.council||isCreator)){ alert("Solo el Consejo de Almas puede votar."); return; }
+  try{ await Cloud.castVote(id, val); state.cloudProposals=await Cloud.proposals(); renderView(); }
+  catch(e){ alert("No se pudo votar: "+(e.message||e)); }
+}
+
 /* --- Santuario --- */
 function vSantuario(a){
   if(a.live && a.santuario) return vSantuarioLive(a);
@@ -1955,6 +2014,8 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#recClose")||e.target.id==="recordModal") closeRecord();
   if(e.target.closest("#pubClose")||e.target.id==="publicModal") closePublic();
   if(e.target.closest("#postSend")) sendPost();
+  if(e.target.closest("#propSend")) sendProposal();
+  const vt=e.target.closest("[data-vote]"); if(vt){ vote(vt.dataset.vote, +vt.dataset.val||1); return; }
   if(e.target.closest("#commentSend")){ const b=e.target.closest("#commentSend"); sendComment(b.dataset.post); }
   if(e.target.closest("#postClose")||e.target.id==="postModal") closePost();
   if(e.target.closest("#feedbackBtn")) openFeedback();

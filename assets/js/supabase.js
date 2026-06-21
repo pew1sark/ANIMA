@@ -200,7 +200,12 @@ const Cloud = {
   },
 
   /* Panel del Fundador — agregados (solo el Creador; si no, lanza error). */
-  async founderStats(){ if(!_sb) return null; const { data, error } = await _sb.rpc("founder_stats"); if(error) throw error; return data; }
+  async founderStats(){ if(!_sb) return null; const { data, error } = await _sb.rpc("founder_stats"); if(error) throw error; return data; },
+
+  /* Consejo de Almas — propuestas y votaciones (migración 0015). */
+  async proposals(){ if(!_sb) return []; try{ const { data } = await _sb.rpc("list_proposals"); return data || []; }catch(e){ return []; } },
+  async createProposal(title, desc){ if(!_sb) return null; const { data, error } = await _sb.rpc("create_proposal", { p_title:title, p_desc:desc||null }); if(error) throw error; return data; },
+  async castVote(id, value){ if(!_sb) return; const { error } = await _sb.rpc("cast_vote", { p_proposal:id, p_value:value }); if(error) throw error; }
 };
 
 /* Exponer Cloud en window para que anima-state.js (capa del rito) pueda
@@ -220,6 +225,7 @@ function dbAlmaToState(row, m){
     instagram: row.instagram || "", portfolio_url: row.portfolio_url || "", shop_url: row.shop_url || "",
     headline: row.headline || "", availability: row.availability || "",
     sparks: row.sparks || 0, created_at: row.created_at || null,
+    council: row.council === true,
     essence: row.essence || 0, affinity: row.affinity || "",
     visibility: row.visibility || {},
     finance: {

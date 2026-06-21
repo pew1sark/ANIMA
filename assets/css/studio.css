@@ -529,3 +529,8 @@ a.nav-item{text-decoration:none;color:inherit}
 .badge-card b{font-size:14px;letter-spacing:-.01em}
 .badge-card small{font-size:11.5px;line-height:1.4}
 .badge-when{color:var(--gold-deep,#7b5920);font-weight:700;margin-top:2px}
+
+/* Consejo de Almas — votaciones */
+.prop-card{border-left:3px solid rgba(208,170,99,.4)}
+.prop-vote{display:flex;gap:8px;flex-wrap:wrap}
+.prop-vote .btn.sm{padding:7px 13px}
