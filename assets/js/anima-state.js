@@ -37,10 +37,10 @@
   var LEVELS = [
     { key: "CHISPA", n: 1, glyph: "✨", name: "Chispa", color: "#f2c64e", span: 100,
       desc: "Acabas de nacer. Una chispa de conciencia dentro de ANIMA.",
-      unlocks: ["Mi Alma", "Perfil básico", "Primer logro"] },
+      unlocks: ["Mi Alma", "Alma básica", "Primer logro"] },
     { key: "RAIZ",   n: 2, glyph: "🌱", name: "Raíz",   color: "#5f8a3a", span: 200,
       desc: "Echas raíces. Empiezas a conectar con otras Almas.",
-      unlocks: ["Conexiones", "Clientes", "Contactos"] },
+      unlocks: ["Constelación", "Vínculos", "Contactos"] },
     { key: "PULSO",  n: 3, glyph: "💓", name: "Pulso",  color: "#8a6f3a", span: 300,
       desc: "Tu Alma late. Lo que creas empieza a moverse.",
       unlocks: ["Proyectos", "Tareas", "Estados"] },
@@ -63,7 +63,7 @@
   /* --- Menú progresivo de ANIMA (req. 8) --- */
   var MENU = [
     { glyph: "✨", t: "Mi Alma",    level: "CHISPA", view: "mialma" },
-    { glyph: "🌱", t: "Conexiones", level: "RAIZ",   view: "clientes" },
+    { glyph: "🌱", t: "Constelación", level: "RAIZ",   view: "clientes" },
     { glyph: "💓", t: "Pulso",      level: "PULSO",  view: "proyectos" },
     { glyph: "📜", t: "Huella",     level: "HUELLA", view: "portafolio" },
     { glyph: "🔥", t: "Lumbre",     level: "TOTEM",  view: "lumbre" },

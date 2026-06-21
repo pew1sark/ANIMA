@@ -42,7 +42,7 @@ function levelProgress(xp){
 /* --- LUMBRE: modos del motor agente --- */
 const LUMBRE_MODES = [
   { key:"OFF",    name:"OFF",          desc:"Solo organización manual." },
-  { key:"BASIC",  name:"Básico",       desc:"Sin IA. Ordena docs, proyectos y finanzas." },
+  { key:"BASIC",  name:"Básico",       desc:"Sin IA. Ordena docs, proyectos y Raíz." },
   { key:"LOCAL",  name:"IA Local",     desc:"Procesa PDF, CV e imágenes sin salir del dispositivo." },
   { key:"CLOUD",  name:"IA Conectada", desc:"Conecta Claude, OpenAI, Gemini u Ollama (opcional)." }
 ];
