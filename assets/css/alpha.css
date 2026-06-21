@@ -1,0 +1,268 @@
+/* ===========================================================
+   ANIMA · ALPHA — Estética del mundo vivo
+   Blanco predominante · negro profundo · gris suave.
+   Pixel art minimalista · espacios vacíos · sin saturación.
+   "No estoy usando una aplicación. Estoy habitando ANIMA."
+   =========================================================== */
+:root{
+  --bg:#ffffff;
+  --ink:#0a0a0b;
+  --soft:#6b6b70;
+  --faint:#9a9aa0;
+  --line:rgba(10,10,11,.10);
+  --line-2:rgba(10,10,11,.06);
+  --panel:#fbfbfc;
+  --panel-2:#f4f4f5;
+  --glow:rgba(10,10,11,.05);
+  --seed:#3f7d4f;          /* único acento vivo, usado con sobriedad */
+  --pixel:6px;
+  --maxw:1120px;
+  font-synthesis-weight:none;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  line-height:1.5;-webkit-font-smoothing:antialiased;letter-spacing:-.01em;
+}
+.pixel{font-family:"DejaVu Sans Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  letter-spacing:.02em;image-rendering:pixelated}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+h1,h2,h3,h4{margin:0;font-weight:680;letter-spacing:-.035em;line-height:1.05}
+p{margin:0}
+.muted{color:var(--soft)}
+.faint{color:var(--faint)}
+.hide{display:none !important}
+.center{text-align:center}
+.mono-up{font-family:"DejaVu Sans Mono",ui-monospace,monospace;text-transform:uppercase;
+  letter-spacing:.32em;font-size:11px;color:var(--faint)}
+
+/* ---------- Botones ---------- */
+.btn{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--ink);
+  background:var(--ink);color:#fff;border-radius:2px;padding:13px 22px;font-size:14px;
+  font-weight:560;transition:.18s ease;letter-spacing:.01em}
+.btn:hover{transform:translateY(-1px);opacity:.92}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn.sm{padding:8px 14px;font-size:12.5px}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+
+/* ---------- Pixel art primitives ---------- */
+.px-sprite{display:inline-grid;line-height:0;image-rendering:pixelated}
+.px-sprite i{display:block;width:var(--pixel);height:var(--pixel);background:transparent}
+.px-sprite i.on{background:var(--ink)}
+.px-sprite i.sd{background:var(--seed)}
+
+/* ============================================================
+   CEREMONIA — Primera experiencia (una sola vez)
+   ============================================================ */
+#ceremony{position:fixed;inset:0;z-index:50;background:var(--bg);
+  display:grid;place-items:center;overflow:hidden}
+.cer-stage{max-width:560px;width:100%;padding:40px 28px;text-align:center;
+  opacity:0;transform:translateY(14px);transition:opacity .9s ease,transform .9s ease}
+.cer-stage.in{opacity:1;transform:none}
+.cer-eyebrow{margin-bottom:26px}
+.cer-stage h1{font-size:clamp(40px,11vw,84px);letter-spacing:-.06em;margin:6px 0}
+.cer-stage h2{font-size:clamp(22px,5vw,34px);margin:0 0 14px}
+.cer-stage p{color:var(--soft);font-size:16px;max-width:460px;margin:0 auto 28px}
+.cer-letter{text-align:left;border:1px solid var(--line);background:var(--panel);
+  padding:30px 30px;border-radius:3px;margin:6px auto 30px;max-width:480px}
+.cer-letter p{color:var(--ink);margin:0 0 12px;font-size:15.5px;max-width:none}
+.cer-letter .sign{color:var(--faint);font-size:13px;margin-top:6px}
+.cer-field{display:block;width:100%;max-width:380px;margin:0 auto 12px;
+  border:1px solid var(--line);background:#fff;border-radius:2px;padding:13px 15px;
+  font-size:15px;color:var(--ink);font-family:inherit}
+.cer-field:focus{outline:none;border-color:var(--ink)}
+.cer-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.cer-progress{position:fixed;left:0;right:0;bottom:30px;display:flex;gap:7px;
+  justify-content:center}
+.cer-dot{width:6px;height:6px;background:var(--line);border-radius:0}
+.cer-dot.on{background:var(--ink)}
+.cer-skip{position:fixed;top:22px;right:24px;font-size:12px;color:var(--faint)}
+.essence-burst{font-size:clamp(46px,13vw,96px);font-weight:680;letter-spacing:-.05em}
+
+/* Avatar pixel (sello del Alma) */
+.avatar-grid{display:grid;grid-template-columns:repeat(8,12px);grid-template-rows:repeat(8,12px);
+  gap:0;width:max-content;margin:0 auto;border:1px solid var(--line);padding:8px;background:#fff}
+.avatar-grid.lg{grid-template-columns:repeat(8,18px);grid-template-rows:repeat(8,18px)}
+.avatar-grid span{width:100%;height:100%}
+
+/* ============================================================
+   APP — el mundo habitado
+   ============================================================ */
+#app{min-height:100vh;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;
+  justify-content:space-between;padding:16px 26px;border-bottom:1px solid var(--line-2);
+  background:rgba(255,255,255,.86);backdrop-filter:blur(12px)}
+.brand{display:flex;align-items:center;gap:12px;font-weight:680;letter-spacing:-.04em;font-size:17px}
+.brand .seal{width:26px;height:26px;border:1px solid var(--ink);display:grid;place-items:center}
+.topbar .ess{display:flex;align-items:center;gap:10px;font-size:13px}
+.topbar .ess b{font-variant-numeric:tabular-nums;font-weight:680}
+.soul-state{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--soft)}
+.soul-state .dot{width:8px;height:8px;border-radius:50%;background:var(--seed)}
+.soul-state.silencio .dot{background:var(--faint)}
+.soul-state.dormida .dot{background:var(--line);border:1px solid var(--faint)}
+
+.shell{display:flex;flex:1;max-width:var(--maxw);margin:0 auto;width:100%}
+/* Menú definitivo — 5 entradas, nada más */
+.menu{width:208px;flex:0 0 208px;padding:30px 14px;border-right:1px solid var(--line-2);
+  position:sticky;top:57px;align-self:flex-start;height:calc(100vh - 57px)}
+.menu a{display:flex;align-items:center;gap:13px;padding:12px 14px;border-radius:2px;
+  color:var(--soft);font-size:14.5px;font-weight:540;margin-bottom:2px;transition:.15s}
+.menu a:hover{background:var(--panel-2);color:var(--ink)}
+.menu a.active{background:var(--ink);color:#fff}
+.menu a .px{flex:0 0 auto}
+.menu .soon{margin-top:24px;padding-top:18px;border-top:1px solid var(--line-2)}
+.menu .soon a{color:var(--faint);font-size:13px;cursor:default}
+.menu .soon a:hover{background:transparent;color:var(--soft)}
+
+.view{flex:1;min-width:0;padding:38px 40px 100px}
+.view-head{margin-bottom:30px}
+.view-head .mono-up{margin-bottom:10px}
+.view-head h2{font-size:clamp(26px,4vw,38px)}
+.view-head p{color:var(--soft);margin-top:8px;max-width:560px}
+
+/* Tabs (submenús internos) */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line-2);margin-bottom:26px;flex-wrap:wrap}
+.tabs button{background:none;border:0;padding:11px 4px;margin-right:20px;font-size:14px;
+  color:var(--faint);font-weight:540;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button.active{color:var(--ink);border-bottom-color:var(--ink)}
+
+/* Bloques (sin exceso de tarjetas — bordes finos, mucho aire) */
+.block{border:1px solid var(--line-2);border-radius:3px;padding:22px;background:#fff}
+.block + .block{margin-top:14px}
+.block h3{font-size:16px;margin-bottom:4px}
+.block .lead{color:var(--soft);font-size:14px}
+.grid{display:grid;gap:14px}
+.grid.c2{grid-template-columns:1fr 1fr}
+.grid.c3{grid-template-columns:repeat(3,1fr)}
+.grid.c4{grid-template-columns:repeat(4,1fr)}
+
+.stat{border:1px solid var(--line-2);border-radius:3px;padding:18px 20px;background:#fff}
+.stat .k{font-family:"DejaVu Sans Mono",monospace;font-size:11px;text-transform:uppercase;
+  letter-spacing:.18em;color:var(--faint)}
+.stat .v{font-size:30px;font-weight:680;letter-spacing:-.04em;margin-top:8px;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:13px;color:var(--soft);font-weight:500;letter-spacing:0}
+
+/* Listas vivas */
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;align-items:flex-start;gap:13px;padding:13px 0;border-bottom:1px solid var(--line-2)}
+.list li:last-child{border-bottom:0}
+.list .when{margin-left:auto;color:var(--faint);font-size:12px;white-space:nowrap}
+.empty{color:var(--faint);font-size:14px;padding:30px 0;text-align:center;
+  border:1px dashed var(--line);border-radius:3px}
+
+/* Semillas */
+.seed-item{display:flex;align-items:center;gap:14px;padding:15px 0;border-bottom:1px solid var(--line-2)}
+.seed-item:last-child{border-bottom:0}
+.seed-state{font-family:"DejaVu Sans Mono",monospace;font-size:11px;text-transform:uppercase;
+  letter-spacing:.14em;margin-left:auto;padding:4px 9px;border:1px solid var(--line)}
+.seed-state.floreciendo{color:var(--seed);border-color:rgba(63,125,79,.4)}
+.seed-state.brotando{color:var(--ink)}
+.seed-state.dormida{color:var(--faint)}
+
+/* Insignias */
+.badge{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 10px;
+  border:1px solid var(--line-2);border-radius:3px;text-align:center}
+.badge.locked{opacity:.45}
+.badge b{font-size:13px}
+.badge small{font-size:11px;color:var(--faint)}
+
+/* Despertares */
+.awaken{border:1px solid var(--line);border-radius:3px;padding:18px 20px;display:flex;
+  align-items:center;gap:16px}
+.awaken.dormant{border-style:dashed;opacity:.7}
+.awaken .n{font-family:"DejaVu Sans Mono",monospace;font-size:13px;color:var(--faint);
+  font-variant-numeric:tabular-nums;min-width:64px}
+.awaken .b{flex:1}
+.awaken .b b{font-size:14px}
+.awaken .b p{font-size:13px;color:var(--soft);margin-top:2px}
+.awaken .state{font-family:"DejaVu Sans Mono",monospace;font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.16em}
+.awaken.dormant .state{color:var(--faint)}
+.awaken .state.awake{color:var(--seed)}
+
+/* Barra de Esencia hacia el próximo Despertar */
+.essbar{height:3px;background:var(--line-2);margin-top:16px;border-radius:0;overflow:hidden}
+.essbar > i{display:block;height:100%;background:var(--ink);transition:width .6s ease}
+
+/* MUNDO · Árbol */
+.tree-stage{display:grid;place-items:center;padding:34px;border:1px solid var(--line-2);
+  border-radius:3px;background:linear-gradient(180deg,#fff,var(--panel))}
+.tree-canvas{image-rendering:pixelated}
+.tree-meta{display:flex;gap:30px;flex-wrap:wrap;margin-top:20px;justify-content:center}
+.tree-meta div{text-align:center}
+.tree-meta .k{font-family:"DejaVu Sans Mono",monospace;font-size:10.5px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--faint)}
+.tree-meta .v{font-size:18px;font-weight:680;margin-top:4px}
+
+/* Constelación */
+.sky{position:relative;height:300px;border:1px solid var(--line-2);border-radius:3px;
+  background:var(--ink);overflow:hidden}
+.sky .star{position:absolute;width:5px;height:5px;background:#fff;border-radius:50%;
+  animation:tw 4s ease-in-out infinite}
+.sky .star.alma{width:7px;height:7px;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.18)}
+@keyframes tw{0%,100%{opacity:.4}50%{opacity:1}}
+.sky .you{position:absolute;width:9px;height:9px;background:var(--seed);border-radius:50%;
+  box-shadow:0 0 0 4px rgba(63,125,79,.25)}
+
+/* Ecos */
+.eco{border:1px solid var(--line-2);border-radius:3px;padding:18px 20px}
+.eco .who{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.eco .who .flag{font-size:11px;color:var(--faint);font-weight:500}
+.eco .body{margin-top:10px;font-size:15px;color:var(--ink)}
+.eco .meta{margin-top:12px;font-size:12px;color:var(--faint)}
+
+/* Modal genérico */
+.modal{position:fixed;inset:0;z-index:40;background:rgba(10,10,11,.32);
+  display:grid;place-items:center;padding:20px}
+.modal .sheet{background:#fff;border:1px solid var(--line);border-radius:4px;
+  max-width:440px;width:100%;padding:28px}
+.modal h3{font-size:20px;margin-bottom:6px}
+.modal label{display:block;font-size:12px;color:var(--soft);margin:14px 0 6px}
+.modal input,.modal textarea,.modal select{width:100%;border:1px solid var(--line);
+  border-radius:2px;padding:11px 13px;font-size:14px;font-family:inherit;color:var(--ink)}
+.modal textarea{min-height:80px;resize:vertical}
+.modal .row{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+
+/* LUMBRE — presencia serena, jamás un chatbot */
+.lumbre-dock{position:fixed;right:24px;bottom:24px;z-index:30}
+.lumbre-orb{width:54px;height:54px;border:1px solid var(--ink);background:#fff;
+  display:grid;place-items:center;border-radius:50%;transition:.2s}
+.lumbre-orb:hover{transform:translateY(-2px)}
+.lumbre-orb .px-sprite i.on{background:var(--ink)}
+.lumbre-panel{position:absolute;right:0;bottom:66px;width:330px;background:#fff;
+  border:1px solid var(--line);border-radius:4px;padding:22px;box-shadow:0 24px 60px var(--glow)}
+.lumbre-panel .name{font-family:"DejaVu Sans Mono",monospace;font-size:10.5px;
+  letter-spacing:.28em;text-transform:uppercase;color:var(--faint);margin-bottom:14px}
+.lumbre-panel .say{font-size:15.5px;line-height:1.55;color:var(--ink)}
+.lumbre-panel .say + .say{margin-top:12px;color:var(--soft);font-size:14px}
+
+/* Toast de Esencia (mensaje del mundo, no un "+XP") */
+.toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:#fff;padding:13px 22px;border-radius:2px;font-size:14px;
+  z-index:60;opacity:0;transition:.4s ease;pointer-events:none;display:flex;align-items:center;gap:10px}
+.toast.in{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Próximamente / dormidas */
+.dormant-screen{text-align:center;padding:60px 20px;border:1px dashed var(--line);border-radius:3px}
+.dormant-screen .lock{font-size:30px;margin-bottom:14px;opacity:.4}
+.dormant-screen h3{font-size:22px;margin-bottom:8px}
+.dormant-screen p{color:var(--soft);max-width:420px;margin:0 auto}
+
+@media(max-width:860px){
+  .shell{flex-direction:column}
+  .menu{width:100%;flex:none;position:sticky;top:57px;height:auto;display:flex;
+    gap:4px;overflow-x:auto;padding:12px;border-right:0;border-bottom:1px solid var(--line-2)}
+  .menu a{white-space:nowrap;margin-bottom:0}
+  .menu .soon{display:none}
+  .view{padding:26px 20px 90px}
+  .grid.c3,.grid.c4,.grid.c2{grid-template-columns:1fr 1fr}
+}
+@media(max-width:540px){
+  .grid.c3,.grid.c4{grid-template-columns:1fr}
+  .lumbre-panel{width:min(330px,86vw)}
+}
