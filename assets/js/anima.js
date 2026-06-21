@@ -1874,6 +1874,7 @@ function renderAlmaMenu(){
   if(planAllows("clanpanel")) items.push(`<button class="apop-item" data-almago="clanpanel">❂ Mi Clan</button>`);
   if(planAllows("santuario")) items.push(`<button class="apop-item" data-almago="santuario">🜁 Santuario</button>`);
   items.push(`<div class="apop-sep"></div>`);
+  if(me().live) items.push(`<button class="apop-item" id="almaPass">🔑 Cambiar contraseña</button>`);
   items.push(`<button class="apop-item" id="almaSwitch">⤿ Cambiar de Alma</button>`);
   items.push(`<button class="apop-item danger" id="almaLogout">⏻ Cerrar sesión</button>`);
   pop.innerHTML=items.join("");
@@ -1950,6 +1951,29 @@ async function doAuth(mode){
     closeAuth(); await refreshAuth();
   }catch(e){ msg.textContent=e.message||"No se pudo completar."; }
 }
+/* Cambiar contraseña (sesión iniciada) — usa updateUser. */
+function openChangePass(){
+  if(!me().live){ alert("Entra a tu Alma para cambiar la contraseña."); return; }
+  const m=document.getElementById("cpModal"); if(!m) return;
+  document.getElementById("cpMsg").textContent="";
+  document.getElementById("cpP1").value=""; document.getElementById("cpP2").value="";
+  m.classList.add("open");
+}
+function closeChangePass(){ const m=document.getElementById("cpModal"); if(m) m.classList.remove("open"); }
+async function doChangePass(){
+  const msg=document.getElementById("cpMsg");
+  const p1=document.getElementById("cpP1").value, p2=document.getElementById("cpP2").value;
+  if(p1.length<6){ msg.textContent="La contraseña debe tener al menos 6 caracteres."; return; }
+  if(p1!==p2){ msg.textContent="Las contraseñas no coinciden."; return; }
+  msg.textContent="Guardando…";
+  try{
+    const { error }=await Cloud.updatePassword(p1); if(error) throw error;
+    try{ Cloud.log("cambio_contrasena"); Cloud.logTimeline("seguridad","Cambiaste tu contraseña"); }catch(e){}
+    msg.textContent="✦ Contraseña actualizada.";
+    setTimeout(closeChangePass, 900);
+  }catch(e){ msg.textContent=e.message||"No se pudo cambiar la contraseña."; }
+}
+
 /* Recuperar contraseña desde el modal: usa el correo escrito (si lo hay)
    y envía el enlace; si no, lleva a la página de recuperación. */
 async function doForgot(){
@@ -2109,8 +2133,11 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#sharePf")) sharePortfolio();
   if(e.target.closest("[data-export]")) exportPDF();
   const ag=e.target.closest("[data-almago]"); if(ag){ closeAlmaMenu(); go(ag.dataset.almago); return; }
+  if(e.target.closest("#almaPass")){ closeAlmaMenu(); openChangePass(); return; }
   if(e.target.closest("#almaSwitch")){ closeAlmaMenu(); switchAlmaSession(); return; }
   if(e.target.closest("#almaLogout")){ closeAlmaMenu(); logout(); return; }
+  if(e.target.closest("#cpSave")) doChangePass();
+  if(e.target.closest("#cpClose")||e.target.id==="cpModal") closeChangePass();
   if(e.target.closest("#authBtn")){ const b=e.target.closest("#authBtn"); b.dataset.in?toggleAlmaMenu():openAuth(); return; }
   else if(!e.target.closest("#almaPop")) closeAlmaMenu();
   if(e.target.closest("#authClose")||e.target.id==="authModal") closeAuth();

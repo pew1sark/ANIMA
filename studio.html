@@ -108,6 +108,21 @@
     </div>
   </div>
 
+  <!-- MODAL CAMBIAR CONTRASEÑA -->
+  <div class="auth-modal" id="cpModal">
+    <div class="auth-box">
+      <div class="auth-head">
+        <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div style="flex:1"><b>Cambiar contraseña</b><br><small class="muted">Elige una contraseña nueva para tu Alma.</small></div>
+        <button class="btn ghost sm" id="cpClose">✕</button>
+      </div>
+      <div class="field"><label>Nueva contraseña</label><input id="cpP1" type="password" placeholder="••••••••" autocomplete="new-password" /></div>
+      <div class="field"><label>Repítela</label><input id="cpP2" type="password" placeholder="••••••••" autocomplete="new-password" /></div>
+      <button class="btn" id="cpSave" style="width:100%;margin-top:6px">Guardar contraseña</button>
+      <div id="cpMsg" class="muted" style="font-size:12.5px;margin-top:12px;min-height:16px"></div>
+    </div>
+  </div>
+
   <!-- MODAL EDITAR ALMA -->
   <div class="auth-modal" id="editModal">
     <div class="auth-box">
