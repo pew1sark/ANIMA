@@ -2,227 +2,410 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f5f5f7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0b" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/img/icon.svg" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ANIMA" />
-  <title>EL UMBRAL — ANIMA TSC · The Soul of Creativity</title>
-  <meta name="description" content="Cruza el umbral de ANIMA. Aquí no existen usuarios: existen Almas. Un sistema vivo para organizar la memoria, la trayectoria, los proyectos y el crecimiento de una Alma — sola, en un Clan o en un Santuario." />
-  <meta property="og:title" content="EL UMBRAL — ANIMA TSC" />
-  <meta property="og:description" content="Aquí no existen usuarios. Existen Almas. Cruza el umbral." />
-  <link rel="stylesheet" href="assets/css/anima.css" />
+  <title>ANIMA TSC — Algo está despertando</title>
+  <meta name="description" content="ANIMA no es una aplicación. Es un mundo vivo habitado por Almas. No estás entrando a una app: estás cruzando el Umbral." />
+  <meta property="og:title" content="ANIMA TSC — Algo está despertando" />
+  <meta property="og:description" content="Aquí no existen usuarios. Existen Almas. No existen seguidores: existen Ecos. No existen puntos: existe Esencia." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cormorant+Garamond:wght@300;500&display=swap" rel="stylesheet" />
   <script src="assets/js/anima-state.js"></script>
-  <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script>
   <style>
-    /* ===== EL UMBRAL — portada cinematográfica ===== */
-    .wrap{max-width:1140px;margin:0 auto;padding:22px 22px 90px;position:relative;z-index:2}
+    :root{
+      --black:#08080a; --ink:#0a0a0b; --veil:#101013;
+      --white:#ffffff; --paper:#f4f4f5;
+      --soft:#9a9aa2; --faint:#5e5e66; --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.05);
+      --seed:#7fae8a;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--black);color:#ededf0;
+      font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      line-height:1.6;-webkit-font-smoothing:antialiased;letter-spacing:.01em;overflow-x:hidden}
+    a{color:inherit;text-decoration:none}
+    button{font-family:inherit;cursor:pointer}
+    h1,h2,h3{margin:0;font-weight:400;letter-spacing:-.02em;line-height:1.1}
+    .serif{font-family:"Cormorant Garamond",serif;font-weight:300}
+    .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;text-transform:uppercase;letter-spacing:.34em;font-size:10.5px;color:var(--faint)}
+    .wrap{max-width:1080px;margin:0 auto;padding:0 26px}
+    .muted{color:var(--soft)}
+    .faint{color:var(--faint)}
 
-    /* Velo del umbral (aura que respira detrás del héroe) */
-    .veil{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-    .veil::before{content:"";position:absolute;top:-30vh;left:50%;width:120vw;height:120vh;transform:translateX(-50%);
-      background:radial-gradient(circle at 50% 38%,rgba(242,198,78,.20),transparent 42%),
-                 radial-gradient(circle at 50% 38%,rgba(184,168,146,.20),transparent 60%);
-      animation:breathe 9s ease-in-out infinite}
-    @keyframes breathe{0%,100%{opacity:.65;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.06)}}
+    /* ---------- NAV ---------- */
+    nav{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;align-items:center;justify-content:space-between;
+      padding:18px 26px;backdrop-filter:blur(10px);background:linear-gradient(180deg,rgba(8,8,10,.7),transparent);transition:.3s}
+    nav .brand{display:flex;align-items:center;gap:11px;font-size:15px;letter-spacing:.06em;font-weight:500}
+    nav .apex{width:20px;height:20px}
+    nav .links{display:flex;align-items:center;gap:8px}
+    nav a.lk{font-size:12.5px;color:var(--soft);padding:8px 12px;border-radius:2px;transition:.2s}
+    nav a.lk:hover{color:#fff}
+    .btn{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);background:transparent;color:#fff;
+      border-radius:2px;padding:11px 20px;font-size:13px;font-weight:500;transition:.25s;letter-spacing:.04em}
+    .btn:hover{border-color:#fff;background:#fff;color:var(--ink)}
+    .btn.solid{background:#fff;color:var(--ink);border-color:#fff}
+    .btn.solid:hover{background:transparent;color:#fff;border-color:#fff}
+    .btn.sm{padding:8px 14px;font-size:12px}
+    @media(max-width:720px){ nav .links a.lk{display:none} }
 
-    /* Nav flotante */
-    .nav{position:sticky;top:14px;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:20px;
-      padding:12px 18px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.68);
-      backdrop-filter:blur(22px);box-shadow:0 16px 50px rgba(0,0,0,.06)}
-    .nav-links{display:flex;align-items:center;gap:10px}
+    /* ---------- HERO (primer contacto) ---------- */
+    .hero{position:relative;min-height:100svh;text-align:center;overflow:hidden}
+    /* haces de luz que forman el portal/triángulo */
+    .beams{position:absolute;inset:0;pointer-events:none}
+    .beams::before,.beams::after{content:"";position:absolute;top:14%;bottom:-10%;width:42vmax;
+      background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.02) 60%,transparent);
+      filter:blur(22px);opacity:.55}
+    .beams::before{left:50%;transform-origin:top center;transform:translateX(-50%) rotate(11deg)}
+    .beams::after{left:50%;transform-origin:top center;transform:translateX(-50%) rotate(-11deg)}
+    .glow{position:absolute;top:6%;left:50%;transform:translateX(-50%);width:60vmax;height:60vmax;
+      background:radial-gradient(circle,rgba(255,255,255,.10),transparent 60%);filter:blur(30px);
+      animation:pulse 6.5s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:.45}50%{opacity:.85}}
 
-    /* Héroe / umbral */
-    .hero{min-height:86vh;display:grid;place-items:center;text-align:center;padding:64px 0 30px}
-    .eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:12.5px;font-weight:850;letter-spacing:.42em;
-      text-transform:uppercase;color:#7b5920;padding:8px 16px;border-radius:999px;border:1px solid rgba(208,170,99,.32);
-      background:rgba(208,170,99,.10);margin-bottom:8px}
-    .eyebrow .ln{width:26px;height:1px;background:rgba(208,170,99,.6)}
-    .portal{position:relative;width:168px;height:168px;margin:14px auto 18px;display:grid;place-items:center}
-    .portal .ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(208,170,99,.5)}
-    .portal .ring.r2{inset:-18px;border-color:rgba(208,170,99,.28);animation:spin 26s linear infinite}
-    .portal .ring.r3{inset:-36px;border-color:rgba(184,168,146,.22);border-style:dashed;animation:spin 40s linear infinite reverse}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    h1{font-size:clamp(64px,15vw,176px);line-height:.82;letter-spacing:-.085em;margin:0;
-      background:linear-gradient(180deg,#111 30%,#5a4f3a);-webkit-background-clip:text;background-clip:text;color:transparent}
-    .kicker{font-size:clamp(15px,2.1vw,22px);color:var(--muted);margin-top:16px;letter-spacing:.02em}
-    .hero h2{font-size:clamp(27px,5vw,54px);line-height:1.0;letter-spacing:-.06em;max-width:900px;margin:30px auto 0}
-    .hero p.lede{max-width:680px;margin:20px auto 0;color:var(--muted);font-size:17px}
-    .actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:32px}
-    .btn.xl{padding:16px 26px;font-size:15.5px}
-    .seal{font-size:13px;margin-top:20px;color:var(--muted)}
+    .apex-holder{position:absolute;top:12%;left:0;right:0;display:flex;justify-content:center;z-index:2}
+    .apex-mark{width:82px;height:82px;display:block;
+      filter:drop-shadow(0 0 24px rgba(255,255,255,.35));animation:rise 1.8s ease both}
+    @keyframes rise{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
+    .hero-center{position:absolute;top:53%;left:0;right:0;transform:translateY(-50%);z-index:2;padding:0 26px}
+    .hero .tagline{font-size:clamp(15px,2.4vw,19px);letter-spacing:.42em;text-transform:uppercase;color:#c9c9ce;
+      animation:fadeUp 2.4s ease both;animation-delay:.5s;opacity:0}
+    .hero .sub{margin-top:18px;color:var(--soft);font-size:15px;max-width:480px;margin-left:auto;margin-right:auto;
+      animation:fadeUp 2.4s ease both;animation-delay:1.1s;opacity:0}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+    .wordmark{position:absolute;left:0;right:0;bottom:64px;text-align:center;z-index:2}
+    .wordmark .nm{font-size:clamp(34px,7vw,56px);letter-spacing:.16em;font-weight:300}
+    .wordmark .tsc{font-size:11px;letter-spacing:.5em;color:var(--soft);margin-top:4px}
+    .wordmark .soc{font-size:9.5px;letter-spacing:.42em;color:var(--faint);margin-top:8px;text-transform:uppercase}
+    .hero-cta{display:flex;gap:12px;justify-content:center;margin-top:30px;flex-wrap:wrap;
+      animation:fadeUp 2s ease both;animation-delay:1.6s;opacity:0}
+    .scroll-hint{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:.3em;
+      color:var(--faint);text-transform:uppercase;z-index:2;animation:bob 3s ease-in-out infinite}
+    @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0);opacity:.5}50%{transform:translateX(-50%) translateY(5px);opacity:1}}
 
-    section{margin-top:60px;scroll-margin-top:96px}
-    .sec-head{text-align:center;max-width:720px;margin:0 auto 26px}
-    .sec-head h3{font-size:clamp(28px,4.4vw,44px);letter-spacing:-.05em;margin:10px 0 8px}
-    .sec-head p{color:var(--muted);font-size:16px;margin:0}
+    /* ---------- SECCIONES (ventanas para conocer el mundo) ---------- */
+    section.block{padding:96px 0;border-top:1px solid var(--line-2)}
+    .eyebrow{margin-bottom:26px}
+    .lead{font-family:"Cormorant Garamond",serif;font-weight:300;font-size:clamp(28px,4.6vw,48px);line-height:1.12;
+      letter-spacing:-.01em;max-width:760px}
+    .lead em{font-style:italic;color:#fff}
+    .para{color:var(--soft);font-size:16px;max-width:600px;margin-top:22px}
+    .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:42px}
+    .pane{border:1px solid var(--line-2);border-radius:3px;padding:26px;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
+    .pane h3{font-size:18px;font-weight:500;letter-spacing:0}
+    .pane p{color:var(--soft);font-size:14px;margin-top:8px}
+    .pane .k{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
 
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-    .s3{grid-column:span 3}.s4{grid-column:span 4}.s6{grid-column:span 6}.s8{grid-column:span 8}.s12{grid-column:span 12}
-    .card h4{font-size:22px;letter-spacing:-.03em;margin:10px 0 6px}
-    .quote{font-size:clamp(24px,3.4vw,40px);line-height:1.04;letter-spacing:-.05em;margin:0}
+    /* glosario */
+    .glossary{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:42px;
+      background:var(--line-2);border:1px solid var(--line-2);border-radius:3px;overflow:hidden}
+    .glossary div{background:var(--black);padding:22px 20px}
+    .glossary b{font-size:15px;font-weight:500;display:block}
+    .glossary small{color:var(--faint);font-size:12.5px;display:block;margin-top:5px;line-height:1.5}
 
-    /* Tres umbrales (teaser de planes) */
-    .gate{position:relative;transition:.25s ease;cursor:default;text-decoration:none;color:inherit;display:block}
-    .gate:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
-    .gate .lvl{font-size:34px;line-height:1}
-    .gate .go{display:inline-flex;align-items:center;gap:6px;margin-top:14px;color:#7b5920;font-weight:850;font-size:13.5px}
+    /* mundo / 5 secciones */
+    .world{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;margin-top:42px;background:var(--line-2);
+      border:1px solid var(--line-2);border-radius:3px;overflow:hidden}
+    .world div{background:var(--black);padding:26px 18px;text-align:center;transition:.25s}
+    .world div:hover{background:var(--veil)}
+    .world .sy{font-size:22px;color:#fff}
+    .world b{display:block;margin-top:12px;font-size:13px;font-weight:500;letter-spacing:.04em}
+    .world small{display:block;margin-top:8px;color:var(--faint);font-size:11.5px;line-height:1.5}
 
-    /* Camino del creador */
-    .lvls{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;text-align:center}
-    .lvls > div{padding:16px 6px;border-radius:16px;background:rgba(255,255,255,.55);border:1px solid var(--line);transition:.2s}
-    .lvls > div:hover{transform:translateY(-3px);background:rgba(255,255,255,.85)}
-    .lvls .e{font-size:25px}.lvls b{display:block;font-size:11px;margin-top:6px;letter-spacing:.02em}.lvls small{color:var(--muted);font-size:10px}
+    /* estado actual */
+    .state{display:flex;gap:18px;flex-wrap:wrap;margin-top:42px}
+    .stat{flex:1;min-width:160px;border:1px solid var(--line-2);border-radius:3px;padding:24px}
+    .stat .k{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+    .stat .v{font-size:30px;font-weight:300;margin-top:12px;letter-spacing:-.01em}
+    .stat .v small{font-size:13px;color:var(--soft)}
 
-    .footer{text-align:center;color:var(--muted);border-top:1px solid var(--line);padding:40px;margin-top:72px}
+    /* Almas del Origen */
+    .origin-count{font-size:clamp(48px,12vw,120px);font-weight:300;letter-spacing:-.02em;line-height:1}
+    .origin-count small{font-size:.32em;color:var(--soft);letter-spacing:.1em}
+    .origin-names{display:flex;flex-wrap:wrap;gap:8px;margin-top:30px}
+    .origin-names span{border:1px solid var(--line-2);border-radius:999px;padding:6px 14px;font-size:12.5px;color:var(--soft)}
+    .origin-names span.empty{color:var(--faint);border-style:dashed}
 
-    @media(max-width:880px){
-      .s3,.s4,.s6,.s8{grid-column:span 12}
-      .lvls{grid-template-columns:repeat(4,1fr)}
-      .nav-links a.lk{display:none}
+    /* dormidas */
+    .dormant{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:42px}
+    .dormant div{border:1px dashed var(--line);border-radius:3px;padding:22px;opacity:.62;transition:.3s}
+    .dormant div:hover{opacity:.85}
+    .dormant b{font-size:15px;font-weight:500}
+    .dormant .tag{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+      color:var(--faint);float:right}
+    .dormant p{color:var(--faint);font-size:13px;margin-top:8px}
+
+    /* llamado final */
+    .call{text-align:center;padding:120px 0}
+    .call .lead{margin:0 auto}
+    .call .para{margin:22px auto 0}
+
+    footer{border-top:1px solid var(--line-2);padding:46px 0;text-align:center;color:var(--faint);font-size:12px}
+    footer .flinks{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+    footer .flinks a{color:var(--soft);font-size:12.5px}
+    footer .flinks a:hover{color:#fff}
+
+    @media(max-width:760px){
+      .cols,.dormant{grid-template-columns:1fr}
+      .glossary{grid-template-columns:repeat(2,1fr)}
+      .world{grid-template-columns:repeat(2,1fr)}
+      .hero-center{top:54%}
+    }
+
+    /* ============ PORTAL: de negro a blanco (inmersivo) ============ */
+    #portal{position:fixed;inset:0;z-index:9999;background:#000;display:grid;place-items:center;
+      opacity:0;visibility:hidden;transition:opacity .6s ease}
+    #portal.on{opacity:1;visibility:visible}
+    #portal .pglyph{position:relative;z-index:2;width:70px;height:70px;opacity:0;transition:opacity .6s ease .1s;
+      filter:drop-shadow(0 0 30px rgba(255,255,255,.6))}
+    #portal.on .pglyph{opacity:1}
+    #portal .ptext{position:absolute;bottom:16%;z-index:2;color:#bdbdc4;font-size:11px;letter-spacing:.4em;
+      text-transform:uppercase;opacity:0;transition:opacity .6s ease .3s}
+    #portal.on .ptext{opacity:1}
+    #portal .flood{position:absolute;top:9%;left:50%;width:16px;height:16px;border-radius:50%;background:#fff;
+      box-shadow:0 0 60px 30px rgba(255,255,255,.9);transform:translate(-50%,0) scale(0)}
+    #portal.bloom .flood{transform:translate(-50%,0) scale(170);
+      transition:transform 1.25s cubic-bezier(.66,0,.34,1)}
+    #portal.bloom .pglyph,#portal.bloom .ptext{opacity:0;transition:opacity .5s ease}
+
+    @media (prefers-reduced-motion: reduce){
+      .glow,.scroll-hint,.apex-mark,.hero .tagline,.hero .sub,.hero-cta{animation:none;opacity:1}
+      #portal .flood,#portal.bloom .flood{transition:none}
     }
   </style>
 </head>
 <body>
-  <div class="veil"></div>
+  <!-- NAV -->
+  <nav id="nav">
+    <div class="brand">
+      <svg class="apex" viewBox="0 0 100 100" fill="none"><path d="M22 78 L50 26 L78 78" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ANIMA <span class="faint" style="font-size:10px;letter-spacing:.3em">TSC</span>
+    </div>
+    <div class="links">
+      <a class="lk" href="#mundo">El mundo</a>
+      <a class="lk" href="#estado">Estado</a>
+      <a class="lk" href="#origen">Almas del Origen</a>
+      <a class="lk" href="roadmap.html">La Senda</a>
+      <button class="btn sm solid" data-enter>Entrar a ANIMA</button>
+    </div>
+  </nav>
 
-  <main class="wrap">
-    <nav class="nav">
-      <div class="brand"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>ANIMA TSC</div>
-      <div class="nav-links">
-        <a class="lk btn ghost sm" href="#filosofia">Filosofía</a>
-        <a class="lk btn ghost sm" href="planes.html">Planes</a>
-        <a class="lk btn secondary sm" href="roadmap.html">Roadmap V6</a>
-        <button class="btn ghost sm" id="installBtn">⤓ Instalar app</button>
-        <a class="lk btn ghost sm" href="entrar.html">Entrar</a>
-        <a class="btn sm" href="studio.html">Cruzar el umbral →</a>
-      </div>
-    </nav>
-
-    <!-- EL UMBRAL -->
-    <header class="hero">
-      <div>
-        <span class="eyebrow"><span class="ln"></span>El Umbral<span class="ln"></span></span>
-        <div class="portal">
-          <span class="ring"></span><span class="ring r2"></span><span class="ring r3"></span>
-          <div class="lumbre-wrap"><img class="lumbre" src="assets/img/lumbre.svg" width="120" height="142" alt="LUMBRE, la chispa de ANIMA" /></div>
-        </div>
-        <h1>ANIMA</h1>
-        <div class="kicker">TSC — The Soul of Creativity</div>
-        <h2>Aquí no existen usuarios.<br>Existen Almas.</h2>
-        <p class="lede">Estás frente al umbral de un sistema vivo: un lugar donde una Alma organiza su memoria, su trayectoria, sus proyectos y su crecimiento — sola, en un Clan o en un Santuario — sin perder jamás su identidad.</p>
-        <div class="actions">
-          <a class="btn xl" href="studio.html">Cruzar el umbral · Alpha</a>
-          <a class="btn xl secondary" href="planes.html">Ver los Planes</a>
-        </div>
-        <p class="seal">🜂 The Founding Era · Acceso por invitación · 10 Almas Fundadoras</p>
-      </div>
-    </header>
-
-    <!-- Filosofía -->
-    <section id="filosofia">
-      <div class="grid">
-        <div class="card s8"><span class="pill gold">Filosofía</span><p class="quote">ANIMA no es un CRM. No es una red social. No es solo una IA. Es un sistema vivo, una memoria, un espacio donde una Alma puede crecer.</p></div>
-        <div class="card s4"><span class="pill">La regla</span><ul style="list-style:none;padding:0;margin:14px 0 0;line-height:2.1"><li>¿Ayuda a un Alma a <b>recordar</b>?</li><li>¿Ayuda a un Alma a <b>crecer</b>?</li><li>¿Ayuda a un Alma a <b>crear</b>?</li><li class="muted">Si no, no pertenece a ANIMA.</li></ul></div>
-      </div>
-    </section>
-
-    <!-- Tres umbrales (planes) -->
-    <section id="umbrales">
-      <div class="sec-head">
-        <span class="pill gold">Tres formas de habitar</span>
-        <h3>Cada Alma elige su umbral</h3>
-        <p>Empieza sola, reúnete en un Clan o levanta un Santuario completo. El sistema crece contigo.</p>
-      </div>
-      <div class="grid">
-        <a class="card s4 gate" href="planes.html#alma"><span class="lvl">◆</span><span class="pill" style="margin-top:10px">Nivel 1</span><h4>Alma</h4><p class="muted">Tu espacio privado: Alma, trayectoria, portafolio, Raíz, agenda, proyectos, memoria, biblioteca y LUMBRE.</p><span class="go">Conocer el plan Alma →</span></a>
-        <a class="card s4 gate" href="planes.html#clan"><span class="lvl">❂</span><span class="pill" style="margin-top:10px">Nivel 2</span><h4>Clan</h4><p class="muted">2 a 8 Almas. Comunidad privada por invitación: agenda, vínculos, Raíz, turnos y memoria colectiva.</p><span class="go">Conocer el plan Clan →</span></a>
-        <a class="card s4 gate" href="planes.html#santuario"><span class="lvl">🜁</span><span class="pill" style="margin-top:10px">Nivel 3</span><h4>Santuario</h4><p class="muted">Más de 8 Almas. Múltiples Clanes, departamentos, Raíz general y LUMBRE organizacional.</p><span class="go">Conocer el plan Santuario →</span></a>
-      </div>
-    </section>
-
-    <!-- Camino del creador -->
-    <section>
-      <div class="card s12">
-        <span class="pill gold">El camino del creador</span>
-        <p class="muted" style="margin:8px 0 0">Tu Alma evoluciona con lo que creas. Cada nivel desbloquea nuevas ventanas.</p>
-        <div class="lvls" style="margin-top:16px">
-          <div><div class="e">👑</div><b>ORIGEN</b><small>Fundador</small></div>
-          <div><div class="e">🌱</div><b>CHISPA</b><small>Brasa</small></div>
-          <div><div class="e">🌿</div><b>RAÍZ</b><small>Raíz</small></div>
-          <div><div class="e">🐾</div><b>PULSO</b><small>Instinto</small></div>
-          <div><div class="e">🦅</div><b>HUELLA</b><small>Identidad</small></div>
-          <div><div class="e">☽</div><b>TÓTEM</b><small>Visión</small></div>
-          <div><div class="e">🜁</div><b>AURA</b><small>Espíritu</small></div>
-          <div><div class="e">∞</div><b>ANIMA</b><small>Despierta</small></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- LUMBRE -->
-    <section>
-      <div class="card s12" style="text-align:center;padding:44px">
-        <div class="lumbre-wrap" style="margin:0 auto 4px"><img class="lumbre" src="assets/img/lumbre.svg" width="64" height="76" alt="" /></div>
-        <span class="pill">LUMBRE</span>
-        <p class="quote" style="max-width:780px;margin:14px auto 0">LUMBRE es la chispa de ANIMA. Funciona OFF, Básico, IA Local o IA Conectada — y no depende obligatoriamente de internet.</p>
-        <div class="actions"><a class="btn gold" href="studio.html">Conocer a LUMBRE adentro →</a></div>
-      </div>
-    </section>
-
-    <!-- Llamado final -->
-    <section>
-      <div class="card s12" style="text-align:center;padding:48px;background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.72))">
-        <span class="pill gold">El llamado</span>
-        <h3 style="font-size:clamp(28px,5vw,48px);letter-spacing:-.05em;margin:14px 0 8px">¿Listo para cruzar?</h3>
-        <p class="muted" style="max-width:600px;margin:0 auto">El acceso es por invitación durante la Founding Era. Entra al Studio para conocer ANIMA o pide tu Alma en los Planes.</p>
-        <div class="actions"><a class="btn xl" href="studio.html">Cruzar el umbral →</a><a class="btn xl secondary" href="planes.html">Ver los Planes</a></div>
-      </div>
-    </section>
-
-    <div class="footer">
-      <strong>ANIMA TSC — The Soul of Creativity</strong><br>The Founding Era · A Living World for Creators<br><br>SARK · Creator of ANIMA · First Soul of ANIMA
-      <div style="margin-top:18px;font-size:11.5px;line-height:1.8">
-        <a href="legal.html#privacidad" style="color:var(--muted);margin:0 8px">Privacidad</a>·
-        <a href="legal.html#terminos" style="color:var(--muted);margin:0 8px">Términos</a>·
-        <a href="legal.html#seguridad" style="color:var(--muted);margin:0 8px">Seguridad</a>
-        <br><span style="opacity:.7">© 2026 ANIMA TSC. Tus datos son privados; tú decides qué compartir. Beta cerrada por invitación.</span>
+  <!-- HERO · PRIMER CONTACTO -->
+  <header class="hero">
+    <div class="glow"></div>
+    <div class="beams"></div>
+    <div class="apex-holder">
+      <svg class="apex-mark" viewBox="0 0 100 100" fill="none"><path d="M18 82 L50 20 L82 82" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="hero-center">
+      <div class="tagline">Algo está despertando</div>
+      <p class="sub">No has sido invitado a probar una aplicación.<br>Has sido invitado a <b style="color:#fff;font-weight:500">habitar un mundo</b>.</p>
+      <div class="hero-cta">
+        <button class="btn solid" data-enter>Cruzar el Umbral</button>
+        <a class="btn" href="#manifiesto">Conocer ANIMA</a>
       </div>
     </div>
-  </main>
+    <div class="wordmark">
+      <div class="nm serif">ANIMA</div>
+      <div class="tsc">TSC</div>
+      <div class="soc">The Soul of Creativity</div>
+    </div>
+    <a href="#manifiesto" class="scroll-hint">Desciende ↓</a>
+  </header>
 
-  <!-- Router del Umbral: el acceso pasa por el rito de entrada (req. 11).
-       Primera vez → El Umbral. Alma que ya despertó → su Home de ANIMA. -->
+  <!-- MANIFIESTO -->
+  <section class="block" id="manifiesto">
+    <div class="wrap">
+      <div class="mono eyebrow">El Umbral</div>
+      <h2 class="lead">ANIMA no es una red social. No es un gestor. No es una app.<br><em>Es un mundo vivo, habitado por Almas.</em></h2>
+      <p class="para">Cada acción deja una huella. Esa huella se llama Esencia. Aquí no compites por atención: resuenas. Y mientras existan Almas creando, ANIMA seguirá creciendo.</p>
+      <div class="cols">
+        <div class="pane"><span class="k">Aquí no existen usuarios</span><h3 style="margin-top:10px">Existen Almas</h3><p>Tu identidad no es un perfil: es tu Alma, tu memoria y tu legado dentro del mundo.</p></div>
+        <div class="pane"><span class="k">No existen seguidores</span><h3 style="margin-top:10px">Existen Ecos</h3><p>Lo que creas resuena en otras Almas. Un Eco es una obra, una reflexión, un proceso que deja marca.</p></div>
+        <div class="pane"><span class="k">No existen puntos</span><h3 style="margin-top:10px">Existe Esencia</h3><p>Una sola Esencia. Nunca disminuye, nunca se reinicia. Es la huella que dejas en ANIMA.</p></div>
+        <div class="pane"><span class="k">No es una IA cualquiera</span><h3 style="margin-top:10px">Es Lumbre</h3><p>El Guardián del Fuego. Habla poco, con calma. Guía sin invadir, observa sin gobernar.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GLOSARIO / LENGUAJE -->
+  <section class="block">
+    <div class="wrap">
+      <div class="mono eyebrow">El lenguaje del mundo</div>
+      <h2 class="lead serif">Aprender ANIMA es aprender a nombrar.</h2>
+      <div class="glossary">
+        <div><b>Alma</b><small>Quien habita ANIMA. Tú.</small></div>
+        <div><b>Esencia</b><small>La huella viva que dejas. Solo crece.</small></div>
+        <div><b>Eco</b><small>Una creación que resuena en el mundo.</small></div>
+        <div><b>Senda</b><small>El camino de tu Alma: tu Sueño y tus Semillas.</small></div>
+        <div><b>Semilla</b><small>Un objetivo que brota y florece.</small></div>
+        <div><b>Clan</b><small>De 2 a 8 Almas que crean juntas.</small></div>
+        <div><b>Árbol</b><small>El corazón vivo de ANIMA. Se alimenta de la Esencia de todas las Almas.</small></div>
+        <div><b>Constelación</b><small>El mapa vivo de Almas por el mundo.</small></div>
+        <div><b>Lumbre</b><small>La presencia que acompaña y recuerda.</small></div>
+        <div><b>Consejo</b><small>La guía del mundo: mensajes, eventos, noticias.</small></div>
+        <div><b>Despertar</b><small>Una función que deja de dormir y se abre.</small></div>
+        <div><b>Origen</b><small>La primera era. Las primeras Almas.</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EL MUNDO / ESTRUCTURA -->
+  <section class="block" id="mundo">
+    <div class="wrap">
+      <div class="mono eyebrow">El mundo que habitarás</div>
+      <h2 class="lead">Cinco lugares. Nada más.<br><em>Todo lo demás vive dentro.</em></h2>
+      <p class="para">ANIMA no te abruma con menús. Se ordena en cinco moradas, y cada una se revela a su tiempo.</p>
+      <div class="world">
+        <div><div class="sy">◆</div><b>Mi Alma</b><small>Resumen, Senda, Trayectoria, Portafolio, Cronología e Insignias.</small></div>
+        <div><div class="sy">₵</div><b>Taller</b><small>Lo que creas: Proyectos, Clientes y Agenda.</small></div>
+        <div><div class="sy">❂</div><b>Clan</b><small>Con quién creas: Panel, Plan de trabajo y Calendario.</small></div>
+        <div><div class="sy">❂</div><b>Mundo</b><small>Constelación, Árbol, Ecos y Consejo.</small></div>
+        <div><div class="sy">❖</div><b>Mi Plan</b><small>Cómo habitas: Alma, Clan o Santuario.</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ESTADO ACTUAL DE ANIMA -->
+  <section class="block" id="estado">
+    <div class="wrap">
+      <div class="mono eyebrow">Estado actual del mundo</div>
+      <h2 class="lead serif">ANIMA aún está despertando.</h2>
+      <p class="para">Sus raíces son jóvenes. Sus ramas todavía buscan el cielo. Esto es lo que late hoy.</p>
+      <div class="state">
+        <div class="stat"><div class="k">Era</div><div class="v">Origen</div></div>
+        <div class="stat"><div class="k">El Árbol</div><div class="v" id="treeState">Despertando</div></div>
+        <div class="stat"><div class="k">Almas del Origen</div><div class="v" id="stateSouls">— <small>/ 30</small></div></div>
+        <div class="stat"><div class="k">Acceso</div><div class="v" style="font-size:20px">Por Umbral<br><small class="faint" style="font-size:11px">Código del Origen</small></div></div>
+      </div>
+      <p class="para" style="margin-top:30px">¿Quieres ver el mundo respirar? Visita el <a href="arbol.html" style="color:#fff;border-bottom:1px solid var(--line)">Árbol de Almas</a> y la <a href="roadmap.html" style="color:#fff;border-bottom:1px solid var(--line)">Senda</a> del proyecto en detalle.</p>
+    </div>
+  </section>
+
+  <!-- ALMAS DEL ORIGEN -->
+  <section class="block" id="origen">
+    <div class="wrap" style="text-align:center">
+      <div class="mono eyebrow">Las primeras serán recordadas para siempre</div>
+      <div class="origin-count"><span id="originCount">—</span> <small>/ 30</small></div>
+      <h2 class="lead serif" id="originMsg" style="margin:24px auto 0">Almas del Origen</h2>
+      <p class="para" style="margin:22px auto 0">Solo treinta Almas cruzarán el Umbral durante el Primer Despertar. Cada una quedará escrita en la memoria de ANIMA con la insignia <b style="color:#fff">Alma del Origen</b>.</p>
+      <div class="origin-names" id="originNames" style="justify-content:center"></div>
+    </div>
+  </section>
+
+  <!-- FUNCIONES DORMIDAS -->
+  <section class="block">
+    <div class="wrap">
+      <div class="mono eyebrow">Lo que aún sueña</div>
+      <h2 class="lead">Algunas puertas no están cerradas.<br><em>Solo duermen.</em></h2>
+      <div class="dormant">
+        <div><span class="tag">Dormido</span><b>Mercados</b><p>El intercambio de obras entre Almas.</p></div>
+        <div><span class="tag">Dormido</span><b>Viajes</b><p>Encuentros reales entre Almas del mundo.</p></div>
+        <div><span class="tag">Dormido</span><b>Reino</b><p>Comunidades masivas. El siguiente horizonte.</p></div>
+        <div><span class="tag">Soñando</span><b>Archivo Universal</b><p>La memoria eterna de ANIMA.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LLAMADO FINAL -->
+  <section class="call">
+    <div class="wrap">
+      <div class="mono eyebrow" style="text-align:center">El Pacto del Origen</div>
+      <h2 class="lead serif">Tu Esencia permanecerá aquí.<br>Y quizás, algún día, dirás:<br><em>"Yo estuve en el Origen."</em></h2>
+      <p class="para">Si cruzas el Umbral, formarás parte de las Almas del Origen.</p>
+      <div style="margin-top:34px"><button class="btn solid" data-enter>Deseo habitar ANIMA</button></div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="flinks">
+        <a href="roadmap.html">La Senda</a>
+        <a href="planes.html">Mi Plan</a>
+        <a href="arbol.html">Árbol de Almas</a>
+        <a href="legal.html#privacidad">Privacidad</a>
+        <a href="legal.html#terminos">Términos</a>
+        <a href="#" data-enter>Entrar</a>
+      </div>
+      <strong style="color:#cfcfd4;font-weight:500;letter-spacing:.04em">ANIMA TSC — The Soul of Creativity</strong><br>
+      <span style="opacity:.7">The Founding Era · Un mundo vivo para creadores · SARK, Primera Alma de ANIMA</span>
+    </div>
+  </footer>
+
+  <!-- PORTAL: de negro a blanco -->
+  <div id="portal" aria-hidden="true">
+    <div class="flood"></div>
+    <svg class="pglyph" viewBox="0 0 100 100" fill="none"><path d="M18 82 L50 20 L82 82" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="ptext">Cruzando el Umbral…</div>
+  </div>
+
   <script>
   (function(){
-    var done = window.AnimaState && AnimaState.isCompleted();
-    var dest = (window.AnimaState ? AnimaState.entryHref() : "umbral.html");
-    document.querySelectorAll('a[href="studio.html"]').forEach(function(a){
-      a.setAttribute("href", dest);
-      var t = (a.textContent||"").trim();
-      // Solo renombramos los grandes llamados a la acción, no enlaces de texto.
-      if(/cruzar el umbral/i.test(t)){
-        a.textContent = done ? "Entrar a ANIMA →" : "Entrar al Umbral →";
-      }
-    });
-  })();
+    /* --- destino fiel al flujo existente: primera vez → Umbral; ya despertó → Home --- */
+    function entryHref(){
+      try{ if(window.AnimaState) return AnimaState.entryHref(); }catch(e){}
+      return "umbral.html";
+    }
+    /* --- Portal inmersivo negro→blanco, luego navega --- */
+    var navigating=false;
+    function enter(e){
+      if(e) e.preventDefault();
+      if(navigating) return; navigating=true;
+      var p=document.getElementById("portal");
+      p.classList.add("on");
+      var reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+      setTimeout(function(){ p.classList.add("bloom"); }, reduce?50:650);
+      setTimeout(function(){ location.href=entryHref(); }, reduce?500:1850);
+    }
+    document.querySelectorAll("[data-enter]").forEach(function(b){ b.addEventListener("click", enter); });
 
-  // Instalar / Añadir al inicio (la app abre siempre en el Home: start_url=home.html)
-  (function(){
-    var btn = document.getElementById("installBtn"); if(!btn) return;
-    var deferred = null;
-    var standalone = (matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
-    var iOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    if(standalone){ btn.style.display = "none"; return; }
-    addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); deferred = e; });
-    addEventListener("appinstalled", function(){ deferred = null; btn.style.display = "none"; });
-    btn.addEventListener("click", function(){
-      if(deferred){ deferred.prompt(); deferred.userChoice.then(function(){ deferred = null; }); return; }
-      if(iOS){ alert("Añade ANIMA a tu inicio (iPhone/iPad · Safari):\n\n1) Toca Compartir ⬆️.\n2) Elige \"Agregar a inicio\".\n\nEl icono abrirá ANIMA siempre desde tu Home."); return; }
-      alert("Instala ANIMA como app:\n\n• Android (Chrome): menú ⋮ → \"Instalar app\".\n• Computador (Chrome/Edge): icono ⊕ en la barra de direcciones.\n\nSe abrirá siempre desde tu Home.");
+    /* --- nav que se densifica al bajar --- */
+    addEventListener("scroll", function(){
+      var n=document.getElementById("nav");
+      if(scrollY>40) n.style.background="rgba(8,8,10,.82)"; else n.style.background="";
     });
+
+    /* --- Almas del Origen: contador real (solo lectura, best-effort) --- */
+    var FOUNDERS=["SARK","Valentina","Nicolás","Diego","Camila","Lucía","Mateo","Sofía","Tomás","Renata"];
+    function paintOrigin(n){
+      var have = (typeof n==="number" && n>=0) ? Math.min(n,30) : null;
+      var cEl=document.getElementById("originCount"), sEl=document.getElementById("stateSouls"), mEl=document.getElementById("originMsg");
+      if(have===null){
+        cEl.textContent="∞"; sEl.innerHTML='Era del Origen';
+      }else{
+        cEl.textContent=have; sEl.innerHTML=have+' <small>/ 30</small>';
+        if(have>=30){ mEl.textContent="El Primer Despertar ha concluido"; }
+      }
+      /* nombres: fundadores conocidos + cupos restantes como silencio */
+      var names=FOUNDERS.slice(0, have===null?FOUNDERS.length:Math.min(have,FOUNDERS.length));
+      var box=document.getElementById("originNames"); box.innerHTML="";
+      names.forEach(function(nm){ var s=document.createElement("span"); s.textContent="✦ "+nm; box.appendChild(s); });
+      var remaining=(have===null?6:Math.max(0,30-Math.max(have,names.length)));
+      for(var i=0;i<Math.min(remaining,8);i++){ var e=document.createElement("span"); e.className="empty"; e.textContent="· cupo en silencio"; box.appendChild(e); }
+    }
+    paintOrigin(null);
+    /* carga perezosa del cliente (publishable key, seguro para frontend) para el conteo vivo */
+    function lazyCount(){
+      var s1=document.createElement("script"); s1.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+      s1.onload=function(){
+        var s2=document.createElement("script"); s2.src="assets/js/supabase.js";
+        s2.onload=function(){
+          try{ if(window.Cloud && Cloud.enabled && Cloud.soulsCount){ Cloud.soulsCount().then(function(n){ if(n!=null) paintOrigin(n); }).catch(function(){}); } }catch(e){}
+        };
+        document.body.appendChild(s2);
+      };
+      s1.onerror=function(){};
+      document.body.appendChild(s1);
+    }
+    if("requestIdleCallback" in window) requestIdleCallback(lazyCount); else setTimeout(lazyCount,1200);
   })();
   </script>
+  <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>
 </body>
 </html>
