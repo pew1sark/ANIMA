@@ -139,8 +139,8 @@ function planAllows(view){
 const VIEW_MIN_LEVEL = {
   // RAÍZ — el Alma empieza a recordar y a ordenar su mundo.
   cronologia:"ROOT", insignias:"ROOT", biblioteca:"ROOT", clientes:"ROOT", agenda:"ROOT",
-  // HUELLA — el Alma se vuelve reconocible: mide su huella.
-  estadisticas:"TOTEM"
+  // HUELLA — el Alma se vuelve reconocible: mide su huella y decide qué muestra.
+  estadisticas:"TOTEM", visibilidad:"TOTEM"
 };
 function levelAllows(view){
   if(isCreator && !state.viewAs) return true;
@@ -168,6 +168,7 @@ const NAV_TREE = [
       {v:"cronologia", ico:"☷",ic:"tiempo",t:"Cronología"},
       {v:"insignias",  ico:"✷",ic:"insignia",t:"Insignias"},
       {v:"estadisticas",ico:"📊",ic:"grafico",t:"Estadísticas"},
+      {v:"visibilidad", ico:"👁",ic:"vista",t:"Visibilidad"},
       {v:"memoria",    ico:"✦",ic:"memoria",t:"Memorias"},
       {v:"biblioteca", ico:"❏",ic:"archivo",t:"Biblioteca"}
   ]},
@@ -255,6 +256,7 @@ const TITLES = {
   cronologia:["Cronología","Porque ANIMA recordará. La historia viva de tu Alma."],
   insignias:["Insignias","No se anuncian. Se descubren."],
   estadisticas:["Estadísticas","La huella de tu Alma, en números."],
+  visibilidad:["Visibilidad","Tú decides qué ve el mundo de tu Alma."],
   consejo:["Consejo de Almas","Las primeras Almas escriben la historia de ANIMA."],
   sant_plan:["Planificación del Santuario","Coordina a toda la organización."],
   config:["Personalizar","Tú decides qué muestra tu Alma."],
@@ -337,7 +339,7 @@ function renderView(){
   if(!levelAllows(state.view)){ document.getElementById("view").innerHTML = previewBanner() + vLocked(state.view); return; }
   const fn = { mialma:vMiAlma, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
     finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
-    cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, consejo:vConsejo,
+    cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, santuario:vSantuario,
     sant_plan:vSantPlan }[state.view] || vMiAlma;
@@ -1474,6 +1476,47 @@ function vEstadisticas(a){
 }
 
 /* ===========================================================
+   VISIBILIDAD (Alpha 2026) — "Tú decides qué ve el mundo."
+   Se abre en HUELLA. Centraliza el portafolio público y qué
+   secciones se muestran a las demás Almas (almas.visibility).
+   =========================================================== */
+function visOn(a,k,def){ const v=a.visibility||{}; return (k==="public")?(v.public===true):(v[k]!==false&&(def!==false)); }
+function vVisibilidad(a){
+  if(!a.live) return `<div class="grid"><div class="card s12"><span class="pill gold">Visibilidad</span><h2 style="margin:8px 0;letter-spacing:-.03em">Entra a tu Alma</h2><p class="muted" style="max-width:600px">Para decidir qué muestra tu Alma al mundo, entra a tu Alma en la nube.</p></div></div>`;
+  const pub=visOn(a,"public");
+  const sw=(k,label,desc)=>{ const on=(k==="public")?pub:visOn(a,k);
+    return `<div class="row" style="align-items:flex-start"><div class="grow"><b>${label}</b><br><small class="muted">${desc}</small></div>
+      <button class="pf-pubtoggle ${on?'on':''}" data-vistoggle="${k}"><span class="toggle ${on?'on':''}"></span>${on?'Visible':'Oculto'}</button></div>`; };
+  const link = pub ? `<div class="row"><div class="grow"><b>Tu enlace público</b><br><small class="muted">Compártelo: muestra solo tu cara pública.</small></div>
+      <a class="btn ghost sm" href="portfolio.html?alma=${a.almaId}" target="_blank" rel="noopener">Ver público ↗</a></div>` : "";
+  return `<div class="grid">
+    <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
+      <span class="pill gold">👁 Visibilidad</span>
+      <h2 style="font-size:24px;letter-spacing:-.04em;margin:10px 0 4px">Tú decides qué ve el mundo</h2>
+      <p class="muted" style="max-width:640px">Tu espacio es privado por defecto. Aquí eliges qué parte de tu Alma es pública. Tu Raíz, memorias, proyectos y agenda <b>nunca</b> se muestran.</p></div>
+    <div class="card s12"><div class="section-title"><h2>Portafolio público</h2></div>
+      ${sw("public","Portafolio público","Si está activo, otras Almas y visitantes pueden ver tu portafolio.")}
+      ${link}</div>
+    <div class="card s12"><div class="section-title"><h2>¿Qué se muestra en tu cara pública?</h2></div>
+      ${sw("bio","Sobre mí","Tu biografía.")}
+      ${sw("tags","Servicios / etiquetas","Tus disciplinas y servicios.")}
+      ${sw("trajectory","Trayectoria","Tus hitos y trayectoria.")}
+      ${sw("portfolio","Obras","Las obras de tu portafolio.")}
+      ${sw("links","Enlaces","Sitio, redes y tienda.")}
+      <p class="muted" style="font-size:12px;margin-top:10px">Estas opciones afectan únicamente tu portafolio público.</p></div>
+  </div>`;
+}
+async function toggleVisibility(key){
+  const a=me(); if(!a.live) return;
+  a.visibility=a.visibility||{};
+  if(key==="public") a.visibility.public=!(a.visibility.public===true);
+  else a.visibility[key]=(a.visibility[key]===false); // por defecto visible → al togglear, oculta/restaura
+  try{ await Cloud.updateAlma(a.almaId,{visibility:a.visibility}); Cloud.log("visibilidad",{key}); }
+  catch(e){ alert("No se pudo guardar: "+(e.message||e)); }
+  save(); renderView();
+}
+
+/* ===========================================================
    CONSEJO DE ALMAS (Alpha 2026) — proponer y votar.
    "Las primeras Almas ayudaron a escribir la historia de ANIMA."
    =========================================================== */
@@ -2393,6 +2436,7 @@ document.addEventListener("click", e=>{
   const spd=e.target.closest("[data-santprojdel]"); if(spd){ delSantProject(spd.dataset.santprojdel); return; }
   if(e.target.closest("[data-santeventadd]")){ addSantEvent(); return; }
   const sed=e.target.closest("[data-santeventdel]"); if(sed){ delSantEvent(sed.dataset.santeventdel); return; }
+  const vtg=e.target.closest("[data-vistoggle]"); if(vtg){ toggleVisibility(vtg.dataset.vistoggle); return; }
   const ed=e.target.closest("[data-edit]"); if(ed){ const [k,i]=ed.dataset.edit.split(":"); openRecord(k,+i); return; }
   const dl=e.target.closest("[data-del]"); if(dl){ const [k,i]=dl.dataset.del.split(":"); deleteRecord(k,+i); return; }
   const st=e.target.closest("[data-star]"); if(st){ _fbRating=+st.dataset.star; renderStars(); return; }
