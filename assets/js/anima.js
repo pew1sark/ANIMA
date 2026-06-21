@@ -138,7 +138,9 @@ function planAllows(view){
    nunca queda oculto; lo que llega después se abre con el camino. */
 const VIEW_MIN_LEVEL = {
   // RAÍZ — el Alma empieza a recordar y a ordenar su mundo.
-  cronologia:"ROOT", insignias:"ROOT", biblioteca:"ROOT", clientes:"ROOT", agenda:"ROOT"
+  cronologia:"ROOT", insignias:"ROOT", biblioteca:"ROOT", clientes:"ROOT", agenda:"ROOT",
+  // HUELLA — el Alma se vuelve reconocible: mide su huella.
+  estadisticas:"TOTEM"
 };
 function levelAllows(view){
   if(isCreator && !state.viewAs) return true;
@@ -165,6 +167,7 @@ const NAV_TREE = [
       {v:"portafolio", ico:"▦",t:"Portafolio"},
       {v:"cronologia", ico:"☷",t:"Cronología"},
       {v:"insignias",  ico:"✷",t:"Insignias"},
+      {v:"estadisticas",ico:"📊",t:"Estadísticas"},
       {v:"memoria",    ico:"✦",t:"Memorias"},
       {v:"biblioteca", ico:"❏",t:"Biblioteca"}
   ]},
@@ -251,6 +254,7 @@ const TITLES = {
   biblioteca:["Biblioteca","Tus documentos y archivos."],
   cronologia:["Cronología","Porque ANIMA recordará. La historia viva de tu Alma."],
   insignias:["Insignias","No se anuncian. Se descubren."],
+  estadisticas:["Estadísticas","La huella de tu Alma, en números."],
   consejo:["Consejo de Almas","Las primeras Almas escriben la historia de ANIMA."],
   sant_plan:["Planificación del Santuario","Coordina a toda la organización."],
   config:["Personalizar","Tú decides qué muestra tu Alma."],
@@ -333,7 +337,7 @@ function renderView(){
   if(!levelAllows(state.view)){ document.getElementById("view").innerHTML = previewBanner() + vLocked(state.view); return; }
   const fn = { mialma:vMiAlma, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
     finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
-    cronologia:vCronologia, insignias:vInsignias, consejo:vConsejo,
+    cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, santuario:vSantuario,
     sant_plan:vSantPlan }[state.view] || vMiAlma;
@@ -1310,8 +1314,49 @@ function vInsignias(a){
 }
 async function loadBadges(){
   if(!Cloud.enabled){ state.cloudBadges=[]; return; }
-  try{ const r=await Promise.all([Cloud.badgeCatalog(),Cloud.myBadges()]); state.badgeCatalog=r[0]; state.cloudBadges=r[1]; if(state.view==="insignias") renderView(); }
+  try{ const r=await Promise.all([Cloud.badgeCatalog(),Cloud.myBadges()]); state.badgeCatalog=r[0]; state.cloudBadges=r[1]; if(state.view==="insignias"||state.view==="estadisticas") renderView(); }
   catch(e){ state.cloudBadges=[]; }
+}
+
+/* ===========================================================
+   ESTADÍSTICAS (Alpha 2026) — "La huella de tu Alma, en números."
+   Se abre en HUELLA. Mide lo que el Alma ha creado y recibido.
+   =========================================================== */
+function vEstadisticas(a){
+  // Carga diferida de insignias y cronología para los conteos.
+  if(a.live){ if(state.cloudBadges==null) loadBadges(); if(state.cloudTimeline==null) loadTimeline(); }
+  const p=levelProgress(a.xp), lv=levelByKey(a.level);
+  const works=(a.portfolio||[]).length, projT=(a.projects||[]).length;
+  const projA=(a.projects||[]).filter(x=>x.st==="En curso"||x.st==="En producción").length;
+  const mem=(a.memories||[]).length, hitos=(a.trajectory||[]).length, lib=(a.library||[]).length;
+  const badges=(state.cloudBadges||[]).length, recuerdos=(state.cloudTimeline||[]).length;
+  const days=a.created_at?Math.max(1,Math.floor((Date.now()-new Date(a.created_at).getTime())/86400000)):null;
+  const stat=(n,l,c)=>`<div class="card s3"><div class="stat"><span class="num"${c?` style="color:${c}"`:''}>${n}</span><span class="lbl">${l}</span></div></div>`;
+  // Proyectos por estado.
+  const byStatus={}; (a.projects||[]).forEach(x=>{ const s=x.st||"Sin estado"; byStatus[s]=(byStatus[s]||0)+1; });
+  const statusRows=Object.keys(byStatus).length?Object.entries(byStatus).sort((x,y)=>y[1]-x[1])
+      .map(([s,n])=>`<div class="country-row"><span>${esc(s)}</span><b>${n}</b></div>`).join("")
+    :`<p class="muted" style="font-size:13px">Aún no registras trabajos.</p>`;
+  return `<div class="grid">
+    <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
+      <span class="pill gold">${lv.emoji} ${esc(lv.label)} · ${esc(lv.name)}</span>
+      <h2 style="font-size:24px;letter-spacing:-.04em;margin:10px 0 4px">La huella de tu Alma</h2>
+      <div class="ebar" style="max-width:420px;margin:6px 0 6px"><span style="width:${p.pct}%"></span></div>
+      <div class="muted" style="font-size:12.5px">${a.xp.toLocaleString("es-CL")} XP${p.next?` · ${p.pct}% hacia ${esc(p.next.label)}`:" · camino completo ∞"}${days?` · ${days} día${days===1?"":"s"} en ANIMA`:""}</div>
+    </div>
+    ${stat((a.sparks||0).toLocaleString("es-CL"),"Chispas","var(--gold-deep)")}
+    ${stat(works,"Obras")}
+    ${stat(projA+"/"+projT,"Proyectos activos")}
+    ${stat(recuerdos,"Recuerdos")}
+    ${stat(mem,"Memorias")}
+    ${stat(hitos,"Hitos")}
+    ${stat(lib,"Biblioteca")}
+    ${stat(badges,"Insignias","var(--gold-deep)")}
+    <div class="card s7"><div class="section-title"><h2>Trabajos por estado</h2></div><div class="country-rows">${statusRows}</div></div>
+    <div class="card s5"><div class="section-title"><h2>Tu pulso</h2></div>
+      <p class="muted" style="font-size:13px;line-height:1.6">Cada obra, memoria e hito suma Esencia y te acerca al siguiente nivel. ${p.next?`Te faltan <b>${(p.next.xp-a.xp).toLocaleString("es-CL")} XP</b> para <b>${esc(p.next.label)}</b>.`:"Has recorrido todo el camino."}</p>
+      ${a.live?"":`<p class="muted" style="font-size:12px">Entra a tu Alma en la nube para contar tus insignias y recuerdos.</p>`}</div>
+  </div>`;
 }
 
 /* ===========================================================
