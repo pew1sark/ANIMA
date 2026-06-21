@@ -388,7 +388,6 @@ function vAlmaResumen(a,lp){
     ${cfg.cards.graficos!==false?`
     <div class="card s6"><div class="section-title"><h2>Finanzas por mes</h2></div>${chartFinance(a)}</div>
     <div class="card s6"><div class="section-title"><h2>Trabajos por estado</h2></div>${chartProjects(a)}</div>`:``}
-    ${cfg.cards.constelacion!==false?constelacionHTML():``}
     ${cfg.cards.hoy!==false?`<div class="card s6"><div class="section-title"><h2>Hoy</h2><div class="spacer"></div><button class="btn sm" data-add="cita">+ Cita</button></div>
       ${a.agenda.map((x,i)=>`<div class="row"><b style="color:var(--gold);width:60px">${esc(x.h)}</b><div class="grow">${esc(x.t)}</div>${acts("cita",i)}</div>`).join("")||`<p class="muted">Sin agenda hoy.</p>`}</div>`:``}
     ${cfg.cards.memoria!==false?`<div class="card s6"><div class="section-title"><h2>Última memoria</h2><div class="spacer"></div><button class="btn sm" data-add="memoria">+ Memoria</button></div>
@@ -722,7 +721,7 @@ function vBiblioteca(a){
 function vConfigBody(a){
   const cfg=getCfg(a);
   const mod=[["trayectoria","Trayectoria"],["portafolio","Portafolio"],["proyectos","Flujo de trabajo"],["finanzas","Finanzas"],["clientes","Clientes"],["cotizador","Cotizador"],["agenda","Agenda"],["memoria","Memorias"],["biblioteca","Biblioteca"]];
-  const card=[["constelacion","Mapa de Almas"],["kpis","Indicadores rápidos"],["camino","Camino (pixel art)"],["graficos","Gráficos"],["hoy","Agenda de hoy"],["memoria","Última memoria"]];
+  const card=[["kpis","Indicadores rápidos"],["camino","Camino (pixel art)"],["graficos","Gráficos"],["hoy","Agenda de hoy"],["memoria","Última memoria"]];
   const tg=(g,k,l,on)=>`<div class="row"><div class="grow"><b>${l}</b></div><button class="toggle ${on?'on':''}" data-cfg="${g}:${k}"><span></span></button></div>`;
   return `<div class="card s12"><span class="pill gold">Personalización</span>
       <p class="muted" style="max-width:640px">Configura tu espacio: qué módulos aparecen en tu menú y qué secciones se muestran en tu panel.</p></div>
@@ -2153,7 +2152,7 @@ const TOUR=[
   {sel:"#nav", title:"Tu menú", text:"Aquí vive tu Alma: trayectoria, portafolio, finanzas, cotizador, clientes y más. Lo que no uses, lo ocultas en Ajustes."},
   {sel:".tabbar", title:"Tu perfil", text:"Mi Alma tiene pestañas: Resumen, Identidad (tu foto y datos), Vista pública (qué muestras) y Ajustes."},
   {sel:".camino-card", title:"Tu camino", text:"Subes de nivel creando. Cada nivel desbloquea nuevas ventanas. Toca la ⓘ para ver el mapa de niveles."},
-  {sel:".map-card", title:"El mundo", text:"El Mapa de Almas muestra a la comunidad que va entrando a ANIMA, ubicada en el planeta."},
+  {sel:'[data-view="comunidad"]', title:"El mundo", text:"En Comunidad vive el Árbol de Almas: el mapa de quienes habitan ANIMA, los Ecos en vivo y el conteo por país."},
   {sel:"#lumbreFab", title:"Soy LUMBRE ✦", text:"Tu chispa compañera. Tócame cuando quieras: te ayudo con finanzas, proyectos y tu siguiente nivel. ¡Bienvenida a ANIMA!"}
 ];
 function startTour(){ closeLumbre(); state.view="mialma"; state.almaTab="resumen"; renderAll(); setTimeout(()=>tourStep(0),360); }
