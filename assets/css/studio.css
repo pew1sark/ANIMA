@@ -553,3 +553,17 @@ a.nav-item{text-decoration:none;color:inherit}
   color:var(--gold-deep,#7b5920);background:rgba(208,170,99,.14);padding:2px 7px;border-radius:999px;white-space:nowrap}
 .locked-view{text-align:center;padding:48px 24px}
 .locked-view .locked-glyph{font-size:44px;opacity:.5;line-height:1}
+
+/* ===========================================================
+   PRIMERA LLEGADA PROGRESIVA — descubrir moradas + aviso sereno
+   =========================================================== */
+.nav-reveal{display:flex;align-items:center;gap:8px;width:calc(100% - 12px);margin:12px 6px 2px;
+  padding:11px 14px;border:1px dashed rgba(0,0,0,.16);border-radius:14px;background:transparent;
+  color:#6e6e73;font:inherit;font-size:13px;font-weight:800;letter-spacing:.01em;cursor:pointer;
+  transition:.2s ease;text-align:left}
+.nav-reveal:hover{border-color:#111;color:#111;background:rgba(0,0,0,.03);transform:translateY(-1px)}
+.anima-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(16px);
+  background:#111;color:#fff;padding:13px 20px;border-radius:14px;font-size:14px;line-height:1.4;
+  max-width:380px;z-index:9999;opacity:0;transition:.35s ease;pointer-events:none;text-align:center;
+  box-shadow:0 18px 50px rgba(0,0,0,.22)}
+.anima-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
