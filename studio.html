@@ -25,7 +25,7 @@
 
     <!-- SIDEBAR -->
     <aside class="side" id="side">
-      <div class="brand">
+      <div class="brand" id="brandHome" title="Ir al inicio" style="cursor:pointer">
         <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         ANIMA
       </div>
@@ -33,11 +33,9 @@
       <nav id="nav"></nav>
       <div style="flex:1"></div>
       <div style="padding:8px 6px;display:flex;flex-direction:column;gap:8px">
-        <button class="btn sm" id="installBtn" hidden>⤓ Instalar app</button>
-        <button class="btn secondary sm" id="tourBtn">✦ Ver tutorial</button>
+        <button class="btn sm" id="installBtn" hidden>⤓ Instalar ANIMA</button>
         <button class="btn gold sm" id="feedbackBtn">✦ Enviar feedback</button>
-        <a class="btn ghost sm" href="roadmap.html">Ver Roadmap V6</a>
-        <button class="btn ghost sm" id="resetBtn">Restaurar Almas</button>
+        <button class="btn ghost sm" id="codiceBtn">❏ El Códice</button>
         <small class="muted" style="padding:4px 6px;font-size:11px">The Soul of Creativity · Beta cerrada</small>
       </div>
     </aside>
@@ -45,7 +43,9 @@
     <!-- MAIN -->
     <main class="main">
       <div class="topbar">
-        <button class="menu-btn" id="menuBtn">☰</button>
+        <button class="home-logo" id="homeLogo" title="Inicio / Atrás" aria-label="Inicio">
+          <svg viewBox="0 0 100 100" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         <div id="topTitle"></div>
         <div class="spacer"></div>
         <div class="alma-menu-wrap">
@@ -205,6 +205,35 @@
       <div class="field"><label>Mensaje</label><textarea id="fbMsg" rows="4" placeholder="Qué te gustó, qué falló, qué le falta a tu Alma…"></textarea></div>
       <button class="btn gold" id="fbSend" style="width:100%">Enviar feedback</button>
       <div id="fbStatus" class="muted" style="font-size:12.5px;margin-top:10px;min-height:16px"></div>
+    </div>
+  </div>
+
+  <!-- MODAL CÓDICE — mini libro: glosario y conceptos del mundo ANIMA -->
+  <div class="auth-modal" id="codiceModal">
+    <div class="auth-box">
+      <div class="auth-head">
+        <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div style="flex:1"><b>El Códice</b><br><small class="muted">Glosario y conceptos del mundo ANIMA.</small></div>
+        <button class="btn ghost sm" id="codiceClose">✕</button>
+      </div>
+      <p class="muted" style="font-size:12.5px;margin:2px 0 12px">Un pequeño libro vivo. Toca cualquier término para abrirlo. Aquí encontrarás el lenguaje de ANIMA, por si quieres entenderlo mejor.</p>
+      <div class="codice">
+        <details open><summary>¿Qué es ANIMA?</summary><p>Un mundo vivo para creadores. Aquí no hay usuarios: hay <b>Almas</b>. No mides seguidores ni likes, sino tu <b>Esencia</b> y tu <b>Huella</b>. Organizas tu identidad, tu trabajo y tu trayectoria, y creces junto a otras Almas.</p></details>
+        <details><summary>Alma</summary><p>Tú, dentro de ANIMA. Tu identidad creativa: nombre, oficio, bio, portafolio y trayectoria. Cada Alma decide qué muestra al mundo y qué guarda en privado.</p></details>
+        <details><summary>Esencia</summary><p>La energía que reúnes al crear y participar. Sustituye a los “puntos”. Sube con cada acción (completar tu identidad, subir obras, dejar Ecos, el Ritual) y te lleva de un nivel al siguiente.</p></details>
+        <details><summary>Niveles del camino</summary><p>El Alma crece por moradas: <b>Origen → Chispa → Raíz → Pulso → Huella → Tótem → Aura → ANIMA</b>. Cada nivel revela nuevas ventanas y posibilidades. No se desbloquea todo de golpe: ANIMA se descubre a tu ritmo.</p></details>
+        <details><summary>Huella</summary><p>Lo que dejas en el mundo: una obra publicada o una entrada en el Muro de la comunidad. Tus Huellas forman tu rastro creativo y hacen resonar el Árbol.</p></details>
+        <details><summary>Eco</summary><p>Una respuesta, un comentario, una señal entre Almas. Sustituye a los “me gusta”: en ANIMA las cosas resuenan, no se acumulan.</p></details>
+        <details><summary>Umbral · Primer Despertar</summary><p>El rito de entrada a ANIMA. Se vive <b>una sola vez</b>: al cruzarlo, tu Alma nace y queda registrada. Después entras directo a tu HOME.</p></details>
+        <details><summary>Árbol de Almas</summary><p>El corazón del Mundo. Un organismo vivo que crece con la actividad de todas las Almas: cuantas más crean, más despierta el Árbol.</p></details>
+        <details><summary>Ritual del Eco</summary><p>Una ceremonia diaria: <b>una vez al día</b> compartes una Huella sobre lo que creaste esta semana. Enciende el Árbol y suma Esencia.</p></details>
+        <details><summary>Mundo · Constelación</summary><p>El mapa de las Almas que habitan ANIMA, por ubicación. Puedes visitar otras Almas y ver lo que decidieron hacer público: su portafolio y su resumen.</p></details>
+        <details><summary>Clan</summary><p>Un equipo pequeño (2–8 Almas) para crear en conjunto: panel, agenda, proyectos y memoria compartida.</p></details>
+        <details><summary>Santuario</summary><p>Una organización mayor (8+): varios Clanes coordinados, con una vista general del conjunto.</p></details>
+        <details><summary>LUMBRE</summary><p>Tu chispa compañera: el motor agente de ANIMA. Aún <b>no despierta</b> — reunirá voz cuando el mundo tenga más Esencia. Pronto te ayudará con tu Raíz, tus proyectos y tu camino.</p></details>
+        <details><summary>Raíz</summary><p>El sustento del Alma: tus ingresos, egresos y ganancia. Siempre privado. Es la base que sostiene tu trayectoria.</p></details>
+        <details><summary>Insignias</summary><p>Marcas que descubres al habitar ANIMA. No se anuncian: se encuentran.</p></details>
+      </div>
     </div>
   </div>
 
