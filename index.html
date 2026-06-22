@@ -393,20 +393,33 @@
       for(var i=0;i<Math.min(remaining,8);i++){ var e=document.createElement("span"); e.className="empty"; e.textContent="· cupo en silencio"; box.appendChild(e); }
     }
     paintOrigin(null);
-    /* carga perezosa del cliente (publishable key, seguro para frontend) para el conteo vivo */
+    /* carga del cliente (publishable key, seguro para frontend): conteo vivo +
+       entrada directa al HOME si hay SESIÓN ACTIVA y el Alma ya despertó. Así la
+       experiencia inicial se vive una sola vez y se respeta en cualquier
+       dispositivo donde la sesión esté abierta (la nube es la verdad). */
     function lazyCount(){
       var s1=document.createElement("script"); s1.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
       s1.onload=function(){
         var s2=document.createElement("script"); s2.src="assets/js/supabase.js";
         s2.onload=function(){
           try{ if(window.Cloud && Cloud.enabled && Cloud.soulsCount){ Cloud.soulsCount().then(function(n){ if(n!=null) paintOrigin(n); }).catch(function(){}); } }catch(e){}
+          try{
+            if(window.Cloud && Cloud.enabled && Cloud.session){
+              Cloud.session().then(function(sess){
+                if(!sess) return;
+                Cloud.myAlma().then(function(alma){
+                  if(alma && alma.awakening_completed){ try{localStorage.setItem("anima_awakened","1");}catch(e){} location.replace("studio.html"); }
+                }).catch(function(){});
+              }).catch(function(){});
+            }
+          }catch(e){}
         };
         document.body.appendChild(s2);
       };
       s1.onerror=function(){};
       document.body.appendChild(s1);
     }
-    if("requestIdleCallback" in window) requestIdleCallback(lazyCount); else setTimeout(lazyCount,1200);
+    lazyCount();   // se ejecuta de inmediato para detectar la sesión cuanto antes
   })();
   </script>
   <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>

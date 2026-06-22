@@ -497,9 +497,11 @@
 
 @media(max-width:960px){
   .app{grid-template-columns:1fr}
-  .side{position:fixed;z-index:100;width:264px;transform:translateX(-100%);transition:.28s}
-  .side.open{transform:translateX(0)}
-  .menu-btn{display:grid;place-items:center}
+  /* En móvil manda la barra inferior: el menú lateral se oculta por completo
+     (sin hamburguesa, sin nota de instalar app) para una vista limpia. */
+  .side{display:none !important}
+  .menu-btn{display:none !important}
+  #installBtn{display:none !important}
   .s3,.s4,.s5,.s6,.s7,.s8{grid-column:span 12}
   .path{grid-template-columns:repeat(4,1fr)}
   .thumbs{grid-template-columns:1fr 1fr}
