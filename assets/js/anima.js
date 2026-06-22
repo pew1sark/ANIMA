@@ -413,6 +413,28 @@ function acts(kind,i){ return `<span class="acts"><button class="ia" data-edit="
 /* ===========================================================
    VISTAS
    =========================================================== */
+/* Submenú de la morada como PESTAÑAS dentro del dashboard.
+   Al entrar a una morada ves sus sub-secciones en pestañas (no solo en la
+   barra). Navegan con go() (data-view). Las bloqueadas por nivel se marcan. */
+function moradaTabs(view){
+  const sec=sectionOfView(view); if(!sec || sec==="miplan") return "";
+  const cfg=getCfg(me()); let kids=[];
+  if(sec==="mialma") kids=NAV_TREE[0].children.slice();
+  else if(sec==="taller") kids=NAV_TREE[1].children.slice();
+  else if(sec==="clan") kids=NAV_TREE[2].children.slice();
+  else if(sec==="mundo"){
+    if(planAllows("comunidad")) kids.push({v:"comunidad",t:"Constelación"});
+    if(me().council||(isCreator&&!state.viewAs)) kids.push({v:"consejo",t:"Consejo"});
+    if(planAllows("santuario")) kids.push({v:"santuario",t:"Santuario"});
+    if(planAllows("santuario")&&me().santuario) kids.push({v:"sant_plan",t:"Planificar"});
+  }
+  kids=kids.filter(c=>planAllows(c.v) && cfg.modules[c.v]!==false);
+  if(kids.length<2) return "";
+  const label={mialma:"Mi Alma",taller:"Taller",clan:"Clan",mundo:"Mundo"}[sec]||"";
+  return `<div class="morada-tabs"><span class="morada-tabs-label">${esc(label)}</span><div class="morada-tabs-row">`+
+    kids.map(c=>`<button class="morada-tab ${state.view===c.v?'on':''}" data-view="${c.v}">${esc(c.t)}${levelAllows(c.v)?"":' <span class="mt-lock">🔒</span>'}</button>`).join("")+
+    `</div></div>`;
+}
 function renderView(){
   if(state.viewAs && !isCreator) state.viewAs=null;              // "Ver como" es solo del Creador
   // Consola y Personalizar: SOLO el Creador, y nunca durante una vista previa.
@@ -429,7 +451,7 @@ function renderView(){
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, santuario:vSantuario,
     sant_plan:vSantPlan }[state.view] || vMiAlma;
-  document.getElementById("view").innerHTML = previewBanner() + fn(me());
+  document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + fn(me());
   if(state.view==="comunidad" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
 }
 /* Ventana bloqueada por nivel — explica qué la abre. */
@@ -2101,7 +2123,7 @@ function vRecordatorios(a){
    =========================================================== */
 const EDITORS = {
   proyecto:{ title:"Trabajo", table:"projects", get:a=>a.projects, push:"unshift", xp:60,
-    fields:[{k:"t",l:"Trabajo"},{k:"client",l:"Vínculo"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
+    fields:[{k:"t",l:"Trabajo"},{k:"client",l:"Vínculo (elige o crea uno)",clients:true},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
     toRow:v=>({title:v.t,client:v.client,status:v.st,pct:+v.pct||0,budget:v.budget?+v.budget:null,started_at:v.start||null,due_at:v.due||null,description:v.desc}) },
   memoria:{ title:"Memoria", table:"memories", get:a=>a.memories, push:"unshift", xp:40,
     fields:[{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({title:v.t,detail:v.d}) },
@@ -2134,6 +2156,8 @@ function openRecord(kind, idx=null){
     if(f.ta)  return `<div class="field"><label>${f.l}</label><textarea id="rec_${f.k}" rows="3">${esc(val)}</textarea></div>`;
     if(f.color) return `<div class="field"><label>${f.l}</label><input type="color" id="rec_${f.k}" value="${val||a.color||'#b8a892'}"></div>`;
     if(f.img) return imgUpField("rec_"+f.k, f.l, val, f.folder||"obra");
+    if(f.clients){ const opts=(a.clients||[]).map(c=>`<option value="${esc(c.name)}"></option>`).join("");
+      return `<div class="field"><label>${f.l}</label><input id="rec_${f.k}" list="rec_clientlist" value="${esc(val)}" autocomplete="off" placeholder="Escribe un nombre nuevo o elige uno"><datalist id="rec_clientlist">${opts}</datalist></div>`; }
     if(f.date) return `<div class="field"><label>${f.l}</label><input id="rec_${f.k}" type="date" value="${esc(val)}"></div>`;
     return `<div class="field"><label>${f.l}</label><input id="rec_${f.k}" type="${f.num?'number':'text'}" value="${esc(val)}"></div>`;
   }).join("");
@@ -2163,6 +2187,7 @@ async function saveRecord(){
       arr[cfg.push==="push"?"push":"unshift"](item);
       if(cfg.xp){ a.xp=(a.xp||0)+cfg.xp; if(a.live){ try{await Cloud.setXP(a.almaId,a.xp);}catch(e){} } await syncLevel(a); }
       if(a.live) recordAlphaEvents(kind, v, arr);
+      if(kind==="proyecto") await interconnectProject(a, v);   // Proyecto ↔ Cliente ↔ Raíz ↔ Flujo
     }else{
       const item=arr[idx]; Object.assign(item,v);
       if(a.live && item._id){ await Cloud.updateRow(cfg.table,item._id,cfg.toRow(v)); }
@@ -2194,6 +2219,39 @@ function recordAlphaEvents(kind, v, arr){
     // Invalida cachés para que Cronología e Insignias se refresquen al entrar.
     state.cloudTimeline=null; state.cloudBadges=null;
   }catch(e){}
+}
+/* ===========================================================
+   INTERCONEXIÓN — al crear un Proyecto, ANIMA enlaza todo:
+   · Vínculo (cliente): se crea si es nuevo, o se enlaza el existente.
+   · Raíz (finanzas): si hay Valor, nace un ingreso estimado del proyecto.
+   · Flujo de trabajo: el proyecto entra a tu kanban (su estado).
+   Reusa tablas existentes (clients, finance_entries). Sin tocar esquema.
+   =========================================================== */
+async function interconnectProject(a, v){
+  const notes=[];
+  // 1 · Vínculo (cliente)
+  const cname=(v.client||"").trim();
+  if(cname){
+    a.clients=a.clients||[];
+    const exists=a.clients.some(c=>String(c.name||"").trim().toLowerCase()===cname.toLowerCase());
+    if(!exists){
+      const item={ name:cname };
+      if(a.live){ try{ const row=await Cloud.insertRow("clients",{ name:cname, alma_id:a.almaId }); item._id=row.id; }catch(e){} }
+      a.clients.unshift(item); notes.push("Vínculo creado");
+    } else { notes.push("Vínculo enlazado"); }
+  }
+  // 2 · Raíz (ingreso estimado del proyecto)
+  const budget=+v.budget||0;
+  if(budget>0){
+    const per=new Date().toISOString().slice(0,7);
+    const inc={ t:"Proyecto: "+(v.t||""), a:budget, d:per, cat:"Proyecto"+(cname?(" · "+cname):"") };
+    if(a.live){ try{ const row=await Cloud.insertRow("finance_entries",{ title:inc.t, amount:budget, period:per, kind:"income", category:inc.cat, alma_id:a.almaId }); inc._id=row.id; }catch(e){} }
+    a.finance.income.unshift(inc); notes.push("Ingreso estimado en tu Raíz");
+  }
+  // 3 · Flujo de trabajo: ya entró a tu kanban.
+  notes.push("En tu Flujo de trabajo");
+  save();
+  animaToast("Proyecto creado · " + notes.join(" · "));
 }
 async function deleteRecord(kind,idx){
   const cfg=EDITORS[kind]; const a=me(); const arr=cfg.get(a); const item=arr[idx];
