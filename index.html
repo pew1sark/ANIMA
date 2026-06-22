@@ -347,6 +347,11 @@
 
   <script>
   (function(){
+    /* --- La experiencia inicial (LAND → Primer Despertar → HOME) se vive una
+           sola vez. Un Alma que ya despertó en este dispositivo entra DIRECTO a
+           su HOME (studio.html), sin volver a pasar por el Umbral. La nube sigue
+           siendo la verdad: el gate (despertar.html) revalida en otros equipos. --- */
+    try{ if(localStorage.getItem("anima_awakened")==="1"){ location.replace("studio.html"); return; } }catch(e){}
     /* --- todos cruzan el Umbral: el gate (despertar.html) decide con la nube
            si esta Alma ya despertó (→ su Alma) o debe vivir el Primer Despertar. --- */
     function entryHref(){ return "despertar.html"; }

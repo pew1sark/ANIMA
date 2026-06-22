@@ -302,12 +302,14 @@
           '<button type="button" class="cbtn ghost" id="b_back">Volver</button>'+
           '<button type="submit" class="cbtn" id="b_nacer">Crear Alma</button>'+
         '</div>'+
+        '<div style="text-align:center"><a class="tiny-link" id="c_have">¿Ya tienes un Alma? · Entrar</a></div>'+
       '</form>',
       function(){
         document.getElementById("f_name").value=form.name;
         document.getElementById("f_email").value=form.email;
         document.getElementById("f_code").value=form.code;
         bind("b_back", sPacto);
+        bind("c_have", sLogin);
         document.getElementById("crearForm").addEventListener("submit", function(e){ e.preventDefault(); nacer(); });
       }
     );
@@ -422,7 +424,7 @@
     var f=document.getElementById("flash"); f.classList.add("on");   // desvanece a blanco
     setTimeout(goHome, 720);
   }
-  function goHome(){ location.href="studio.html"; }
+  function goHome(){ try{ localStorage.setItem("anima_awakened","1"); }catch(e){} location.href="studio.html"; }
 
   /* ---------- BOOT: la NUBE decide quién cruzó el Umbral ---------- */
   (function boot(){
