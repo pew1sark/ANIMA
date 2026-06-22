@@ -306,6 +306,29 @@ function renderNav(){
       +navItem({v:"config",ico:"⚙",ic:"config",t:"Personalizar"});
   }
   document.getElementById("nav").innerHTML=h;
+  renderBottomNav(stage);
+}
+/* ===========================================================
+   BARRA INFERIOR (móvil) — estilo Instagram.
+   Solo cambia de menú principal; las sub-secciones siguen viviendo
+   dentro como pestañas (morada-tabs). Respeta la llegada progresiva
+   (las mismas moradas reveladas que la barra lateral) y el plan.
+   =========================================================== */
+function renderBottomNav(stage){
+  const bn=document.getElementById("botnav"); if(!bn) return;
+  // La barra inferior es el conmutador principal en móvil: muestra siempre las
+  // moradas base. (El descubrimiento progresivo es una guía de la barra lateral.)
+  const cur=sectionOfView(state.view);
+  const core=[
+    {id:"mialma",ic:"alma",ico:"◆",t:"Mi Alma",v:"mialma"},
+    {id:"taller",ic:"taller",ico:"₵",t:"Taller",v:"proyectos"},
+    {id:"mundo", ic:"nucleo",ico:"❂",t:"Mundo", v:"comunidad"}
+  ];
+  let items=core.map(s=>`<button class="botnav-item ${cur===s.id?'on':''}" data-view="${s.v}"><span class="bi">${ANIMA_ICON(s.ic,s.ico)}</span><span class="bl">${esc(s.t)}</span></button>`);
+  if(planAllows("clanpanel")) items.push(`<button class="botnav-item ${cur==='clan'?'on':''}" data-view="clanpanel"><span class="bi">${ANIMA_ICON('constelacion','❂')}</span><span class="bl">Clan</span></button>`);
+  if(planAllows("santuario")) items.push(`<button class="botnav-item ${cur==='santuario'?'on':''}" data-view="santuario"><span class="bi">${ANIMA_ICON('santuario','🜁')}</span><span class="bl">Santuario</span></button>`);
+  items.push(`<button class="botnav-item botnav-lumbre" id="botLumbre"><span class="bi"><img src="assets/img/lumbre.svg" width="22" height="24" alt=""></span><span class="bl">LUMBRE</span></button>`);
+  bn.innerHTML=items.join("");
 }
 /* Revela la siguiente morada, la explica y la marca. */
 function revealNext(){
@@ -367,13 +390,54 @@ function hashStr(s){ s=String(s||""); let h=0; for(let i=0;i<s.length;i++){ h=(h
 function timeAgo(iso){ if(!iso) return ""; const d=(Date.now()-new Date(iso).getTime())/1000;
   if(isNaN(d)) return ""; if(d<60) return "ahora"; if(d<3600) return Math.floor(d/60)+" min"; if(d<86400) return Math.floor(d/3600)+" h"; return Math.floor(d/86400)+" d"; }
 const WORLD_IMG="https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg";
-const CITY_COORDS={ "santiago":[-33.45,-70.66],"valparaiso":[-33.05,-71.62],"buenos aires":[-34.6,-58.38],
-  "cordoba":[-31.42,-64.18],"medellin":[6.24,-75.57],"bogota":[4.71,-74.07],"ciudad de mexico":[19.43,-99.13],
-  "guadalajara":[20.67,-103.35],"lima":[-12.04,-77.04],"madrid":[40.42,-3.70] };
+const CITY_COORDS={ "santiago":[-33.45,-70.66],"valparaiso":[-33.05,-71.62],"concepcion":[-36.83,-73.05],
+  "buenos aires":[-34.6,-58.38],"cordoba":[-31.42,-64.18],"medellin":[6.24,-75.57],"bogota":[4.71,-74.07],
+  "ciudad de mexico":[19.43,-99.13],"guadalajara":[20.67,-103.35],"lima":[-12.04,-77.04],"madrid":[40.42,-3.70],
+  "barcelona":[41.39,2.16],"new york":[40.71,-74.0],"nueva york":[40.71,-74.0],"los angeles":[34.05,-118.24],
+  "miami":[25.76,-80.19],"san francisco":[37.77,-122.42],"chicago":[41.88,-87.63],"houston":[29.76,-95.37] };
 const COUNTRY_COORDS={ "chile":[-35,-71],"argentina":[-38,-63],"colombia":[4,-73],"mexico":[23,-102],
-  "peru":[-10,-76],"espana":[40,-4],"spain":[40,-4] };
-const deburr=s=>(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u{1F1E6}-\u{1F1FF}]/gu,"").trim().toLowerCase();
+  "peru":[-10,-76],"espana":[40,-4],"spain":[40,-4],"usa":[39,-98],"brasil":[-10,-52],"brazil":[-10,-52],
+  "ecuador":[-1.5,-78],"uruguay":[-33,-56],"venezuela":[7,-66],"bolivia":[-17,-65],"paraguay":[-23,-58],
+  "guatemala":[15.5,-90],"costa rica":[10,-84],"panama":[9,-80],"republica dominicana":[19,-70.5],
+  "puerto rico":[18.2,-66.5],"francia":[46,2],"france":[46,2],"alemania":[51,10],"italia":[42.8,12.8],
+  "reino unido":[54,-2],"canada":[56,-106],"portugal":[39.5,-8] };
+const deburr=s=>(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u{1F1E6}-\u{1F1FF}]/gu,"").replace(/[.\-]/g," ").replace(/\s+/g," ").trim().toLowerCase();
+/* Normaliza el pa\u00eds de un Alma a una forma can\u00f3nica (nombre + bandera) para que
+   el conteo y el mapa agrupen bien las variantes ("EE.UU.", "USA", "United States"). */
+const COUNTRY_CANON=[
+  {key:"chile",name:"Chile",flag:"\ud83c\udde8\ud83c\uddf1",aliases:["chile"]},
+  {key:"argentina",name:"Argentina",flag:"\ud83c\udde6\ud83c\uddf7",aliases:["argentina"]},
+  {key:"mexico",name:"M\u00e9xico",flag:"\ud83c\uddf2\ud83c\uddfd",aliases:["mexico"]},
+  {key:"colombia",name:"Colombia",flag:"\ud83c\udde8\ud83c\uddf4",aliases:["colombia"]},
+  {key:"peru",name:"Per\u00fa",flag:"\ud83c\uddf5\ud83c\uddea",aliases:["peru"]},
+  {key:"espana",name:"Espa\u00f1a",flag:"\ud83c\uddea\ud83c\uddf8",aliases:["espana","spain"]},
+  {key:"usa",name:"Estados Unidos",flag:"\ud83c\uddfa\ud83c\uddf8",aliases:["usa","us","ee uu","eeuu","ee uu ","estados unidos","estados unidos de america","united states","united states of america"]},
+  {key:"brasil",name:"Brasil",flag:"\ud83c\udde7\ud83c\uddf7",aliases:["brasil","brazil"]},
+  {key:"ecuador",name:"Ecuador",flag:"\ud83c\uddea\ud83c\udde8",aliases:["ecuador"]},
+  {key:"uruguay",name:"Uruguay",flag:"\ud83c\uddfa\ud83c\uddfe",aliases:["uruguay"]},
+  {key:"venezuela",name:"Venezuela",flag:"\ud83c\uddfb\ud83c\uddea",aliases:["venezuela"]},
+  {key:"bolivia",name:"Bolivia",flag:"\ud83c\udde7\ud83c\uddf4",aliases:["bolivia"]},
+  {key:"paraguay",name:"Paraguay",flag:"\ud83c\uddf5\ud83c\uddfe",aliases:["paraguay"]},
+  {key:"guatemala",name:"Guatemala",flag:"\ud83c\uddec\ud83c\uddf9",aliases:["guatemala"]},
+  {key:"costa rica",name:"Costa Rica",flag:"\ud83c\udde8\ud83c\uddf7",aliases:["costa rica"]},
+  {key:"panama",name:"Panam\u00e1",flag:"\ud83c\uddf5\ud83c\udde6",aliases:["panama"]},
+  {key:"republica dominicana",name:"Rep. Dominicana",flag:"\ud83c\udde9\ud83c\uddf4",aliases:["republica dominicana","dominican republic"]},
+  {key:"puerto rico",name:"Puerto Rico",flag:"\ud83c\uddf5\ud83c\uddf7",aliases:["puerto rico"]},
+  {key:"francia",name:"Francia",flag:"\ud83c\uddeb\ud83c\uddf7",aliases:["francia","france"]},
+  {key:"alemania",name:"Alemania",flag:"\ud83c\udde9\ud83c\uddea",aliases:["alemania","germany"]},
+  {key:"italia",name:"Italia",flag:"\ud83c\uddee\ud83c\uddf9",aliases:["italia","italy"]},
+  {key:"reino unido",name:"Reino Unido",flag:"\ud83c\uddec\ud83c\udde7",aliases:["reino unido","united kingdom","uk"]},
+  {key:"canada",name:"Canad\u00e1",flag:"\ud83c\udde8\ud83c\udde6",aliases:["canada"]},
+  {key:"portugal",name:"Portugal",flag:"\ud83c\uddf5\ud83c\uddf9",aliases:["portugal"]}
+];
+function canonCountry(raw){
+  const d=deburr(raw); if(!d) return null;
+  for(const c of COUNTRY_CANON){ if(c.aliases.indexOf(d)>-1) return c; }
+  return { key:d, name:String(raw).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u{1F1E6}-\u{1F1FF}]/gu,"").trim()||String(raw).trim(), flag:"\ud83c\udf0d" };
+}
+function countryLabel(raw){ const c=canonCountry(raw); return c?`${c.flag} ${c.name}`:""; }
 function almaLatLng(m){ const c=deburr(m.city); if(CITY_COORDS[c]) return CITY_COORDS[c];
+  const cc=canonCountry(m.country); if(cc && COUNTRY_COORDS[cc.key]) return COUNTRY_COORDS[cc.key];
   const co=deburr(m.country); if(COUNTRY_COORDS[co]) return COUNTRY_COORDS[co]; return [15,-20]; }
 /* El mapa de Almas (puntos sobre el planeta). Compartido por el dashboard
    y por el Árbol de Almas de la ventana de Comunidad. */
@@ -569,7 +633,7 @@ function vAlmaIdentidad(a){
 function vAlmaPublica(a){
   if(!a.live) return `<div class="card s12"><p class="muted">Entra a tu Alma para configurar tu vista pública.</p></div>`;
   const v=a.visibility||{}; const on=k=>v[k]!==false;
-  const rows=[["bio","Mostrar mi bio"],["tags","Mostrar mis etiquetas"],["trajectory","Mostrar mi trayectoria"],["portfolio","Mostrar mi portafolio"],["links","Mostrar mis enlaces"]];
+  const rows=[["bio","Mostrar mi bio"],["tags","Mostrar mis etiquetas"],["location","Mostrar mi ubicación"],["trajectory","Mostrar mi trayectoria"],["portfolio","Mostrar mi portafolio"],["links","Mostrar mis enlaces"]];
   return `<div class="card s12"><span class="pill gold">Vista pública</span>
     <p class="muted" style="max-width:640px">Controla qué ven las demás Almas cuando visitan tu Alma en la comunidad. Tu Raíz, agenda, memorias y vínculos <b>siempre son privados</b>.</p>
     ${rows.map(([k,l])=>`<div class="row"><div class="grow"><b>${l}</b></div><button class="toggle ${on(k)?'on':''}" data-pubcfg="${k}"><span></span></button></div>`).join("")}
@@ -1236,7 +1300,7 @@ function vComunidad(a){
 
   // Contador X / 100 (vivo) + países desde las Almas presentes.
   const n = state.cloudSoulsCount!=null ? state.cloudSoulsCount : list.length;
-  const counts={}; list.forEach(m=>{ const c=(m.country&&m.country.trim())?m.country.trim():"En tránsito"; counts[c]=(counts[c]||0)+1; });
+  const counts={}; list.forEach(m=>{ const c=(m.country&&m.country.trim())?countryLabel(m.country):"✦ En tránsito"; counts[c]=(counts[c]||0)+1; });
   const countriesArr=Object.entries(counts).sort((x,y)=>y[1]-x[1]);
 
   // Ecos (carga diferida).
@@ -1255,7 +1319,7 @@ function vComunidad(a){
   const ecosToday=ecos.filter(e=>(e.created_at||"").slice(0,10)===todayKey).length;
   const clanesCount=new Set(list.map(x=>x.clan).filter(Boolean)).size;
   const santuariosCount=new Set(list.map(x=>x.santuario).filter(Boolean)).size;
-  const paisesCount=countriesArr.length;
+  const paisesCount=countriesArr.filter(([c])=>c!=="✦ En tránsito").length;
   const weekAgo=Date.now()-7*864e5;
   const newWeek=list.filter(x=>x.created_at && new Date(x.created_at).getTime()>=weekAgo).length;
   const nivelesCount=new Set(list.map(x=>x.level).filter(Boolean)).size;
@@ -1303,11 +1367,17 @@ function vComunidad(a){
   const paisCard = `<div class="card s6"><div class="section-title"><h2 style="font-size:15px">Distribución por país</h2></div>
       <div class="wt-bars">${countriesArr.length?countriesArr.slice(0,7).map(([c,k])=>`<div class="wt-bar"><span>${esc(c)}</span><span class="track"><span class="fill" style="width:${Math.max(6,Math.round(k/maxC*100))}%"></span></span><b>${k}</b></div>`).join(""):`<p class="muted" style="font-size:13px">Todavía sin geografía.</p>`}</div></div>`;
 
-  // RITUAL ACTIVO — la vela encendida del Mundo.
-  const ritual = `<div class="card s6 wt-ritual"><div class="section-title"><h2 style="font-size:15px">Ritual activo</h2><div class="spacer"></div><span class="pill gold">Vela encendida</span></div>
+  // RITUAL ACTIVO — la vela encendida del Mundo. Una vez al día por Alma:
+  // subir una Huella (post) sobre lo que se creó esta semana.
+  const ritDone=a.live && ritualDoneToday(a);
+  const ritual = `<div class="card s6 wt-ritual"><div class="section-title"><h2 style="font-size:15px">Ritual activo</h2><div class="spacer"></div><span class="pill gold">${ritDone?"🜂 Completado hoy":"Vela encendida"}</span></div>
       <div class="rt-name">Ritual del Eco</div>
-      <p>¿Qué creaste esta semana? Comparte tu Huella con el Mundo y deja que el Árbol resuene contigo.</p>
-      ${a.live?`<button class="btn" data-ritual="eco">✦ Participar en el Ritual</button>`:`<p class="muted" style="font-size:13px">Entra a tu Alma para participar en el Ritual.</p>`}</div>`;
+      <p>¿Qué creaste esta semana? Sube tu Huella al Mundo y deja que el Árbol resuene contigo. <b>Una vez al día.</b></p>
+      ${!a.live
+        ? `<p class="muted" style="font-size:13px">Entra a tu Alma para participar en el Ritual.</p>`
+        : (ritDone
+            ? `<button class="btn secondary" disabled style="opacity:.7;cursor:default">✓ Ya encendiste la vela hoy</button><div class="muted" style="font-size:12px;margin-top:8px">Vuelve mañana para dejar una nueva Huella.</div>`
+            : `<button class="btn" data-ritual="eco">✦ Participar en el Ritual</button>`)}</div>`;
 
   const create = a.live ? `<div class="card s12"><div class="section-title"><h2>Comparte con la comunidad</h2></div>
       <div class="field"><input id="postTitle" placeholder="Título (opcional)"></div>
@@ -1316,8 +1386,10 @@ function vComunidad(a){
     : `<div class="card s12"><p class="muted">Entra a tu Alma para dejar tu Huella en la comunidad.</p></div>`;
   const wall = `<div class="card s12"><div class="section-title"><h2>Muro de la comunidad</h2><div class="spacer"></div><span class="pill ${liveMode()?'gold':''}">${feed.length} Huellas</span></div>
       ${feed.length?feed.map(p=>{ const au=authorOf(p.author_alma_id);
-        return `<div class="post" data-openpost="${p.id}"><span class="avatar sm" style="background:linear-gradient(145deg,${au.color},${shade(au.color,-22)})">${initials(au.name)}</span>
-          <div class="grow"><b>${esc(p.title||au.name)}</b><br><small class="muted">${esc(au.name)} · ${timeAgo(p.created_at)}</small>
+        const visit=(au.id && au.id!==a.almaId)?`data-pub="${au.id}"`:"";
+        const isRit=p.kind==="ritual";
+        return `<div class="post" data-openpost="${p.id}"><span class="avatar sm pub-link" ${visit} title="${visit?'Visitar Alma':''}" style="background:linear-gradient(145deg,${au.color},${shade(au.color,-22)})">${initials(au.name)}</span>
+          <div class="grow"><b>${esc(p.title||au.name)}</b>${isRit?` <span class="pill gold" style="font-size:9px">🜂 Ritual</span>`:""}<br><small class="muted">${esc(au.name)} · ${timeAgo(p.created_at)}</small>
           <p style="margin:6px 0 0">${esc((p.body||"").slice(0,160))}${(p.body||"").length>160?"…":""}</p></div></div>`;
       }).join(""):`<p class="muted">Aún no hay Huellas.${a.live?" ¡Deja la primera!":""}</p>`}</div>`;
   const clanCard = a.clan ? `<div class="card s12"><div class="section-title"><h2>${clan?clan.emoji:"🖤"} ${esc(a.clan)}</h2><div class="spacer"></div><span class="pill">Clan · Nivel 2</span></div>
@@ -1346,7 +1418,7 @@ function constelMini(list){
   const cx=50, cy=48; let links="", stars="";
   const pts=top.map((m,i)=>{ if(i===0) return {x:cx,y:cy,m}; const ang=((i-1)/(top.length-1))*Math.PI*2; return {x:cx+Math.cos(ang)*32, y:cy+Math.sin(ang)*34, m}; });
   pts.forEach((p,i)=>{ if(i===0) return; const dx=p.x-cx, dy=p.y-cy; const len=Math.sqrt(dx*dx+dy*dy); const ang=Math.atan2(dy,dx)*180/Math.PI; links+=`<span class="wt-link" style="left:${cx}%;top:${cy}%;width:${len}%;transform:rotate(${ang}deg)"></span>`; });
-  pts.forEach(p=>{ const c=p.m.color||"#888"; stars+=`<span class="wt-star" style="left:${p.x}%;top:${p.y}%;background:linear-gradient(145deg,${c},${shade(c,-22)})">${initials(p.m.name)}</span>`; });
+  pts.forEach(p=>{ const c=p.m.color||"#888"; const act=(liveMode()&&!p.m.live&&p.m.id)?`data-pub="${p.m.id}"`:""; stars+=`<span class="wt-star ${act?'pub-link':''}" ${act} title="${esc(p.m.name)}" style="left:${p.x}%;top:${p.y}%;background:linear-gradient(145deg,${c},${shade(c,-22)})">${initials(p.m.name)}</span>`; });
   return `<div class="wt-constel">${links}${stars}</div>`;
 }
 /* Monta el Árbol Vivo y enlaza el Estado del Mundo con el DOM (en vivo). */
@@ -1371,13 +1443,44 @@ function initWorldTreeView(){
   if(!state._wtBound){ state._wtBound=true; WorldTree.onChange(updateWtDom); }
   updateWtDom(WorldTree.snapshot());
 }
-/* Participar en el Ritual activo: enciende el corazón del Árbol. */
+/* ===========================================================
+   RITUAL DEL ECO — una vez al día por Alma.
+   El Ritual ya no es un botón vacío: es subir una Huella (post)
+   sobre lo que creaste esta semana. Se publica en el Muro,
+   enciende el Árbol y solo puede hacerse una vez por día.
+   =========================================================== */
+function ritualKey(a){ return "anima_ritual_"+(a.almaId||a.id||"guest")+"_"+new Date().toISOString().slice(0,10); }
+function ritualDoneToday(a){ try{ return localStorage.getItem(ritualKey(a))==="1"; }catch(e){ return false; } }
 function doRitual(kind){
   const a=me(); if(!a.live){ alert("Entra a tu Alma para participar en el Ritual."); return; }
-  if(window.WorldTree) WorldTree.onRitual({ almaName:a.name, country:a.country });
-  if(window.AnimaState){ AnimaState.addEsencia(12,"Participar en un Ritual"); setTimeout(maybeLevelGuide,400); }
-  if(Cloud.enabled){ const nick=(a.name||"Alma").split(" ")[0]; Cloud.emitEcho("ritual","🜂 "+nick+" completó el Ritual del Eco").catch(()=>{}); }
-  toast("🜂 El Árbol resonó con tu Ritual.");
+  if(ritualDoneToday(a)){ toast("🜂 Ya encendiste la vela hoy. Vuelve mañana."); return; }
+  document.getElementById("ritualBody").value="";
+  document.getElementById("ritualTitle").value="";
+  document.getElementById("ritualMsg").textContent="";
+  document.getElementById("ritualModal").classList.add("open");
+  setTimeout(()=>{ const t=document.getElementById("ritualBody"); if(t) t.focus(); },120);
+}
+function closeRitual(){ document.getElementById("ritualModal").classList.remove("open"); }
+async function sendRitual(){
+  const a=me(); if(!a.live){ alert("Entra a tu Alma para participar en el Ritual."); return; }
+  if(ritualDoneToday(a)){ closeRitual(); toast("🜂 Ya encendiste la vela hoy."); renderView(); return; }
+  const body=document.getElementById("ritualBody").value.trim();
+  const title=(document.getElementById("ritualTitle").value.trim())||"Mi Huella de la semana";
+  const msg=document.getElementById("ritualMsg");
+  if(!body){ msg.textContent="Cuenta qué creaste esta semana para encender la vela."; return; }
+  msg.textContent="Encendiendo la vela…";
+  try{
+    await Cloud.insertRow("posts",{ author_alma_id:a.almaId, kind:"ritual", title, body });
+    try{ localStorage.setItem(ritualKey(a),"1"); }catch(e){}
+    if(window.WorldTree){ WorldTree.onRitual({ almaName:a.name, country:a.country }); WorldTree.onHuella({ almaName:a.name, branch:branchOf(a), country:a.country, targetId:a.almaId }); }
+    if(window.AnimaState){ AnimaState.addEsencia(20,"Ritual del Eco"); setTimeout(maybeLevelGuide,400); }
+    const nick=(a.name||"Alma").split(" ")[0];
+    Cloud.emitEcho("ritual","🜂 "+nick+" completó el Ritual del Eco").catch(()=>{});
+    try{ Cloud.logTimeline("huella","Ritual del Eco",title); }catch(e){}
+    await loadPosts();
+    closeRitual(); renderView();
+    toast("🜂 El Árbol resonó con tu Huella.");
+  }catch(e){ msg.textContent="No se pudo completar el Ritual: "+(e.message||e); }
 }
 /* Aviso breve y suave (no satura la pantalla). */
 function toast(msg){
@@ -1456,10 +1559,11 @@ function branchOf(a){
 function openPost(id){
   const p=(state.cloudPosts||[]).find(x=>x.id===id); if(!p) return; const au=authorOf(p.author_alma_id);
   document.getElementById("postModal").classList.add("open");
+  const visit=(au.id && au.id!==me().almaId)?`data-pub="${au.id}"`:"";
   document.getElementById("postModalBody").innerHTML=`
     <div style="display:flex;gap:10px;align-items:center">
-      <span class="avatar sm" style="background:linear-gradient(145deg,${au.color},${shade(au.color,-22)})">${initials(au.name)}</span>
-      <div><b>${esc(au.name)}</b><br><small class="muted">${timeAgo(p.created_at)}</small></div></div>
+      <span class="avatar sm ${visit?'pub-link':''}" ${visit} title="${visit?'Visitar Alma':''}" style="background:linear-gradient(145deg,${au.color},${shade(au.color,-22)})">${initials(au.name)}</span>
+      <div><b ${visit?'class="pub-link" '+visit:""}>${esc(au.name)}</b><br><small class="muted">${timeAgo(p.created_at)}</small></div></div>
     ${p.title?`<h2 style="margin:12px 0 4px;letter-spacing:-.03em">${esc(p.title)}</h2>`:""}
     <p style="white-space:pre-wrap">${esc(p.body||"")}</p>
     <div class="section-title" style="margin-top:14px"><h3 style="font-size:14px;margin:0">Ecos</h3></div>
@@ -2380,6 +2484,33 @@ async function loadMyAlma(){
     maybeLevelGuide();           // LUMBRE guía si el Alma despertó un nuevo nivel
   }catch(e){} }
   applyHashView();               // entrada directa a Clan/Santuario desde el Home
+  ensureLocation(a);             // sincroniza la ubicación del Alma (automática)
+  maybeAutoTour();               // tutorial único por Alma (solo la primera vez)
+}
+/* ===========================================================
+   UBICACIÓN AUTOMÁTICA DEL ALMA
+   Cada Alma aparece en el Mundo según su ubicación. Si todavía no
+   tiene país, lo detectamos una vez (por IP, en el navegador del Alma)
+   y lo guardamos. Es editable en Identidad y se puede ocultar en la
+   Vista pública. Best-effort: si la red lo bloquea, no pasa nada.
+   =========================================================== */
+async function ensureLocation(a){
+  if(!a || !a.live || !a.almaId) return;
+  if(a.country && String(a.country).trim()) return;
+  if(localStorage.getItem("anima_geo_"+a.almaId)) return;   // ya intentado
+  try{
+    let country="", city="";
+    try{ const r=await fetch("https://ipapi.co/json/"); if(r.ok){ const j=await r.json(); country=j.country_name||""; city=j.city||""; } }catch(_){}
+    if(!country){ try{ const r2=await fetch("https://ipwho.is/"); if(r2.ok){ const j2=await r2.json(); if(j2 && j2.success!==false){ country=j2.country||""; city=j2.city||""; } } }catch(_){}}
+    localStorage.setItem("anima_geo_"+a.almaId,"1");
+    if(country){
+      const patch={ country }; if(city && !a.city) patch.city=city;
+      try{ await Cloud.updateAlma(a.almaId, patch); }catch(_){}
+      Object.assign(a, patch);
+      try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(_){}
+      renderAll();
+    }
+  }catch(e){}
 }
 function updateAuthUI(session){
   const btn=document.getElementById("authBtn"); if(!btn) return;
@@ -2528,23 +2659,34 @@ async function saveEdit(){ const a=me(); const g=id=>document.getElementById(id)
   try{ await Cloud.updateAlma(a.almaId,patch); Object.assign(a,patch); closeEdit(); renderAll(); updateAuthUI(await Cloud.session()); }
   catch(e){ alert("No se pudo guardar: "+(e.message||e)); } }
 
-/* --- Perfil público --- */
+/* --- Visitar otra Alma: solo sus ventanas públicas ---
+   Resumen general (nivel, ubicación, oficio, desde cuándo) + portafolio +
+   trayectoria, respetando lo que cada Alma decidió hacer público en su
+   Vista pública. La Raíz, agenda, memorias y vínculos NUNCA se muestran. */
 async function openPublic(id){
   const row=(state.cloudAlmas||[]).find(x=>x.id===id); if(!row) return;
   const lv=levelByKey(row.level); const vis=row.visibility||{}; const show=k=>vis[k]!==false;
   const av=row.avatar_url?`background-image:url('${esc(row.avatar_url)}');background-size:cover;background-position:center`:`background:linear-gradient(145deg,${row.color},${shade(row.color,-22)})`;
+  const loc=show("location")?(row.territory||(row.city&&row.country?row.city+", "+row.country:(row.country||row.city||""))):"";
+  const since=row.created_at?new Date(row.created_at).toLocaleDateString("es-CL",{month:"long",year:"numeric"}):"";
+  const summary=`<div class="pub-summary">
+      ${loc?`<span class="chip">📍 ${esc(loc)}</span>`:""}
+      <span class="chip">${lv.emoji} ${esc(lv.label)} · ${esc(lv.name)}</span>
+      ${row.sparks?`<span class="chip">✦ ${row.sparks} Chispas</span>`:""}
+      ${since?`<span class="chip">Alma desde ${esc(since)}</span>`:""}
+    </div>`;
   document.getElementById("publicModal").classList.add("open");
   document.getElementById("pubBody").innerHTML=`<div style="text-align:center">
       <span class="avatar lg" style="margin:0 auto 10px;${av}">${row.avatar_url?"":initials(row.name)}</span>
-      <h2 style="margin:0;letter-spacing:-.04em">${esc(row.name)}</h2><div class="muted">${esc([row.discipline||row.role,row.specialty].filter(Boolean).join(" · "))} · ${esc(row.territory||row.country||"")}</div>
-      <span class="level-badge" style="margin-top:8px;border-color:${lv.color}55;color:${lv.color}">${lv.emoji} ${lv.label}</span>
+      <h2 style="margin:0;letter-spacing:-.04em">${esc(row.name)}</h2><div class="muted">${esc([row.discipline||row.role,row.specialty].filter(Boolean).join(" · "))}${loc?" · "+esc(loc):""}</div>
+      ${summary}
       <div style="margin-top:12px"><a class="btn sm" href="portfolio.html?alma=${id}" target="_blank" rel="noopener">Ver portafolio completo →</a></div></div>
-    ${show("bio")?`<p style="margin-top:14px">${esc(row.bio||"")}</p>`:""}${show("tags")?`<div>${(row.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}
+    ${show("bio")&&row.bio?`<p style="margin-top:14px">${esc(row.bio||"")}</p>`:""}${show("tags")?`<div>${(row.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}
     <div id="pubExtra" class="muted" style="font-size:12.5px;margin-top:12px">Cargando…</div>`;
   try{ const m=await Cloud.loadModules(id);
     const tj=show("trajectory")?(m.trajectory||[]).map(x=>`<div class="node"><div class="yr">${esc(x.year)}</div><b>${esc(x.title)}</b><p class="muted" style="margin:2px 0 0">${esc(x.detail||"")}</p></div>`).join(""):"";
     const pf=show("portfolio")?(m.portfolio||[]).map(x=>`<span class="chip">${esc(x.title)} · ${esc(x.kind)}</span>`).join(""):"";
-    document.getElementById("pubExtra").innerHTML=(tj?`<h3 style="font-size:15px;margin:8px 0 4px">Trayectoria</h3><div class="tl">${tj}</div>`:"")+(pf?`<h3 style="font-size:15px;margin:14px 0 6px">Portafolio</h3><div>${pf}</div>`:"")||"Alma pública.";
+    document.getElementById("pubExtra").innerHTML=(tj?`<h3 style="font-size:15px;margin:8px 0 4px">Trayectoria</h3><div class="tl">${tj}</div>`:"")+(pf?`<h3 style="font-size:15px;margin:14px 0 6px">Portafolio</h3><div>${pf}</div>`:"")||"Esta Alma aún no ha hecho público su portafolio.";
   }catch(e){ document.getElementById("pubExtra").textContent=""; }
 }
 function closePublic(){ document.getElementById("publicModal").classList.remove("open"); }
@@ -2572,8 +2714,23 @@ function openLumbre(){ drawer().classList.add("open"); dbg().classList.add("open
 function closeLumbre(){ drawer().classList.remove("open"); dbg().classList.remove("open"); }
 function closeSide(){ document.getElementById("side").classList.remove("open"); }
 
+/* ===========================================================
+   CIERRE DE MODALES SIN BUGS
+   El click sobre el fondo cierra el modal, pero SOLO si el gesto empezó
+   en el fondo. Antes, al rellenar un campo y arrastrar el cursor fuera
+   (p. ej. seleccionando texto) el "click" caía sobre el fondo y cerraba
+   la ventana perdiendo lo escrito. Ahora recordamos dónde empezó el gesto.
+   =========================================================== */
+let _downTarget=null;
+document.addEventListener("mousedown", e=>{ _downTarget=e.target; }, true);
+document.addEventListener("touchstart", e=>{ _downTarget=(e.touches&&e.touches[0])?document.elementFromPoint(e.touches[0].clientX,e.touches[0].clientY):e.target; }, true);
+/* ¿Click legítimo sobre el fondo del modal `id`? (empezó y terminó en el fondo) */
+function bdClose(e, id){ return e.target.id===id && (!_downTarget || _downTarget===e.target || _downTarget.id===id); }
+
 document.addEventListener("click", e=>{
   if(e.target.closest("[data-reveal]")){ revealNext(); return; }
+  // Visitar otra Alma tiene prioridad (p. ej. el avatar dentro de una Huella).
+  const pvEarly=e.target.closest("[data-pub]"); if(pvEarly){ openPublic(pvEarly.dataset.pub); return; }
   const rn=e.target.closest("[data-reino]"); if(rn){ toggleReino(rn.dataset.reino); return; }
   const va=e.target.closest("[data-viewas]"); if(va){ setViewAs(va.dataset.viewas); return; }
   const cs=e.target.closest("[data-cssave]"); if(cs){ consolaSave(cs.dataset.cssave); return; }
@@ -2640,31 +2797,34 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#createAlmaBtn")) openAuth();
   if(e.target.closest("#idSave")) saveIdentity();
   if(e.target.closest("#edSave")) saveEdit();
-  if(e.target.closest("#edClose")||e.target.id==="editModal") closeEdit();
+  if(e.target.closest("#edClose")||bdClose(e,"editModal")) closeEdit();
   if(e.target.closest("#recSave")) saveRecord();
   if(e.target.closest("#recDel")){ if(recordCtx) deleteRecord(recordCtx.kind,recordCtx.idx); }
-  if(e.target.closest("#recClose")||e.target.id==="recordModal") closeRecord();
-  if(e.target.closest("#pubClose")||e.target.id==="publicModal") closePublic();
+  if(e.target.closest("#recClose")||bdClose(e,"recordModal")) closeRecord();
+  if(e.target.closest("#pubClose")||bdClose(e,"publicModal")) closePublic();
   if(e.target.closest("#postSend")) sendPost();
   if(e.target.closest("#propSend")) sendProposal();
   const vt=e.target.closest("[data-vote]"); if(vt){ vote(vt.dataset.vote, +vt.dataset.val||1); return; }
   if(e.target.closest("#commentSend")){ const b=e.target.closest("#commentSend"); sendComment(b.dataset.post); }
-  if(e.target.closest("#postClose")||e.target.id==="postModal") closePost();
+  if(e.target.closest("#postClose")||bdClose(e,"postModal")) closePost();
+  if(e.target.closest("#ritualSend")) sendRitual();
+  if(e.target.closest("#ritualClose")||bdClose(e,"ritualModal")) closeRitual();
   if(e.target.closest("#feedbackBtn")) openFeedback();
   if(e.target.closest("#fbSend")) sendFeedback();
-  if(e.target.closest("#fbClose")||e.target.id==="feedbackModal") closeFeedback();
+  if(e.target.closest("#fbClose")||bdClose(e,"feedbackModal")) closeFeedback();
   if(e.target.closest("#lumbreOpen")) openLumbre();
-  if(e.target.closest("#lumbreClose")||e.target.id==="drawerBg") closeLumbre();
+  if(e.target.closest("#lumbreClose")||bdClose(e,"drawerBg")) closeLumbre();
   if(e.target.closest("#menuBtn")) document.getElementById("side").classList.toggle("open");
   if(e.target.closest("#whoBox")) go("mialma");
   if(e.target.closest("#resetBtn")) reset();
   if(e.target.closest("#installBtn")) installApp();
   if(e.target.closest("#lumbreFab")) openLumbre();
+  if(e.target.closest("#botLumbre")) openLumbre();
   if(e.target.closest("#tourBtn")) startTour();
   if(e.target.closest("#tourNext")) tourNext();
   if(e.target.closest("#tourSkip")) endTour();
   if(e.target.closest("#levelsInfo")) openLevels();
-  if(e.target.closest("#levelClose")||e.target.id==="levelModal") closeLevels();
+  if(e.target.closest("#levelClose")||bdClose(e,"levelModal")) closeLevels();
   if(e.target.closest("#sharePf")) sharePortfolio();
   if(e.target.closest("[data-export]")) exportPDF();
   const ag=e.target.closest("[data-almago]"); if(ag){ closeAlmaMenu(); go(ag.dataset.almago); return; }
@@ -2672,10 +2832,10 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#almaSwitch")){ closeAlmaMenu(); switchAlmaSession(); return; }
   if(e.target.closest("#almaLogout")){ closeAlmaMenu(); logout(); return; }
   if(e.target.closest("#cpSave")) doChangePass();
-  if(e.target.closest("#cpClose")||e.target.id==="cpModal") closeChangePass();
+  if(e.target.closest("#cpClose")||bdClose(e,"cpModal")) closeChangePass();
   if(e.target.closest("#authBtn")){ const b=e.target.closest("#authBtn"); b.dataset.in?toggleAlmaMenu():openAuth(); return; }
   else if(!e.target.closest("#almaPop")) closeAlmaMenu();
-  if(e.target.closest("#authClose")||e.target.id==="authModal") closeAuth();
+  if(e.target.closest("#authClose")||bdClose(e,"authModal")) closeAuth();
   if(e.target.closest("#authSignIn")) doAuth("in");
   if(e.target.closest("#authSignUp")) doAuth("up");
   if(e.target.closest("#authForgot")) doForgot();
@@ -2711,16 +2871,21 @@ function sharePortfolio(){ const a=me(); if(!a.live){ alert("Crea tu Alma para t
 
 /* ---------- Tutorial guiado por LUMBRE ---------- */
 const TOUR=[
-  {sel:"#nav", title:"Tu menú", text:"Aquí vive tu Alma: trayectoria, portafolio, Raíz, cotizador, vínculos y más. Lo que no uses, lo ocultas en Ajustes."},
+  {sel:"#nav", selMobile:".botnav", title:"Tu menú", text:"Aquí cambias de morada. En el celular vive abajo (como Instagram): Mi Alma, Taller y Mundo. Cada una guarda sus pestañas dentro."},
   {sel:".tabbar", title:"Tu Alma", text:"Mi Alma tiene pestañas: Resumen, Identidad (tu foto y datos), Vista pública (qué muestras) y Ajustes."},
   {sel:".camino-card", title:"Tu camino", text:"Subes de nivel creando. Cada nivel desbloquea nuevas ventanas. Toca la ⓘ para ver el mapa de niveles."},
-  {sel:'[data-view="comunidad"]', title:"El mundo", text:"En Comunidad vive el Árbol de Almas: el mapa de quienes habitan ANIMA, los Ecos en vivo y el conteo por país."},
-  {sel:"#lumbreFab", title:"Soy LUMBRE ✦", text:"Tu chispa compañera. Tócame cuando quieras: te ayudo con Raíz, proyectos y tu siguiente nivel. ¡Bienvenida a ANIMA!"}
+  {sel:'[data-view="comunidad"]', selMobile:'.botnav [data-view="comunidad"]', title:"El mundo", text:"En Mundo vive el Árbol de Almas: el mapa de quienes habitan ANIMA, los Ecos en vivo, el Ritual del día y el conteo por país. Toca una Alma para visitarla."},
+  {sel:"#lumbreFab", selMobile:"#botLumbre", title:"Soy LUMBRE ✦", text:"Tu chispa compañera. Tócame cuando quieras: te ayudo con Raíz, proyectos y tu siguiente nivel. ¡Bienvenida a ANIMA!"}
 ];
-function startTour(){ closeLumbre(); state.view="mialma"; state.almaTab="resumen"; renderAll(); setTimeout(()=>tourStep(0),360); }
+function startTour(){ closeLumbre(); closeSide(); state.view="mialma"; state.almaTab="resumen"; renderAll(); setTimeout(()=>tourStep(0),360); }
 function tourStep(i){
   if(i>=TOUR.length) return endTour();
-  state.tourI=i; const step=TOUR[i]; const el=document.querySelector(step.sel);
+  state.tourI=i; const step=TOUR[i];
+  const isMob=window.innerWidth<=960;
+  const sel=(isMob && step.selMobile)?step.selMobile:step.sel;
+  let el=document.querySelector(sel);
+  if((!el || el.getBoundingClientRect().width===0) && step.selMobile && step.selMobile!==sel) el=document.querySelector(step.selMobile);
+  if((!el || el.getBoundingClientRect().width===0) && sel!==step.sel) el=document.querySelector(step.sel);
   document.getElementById("tour").classList.add("open");
   if(!el){ return tourStep(i+1); }
   el.scrollIntoView({block:"center",behavior:"smooth"});
@@ -2739,7 +2904,17 @@ function tourStep(i){
   },380);
 }
 function tourNext(){ tourStep((state.tourI||0)+1); }
-function endTour(){ document.getElementById("tour").classList.remove("open"); localStorage.setItem("anima_tour_done","1"); }
+/* El tutorial es ÚNICO POR ALMA: se descubre una sola vez y no se repite al
+   volver a entrar. La marca se guarda por almaId (o "guest" si no hay sesión). */
+function tourKey(){ return "anima_tour_done_"+(me().almaId||me().id||"guest"); }
+function tourDone(){ try{ return localStorage.getItem(tourKey())==="1"; }catch(e){ return false; } }
+function endTour(){ document.getElementById("tour").classList.remove("open"); try{ localStorage.setItem(tourKey(),"1"); }catch(e){} }
+/* Lanza el tutorial automáticamente solo si esta Alma no lo ha visto nunca. */
+function maybeAutoTour(){
+  if(tourDone()) return;
+  const tEl=document.getElementById("tour"); if(tEl && tEl.classList.contains("open")) return;
+  setTimeout(()=>{ if(!tourDone()){ const t=document.getElementById("tour"); if(t && !t.classList.contains("open")) startTour(); } }, 900);
+}
 
 /* ---------- PWA (instalable) ---------- */
 let deferredPrompt=null;
@@ -2755,4 +2930,6 @@ renderAll();
 setupPullToRefresh();
 refreshAuth();
 if("serviceWorker" in navigator){ window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
-if(!localStorage.getItem("anima_tour_done")){ setTimeout(()=>{ if(!localStorage.getItem("anima_tour_done")) startTour(); }, 1100); }
+/* Auto-tutorial: una sola vez por Alma. Si hay sesión, loadMyAlma() lo dispara
+   con el Alma real ya cargada; aquí cubrimos el caso Invitada / sin nube. */
+setTimeout(()=>{ if(!(Cloud.enabled)) maybeAutoTour(); else Cloud.session().then(s=>{ if(!s) maybeAutoTour(); }).catch(()=>maybeAutoTour()); }, 1400);
