@@ -250,10 +250,13 @@ function setStoredReveal(n){ try{ localStorage.setItem(revealKey(), String(n)); 
 function levelReveal(){ const r=levelRank(me().level); return r<=1?1:Math.min(5,r); }
 /* ¿A qué morada pertenece una vista? (para no ocultar la activa) */
 function sectionOfView(v){
-  // Mi Plan vive DENTRO de Mi Alma; Clan vive DENTRO de Mundo (solo 3 moradas afuera).
+  // Mi Plan vive DENTRO de Mi Alma. Clan y Santuario son moradas propias del menú,
+  // visibles SOLO si el Alma tiene acceso a esa Forma. No viven dentro de Mundo.
   if(["mialma","trayectoria","portafolio","cronologia","insignias","estadisticas","visibilidad","memoria","biblioteca","miplan"].includes(v)) return "mialma";
   if(["proyectos","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
-  if(["comunidad","consejo","santuario","sant_plan","clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "mundo";
+  if(["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "clan";
+  if(["santuario","sant_plan"].includes(v)) return "santuario";
+  if(["comunidad","consejo"].includes(v)) return "mundo";
   return null;
 }
 /* Ítem de morada en la barra: navega a su vista por defecto y se marca activo
@@ -286,6 +289,11 @@ function renderNav(){
   if(next){
     h += `<button class="nav-reveal" data-reveal title="${esc(SECTION_REVEAL[next.id]||"")}">✦ Descubrir ${esc(SECTION_TITLE[next.id]||"")} →</button>`;
   }
+  // Clan y Santuario: moradas del menú que SOLO aparecen si el Alma tiene acceso
+  // a esa Forma (plan). Ese acceso solo lo concede el Creador desde la Consola.
+  // No se ocultan por la llegada progresiva: si hay acceso, están en el menú.
+  if(planAllows("clanpanel")) h += navSectionItem("clan","❂","constelacion","Clan","clanpanel");
+  if(planAllows("santuario")) h += navSectionItem("santuario","🜁","santuario","Santuario","santuario");
   // Pista: qué se abre al subir de nivel.
   const lpNav=levelProgress(me().xp);
   if(lpNav.next && UNLOCKS[lpNav.next.key]){
@@ -420,13 +428,15 @@ function moradaTabs(view){
   else if(sec==="mundo"){
     if(planAllows("comunidad")) kids.push({v:"comunidad",t:"Constelación"});
     if(me().council||(isCreator&&!state.viewAs)) kids.push({v:"consejo",t:"Consejo"});
-    if(planAllows("santuario")) kids.push({v:"santuario",t:"Santuario"});
+  }
+  else if(sec==="clan"){ kids=NAV_TREE[2].children.slice(); }                                    // Panel · Plan de trabajo · Calendario · Proyectos · Recordatorios
+  else if(sec==="santuario"){
+    kids.push({v:"santuario",t:"Santuario"});
     if(planAllows("santuario")&&me().santuario) kids.push({v:"sant_plan",t:"Planificar"});
-    NAV_TREE[2].children.forEach(c=>{ if(planAllows(c.v)) kids.push({v:c.v,t:c.t}); });          // Clan plegado aquí
   }
   kids=kids.filter(c=>planAllows(c.v) && cfg.modules[c.v]!==false);
   if(kids.length<2) return "";
-  const label={mialma:"Mi Alma",taller:"Taller",mundo:"Mundo"}[sec]||"";
+  const label={mialma:"Mi Alma",taller:"Taller",mundo:"Mundo",clan:"Clan",santuario:"Santuario"}[sec]||"";
   return `<div class="morada-tabs"><span class="morada-tabs-label">${esc(label)}</span><div class="morada-tabs-row">`+
     kids.map(c=>`<button class="morada-tab ${state.view===c.v?'on':''}" data-view="${c.v}">${esc(c.t)}${levelAllows(c.v)?"":' <span class="mt-lock">🔒</span>'}</button>`).join("")+
     `</div></div>`;
@@ -1878,25 +1888,29 @@ const PLAN_PICK_FEATURES={
   SANTUARIO:["Todo lo de Clan a gran escala","Varios Clanes y departamentos","Panel del Santuario con métricas","Coordinación con rol Admin"]
 };
 function vMiPlan(a){
-  const cur=almaPlan(a);
+  const cur=almaPlan(a); const admin=(isCreator&&!state.viewAs);
   const card=k=>{ const m=PLAN_META[k]; const on=cur===k;
     return `<div class="card s4 plan-pick ${on?'on':''}">
       <span class="lvl" style="font-size:34px;line-height:1">${m.ico}</span>
       <h2 style="font-size:24px;letter-spacing:-.04em;margin:8px 0 0">${m.t}</h2>
       <small class="muted">${m.sub}</small>
       <ul class="feat">${PLAN_PICK_FEATURES[k].map(f=>`<li><span class="ck">✦</span> ${f}</li>`).join("")}</ul>
-      ${on?`<span class="pill ok" style="width:max-content">Tu plan actual</span>`:`<button class="btn ${k==='CLAN'?'gold':'secondary'}" data-pickplan="${k}">Activar ${m.t}</button>`}
+      ${on?`<span class="pill ok" style="width:max-content">Tu Forma actual</span>`
+          :admin?`<button class="btn ${k==='CLAN'?'gold':'secondary'}" data-pickplan="${k}">Asignar ${m.t}</button>`
+          :(k==='ALMA'?`<span class="pill" style="width:max-content">Tu Forma de origen</span>`
+                      :`<span class="pill" style="width:max-content">La concede el Creador</span>`)}
     </div>`; };
+  const intro = admin
+    ? `<p class="muted" style="max-width:640px">Como Creador, asignas la Forma de cada Alma desde la <b>Consola</b>. Aquí puedes asignar la tuya.</p>`
+    : `<p class="muted" style="max-width:640px">Tu Forma define cómo habitas ANIMA. Toda Alma nace como <b>Alma</b>. <b>Clan</b> y <b>Santuario</b> son moradas que <b>concede el Creador de ANIMA</b> — no se activan solas.</p>`;
   return `<div class="grid">
     <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
-      <span class="pill gold">Mi Plan</span>
-      <h2 style="font-size:26px;letter-spacing:-.04em;margin:10px 0 4px">Elige tu umbral</h2>
-      <p class="muted" style="max-width:640px">Al activar un plan desbloqueas sus funciones al instante. ${a.live?'':'Entra a tu Alma en la nube para que tu plan viaje contigo.'}</p>
+      <span class="pill gold">Forma</span>
+      <h2 style="font-size:26px;letter-spacing:-.04em;margin:10px 0 4px">Cómo habitas ANIMA</h2>
+      ${intro}
       ${a.clan?`<p class="muted" style="font-size:12.5px;margin-top:8px">Tu Clan: <b>${esc(a.clan)}</b>${a.santuario?` · Santuario: <b>${esc(a.santuario)}</b>`:""} · Rol: ${roleBadge(almaRole(me()))}</p>`:""}
     </div>
     ${["ALMA","CLAN","SANTUARIO"].map(card).join("")}
-    <div class="card s12"><div class="section-title"><h2 style="font-size:16px">¿Te invitaron a un Clan?</h2></div>
-      <p class="muted" style="font-size:12.5px">Ingresa el código de invitación para entrar con tu rol asignado.</p>${joinCodeBox()}</div>
   </div>`;
 }
 function vSantuarioLive(a){
@@ -2016,6 +2030,10 @@ async function delSantEvent(id){
 /* --- Acciones de planes, roles y herramientas de Clan --- */
 async function pickPlan(plan){
   const a=me(); if(!a.live){ alert("Entra a tu Alma en la nube para activar un plan."); return; }
+  // Clan y Santuario son moradas concedidas: solo el Creador las asigna (Consola).
+  if((plan==="CLAN"||plan==="SANTUARIO") && !(isCreator && !state.viewAs)){
+    alert("Clan y Santuario los concede el Creador de ANIMA."); return;
+  }
   const patch={plan};
   if(plan==="CLAN" || plan==="SANTUARIO"){
     if(!a.clan){ const name=(prompt(plan==="SANTUARIO"?"Nombre de tu Santuario (y Clan principal):":"Nombre de tu Clan:","")||"").trim(); if(!name) return; patch.clan=name; patch.team_role="LIDER"; if(plan==="SANTUARIO"){ patch.santuario=name; patch.team_role="ADMIN"; } }
