@@ -2528,6 +2528,18 @@ function renderAlmaMenu(){
   if(planAllows("clanpanel")) items.push(`<button class="apop-item" data-almago="clanpanel">❂ Mi Clan</button>`);
   if(planAllows("santuario")) items.push(`<button class="apop-item" data-almago="santuario">🜁 Santuario</button>`);
   items.push(`<div class="apop-sep"></div>`);
+  // En móvil el menú lateral está oculto: sus acciones secundarias (tutorial,
+  // feedback y, para el Creador, Consola/Personalizar) viven aquí, en el menú
+  // del Alma, para mantener la app limpia sin perder el acceso.
+  if(window.innerWidth<=960){
+    items.push(`<button class="apop-item" id="almaTour">✦ Ver tutorial</button>`);
+    items.push(`<button class="apop-item" id="almaFeedback">✦ Enviar feedback</button>`);
+    if(isCreator && !state.viewAs){
+      items.push(`<button class="apop-item" data-almago="consola">⬡ Consola</button>`);
+      items.push(`<button class="apop-item" data-almago="config">⚙ Personalizar</button>`);
+    }
+    items.push(`<div class="apop-sep"></div>`);
+  }
   if(me().live) items.push(`<button class="apop-item" id="almaPass">🔑 Cambiar contraseña</button>`);
   items.push(`<button class="apop-item" id="almaSwitch">⤿ Cambiar de Alma</button>`);
   items.push(`<button class="apop-item danger" id="almaLogout">⏻ Cerrar sesión</button>`);
@@ -2828,6 +2840,8 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#sharePf")) sharePortfolio();
   if(e.target.closest("[data-export]")) exportPDF();
   const ag=e.target.closest("[data-almago]"); if(ag){ closeAlmaMenu(); go(ag.dataset.almago); return; }
+  if(e.target.closest("#almaTour")){ closeAlmaMenu(); startTour(); return; }
+  if(e.target.closest("#almaFeedback")){ closeAlmaMenu(); openFeedback(); return; }
   if(e.target.closest("#almaPass")){ closeAlmaMenu(); openChangePass(); return; }
   if(e.target.closest("#almaSwitch")){ closeAlmaMenu(); switchAlmaSession(); return; }
   if(e.target.closest("#almaLogout")){ closeAlmaMenu(); logout(); return; }
