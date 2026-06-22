@@ -2534,6 +2534,7 @@ function renderAlmaMenu(){
   if(window.innerWidth<=960){
     items.push(`<button class="apop-item" id="almaTour">✦ Ver tutorial</button>`);
     items.push(`<button class="apop-item" id="almaFeedback">✦ Enviar feedback</button>`);
+    items.push(`<button class="apop-item" id="almaCodice">❏ El Códice</button>`);
     if(isCreator && !state.viewAs){
       items.push(`<button class="apop-item" data-almago="consola">⬡ Consola</button>`);
       items.push(`<button class="apop-item" data-almago="config">⚙ Personalizar</button>`);
@@ -2581,8 +2582,12 @@ function maybeLevelGuide(){
   if(seen && order.indexOf(key)<=order.indexOf(seen)){ localStorage.setItem("anima_lumbre_level_seen",key); return; }
   localStorage.setItem("anima_lumbre_level_seen",key);
   state.chat=state.chat||[]; state.chat.push({role:"lum",text:lumbreLevelTip(p.level)}); save();
-  openLumbre();
+  // LUMBRE aún no despierta: guardamos el mensaje para cuando vuelva, sin abrir el chat.
+  if(LUMBRE_AWAKE) openLumbre();
 }
+/* El Códice — mini libro con el glosario y los conceptos del mundo ANIMA. */
+function openCodice(){ const m=document.getElementById("codiceModal"); if(m) m.classList.add("open"); }
+function closeCodice(){ const m=document.getElementById("codiceModal"); if(m) m.classList.remove("open"); }
 
 /* ---------- Tirar para refrescar (móvil) ---------- */
 function setupPullToRefresh(){
@@ -2722,9 +2727,25 @@ function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); }
 function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad") loadPosts(); if(view==="sant_plan") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
-function openLumbre(){ drawer().classList.add("open"); dbg().classList.add("open"); renderLumbre(); }
+/* LUMBRE aún no despierta: el chat permanece desactivado. Al tocarla, en vez de
+   desplegar el panel, avisa con serenidad. Despertará cuando el mundo (y el Alma)
+   reúnan más Esencia. Cambiar a true para reactivar el chat. */
+const LUMBRE_AWAKE=false;
+function openLumbre(){
+  if(!LUMBRE_AWAKE){ toast("✦ LUMBRE aún no despierta. Junta más Esencia…"); return; }
+  drawer().classList.add("open"); dbg().classList.add("open"); renderLumbre();
+}
 function closeLumbre(){ drawer().classList.remove("open"); dbg().classList.remove("open"); }
 function closeSide(){ document.getElementById("side").classList.remove("open"); }
+/* El logo (arriba a la izquierda): cierra la ventana/menú abierto si lo hay
+   (actúa como "atrás"); si no, vuelve al HOME. */
+function homeOrBack(){
+  const m=document.querySelector(".auth-modal.open"); if(m){ m.classList.remove("open"); return; }
+  if(drawer().classList.contains("open")){ closeLumbre(); return; }
+  const pop=document.getElementById("almaPop"); if(pop && pop.classList.contains("open")){ closeAlmaMenu(); return; }
+  if(state.view!=="mialma"){ go("mialma"); return; }
+  document.getElementById("view").scrollTop=0;
+}
 
 /* ===========================================================
    CIERRE DE MODALES SIN BUGS
@@ -2822,13 +2843,14 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#ritualSend")) sendRitual();
   if(e.target.closest("#ritualClose")||bdClose(e,"ritualModal")) closeRitual();
   if(e.target.closest("#feedbackBtn")) openFeedback();
+  if(e.target.closest("#codiceBtn")) openCodice();
+  if(e.target.closest("#codiceClose")||bdClose(e,"codiceModal")) closeCodice();
+  if(e.target.closest("#homeLogo")||e.target.closest("#brandHome")){ homeOrBack(); return; }
   if(e.target.closest("#fbSend")) sendFeedback();
   if(e.target.closest("#fbClose")||bdClose(e,"feedbackModal")) closeFeedback();
   if(e.target.closest("#lumbreOpen")) openLumbre();
   if(e.target.closest("#lumbreClose")||bdClose(e,"drawerBg")) closeLumbre();
-  if(e.target.closest("#menuBtn")) document.getElementById("side").classList.toggle("open");
   if(e.target.closest("#whoBox")) go("mialma");
-  if(e.target.closest("#resetBtn")) reset();
   if(e.target.closest("#installBtn")) installApp();
   if(e.target.closest("#lumbreFab")) openLumbre();
   if(e.target.closest("#botLumbre")) openLumbre();
@@ -2842,6 +2864,7 @@ document.addEventListener("click", e=>{
   const ag=e.target.closest("[data-almago]"); if(ag){ closeAlmaMenu(); go(ag.dataset.almago); return; }
   if(e.target.closest("#almaTour")){ closeAlmaMenu(); startTour(); return; }
   if(e.target.closest("#almaFeedback")){ closeAlmaMenu(); openFeedback(); return; }
+  if(e.target.closest("#almaCodice")){ closeAlmaMenu(); openCodice(); return; }
   if(e.target.closest("#almaPass")){ closeAlmaMenu(); openChangePass(); return; }
   if(e.target.closest("#almaSwitch")){ closeAlmaMenu(); switchAlmaSession(); return; }
   if(e.target.closest("#almaLogout")){ closeAlmaMenu(); logout(); return; }
@@ -2889,7 +2912,7 @@ const TOUR=[
   {sel:".tabbar", title:"Tu Alma", text:"Mi Alma tiene pestañas: Resumen, Identidad (tu foto y datos), Vista pública (qué muestras) y Ajustes."},
   {sel:".camino-card", title:"Tu camino", text:"Subes de nivel creando. Cada nivel desbloquea nuevas ventanas. Toca la ⓘ para ver el mapa de niveles."},
   {sel:'[data-view="comunidad"]', selMobile:'.botnav [data-view="comunidad"]', title:"El mundo", text:"En Mundo vive el Árbol de Almas: el mapa de quienes habitan ANIMA, los Ecos en vivo, el Ritual del día y el conteo por país. Toca una Alma para visitarla."},
-  {sel:"#lumbreFab", selMobile:"#botLumbre", title:"Soy LUMBRE ✦", text:"Tu chispa compañera. Tócame cuando quieras: te ayudo con Raíz, proyectos y tu siguiente nivel. ¡Bienvenida a ANIMA!"}
+  {sel:"#lumbreFab", selMobile:"#botLumbre", title:"LUMBRE ✦", text:"Tu chispa compañera. Aún está despertando: reunirá voz cuando el mundo y tu Alma junten más Esencia. ¡Bienvenida a ANIMA!"}
 ];
 function startTour(){ closeLumbre(); closeSide(); state.view="mialma"; state.almaTab="resumen"; renderAll(); setTimeout(()=>tourStep(0),360); }
 function tourStep(i){

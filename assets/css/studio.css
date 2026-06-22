@@ -666,3 +666,31 @@ a.nav-item{text-decoration:none;color:inherit}
   .tour-bub{max-width:calc(100vw - 24px)}
 }
 @media print{ .botnav{display:none !important} }
+
+/* ===========================================================
+   LOGO INICIO/ATRÁS (arriba a la izquierda)
+   En escritorio el logo top-left vive en la barra lateral (.brand);
+   en móvil, donde el lateral se oculta, aparece en la barra superior.
+   =========================================================== */
+.home-logo{display:none;border:1px solid var(--line);background:rgba(255,255,255,.7);
+  width:40px;height:40px;border-radius:12px;cursor:pointer;place-items:center;flex:0 0 auto}
+.home-logo svg{width:22px;height:22px}
+.home-logo:hover{border-color:var(--ink,#111)}
+@media(max-width:960px){ .home-logo{display:grid} }
+
+/* ===========================================================
+   EL CÓDICE — mini libro (glosario), acordeón minimalista
+   =========================================================== */
+.codice{display:flex;flex-direction:column}
+.codice details{border-bottom:1px solid var(--line)}
+.codice details:last-child{border-bottom:0}
+.codice summary{list-style:none;cursor:pointer;padding:13px 2px;font-size:15px;font-weight:600;
+  letter-spacing:-.01em;color:var(--ink,#0a0a0b);display:flex;align-items:center;gap:10px;
+  transition:color .18s ease}
+.codice summary::-webkit-details-marker{display:none}
+.codice summary::before{content:"+";font-family:ui-monospace,monospace;font-weight:700;
+  color:var(--faint,#9a9aa0);width:14px;text-align:center;transition:transform .2s ease}
+.codice details[open] summary::before{content:"–"}
+.codice summary:hover{color:var(--gold-deep,#7b5920)}
+.codice details p{margin:0 0 14px 24px;font-size:14px;line-height:1.6;color:var(--soft,#6b6b70)}
+.codice details p b{color:var(--ink,#0a0a0b);font-weight:600}
