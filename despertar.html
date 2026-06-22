@@ -251,7 +251,7 @@
   function sOrigen(){
     render(
       '<div class="eyebrow mono">Serán recordadas para siempre</div>'+
-      '<p class="big">Las primeras 30 Almas<br><em>serán recordadas para siempre.</em></p>'+
+      '<p class="big">Las primeras 50 Almas<br><em>serán recordadas para siempre.</em></p>'+
       '<div class="mono" style="margin-top:34px;letter-spacing:.4em">Almas del Origen</div>'+
       '<div class="word" id="originCount" style="font-size:clamp(30px,9vw,64px);margin-top:6px">— / 30</div>'+
       '<div class="actions"><button class="cbtn" id="b4">Deseo habitar ANIMA</button></div>',
@@ -259,7 +259,7 @@
         bind("b4", sPacto);
         try{ if(window.Cloud && Cloud.enabled && Cloud.soulsCount){
           Cloud.soulsCount().then(function(n){ var el=document.getElementById("originCount");
-            if(el && n!=null){ el.textContent = Math.min(n,30) + " / 30"; } });
+            if(el && n!=null){ el.textContent = Math.min(n,50) + " / 50"; } });
         } }catch(e){}
       }
     );

@@ -2507,6 +2507,9 @@ async function ensureLocation(a){
       const patch={ country }; if(city && !a.city) patch.city=city;
       try{ await Cloud.updateAlma(a.almaId, patch); }catch(_){}
       Object.assign(a, patch);
+      // Registrar en el Mundo el país que ingresa (visible en los Ecos, sin
+      // afectar el conteo de Almas). Una sola vez, al detectar la ubicación.
+      try{ const nick=(a.name||"Alma").split(" ")[0]; await Cloud.emitEcho("senal","➶ "+nick+" se suma desde "+countryLabel(country)); }catch(_){}
       try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(_){}
       renderAll();
     }

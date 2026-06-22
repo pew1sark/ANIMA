@@ -281,7 +281,7 @@
       <div class="state">
         <div class="stat"><div class="k">Era</div><div class="v">Origen</div></div>
         <div class="stat"><div class="k">El Árbol</div><div class="v" id="treeState">Despertando</div></div>
-        <div class="stat"><div class="k">Almas del Origen</div><div class="v" id="stateSouls">— <small>/ 30</small></div></div>
+        <div class="stat"><div class="k">Almas del Origen</div><div class="v" id="stateSouls">— <small>/ 50</small></div></div>
         <div class="stat"><div class="k">Acceso</div><div class="v" style="font-size:20px">Por Umbral<br><small class="faint" style="font-size:11px">Código del Origen</small></div></div>
       </div>
       <p class="para" style="margin-top:30px">¿Quieres ver el mundo respirar? Visita el <a href="arbol.html" style="color:#fff;border-bottom:1px solid var(--line)">Árbol de Almas</a> y la <a href="roadmap.html" style="color:#fff;border-bottom:1px solid var(--line)">Senda</a> del proyecto en detalle.</p>
@@ -292,7 +292,7 @@
   <section class="block" id="origen">
     <div class="wrap" style="text-align:center">
       <div class="mono eyebrow">Las primeras serán recordadas para siempre</div>
-      <div class="origin-count"><span id="originCount">—</span> <small>/ 30</small></div>
+      <div class="origin-count"><span id="originCount">—</span> <small>/ 50</small></div>
       <h2 class="lead serif" id="originMsg" style="margin:24px auto 0">Almas del Origen</h2>
       <p class="para" style="margin:22px auto 0">Solo treinta Almas cruzarán el Umbral durante el Primer Despertar. Cada una quedará escrita en la memoria de ANIMA con la insignia <b style="color:#fff">Alma del Origen</b>.</p>
       <div class="origin-names" id="originNames" style="justify-content:center"></div>
@@ -377,13 +377,13 @@
     /* --- Almas del Origen: contador real (solo lectura, best-effort) --- */
     var FOUNDERS=["SARK","Valentina","Nicolás","Diego","Camila","Lucía","Mateo","Sofía","Tomás","Renata"];
     function paintOrigin(n){
-      var have = (typeof n==="number" && n>=0) ? Math.min(n,30) : null;
+      var have = (typeof n==="number" && n>=0) ? Math.min(n,50) : null;
       var cEl=document.getElementById("originCount"), sEl=document.getElementById("stateSouls"), mEl=document.getElementById("originMsg");
       if(have===null){
         cEl.textContent="∞"; sEl.innerHTML='Era del Origen';
       }else{
-        cEl.textContent=have; sEl.innerHTML=have+' <small>/ 30</small>';
-        if(have>=30){ mEl.textContent="El Primer Despertar ha concluido"; }
+        cEl.textContent=have; sEl.innerHTML=have+' <small>/ 50</small>';
+        if(have>=50){ mEl.textContent="El Primer Despertar ha concluido"; }
       }
       /* nombres: fundadores conocidos + cupos restantes como silencio */
       var names=FOUNDERS.slice(0, have===null?FOUNDERS.length:Math.min(have,FOUNDERS.length));
