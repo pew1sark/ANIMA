@@ -203,11 +203,19 @@
 .tour-bub p{margin:5px 0 10px;font-size:13.5px;color:#4a463e;line-height:1.5}
 .tour-bub .trow{display:flex;align-items:center;gap:8px}
 
-/* ---------- Mi Alma: pestañas ---------- */
-.tabbar{display:flex;gap:6px;padding:8px;flex-wrap:wrap}
-.tabbtn{border:1px solid transparent;background:transparent;color:var(--muted);font-weight:800;font-size:13.5px;padding:9px 15px;border-radius:12px;cursor:pointer;transition:.15s}
-.tabbtn:hover{background:rgba(255,255,255,.6)}
-.tabbtn.on{background:#111;color:#fff;box-shadow:var(--shadow-soft)}
+/* ---------- Mi Alma: pestañas (editorial, mismo lenguaje que las moradas) ---------- */
+.card.tabbar{background:transparent;border:0;border-bottom:1px solid rgba(10,10,11,.08);
+  border-radius:0;box-shadow:none;backdrop-filter:none;padding:0;display:flex;gap:0;flex-wrap:wrap}
+.tabbtn{position:relative;border:0;background:none;border-radius:0;color:#9a9aa0;
+  font-weight:520;font-size:14px;letter-spacing:-.01em;padding:12px 6px 14px;margin:0 9px;
+  cursor:pointer;transition:color .22s ease}
+.tabbtn:first-child{margin-left:0}
+.tabbtn::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1.5px;
+  background:var(--ink,#0a0a0b);border-radius:2px;
+  transform:scaleX(0);transform-origin:center;transition:transform .26s cubic-bezier(.4,0,.2,1)}
+.tabbtn:hover{background:none;color:#0a0a0b}
+.tabbtn.on{background:none;color:#0a0a0b;font-weight:620;box-shadow:none}
+.tabbtn.on::after{transform:scaleX(1)}
 
 /* ---------- Gráficos ---------- */
 .chart{display:flex;align-items:flex-end;gap:10px;height:140px;padding-top:6px}
