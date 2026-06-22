@@ -181,7 +181,7 @@ function canAdminSantuario(){ if(isCreator && !state.viewAs) return true; return
 const NAV_TREE = [
   // 1 · MI ALMA — la identidad (todo lo que era "Esencia" vive aquí dentro).
   { type:"reino", key:"mialma", ico:"◆", ic:"alma", t:"Mi Alma", children:[
-      {v:"mialma",      ico:"◆",ic:"alma",t:"Resumen"},
+      {v:"mialma",      ico:"◆",ic:"alma",t:"Núcleo"},
       {v:"trayectoria", ico:"⤴",ic:"ruta",t:"Trayectoria"},
       {v:"portafolio",  ico:"▦",ic:"huellas",t:"Portafolio"},
       {v:"cronologia",  ico:"☷",ic:"tiempo",t:"Cronología"},
@@ -250,30 +250,26 @@ function setStoredReveal(n){ try{ localStorage.setItem(revealKey(), String(n)); 
 function levelReveal(){ const r=levelRank(me().level); return r<=1?1:Math.min(5,r); }
 /* ¿A qué morada pertenece una vista? (para no ocultar la activa) */
 function sectionOfView(v){
-  if(["mialma","trayectoria","portafolio","cronologia","insignias","estadisticas","visibilidad","memoria","biblioteca"].includes(v)) return "mialma";
+  // Mi Plan vive DENTRO de Mi Alma; Clan vive DENTRO de Mundo (solo 3 moradas afuera).
+  if(["mialma","trayectoria","portafolio","cronologia","insignias","estadisticas","visibilidad","memoria","biblioteca","miplan"].includes(v)) return "mialma";
   if(["proyectos","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
-  if(["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "clan";
-  if(["comunidad","consejo","santuario","sant_plan"].includes(v)) return "mundo";
-  if(v==="miplan") return "miplan";
+  if(["comunidad","consejo","santuario","sant_plan","clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "mundo";
   return null;
 }
-/* Construye las moradas de nivel superior visibles según plan/personalización. */
+/* Ítem de morada en la barra: navega a su vista por defecto y se marca activo
+   cuando estás en cualquiera de sus pestañas. */
+function navSectionItem(id, ico, ic, t, defView){
+  const active = sectionOfView(state.view)===id;
+  return `<div class="nav-item ${active?'active':''}" data-view="${defView}"><span class="ico">${ANIMA_ICON(ic, ico)}</span>${t}</div>`;
+}
+/* Solo 3 moradas en la barra. Todo lo demás vive en pestañas del dashboard:
+   Mi Plan dentro de Mi Alma · Clan dentro de Mundo. */
 function buildSections(cfg){
-  const out=[];
-  out.push({ id:"mialma", html:navReino("mialma","◆","alma","Mi Alma",
-      NAV_TREE[0].children.filter(c=>cfg.modules[c.v]!==false && planAllows(c.v))) });
-  out.push({ id:"taller", html:navReino("taller","₵","taller","Taller",
-      NAV_TREE[1].children.filter(c=>cfg.modules[c.v]!==false && planAllows(c.v))) });
-  const clanKids=NAV_TREE[2].children.filter(c=>cfg.modules[c.v]!==false && planAllows(c.v));
-  if(clanKids.length) out.push({ id:"clan", html:navReino("clan","❂","constelacion","Clan",clanKids) });
-  const worldKids=[];
-  if(planAllows("comunidad")) worldKids.push({v:"comunidad",ico:"❂",ic:"nucleo",t:"Constelación"});
-  if(me().council || (isCreator && !state.viewAs)) worldKids.push({v:"consejo",ico:"⚖",ic:"consejo",t:"Consejo"});
-  if(planAllows("santuario")) worldKids.push({v:"santuario",ico:"🜁",ic:"santuario",t:"Santuario"});
-  if(planAllows("santuario") && me().santuario) worldKids.push({v:"sant_plan",ico:"❖",ic:"plan",t:"Planificar"});
-  if(worldKids.length) out.push({ id:"mundo", html:navReino("mundo","❂","nucleo","Mundo",worldKids) });
-  out.push({ id:"miplan", html:navItem({v:"miplan",ico:"❖",ic:"plan",t:"Mi Plan"}) });
-  return out.filter(s=>s.html);
+  return [
+    { id:"mialma", html:navSectionItem("mialma","◆","alma","Mi Alma","mialma") },
+    { id:"taller", html:navSectionItem("taller","₵","taller","Taller","proyectos") },
+    { id:"mundo",  html:navSectionItem("mundo","❂","nucleo","Mundo","comunidad") }
+  ];
 }
 function renderNav(){
   const cfg=getCfg(me());
@@ -417,20 +413,20 @@ function acts(kind,i){ return `<span class="acts"><button class="ia" data-edit="
    Al entrar a una morada ves sus sub-secciones en pestañas (no solo en la
    barra). Navegan con go() (data-view). Las bloqueadas por nivel se marcan. */
 function moradaTabs(view){
-  const sec=sectionOfView(view); if(!sec || sec==="miplan") return "";
+  const sec=sectionOfView(view); if(!sec) return "";
   const cfg=getCfg(me()); let kids=[];
-  if(sec==="mialma") kids=NAV_TREE[0].children.slice();
-  else if(sec==="taller") kids=NAV_TREE[1].children.slice();
-  else if(sec==="clan") kids=NAV_TREE[2].children.slice();
+  if(sec==="mialma"){ kids=NAV_TREE[0].children.slice(); kids.push({v:"miplan",t:"Forma"}); }   // Mi Plan plegado aquí
+  else if(sec==="taller"){ kids=NAV_TREE[1].children.slice(); }
   else if(sec==="mundo"){
     if(planAllows("comunidad")) kids.push({v:"comunidad",t:"Constelación"});
     if(me().council||(isCreator&&!state.viewAs)) kids.push({v:"consejo",t:"Consejo"});
     if(planAllows("santuario")) kids.push({v:"santuario",t:"Santuario"});
     if(planAllows("santuario")&&me().santuario) kids.push({v:"sant_plan",t:"Planificar"});
+    NAV_TREE[2].children.forEach(c=>{ if(planAllows(c.v)) kids.push({v:c.v,t:c.t}); });          // Clan plegado aquí
   }
   kids=kids.filter(c=>planAllows(c.v) && cfg.modules[c.v]!==false);
   if(kids.length<2) return "";
-  const label={mialma:"Mi Alma",taller:"Taller",clan:"Clan",mundo:"Mundo"}[sec]||"";
+  const label={mialma:"Mi Alma",taller:"Taller",mundo:"Mundo"}[sec]||"";
   return `<div class="morada-tabs"><span class="morada-tabs-label">${esc(label)}</span><div class="morada-tabs-row">`+
     kids.map(c=>`<button class="morada-tab ${state.view===c.v?'on':''}" data-view="${c.v}">${esc(c.t)}${levelAllows(c.v)?"":' <span class="mt-lock">🔒</span>'}</button>`).join("")+
     `</div></div>`;
@@ -444,7 +440,7 @@ function renderView(){
   // Consejo de Almas: reservado a las Almas Fundadoras (Consejo) y al Creador.
   if(state.view==="consejo" && !(me().council || (isCreator && !state.viewAs))) state.view="mialma";
   // Gating por nivel: la ventana está realmente BLOQUEADA hasta alcanzar su nivel.
-  if(!levelAllows(state.view)){ document.getElementById("view").innerHTML = previewBanner() + vLocked(state.view); return; }
+  if(!levelAllows(state.view)){ document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + vLocked(state.view); return; }
   const fn = { mialma:vMiAlma, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
     finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
