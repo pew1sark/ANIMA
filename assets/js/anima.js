@@ -2643,7 +2643,7 @@ async function doForgot(){
   }catch(e){ msg.textContent=e.message||"No se pudo enviar el enlace."; }
 }
 /* Cerrar sesión → vuelve al Home de ANIMA (la página principal por defecto). */
-async function logout(){ if(!confirm("¿Cerrar sesión de tu Alma?"))return; try{await Cloud.log("logout");}catch(e){} try{await Cloud.signOut();}catch(e){} try{sessionStorage.removeItem("anima_logged_login");}catch(e){} location.href="home.html"; }
+async function logout(){ if(!confirm("¿Cerrar sesión de tu Alma?"))return; try{await Cloud.log("logout");}catch(e){} try{await Cloud.signOut();}catch(e){} try{sessionStorage.removeItem("anima_logged_login");}catch(e){} try{localStorage.removeItem("anima_awakened");}catch(e){} location.href="home.html"; }
 /* Cambiar de Alma → cierra sesión y abre el acceso para entrar con otra. */
 async function switchAlmaSession(){ try{await Cloud.signOut();}catch(e){}
   isCreator=false; state.viewAs=null; state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; state.view="mialma"; save(); renderAll(); updateAuthUI(null); openAuth(); }
