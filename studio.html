@@ -58,6 +58,9 @@
     </main>
   </div>
 
+  <!-- BARRA INFERIOR (móvil) — cambiar de menú como en Instagram -->
+  <nav class="botnav" id="botnav"></nav>
+
   <!-- LUMBRE DRAWER -->
   <div class="drawer-bg" id="drawerBg"></div>
   <aside class="drawer" id="drawer">
@@ -167,6 +170,22 @@
     <div class="auth-box">
       <div class="auth-head"><div style="flex:1"><b>Huella</b></div><button class="btn ghost sm" id="postClose">✕</button></div>
       <div id="postModalBody"></div>
+    </div>
+  </div>
+
+  <!-- MODAL RITUAL DEL ECO -->
+  <div class="auth-modal" id="ritualModal">
+    <div class="auth-box">
+      <div class="auth-head">
+        <span class="mark" style="background:radial-gradient(circle at 50% 40%,#fff7e1,#f0d89a)"><img src="assets/img/lumbre.svg" width="20" height="24" alt="" style="image-rendering:pixelated"></span>
+        <div style="flex:1"><b>Ritual del Eco</b><br><small class="muted">Vela encendida · una vez al día</small></div>
+        <button class="btn ghost sm" id="ritualClose">✕</button>
+      </div>
+      <p class="muted" style="font-size:13px;margin:2px 0 10px">Comparte tu Huella de la semana. Se publicará en el Muro de la comunidad y el Árbol resonará contigo.</p>
+      <div class="field"><label>¿Qué creaste esta semana?</label><textarea id="ritualBody" rows="4" placeholder="Una obra, un avance, una idea que tomó forma…"></textarea></div>
+      <div class="field"><label>Título (opcional)</label><input id="ritualTitle" placeholder="Dale un nombre a tu Huella"></div>
+      <button class="btn gold" id="ritualSend" style="width:100%">🜂 Encender la vela</button>
+      <div id="ritualMsg" class="muted" style="font-size:12.5px;margin-top:10px;min-height:16px"></div>
     </div>
   </div>
 
