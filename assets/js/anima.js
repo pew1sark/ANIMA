@@ -60,9 +60,21 @@ function caminoPixelHTML(lp){
       <small class="muted">${nx?`${lp.pct}% — faltan ${falta.toLocaleString("es-CL")} Esencia para <b>${nx.label}</b>`:"Alma Despierta · nivel máximo ∞"}</small></div>
   </div>`;
 }
+/* Qué REVELA cada nivel y a qué da acceso (coherente con la llegada progresiva). */
+const LEVEL_OPENS = {
+  FOUNDING:"Mi Alma — tu identidad y tu Esencia.",
+  EMBER:"Mi Alma completa: Senda (Sueño y Semillas), Trayectoria, Portafolio, Cronología e Insignias.",
+  ROOT:"Se revela el Taller: Proyectos, Vínculos y Agenda. Un proyecto enlaza su cliente, su plan de trabajo y tu Raíz (finanzas).",
+  WILD:"Se revela el Mundo: la Constelación de Almas, el Árbol vivo y los Ecos.",
+  TOTEM:"Se revela el Clan: crear junto a otras Almas — Panel, Plan de trabajo, Calendario y Proyectos compartidos.",
+  AETHER:"LUMBRE más presente y automatizaciones: el sistema empieza a trabajar contigo.",
+  SPIRIT:"Mentorías y legado: una Alma que guía a otras.",
+  ANIMA:"El ecosistema completo. El Santuario despierta para albergar más Almas."
+};
 function openLevels(){
-  document.getElementById("levelBody").innerHTML=`<p class="muted" style="font-size:13px">Tu Alma evoluciona con tu actividad. Cada acción (crear trabajos, memorias, hitos) da Esencia y desbloquea nuevas ventanas dentro de ANIMA.</p>
-    ${LEVELS.map(l=>`<div class="row"><div style="width:40px">${pixelSprite(l)}</div><div class="grow"><b>${l.label}</b> <small class="muted">· ${l.name} · ${l.xp.toLocaleString("es-CL")} Esencia</small><br><small class="muted">Desbloquea: ${UNLOCKS[l.key]||""}</small></div></div>`).join("")}`;
+  document.getElementById("levelBody").innerHTML=
+    `<p class="muted" style="font-size:13px">ANIMA se descubre de a poco: no verás todo de golpe. Cada morada se revela cuando estás listo — a tu ritmo, o al subir de nivel. Este es el mapa de lo que abre cada nivel y a qué da acceso.</p>`+
+    LEVELS.map(l=>`<div class="row"><div style="width:40px">${pixelSprite(l)}</div><div class="grow"><b>${l.emoji} ${l.label}</b> <small class="muted">· ${l.xp.toLocaleString("es-CL")} Esencia</small><br><small class="muted">${LEVEL_OPENS[l.key]||UNLOCKS[l.key]||""}</small></div></div>`).join("");
   document.getElementById("levelModal").classList.add("open");
 }
 function closeLevels(){ document.getElementById("levelModal").classList.remove("open"); }
@@ -216,29 +228,72 @@ function navReino(key, ico, ic, t, kids){
       <span class="ico">${ANIMA_ICON(ic, ico)}</span><span class="rt">${t}</span><span class="caret">⌄</span></div>`
     + `<div class="nav-sub ${open?'open':''}"><div class="nav-sub-inner">${kids.map(c=>levelAllows(c.v)?navItem(c,true):navItemLocked(c,true)).join("")}</div></div>`;
 }
-function renderNav(){
-  const cfg=getCfg(me());
-  let h="";
-  // 1-3 · Mi Alma, Taller, Clan — el menú definitivo: 5 entradas, todo vive dentro.
-  NAV_TREE.forEach(node=>{
-    // Visibles según plan/personalización; las que aún no alcanza el nivel
-    // se muestran BLOQUEADAS (no se ocultan) para que el menú "crezca a la vista".
-    const kids=node.children.filter(c=>cfg.modules[c.v]!==false && planAllows(c.v));
-    h+=navReino(node.key, node.ico, node.ic, node.t, kids);
-  });
-  // 4 · MUNDO — el mundo que habito (Constelación, Árbol y Ecos viven en Comunidad).
+/* ===========================================================
+   PRIMERA LLEGADA PROGRESIVA (Alpha)
+   El menú no aparece de golpe: el Alma descubre ANIMA de a poco.
+   Cada morada se revela al avanzar (botón "Descubrir") o al subir
+   de nivel, y se explica qué abre. Persistente por Alma (local).
+   El Creador ve todo. No oculta nunca la vista activa.
+   =========================================================== */
+const SECTION_REVEAL = {
+  mialma: "Mi Alma se ha revelado — tu identidad: Resumen, Senda, Trayectoria, Portafolio, Cronología e Insignias.",
+  taller: "El Taller se ha revelado — donde creas: Proyectos, Vínculos y Agenda, todo interconectado.",
+  clan:   "El Clan se ha revelado — crear junto a otras Almas (2 a 8).",
+  mundo:  "El Mundo se ha revelado — la Constelación de Almas, el Árbol vivo y los Ecos.",
+  miplan: "Mi Plan se ha revelado — cómo habitas ANIMA: Alma, Clan o Santuario."
+};
+const SECTION_TITLE = { mialma:"Mi Alma", taller:"el Taller", clan:"el Clan", mundo:"el Mundo", miplan:"Mi Plan" };
+function revealKey(){ return "anima_reveal_"+(me().almaId||me().id||"guest"); }
+function storedReveal(){ const n=parseInt(localStorage.getItem(revealKey()),10); return isNaN(n)?0:n; }
+function setStoredReveal(n){ try{ localStorage.setItem(revealKey(), String(n)); }catch(e){} }
+/* Al subir de nivel, ANIMA revela más moradas por sí sola. */
+function levelReveal(){ const r=levelRank(me().level); return r<=1?1:Math.min(5,r); }
+/* ¿A qué morada pertenece una vista? (para no ocultar la activa) */
+function sectionOfView(v){
+  if(["mialma","trayectoria","portafolio","cronologia","insignias","estadisticas","visibilidad","memoria","biblioteca"].includes(v)) return "mialma";
+  if(["proyectos","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
+  if(["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "clan";
+  if(["comunidad","consejo","santuario","sant_plan"].includes(v)) return "mundo";
+  if(v==="miplan") return "miplan";
+  return null;
+}
+/* Construye las moradas de nivel superior visibles según plan/personalización. */
+function buildSections(cfg){
+  const out=[];
+  out.push({ id:"mialma", html:navReino("mialma","◆","alma","Mi Alma",
+      NAV_TREE[0].children.filter(c=>cfg.modules[c.v]!==false && planAllows(c.v))) });
+  out.push({ id:"taller", html:navReino("taller","₵","taller","Taller",
+      NAV_TREE[1].children.filter(c=>cfg.modules[c.v]!==false && planAllows(c.v))) });
+  const clanKids=NAV_TREE[2].children.filter(c=>cfg.modules[c.v]!==false && planAllows(c.v));
+  if(clanKids.length) out.push({ id:"clan", html:navReino("clan","❂","constelacion","Clan",clanKids) });
   const worldKids=[];
   if(planAllows("comunidad")) worldKids.push({v:"comunidad",ico:"❂",ic:"nucleo",t:"Constelación"});
   if(me().council || (isCreator && !state.viewAs)) worldKids.push({v:"consejo",ico:"⚖",ic:"consejo",t:"Consejo"});
   if(planAllows("santuario")) worldKids.push({v:"santuario",ico:"🜁",ic:"santuario",t:"Santuario"});
   if(planAllows("santuario") && me().santuario) worldKids.push({v:"sant_plan",ico:"❖",ic:"plan",t:"Planificar"});
-  h+=navReino("mundo", "❂", "nucleo", "Mundo", worldKids);
-  // 5 · MI PLAN — lo que puedo llegar a ser.
-  h+=navItem({v:"miplan",ico:"❖",ic:"plan",t:"Mi Plan"});
-  // "El menú crece con la persona": muestra qué se abre al subir de nivel.
+  if(worldKids.length) out.push({ id:"mundo", html:navReino("mundo","❂","nucleo","Mundo",worldKids) });
+  out.push({ id:"miplan", html:navItem({v:"miplan",ico:"❖",ic:"plan",t:"Mi Plan"}) });
+  return out.filter(s=>s.html);
+}
+function renderNav(){
+  const cfg=getCfg(me());
+  const built=buildSections(cfg);
+  // Cuántas moradas revelar: manual + por nivel. El Creador ve todo.
+  let stage = (isCreator && !state.viewAs) ? built.length : Math.max(1, storedReveal(), levelReveal());
+  // Nunca ocultes la morada que el Alma está viendo ahora.
+  const curSec=sectionOfView(state.view);
+  if(curSec){ const ci=built.findIndex(s=>s.id===curSec); if(ci>=0) stage=Math.max(stage, ci+1); }
+  stage=Math.min(stage, built.length);
+  let h = built.slice(0,stage).map(s=>s.html).join("");
+  // Afordancia: descubrir la siguiente morada (progresivo, a tu ritmo).
+  const next = built[stage];
+  if(next){
+    h += `<button class="nav-reveal" data-reveal title="${esc(SECTION_REVEAL[next.id]||"")}">✦ Descubrir ${esc(SECTION_TITLE[next.id]||"")} →</button>`;
+  }
+  // Pista: qué se abre al subir de nivel.
   const lpNav=levelProgress(me().xp);
   if(lpNav.next && UNLOCKS[lpNav.next.key]){
-    h+=`<div class="nav-next">✦ Al alcanzar <b>${lpNav.next.label}</b>: ${UNLOCKS[lpNav.next.key]}</div>`;
+    h+=`<div class="nav-next">Al alcanzar <b>${lpNav.next.label}</b>: ${UNLOCKS[lpNav.next.key]}</div>`;
   }
   // El bloque Creador se oculta mientras se previsualiza un plan (vista fiel).
   if(isCreator && !state.viewAs){
@@ -247,6 +302,23 @@ function renderNav(){
       +navItem({v:"config",ico:"⚙",ic:"config",t:"Personalizar"});
   }
   document.getElementById("nav").innerHTML=h;
+}
+/* Revela la siguiente morada, la explica y la marca. */
+function revealNext(){
+  const built=buildSections(getCfg(me()));
+  const cur=Math.max(1, storedReveal(), levelReveal());
+  const target=Math.min(built.length, cur+1);
+  setStoredReveal(target);
+  renderNav();
+  const revealed=built[target-1];
+  if(revealed && SECTION_REVEAL[revealed.id]) animaToast(SECTION_REVEAL[revealed.id]);
+}
+/* Aviso sereno (no intrusivo) — mensajes del mundo, nunca "+XP". */
+function animaToast(msg){
+  let t=document.getElementById("animaToast");
+  if(!t){ t=document.createElement("div"); t.id="animaToast"; t.className="anima-toast"; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(animaToast._t); animaToast._t=setTimeout(function(){ t.classList.remove("show"); }, 4400);
 }
 
 /* ---------- Sidebar identidad ---------- */
@@ -2426,6 +2498,7 @@ function closeLumbre(){ drawer().classList.remove("open"); dbg().classList.remov
 function closeSide(){ document.getElementById("side").classList.remove("open"); }
 
 document.addEventListener("click", e=>{
+  if(e.target.closest("[data-reveal]")){ revealNext(); return; }
   const rn=e.target.closest("[data-reino]"); if(rn){ toggleReino(rn.dataset.reino); return; }
   const va=e.target.closest("[data-viewas]"); if(va){ setViewAs(va.dataset.viewas); return; }
   const cs=e.target.closest("[data-cssave]"); if(cs){ consolaSave(cs.dataset.cssave); return; }
