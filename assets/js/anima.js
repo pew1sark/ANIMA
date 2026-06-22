@@ -441,6 +441,9 @@ function moradaTabs(view){
     kids.map(c=>`<button class="morada-tab ${state.view===c.v?'on':''}" data-view="${c.v}">${esc(c.t)}${levelAllows(c.v)?"":' <span class="mt-lock">🔒</span>'}</button>`).join("")+
     `</div></div>`;
 }
+/* Transición suave: el cuerpo de cada vista "abre los ojos" en cada render.
+   No envuelve la barra de pestañas (queda estable, sin parpadeo). */
+function animaWrap(html){ return `<div class="anima-page-transition">${html}</div>`; }
 function renderView(){
   if(state.viewAs && !isCreator) state.viewAs=null;              // "Ver como" es solo del Creador
   // Consola y Personalizar: SOLO el Creador, y nunca durante una vista previa.
@@ -450,14 +453,14 @@ function renderView(){
   // Consejo de Almas: reservado a las Almas Fundadoras (Consejo) y al Creador.
   if(state.view==="consejo" && !(me().council || (isCreator && !state.viewAs))) state.view="mialma";
   // Gating por nivel: la ventana está realmente BLOQUEADA hasta alcanzar su nivel.
-  if(!levelAllows(state.view)){ document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + vLocked(state.view); return; }
+  if(!levelAllows(state.view)){ document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + animaWrap(vLocked(state.view)); return; }
   const fn = { mialma:vMiAlma, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
     finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, santuario:vSantuario,
     sant_plan:vSantPlan }[state.view] || vMiAlma;
-  document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + fn(me());
+  document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + animaWrap(fn(me()));
   if(state.view==="comunidad" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
 }
 /* Ventana bloqueada por nivel — explica qué la abre. */

@@ -583,3 +583,23 @@ a.nav-item{text-decoration:none;color:inherit}
 .morada-tab.on{background:#111;color:#fff;border-color:#111}
 .morada-tab .mt-lock{font-size:10px;opacity:.7}
 @media(max-width:640px){ .morada-tabs-label{display:none} }
+
+/* ===========================================================
+   TRANSICIONES SUAVES — "ANIMA cerró los ojos un instante y volvió a abrirlos"
+   Fade + leve desplazamiento vertical. Sin rebotes, sin zoom, sin loaders.
+   =========================================================== */
+.anima-page-transition{ animation:animaBlink 240ms ease-out both; }
+@keyframes animaBlink{
+  0%{ opacity:0; transform:translateY(6px); filter:blur(2px); }
+  100%{ opacity:1; transform:translateY(0); filter:blur(0); }
+}
+.anima-tab-transition{ animation:animaTabBreath 200ms ease-out both; }
+@keyframes animaTabBreath{
+  0%{ opacity:0; transform:translateY(4px); }
+  100%{ opacity:1; transform:translateY(0); }
+}
+/* La barra de pestañas y el menú quedan estables: solo respira el contenido. */
+
+@media (prefers-reduced-motion: reduce){
+  .anima-page-transition, .anima-tab-transition{ animation:none; }
+}
