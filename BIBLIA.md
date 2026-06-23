@@ -276,6 +276,49 @@ Solo funciones esenciales:
 
 ---
 
+## XVI. Clan y Santuario — Definición
+
+ANIMA habita tres formas: **Alma** (sola), **Clan** (con otras) y **Santuario** (un mundo
+de mundos). No son planes ni niveles de pago: son **formas de habitar** que despiertan con
+la Esencia o que el Origen concede.
+
+### ◆ ALMA — *Sola, pero nunca aislada.*
+La forma base. Una Alma con su identidad, su Raíz, su portafolio y su trayectoria.
+Todas las Almas viven el Mundo, dejan Huellas y resuenan en Ecos.
+
+### ❂ CLAN — *Con quién creo.*
+Una **constelación pequeña** de **2 a 8 Almas** que crean juntas. Espacio colaborativo
+privado con **identidad propia**: nombre, símbolo y descripción.
+
+- **Para qué:** proyectos compartidos, un **Plan de trabajo** común, un **Calendario**
+  sincronizado y la memoria colectiva del equipo.
+- **Cómo despierta:** al reunir Esencia (*Despertar Clan*) o por invitación; el Origen
+  (Creador) también puede concederlo.
+- **Roles dentro del Clan:**
+  - **Admin** — representa al Clan. Control total: crear/editar/eliminar el Clan, su
+    nombre, símbolo y descripción; gestionar Almas y roles.
+  - **Líder** — segunda mano, misma jerarquía operativa: administra tareas, organiza
+    Almas, edita calendarios y gestiona proyectos.
+  - **Alma** — miembro: crea, participa y aporta.
+- **Sincronización:** una tarea creada aparece en el Calendario, el Plan de trabajo, el
+  perfil del Alma responsable y las estadísticas del Clan. Todo late junto.
+
+### 🜁 SANTUARIO — *Lo que puedo llegar a ser.*
+No es una sección: es un **estado superior**. Una **organización viva (8+ Almas)** que
+reúne **varios Clanes** bajo un mismo techo.
+
+- **Estructura:** Santuario → contiene **Clanes** → contienen **Almas**.
+- **Para qué:** coordinar múltiples Clanes con una **vista general** (Panel del Santuario),
+  Ecos privados, eventos, símbolos únicos y su propio pulso del Árbol.
+- **Cómo despierta:** al alcanzar gran Esencia (*Despertar Santuario*) o lo concede el Origen.
+- **Roles:** el **Admin del Santuario** coordina los Clanes; cada Clan conserva su
+  Admin/Líder/Alma.
+
+> Regla: una tarea, un evento o un proyecto **nunca viven aislados** — se sincronizan entre
+> Calendario, Plan de trabajo, perfil del Alma, Dashboard y estadísticas.
+
+---
+
 ## Mandamiento Final
 
 ANIMA es un mundo vivo.
