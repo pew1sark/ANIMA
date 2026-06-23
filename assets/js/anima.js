@@ -191,9 +191,10 @@ const VIEW_MIN_LEVEL = {
   estadisticas:"TOTEM", visibilidad:"TOTEM"
 };
 function levelAllows(view){
-  // Todo el menú está descubierto al entrar a ANIMA: ya no se oculta ni se
-  // bloquea por nivel. (El acceso a Clan/Santuario sigue dependiendo del plan.)
-  return true;
+  if(isCreator && !state.viewAs) return true;
+  const need = VIEW_MIN_LEVEL[view];
+  if(!need) return true;
+  return levelRank(me().level) >= levelRank(need);
 }
 /* Fundar un Clan o Santuario requiere que el Alma haya crecido en el Árbol
    hasta cierto nivel. Umbral único y fácil de ajustar. */
@@ -340,6 +341,11 @@ function renderNav(){
   // No se ocultan por la llegada progresiva: si hay acceso, están en el menú.
   if(planAllows("clanpanel")) h += navSectionItem("clan","❂","constelacion","Clan","clanpanel");
   if(planAllows("santuario")) h += navSectionItem("santuario","🜁","santuario","Santuario","santuario");
+  // Pista: qué se abre al subir de nivel (sistema de desbloqueos).
+  const lpNav=levelProgress(me().xp);
+  if(lpNav.next && UNLOCKS[lpNav.next.key]){
+    h+=`<div class="nav-next">Al alcanzar <b>${lpNav.next.label}</b>: ${UNLOCKS[lpNav.next.key]}</div>`;
+  }
   // El bloque Creador se oculta mientras se previsualiza un plan (vista fiel).
   if(isCreator && !state.viewAs){
     h+=`<div class="nav-label">Creador</div>`
