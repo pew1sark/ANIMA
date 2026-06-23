@@ -884,27 +884,26 @@ a.nav-item{text-decoration:none;color:inherit}
    RESUMEN-HUB de cada morada — accesos directos a sus pestañas.
    Aparece en la portada de la morada para navegar más fluido.
    =========================================================== */
-.morada-hub{margin:0 0 24px}
-.morada-hub .hub-head{display:flex;align-items:baseline;gap:10px;margin:0 2px 12px}
-.morada-hub .hub-head b{font-size:18px;letter-spacing:-.02em}
-.morada-hub .hub-head small{font-family:ui-monospace,"DejaVu Sans Mono",monospace;font-size:9.5px;
-  letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
-.hub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
-.hub-card{display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:left;
-  border:1px solid var(--line);background:var(--card);border-radius:16px;padding:15px 14px;
+.morada-hub{margin:0 0 18px}
+.morada-hub .hub-head{display:flex;align-items:baseline;gap:9px;margin:0 2px 9px}
+.morada-hub .hub-head b{font-size:14px;letter-spacing:-.02em}
+.morada-hub .hub-head small{font-family:ui-monospace,"DejaVu Sans Mono",monospace;font-size:9px;
+  letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+/* Chips compactos en una fila que envuelve: ocupan poco alto. */
+.hub-grid{display:flex;flex-wrap:wrap;gap:7px}
+.hub-card{display:inline-flex;align-items:center;gap:7px;
+  border:1px solid var(--line);background:var(--card);border-radius:11px;padding:7px 11px;
   cursor:pointer;font:inherit;color:var(--text);position:relative;
-  transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,background .16s ease}
-.hub-card:hover{transform:translateY(-3px);border-color:rgba(208,170,99,.5);box-shadow:var(--shadow-soft)}
-.hub-card:active{transform:translateY(-1px) scale(.99)}
-.hub-card .hub-ico{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;
-  background:rgba(208,170,99,.14);color:#7b5920}
-.hub-card .hub-ico svg{width:19px;height:19px}
-.hub-card .hub-t{font-size:14px;font-weight:680;letter-spacing:-.01em}
-.hub-card.on{border-color:rgba(208,170,99,.65);background:rgba(208,170,99,.10)}
-.hub-card.on .hub-ico{background:linear-gradient(135deg,var(--gold,#d0aa63),#b8862f);color:#1a1505}
-.hub-card.locked{opacity:.6}
-.hub-card .hub-lock{position:absolute;top:12px;right:12px;font-size:12px;opacity:.7}
-@media(max-width:640px){ .hub-grid{grid-template-columns:repeat(2,1fr)} }
+  transition:transform .14s ease,border-color .14s ease,background .14s ease}
+.hub-card:hover{border-color:rgba(208,170,99,.55);background:rgba(208,170,99,.07)}
+.hub-card:active{transform:scale(.97)}
+.hub-card .hub-ico{display:grid;place-items:center;width:20px;height:20px;color:#7b5920;opacity:.85}
+.hub-card .hub-ico svg{width:16px;height:16px}
+.hub-card .hub-t{font-size:13px;font-weight:640;letter-spacing:-.01em;white-space:nowrap}
+.hub-card.on{border-color:rgba(208,170,99,.7);background:rgba(208,170,99,.14)}
+.hub-card.on .hub-ico{color:#1a1505;opacity:1}
+.hub-card.locked{opacity:.55}
+.hub-card .hub-lock{font-size:11px;opacity:.7;margin-left:1px}
 
 /* ===========================================================
    TRANSICIONES SUAVES — "ANIMA cerró los ojos un instante y volvió a abrirlos"
