@@ -2214,7 +2214,7 @@ async function syncTeam(clan){
     if(!state.teamCache) state.teamCache={};
     const prev=state.teamCache[clan]||{};
     state.teamCache[clan]={
-      tasks: tasks.map(t=>({id:t.id,title:t.title,assignee:t.assignee,status:t.status||"Pendiente",_cloud:true})),
+      tasks: tasks.map(t=>({id:t.id,title:t.title,assignee:t.assignee,status:t.status||"Pendiente",description:t.description,work_type:t.work_type,priority:t.priority,start:t.start_date,due:t.due_at,notes:t.notes,_cloud:true})),
       reminders: reminders.map(r=>({id:r.id,title:r.title,due:r.due_at,assignee:r.assignee,done:!!r.done,_cloud:true})),
       events: events.map(e=>({id:e.id,title:e.title,date:e.at_date,time:e.at_time,kind:e.kind,notes:e.notes,_cloud:true})),
       projects: projects.map(p=>({id:p.id,title:p.title,assignee:p.assignee,status:p.status||"Pendiente",pct:p.pct||0,due:p.due_at,notes:p.notes,_cloud:true})),
@@ -2224,14 +2224,44 @@ async function syncTeam(clan){
   }catch(e){ /* tablas aún no creadas → se mantiene lo local */ }
 }
 
-async function addTeamTask(){
-  if(!canCollaborate()){ alert("Tu rol es de solo lectura. Pide a tu Líder el rol de Colaborador para crear tareas."); return; }
+/* Plan de trabajo profesional: formulario completo (crear/editar tarea). */
+let taskCtx=null;
+function addTeamTask(){ openTaskModal(null); }
+function openTaskModal(id){
+  if(!canCollaborate()){ alert("Tu rol es de solo lectura en el Clan."); return; }
   const clan=me().clan; if(!clan){ alert("Necesitas pertenecer a un Clan."); return; }
-  const title=prompt("Tarea para el equipo:"); if(!title||!title.trim()) return;
-  const assignee=(prompt("¿Para quién? (nombre, opcional)","")||"").trim()||null;
-  const row={title:title.trim(),assignee,status:"Pendiente"};
-  if(Cloud.enabled && me().live){ try{ await Cloud.addTeamTask(clan,row); await syncTeam(clan); return; }catch(e){} }
-  const d=teamCache(clan); d.tasks.unshift({id:"l"+Date.now(),...row}); teamSaveLocal(clan,d); renderView();
+  const d=teamCache(clan); const t=id?d.tasks.find(x=>x.id===id):null; taskCtx=t?{id}:null;
+  const g=x=>document.getElementById(x);
+  g("taskTitle").textContent=t?"Editar tarea":"Nueva tarea";
+  g("tk_title").value=t?(t.title||""):""; g("tk_desc").value=t?(t.description||""):"";
+  g("tk_type").value=t?(t.work_type||""):""; g("tk_start").value=t?(t.start||""):""; g("tk_due").value=t?(t.due||""):"";
+  g("tk_priority").value=t?(t.priority||"Media"):"Media"; g("tk_status").value=t?(t.status||"Pendiente"):"Pendiente";
+  g("tk_notes").value=t?(t.notes||""):"";
+  g("tk_assignee").innerHTML=`<option value="">Sin asignar</option>`+clanMembers(clan).map(m=>`<option value="${esc(m.name)}" ${t&&t.assignee===m.name?'selected':''}>${esc(m.name)}</option>`).join("");
+  g("tk_msg").textContent="";
+  g("taskModal").classList.add("open");
+}
+function closeTaskModal(){ document.getElementById("taskModal").classList.remove("open"); }
+async function saveTask(){
+  const clan=me().clan; if(!clan) return; const g=x=>document.getElementById(x);
+  const title=(g("tk_title").value||"").trim(); const msg=g("tk_msg");
+  if(!title){ if(msg) msg.textContent="La tarea necesita un título."; return; }
+  const row={ title, description:(g("tk_desc").value||"").trim()||null, work_type:(g("tk_type").value||"").trim()||null,
+    assignee:(g("tk_assignee").value||"").trim()||null, start_date:g("tk_start").value||null, due_at:g("tk_due").value||null,
+    priority:g("tk_priority").value||"Media", status:g("tk_status").value||"Pendiente", notes:(g("tk_notes").value||"").trim()||null };
+  if(msg) msg.textContent="Guardando…";
+  try{
+    if(Cloud.enabled && me().live){
+      if(taskCtx && taskCtx.id) await Cloud.updateTeamTask(taskCtx.id, row); else await Cloud.addTeamTask(clan, row);
+      await syncTeam(clan);
+    }else{
+      const d=teamCache(clan); const local={title,assignee:row.assignee,status:row.status,description:row.description,work_type:row.work_type,priority:row.priority,start:row.start_date,due:row.due_at,notes:row.notes};
+      if(taskCtx&&taskCtx.id){ const t=d.tasks.find(x=>x.id===taskCtx.id); if(t) Object.assign(t,local); }
+      else d.tasks.unshift({id:"l"+Date.now(),...local});
+      teamSaveLocal(clan,d);
+    }
+    closeTaskModal(); renderView();
+  }catch(e){ if(msg) msg.textContent="No se pudo guardar: "+(e.message||e); }
 }
 async function cycleTask(id){
   if(!canCollaborate()){ alert("Solo Colaboradores o Líderes pueden mover tareas."); return; }
@@ -2286,16 +2316,39 @@ function clanHeader(a,clan,title,sub){
     <div class="section-title"><h2>${seed?seed.emoji:'❂'} ${esc(clan)} · ${esc(title)}</h2><div class="spacer"></div>${planBadge(a.plan||'CLAN')}${roleBadge(almaRole(me()))}<span class="pill">${members.length||1} Alma(s)</span></div>
     <p class="muted" style="font-size:13px">${esc(sub)}</p></div>`;
 }
+const PRIO_META={ Urgente:["🔴","urgente"], Alta:["🟠","alta"], Media:["🟡","media"], Baja:["🟢","baja"] };
+function taskOverdue(t){ if(!t.due || (t.status==="Hecho")) return false; return t.due < new Date().toISOString().slice(0,10); }
 function vEquipo(a){
   const clan=a.clan; if(!clan) return clanEmpty("Plan de trabajo","El tablero de tareas es compartido por el Clan.");
-  const d=teamCache(clan); const can=canCollaborate(); const COLS=["Pendiente","En curso","Hecho"];
-  const card=t=>`<div class="kcard"><b>${esc(t.title)}</b><small>${esc(t.assignee||'Sin asignar')}</small>
-      <div class="kacts">${can?`<button class="ia" data-taskcycle="${t.id}" title="Avanzar estado">→</button>`:''}${canLead()?`<button class="ia danger" data-taskdel="${t.id}" title="Eliminar">✕</button>`:''}</div></div>`;
+  const d=teamCache(clan); const can=canCollaborate(); const COLS=["Pendiente","En curso","Revisión","Hecho"];
+  const card=t=>{ const pr=PRIO_META[t.priority||"Media"]||PRIO_META.Media; const over=taskOverdue(t);
+    return `<div class="kcard ${over?'overdue':''}" ${can?`data-taskedit="${t.id}" style="cursor:pointer"`:""}>
+      <div class="kc-top"><b>${esc(t.title)}</b>${t.priority?`<span class="prio prio-${pr[1]}" title="Prioridad ${esc(t.priority)}">${pr[0]}</span>`:""}</div>
+      ${t.work_type?`<span class="kc-type">${esc(t.work_type)}</span>`:""}
+      <small class="kc-meta">${esc(t.assignee||'Sin asignar')}${t.due?` · ${over?'⚠ ':''}${fmtDay(t.due)}`:""}</small>
+      ${t.description?`<p class="kc-desc">${esc(t.description.slice(0,90))}${t.description.length>90?'…':''}</p>`:""}
+      <div class="kacts">${can?`<button class="ia" data-taskcycle="${t.id}" title="Avanzar estado">→</button>`:''}${canLead()?`<button class="ia danger" data-taskdel="${t.id}" title="Eliminar">✕</button>`:''}</div></div>`; };
   return `<div class="grid">
-    ${clanHeader(a,clan,"Plan de trabajo",can?"Tablero compartido: crea, asigna y mueve tareas.":"Tablero del Clan (tu rol es de solo lectura).")}
+    ${clanHeader(a,clan,"Plan de trabajo",can?"Tablero compartido: crea, asigna y mueve tareas. Toca una tarjeta para editarla.":"Tablero del Clan (tu rol es de solo lectura).")}
+    ${clanStatsCard(a,clan)}
     <div class="card s12"><div class="section-title"><h2>Tablero</h2><div class="spacer"></div>${can?`<button class="btn sm gold" data-teamadd="1">+ Tarea</button>`:`<span class="pill">Solo lectura</span>`}</div>
       <div class="kanban">${COLS.map(s=>`<div class="kcol"><div class="kcol-h">${s.toUpperCase()}<span>${d.tasks.filter(t=>(t.status||'Pendiente')===s).length||""}</span></div>${d.tasks.filter(t=>(t.status||'Pendiente')===s).map(card).join("")||`<div class="kempty">—</div>`}</div>`).join("")}</div></div>
   </div>`;
+}
+/* Estadísticas del Clan: Almas, proyectos activos, tareas, eventos, Huellas, actividad. */
+function clanStatsCard(a,clan){
+  const d=teamCache(clan); const members=clanMembers(clan);
+  const tareasAct=d.tasks.filter(t=>(t.status||"Pendiente")!=="Hecho").length;
+  const projAct=d.projects.filter(p=>(p.status||"Pendiente")!=="Hecho").length;
+  const today=new Date().toISOString().slice(0,10);
+  const evProx=d.events.filter(e=>!e.date||e.date>=today).length;
+  const memIds=new Set(members.map(m=>m.id||m.almaId));
+  const huellas=(state.cloudPosts||[]).filter(p=>memIds.has(p.author_alma_id)).length;
+  const monthAgo=Date.now()-30*864e5;
+  const actMes=d.tasks.length + d.projects.length + d.events.length; // pulso del Clan
+  const cell=(n,l)=>`<div><div class="num">${n}</div><span class="lbl">${l}</span></div>`;
+  return `<div class="card s12"><div class="section-title"><h2 style="font-size:15px">Estadísticas del Clan</h2></div>
+    <div class="clan-stats">${cell(members.length,"Almas")}${cell(projAct,"Proyectos activos")}${cell(tareasAct,"Tareas activas")}${cell(evProx,"Eventos próximos")}${cell(huellas,"Huellas")}${cell(actMes,"Actividad")}</div></div>`;
 }
 function vClanPanel(a){
   const clan=a.clan;
@@ -2365,21 +2418,71 @@ function vClanCreate(a){
       <button class="btn" id="joinBtn">Unirme al Clan</button></div>
   </div>`;
 }
+/* ===========================================================
+   CALENDARIO tipo iPhone — Día · Semana · Mes · Año.
+   Unifica eventos del Clan y tareas con fecha de entrega (sincronización).
+   =========================================================== */
+const CAL_DOW=["L","M","M","J","V","S","D"];
+const CAL_MON=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+function ymd(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function clanCalItems(clan){
+  const d=teamCache(clan); const items=[];
+  d.events.forEach(e=>{ if(e.date) items.push({date:e.date,time:e.time||"",title:e.title,kind:e.kind||"Evento",type:"evento",id:e.id,notes:e.notes}); });
+  d.tasks.forEach(t=>{ if(t.due) items.push({date:t.due,time:"",title:t.title,kind:t.priority||"",type:"tarea",id:t.id,status:t.status}); });
+  return items;
+}
+function calItemsOn(items,iso){ return items.filter(x=>x.date===iso).sort((a,b)=>String(a.time).localeCompare(String(b.time))); }
 function vCalendario(a){
   const clan=a.clan; if(!clan) return clanEmpty("Calendario","Los eventos y turnos son del Clan.");
-  const d=teamCache(clan); const can=canCollaborate();
-  const evs=[...d.events].sort((x,y)=>String(x.date||"9999").localeCompare(String(y.date||"9999")));
-  const today=new Date().toISOString().slice(0,10);
-  const up=evs.filter(e=>!e.date||e.date>=today), past=evs.filter(e=>e.date&&e.date<today);
-  const item=e=>`<div class="row ev-row"><div class="ev-date"><b>${fmtDay(e.date)}</b><small>${esc(e.time||"")}</small></div>
-    <div class="grow"><b>${esc(e.title)}</b>${e.kind?` <span class="chip">${esc(e.kind)}</span>`:""}${e.notes?`<br><small class="muted">${esc(e.notes)}</small>`:""}</div>
-    ${canLead()?`<button class="ia danger" data-eventdel="${e.id}">✕</button>`:""}</div>`;
+  const can=canCollaborate(); const items=clanCalItems(clan);
+  const mode=state.calMode||"mes"; const todayIso=ymd(new Date());
+  const cur=state.calCursor?new Date(state.calCursor+"T00:00:00"):new Date();
+  const sel=state.calSel||ymd(cur);
+  let title="", body="";
+  if(mode==="ano"){
+    title=String(cur.getFullYear());
+    body=`<div class="cal-year">${CAL_MON.map((mn,mi)=>{ const c=items.filter(x=>x.date.slice(0,7)===cur.getFullYear()+"-"+String(mi+1).padStart(2,"0")).length;
+      return `<button class="cal-ym" data-calmonth="${cur.getFullYear()}-${String(mi+1).padStart(2,"0")}"><b>${mn.slice(0,3)}</b>${c?`<span class="cal-dot">${c}</span>`:""}</button>`; }).join("")}</div>`;
+  } else if(mode==="dia"){
+    const dd=new Date(sel+"T00:00:00"); title=dd.getDate()+" "+CAL_MON[dd.getMonth()]+" "+dd.getFullYear();
+    body=calDayList(items,sel,can);
+  } else if(mode==="semana"){
+    const base=new Date(cur); const dow=(base.getDay()+6)%7; base.setDate(base.getDate()-dow);
+    const days=[...Array(7)].map((_,i)=>{ const x=new Date(base); x.setDate(base.getDate()+i); return ymd(x); });
+    title=CAL_MON[new Date(days[0]+"T00:00:00").getMonth()];
+    body=`<div class="cal-week">${days.map(iso=>{ const dd=new Date(iso+"T00:00:00"); const its=calItemsOn(items,iso);
+      return `<button class="cal-wday ${iso===todayIso?'today':''} ${iso===sel?'sel':''}" data-calday="${iso}"><span class="cw-dow">${CAL_DOW[(dd.getDay()+6)%7]}</span><span class="cw-n">${dd.getDate()}</span>${its.slice(0,3).map(it=>`<span class="cw-it ${it.type}">${esc(it.title.slice(0,14))}</span>`).join("")}${its.length>3?`<span class="cw-more">+${its.length-3}</span>`:""}</button>`; }).join("")}</div>
+      ${calDayList(items,sel,can)}`;
+  } else { // mes
+    title=CAL_MON[cur.getMonth()]+" "+cur.getFullYear();
+    const first=new Date(cur.getFullYear(),cur.getMonth(),1); const start=(first.getDay()+6)%7;
+    const dim=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate();
+    let cells=""; for(let i=0;i<start;i++) cells+=`<div class="cal-cell empty"></div>`;
+    for(let dn=1;dn<=dim;dn++){ const iso=ymd(new Date(cur.getFullYear(),cur.getMonth(),dn)); const its=calItemsOn(items,iso);
+      cells+=`<button class="cal-cell ${iso===todayIso?'today':''} ${iso===sel?'sel':''}" data-calday="${iso}"><span class="cc-n">${dn}</span>${its.length?`<span class="cc-dots">${its.slice(0,3).map(it=>`<i class="cc-dot ${it.type}"></i>`).join("")}</span>`:""}</button>`; }
+    body=`<div class="cal-grid"><div class="cal-head">${CAL_DOW.map(x=>`<span>${x}</span>`).join("")}</div><div class="cal-cells">${cells}</div></div>${calDayList(items,sel,can)}`;
+  }
+  const modes=[["dia","Día"],["semana","Semana"],["mes","Mes"],["ano","Año"]];
   return `<div class="grid">
-    ${clanHeader(a,clan,"Calendario",can?"Eventos y turnos del Clan. Agrega los próximos.":"Calendario del Clan (solo lectura).")}
-    <div class="card s12"><div class="section-title"><h2>Próximos</h2><div class="spacer"></div>${can?`<button class="btn sm gold" data-eventadd="1">+ Evento</button>`:`<span class="pill">Solo lectura</span>`}</div>
-      ${up.length?up.map(item).join(""):`<p class="muted">Sin eventos próximos.</p>`}</div>
-    ${past.length?`<div class="card s12"><div class="section-title"><h2>Pasados</h2><div class="spacer"></div><span class="pill">${past.length}</span></div>${past.map(item).join("")}</div>`:""}
+    ${clanHeader(a,clan,"Calendario",can?"Eventos del Clan y entregas de tareas, en un solo lugar.":"Calendario del Clan (solo lectura).")}
+    <div class="card s12">
+      <div class="cal-bar">
+        <div class="cal-modes">${modes.map(([k,l])=>`<button class="cal-mode ${mode===k?'on':''}" data-calmode="${k}">${l}</button>`).join("")}</div>
+        <div class="spacer" style="flex:1"></div>
+        <button class="ia" data-calnav="prev">‹</button><b class="cal-title">${esc(title)}</b><button class="ia" data-calnav="next">›</button>
+        ${can?`<button class="btn sm gold" data-eventadd="1" style="margin-left:8px">+ Evento</button>`:""}
+      </div>
+      ${body}
+    </div>
   </div>`;
+}
+function calDayList(items,iso,can){
+  const its=calItemsOn(items,iso); const dd=new Date(iso+"T00:00:00");
+  const head=`<div class="section-title" style="margin-top:16px"><h2 style="font-size:15px">${dd.getDate()} ${CAL_MON[dd.getMonth()]}</h2><div class="spacer"></div>${can?`<button class="btn ghost sm" data-caladd="${iso}">+ Evento aquí</button>`:""}</div>`;
+  if(!its.length) return head+`<p class="muted" style="font-size:13px">Sin eventos ni entregas este día.</p>`;
+  return head+its.map(it=>`<div class="row ev-row"><div class="ev-date"><b>${it.time||(it.type==="tarea"?"⚑":"·")}</b></div>
+    <div class="grow"><b>${esc(it.title)}</b> <span class="chip">${it.type==="tarea"?"Entrega":esc(it.kind||"Evento")}</span>${it.notes?`<br><small class="muted">${esc(it.notes)}</small>`:""}</div>
+    ${(it.type==="evento"&&canLead())?`<button class="ia danger" data-eventdel="${it.id}">✕</button>`:(it.type==="tarea"?`<button class="ia" data-taskedit="${it.id}" title="Ver tarea">→</button>`:"")}</div>`).join("");
 }
 function vProyectosClan(a){
   const clan=a.clan; if(!clan) return clanEmpty("Proyectos del Clan","Los encargos compartidos son del Clan.");
@@ -2637,11 +2740,21 @@ async function genInvite(){
 }
 async function delInvite(id){ const clan=me().clan; try{ await Cloud.deleteInvite(id); await loadInvites(clan); }catch(e){ alert("No se pudo eliminar: "+(e.message||e)); } }
 function copyCode(code){ if(navigator.clipboard){ navigator.clipboard.writeText(code).then(()=>alert("Código copiado: "+code)); } else { prompt("Copia el código:",code); } }
-async function addClanEvent(){
-  if(!canCollaborate()){ alert("Tu rol es de solo lectura. Pide a tu Líder el rol de Colaborador."); return; }
+/* Navegación del calendario (Día/Semana/Mes/Año). */
+function calNav(dir){
+  const mode=state.calMode||"mes"; const s=dir==="next"?1:-1;
+  const base=new Date((state.calCursor||state.calSel||ymd(new Date()))+"T00:00:00");
+  if(mode==="dia"){ base.setDate(base.getDate()+s); state.calSel=ymd(base); }
+  else if(mode==="semana"){ base.setDate(base.getDate()+7*s); }
+  else if(mode==="ano"){ base.setFullYear(base.getFullYear()+s); }
+  else { base.setMonth(base.getMonth()+s); }
+  state.calCursor=ymd(base); renderView();
+}
+async function addClanEvent(preDate){
+  if(!canCollaborate()){ alert("Tu rol es de solo lectura. Pide a tu Líder el rol de Líder."); return; }
   const clan=me().clan; if(!clan) return;
   const title=(prompt("Evento / turno:")||"").trim(); if(!title) return;
-  const at_date=(prompt("Fecha (AAAA-MM-DD):","")||"").trim()||null;
+  const at_date=(typeof preDate==="string"?preDate:(prompt("Fecha (AAAA-MM-DD):", state.calSel||"")||"").trim())||null;
   const at_time=(prompt("Hora (opcional, ej 15:00):","")||"").trim()||null;
   const notes=(prompt("Nota (opcional):","")||"").trim()||null;
   const row={title,at_date,at_time,notes};
@@ -3323,6 +3436,9 @@ document.addEventListener("click", e=>{
   if(e.target.closest("[data-teamadd]")){ addTeamTask(); return; }
   const tcy=e.target.closest("[data-taskcycle]"); if(tcy){ cycleTask(tcy.dataset.taskcycle); return; }
   const tdl=e.target.closest("[data-taskdel]"); if(tdl){ delTeamTask(tdl.dataset.taskdel); return; }
+  if(e.target.closest("#tk_save")){ saveTask(); return; }
+  if(e.target.closest("#taskClose")||bdClose(e,"taskModal")){ closeTaskModal(); return; }
+  const ted=e.target.closest("[data-taskedit]"); if(ted){ openTaskModal(ted.dataset.taskedit); return; }
   const pkp=e.target.closest("[data-pickplan]"); if(pkp){ pickPlan(pkp.dataset.pickplan); return; }
   if(e.target.closest("#joinBtn")){ joinClanCode(); return; }
   if(e.target.closest("#genInvite")){ genInvite(); return; }
@@ -3336,6 +3452,11 @@ document.addEventListener("click", e=>{
   const cpc=e.target.closest("[data-copycode]"); if(cpc){ copyCode(cpc.dataset.copycode); return; }
   const din=e.target.closest("[data-delinvite]"); if(din){ delInvite(din.dataset.delinvite); return; }
   if(e.target.closest("[data-eventadd]")){ addClanEvent(); return; }
+  const cmd=e.target.closest("[data-calmode]"); if(cmd){ state.calMode=cmd.dataset.calmode; renderView(); return; }
+  const cnv=e.target.closest("[data-calnav]"); if(cnv){ calNav(cnv.dataset.calnav); return; }
+  const cdy=e.target.closest("[data-calday]"); if(cdy){ state.calSel=cdy.dataset.calday; if((state.calMode||"mes")==="dia") state.calCursor=cdy.dataset.calday; renderView(); return; }
+  const cmo=e.target.closest("[data-calmonth]"); if(cmo){ state.calCursor=cmo.dataset.calmonth+"-01"; state.calMode="mes"; renderView(); return; }
+  const cae=e.target.closest("[data-caladd]"); if(cae){ addClanEvent(cae.dataset.caladd); return; }
   const evd=e.target.closest("[data-eventdel]"); if(evd){ delClanEvent(evd.dataset.eventdel); return; }
   if(e.target.closest("[data-cprojadd]")){ addClanProject(); return; }
   const cpcy=e.target.closest("[data-cprojcycle]"); if(cpcy){ cycleClanProject(cpcy.dataset.cprojcycle); return; }

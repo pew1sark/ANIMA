@@ -229,6 +229,30 @@
     </div>
   </div>
 
+  <!-- MODAL TAREA (Plan de trabajo del Clan) -->
+  <div class="auth-modal" id="taskModal">
+    <div class="auth-box">
+      <div class="auth-head"><div style="flex:1"><b id="taskTitle">Nueva tarea</b><br><small class="muted">Plan de trabajo del Clan</small></div><button class="btn ghost sm" id="taskClose">✕</button></div>
+      <div class="field"><label>Título</label><input id="tk_title" placeholder="¿Qué hay que hacer?"></div>
+      <div class="field"><label>Descripción</label><textarea id="tk_desc" rows="2" placeholder="Detalle (opcional)"></textarea></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:140px"><label>Tipo de trabajo</label><input id="tk_type" placeholder="Diseño, Producción…"></div>
+        <div class="field" style="flex:1;min-width:120px"><label>Responsable</label><select id="tk_assignee"></select></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:120px"><label>Inicio</label><input id="tk_start" type="date"></div>
+        <div class="field" style="flex:1;min-width:120px"><label>Entrega</label><input id="tk_due" type="date"></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:120px"><label>Prioridad</label><select id="tk_priority"><option value="Baja">Baja</option><option value="Media" selected>Media</option><option value="Alta">Alta</option><option value="Urgente">Urgente</option></select></div>
+        <div class="field" style="flex:1;min-width:120px"><label>Estado</label><select id="tk_status"><option>Pendiente</option><option>En curso</option><option>Revisión</option><option>Hecho</option></select></div>
+      </div>
+      <div class="field"><label>Notas</label><textarea id="tk_notes" rows="2" placeholder="Notas internas (opcional)"></textarea></div>
+      <div style="display:flex;gap:10px"><button class="btn" id="tk_save" style="flex:1">Guardar tarea</button></div>
+      <div id="tk_msg" class="muted" style="font-size:12.5px;margin-top:8px;min-height:14px"></div>
+    </div>
+  </div>
+
   <!-- MODAL CÓDICE — mini libro: glosario y conceptos del mundo ANIMA -->
   <div class="auth-modal" id="codiceModal">
     <div class="auth-box">
