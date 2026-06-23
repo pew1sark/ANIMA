@@ -146,12 +146,13 @@ const PLAN_ORDER = ["ALMA","CLAN","SANTUARIO"];
    El espacio individual (esencia + taller) y la Comunidad/constelación
    los tienen TODOS los planes — ANIMA es una comunidad de Almas.
    Clan y Santuario añaden herramientas de equipo y el panel de la organización. */
+const SANT_VIEWS = ["santuario","sant_almas","sant_tareas","sant_proyectos","sant_cal","sant_informes","sant_plan"];
 const PLAN_UNLOCKS = {
   ALMA:      [],
   CLAN:      ["clanpanel","equipo","calendario","proyectos_clan","recordatorios"],
-  SANTUARIO: ["clanpanel","equipo","calendario","proyectos_clan","recordatorios","santuario"]
+  SANTUARIO: ["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].concat(SANT_VIEWS)
 };
-const GATED_VIEWS = ["clanpanel","equipo","calendario","proyectos_clan","recordatorios","santuario"]; // requieren plan (Comunidad NO se restringe)
+const GATED_VIEWS = ["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].concat(SANT_VIEWS); // requieren plan (Comunidad NO se restringe)
 /* Roles del Clan (definición ANIMA): Admin · Líder · Alma. Las Almas heredadas
    con MIEMBRO/COLABORADOR se tratan como ALMA. */
 const ROLES = [["ADMIN","Admin"],["LIDER","Líder"],["ALMA","Alma"]];
@@ -296,7 +297,7 @@ function sectionOfView(v){
   if(["mialma","trayectoria","portafolio","cronologia","insignias","estadisticas","visibilidad","memoria","biblioteca","miplan"].includes(v)) return "mialma";
   if(["proyectos","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
   if(["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "clan";
-  if(["santuario","sant_plan"].includes(v)) return "santuario";
+  if(SANT_VIEWS.includes(v)) return "santuario";
   if(["comunidad","consejo","cronica"].includes(v)) return "mundo";
   return null;
 }
@@ -417,6 +418,11 @@ const TITLES = {
   visibilidad:["Visibilidad","Tú decides qué ve el mundo de tu Alma."],
   consejo:["Consejo de Almas","Las primeras Almas escriben la historia de ANIMA."],
   sant_plan:["Planificación del Santuario","Coordina a toda la organización."],
+  sant_almas:["Almas del Santuario","Suma, organiza y asigna roles a gran escala."],
+  sant_tareas:["Tareas del Santuario","Designa tareas a las Almas de la organización."],
+  sant_proyectos:["Proyectos del Santuario","Encargos colectivos de la organización."],
+  sant_cal:["Calendario del Santuario","Eventos y entregas, sincronizados."],
+  sant_informes:["Informes","Informes de actividad de cada Alma."],
   config:["Personalizar","Tú decides qué muestra tu Alma."],
   consola:["Consola del Creador","Planes, roles, nivel y clan · vista omnipresente."],
   miplan:["Mi Plan","Elige tu umbral y desbloquea sus funciones."],
@@ -544,8 +550,8 @@ function moradaTabs(view){
   }
   else if(sec==="clan"){ kids=NAV_TREE[2].children.slice(); }                                    // Panel · Plan de trabajo · Calendario · Proyectos · Recordatorios
   else if(sec==="santuario"){
-    kids.push({v:"santuario",t:"Santuario"});
-    if(planAllows("santuario")&&me().santuario) kids.push({v:"sant_plan",t:"Planificar"});
+    kids.push({v:"santuario",t:"Fogón"});
+    if(me().santuario){ kids.push({v:"sant_almas",t:"Almas"},{v:"sant_tareas",t:"Tareas"},{v:"sant_proyectos",t:"Proyectos"},{v:"sant_cal",t:"Calendario"},{v:"sant_informes",t:"Informes"}); }
   }
   kids=kids.filter(c=>planAllows(c.v) && cfg.modules[c.v]!==false);
   if(kids.length<2) return "";
@@ -572,7 +578,8 @@ function renderView(){
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, santuario:vSantuario,
-    sant_plan:vSantPlan, cronica:vCronica }[state.view] || vMiAlma;
+    sant_almas:vSantAlmas, sant_tareas:vSantTareas, sant_proyectos:vSantProyectos, sant_cal:vSantCalendario, sant_informes:vSantInformes,
+    sant_plan:vSantTareas, cronica:vCronica }[state.view] || vMiAlma;
   let bodyHTML;
   try{ bodyHTML = animaWrap(fn(me())); }
   catch(err){
@@ -2249,7 +2256,8 @@ async function vote(id, val){
 
 /* --- Santuario --- */
 function vSantuario(a){
-  if(a.live && a.santuario) return vSantuarioLive(a);
+  if(a.live && a.santuario) return vFogon(a);     // EL FOGÓN — panel principal
+  if(a.live && !a.santuario) return vSantCreate(a); // fundar o unirse
   const S=SEED_SANCTUARY, list=roster(), live=liveMode();
   const full=state.almas.filter(x=>x.finance);
   const totalInc=full.reduce((t,x)=>t+sum(x.finance.income),0), totalExp=full.reduce((t,x)=>t+sum(x.finance.expense),0);
@@ -2328,39 +2336,56 @@ async function syncTeam(clan){
 
 /* Plan de trabajo profesional: formulario completo (crear/editar tarea). */
 let taskCtx=null;
-function addTeamTask(){ openTaskModal(null); }
-function openTaskModal(id){
-  if(!canCollaborate()){ alert("Tu rol es de solo lectura en el Clan."); return; }
-  const clan=me().clan; if(!clan){ alert("Necesitas pertenecer a un Clan."); return; }
-  const d=teamCache(clan); const t=id?d.tasks.find(x=>x.id===id):null; taskCtx=t?{id}:null;
+function addTeamTask(){ openTaskModal(null,"clan"); }
+function openTaskModal(id, scope){
+  scope=scope||"clan"; const isSantTask=scope==="sant", isSantProj=scope==="santproj", isSant=isSantTask||isSantProj;
+  if(isSant ? !santCanEdit() : !canCollaborate()){ alert(isSant?"Solo el Admin o un Líder del Santuario asigna trabajo.":"Tu rol es de solo lectura en el Clan."); return; }
+  const scopeId = isSant ? me().santuario : me().clan;
+  if(!scopeId){ alert(isSant?"Necesitas pertenecer a un Santuario.":"Necesitas pertenecer a un Clan."); return; }
+  const d = isSant ? santCache(scopeId) : teamCache(scopeId);
+  const list = isSantProj ? d.projects : d.tasks;
+  const t=id?list.find(x=>x.id===id):null; taskCtx=t?{id,scope}:{scope};
   const g=x=>document.getElementById(x);
-  g("taskTitle").textContent=t?"Editar tarea":"Nueva tarea";
+  g("taskTitle").textContent=t?(isSantProj?"Editar proyecto":"Editar tarea"):(isSantProj?"Nuevo proyecto del Santuario":isSantTask?"Nueva tarea del Santuario":"Nueva tarea");
   g("tk_title").value=t?(t.title||""):""; g("tk_desc").value=t?(t.description||""):"";
-  g("tk_type").value=t?(t.work_type||""):""; g("tk_start").value=t?(t.start||""):""; g("tk_due").value=t?(t.due||""):"";
+  g("tk_type").value=t?(t.work_type||t.area||""):""; g("tk_start").value=t?(t.start||""):""; g("tk_due").value=t?(t.due||""):"";
   g("tk_priority").value=t?(t.priority||"Media"):"Media"; g("tk_status").value=t?(t.status||"Pendiente"):"Pendiente";
   g("tk_notes").value=t?(t.notes||""):"";
-  g("tk_assignee").innerHTML=`<option value="">Sin asignar</option>`+clanMembers(clan).map(m=>`<option value="${esc(m.name)}" ${t&&t.assignee===m.name?'selected':''}>${esc(m.name)}</option>`).join("");
+  const members = isSant ? santMembers(scopeId) : clanMembers(scopeId);
+  g("tk_assignee").innerHTML=`<option value="">Sin asignar</option>`+members.map(m=>`<option value="${esc(m.name)}" ${t&&t.assignee===m.name?'selected':''}>${esc(m.name)}</option>`).join("");
   g("tk_msg").textContent="";
   g("taskModal").classList.add("open");
 }
 function closeTaskModal(){ document.getElementById("taskModal").classList.remove("open"); }
 async function saveTask(){
-  const clan=me().clan; if(!clan) return; const g=x=>document.getElementById(x);
+  const scope=(taskCtx&&taskCtx.scope)||"clan"; const isSantTask=scope==="sant", isSantProj=scope==="santproj", isSant=isSantTask||isSantProj;
+  const scopeId = isSant ? me().santuario : me().clan; if(!scopeId) return;
+  const g=x=>document.getElementById(x);
   const title=(g("tk_title").value||"").trim(); const msg=g("tk_msg");
-  if(!title){ if(msg) msg.textContent="La tarea necesita un título."; return; }
+  if(!title){ if(msg) msg.textContent=(isSantProj?"El proyecto":"La tarea")+" necesita un título."; return; }
   const row={ title, description:(g("tk_desc").value||"").trim()||null, work_type:(g("tk_type").value||"").trim()||null,
     assignee:(g("tk_assignee").value||"").trim()||null, start_date:g("tk_start").value||null, due_at:g("tk_due").value||null,
     priority:g("tk_priority").value||"Media", status:g("tk_status").value||"Pendiente", notes:(g("tk_notes").value||"").trim()||null };
   if(msg) msg.textContent="Guardando…";
   try{
-    if(Cloud.enabled && me().live){
-      if(taskCtx && taskCtx.id) await Cloud.updateTeamTask(taskCtx.id, row); else await Cloud.addTeamTask(clan, row);
-      await syncTeam(clan);
+    if(isSantProj){
+      const prow={ title:row.title, description:row.description, area:row.work_type, assignee:row.assignee,
+        due_at:row.due_at, status:row.status, notes:row.notes };
+      if(taskCtx && taskCtx.id) await Cloud.updateSantProject(taskCtx.id, prow); else await Cloud.addSantProject(scopeId, {...prow, pct:0});
+      await loadSant(scopeId);
+    }else if(isSantTask){
+      const srow={ title:row.title, description:row.description, area:row.work_type, assignee:row.assignee,
+        start_date:row.start_date, due_at:row.due_at, priority:row.priority, status:row.status, notes:row.notes };
+      if(taskCtx && taskCtx.id) await Cloud.updateSantTask(taskCtx.id, srow); else await Cloud.addSantTask(scopeId, srow);
+      await loadSant(scopeId);
+    }else if(Cloud.enabled && me().live){
+      if(taskCtx && taskCtx.id) await Cloud.updateTeamTask(taskCtx.id, row); else await Cloud.addTeamTask(scopeId, row);
+      await syncTeam(scopeId);
     }else{
-      const d=teamCache(clan); const local={title,assignee:row.assignee,status:row.status,description:row.description,work_type:row.work_type,priority:row.priority,start:row.start_date,due:row.due_at,notes:row.notes};
+      const d=teamCache(scopeId); const local={title,assignee:row.assignee,status:row.status,description:row.description,work_type:row.work_type,priority:row.priority,start:row.start_date,due:row.due_at,notes:row.notes};
       if(taskCtx&&taskCtx.id){ const t=d.tasks.find(x=>x.id===taskCtx.id); if(t) Object.assign(t,local); }
       else d.tasks.unshift({id:"l"+Date.now(),...local});
-      teamSaveLocal(clan,d);
+      teamSaveLocal(scopeId,d);
     }
     closeTaskModal(); renderView();
   }catch(e){ if(msg) msg.textContent="No se pudo guardar: "+(e.message||e); }
@@ -2648,119 +2673,347 @@ function vMiPlan(a){
     ${["ALMA","CLAN","SANTUARIO"].map(card).join("")}
   </div>`;
 }
-function vSantuarioLive(a){
-  const s=a.santuario; const list=(state.cloudAlmas||[]).filter(x=>x.santuario===s);
-  const clans=[...new Set(list.map(x=>x.clan).filter(Boolean))];
-  const sparks=list.reduce((t,x)=>t+(x.sparks||0),0);
-  const clanRow=c=>{ const mem=list.filter(x=>x.clan===c); const lead=mem.find(x=>(x.team_role)==='LIDER'||(x.team_role)==='ADMIN');
-    return `<div class="row"><span style="font-size:20px">❂</span><div class="grow"><b>${esc(c)}</b><br><small class="muted">${mem.length} Alma(s)${lead?` · Lidera ${esc(lead.name)}`:""}</small></div><span class="chip">${mem.reduce((t,x)=>t+(x.sparks||0),0)} ✦</span></div>`; };
+/* --- Santuario: membresía, identidad y permisos --- */
+function santMembers(s){ return s ? roster().filter(x=>x.santuario===s) : []; }
+function santMeta(s){ return (state.santMeta && state.santMeta[s]) || null; }
+async function loadSantMeta(s){
+  if(!s || !Cloud.enabled) return;
+  try{ const r=await Cloud.santuario(s); if(r){ state.santMeta=state.santMeta||{}; state.santMeta[s]=r; if(sectionOfView(state.view)==="santuario") renderView(); } }catch(e){}
+}
+/* ¿La sesión organiza el Santuario? (Admin/Líder o Creador). */
+function santCanEdit(){ if(isCreator && !state.viewAs) return true; const a=me(); return !!a.santuario && (almaRole(me())==="ADMIN"||almaRole(me())==="LIDER"); }
+function santHeader(a,s,title,sub){
+  const meta=santMeta(s)||{emoji:"🜁"}; const members=santMembers(s);
+  return `<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
+    <div class="section-title"><h2>${esc(meta.emoji||"🜁")} ${esc(s)} · ${esc(title)}</h2><div class="spacer"></div>${planBadge('SANTUARIO')}${roleBadge(almaRole(me()))}<span class="pill">${members.length} Alma${members.length===1?"":"s"}</span></div>
+    <p class="muted" style="font-size:13px">${esc(sub)}</p></div>`;
+}
+
+/* ===========================================================
+   EL FOGÓN — panel principal del Santuario (la reunión).
+   Resumen vivo de toda la organización; todo se sincroniza con
+   las pestañas Almas · Tareas · Proyectos · Calendario · Informes.
+   =========================================================== */
+function vFogon(a){
+  const s=a.santuario; const d=santCache(s); const meta=santMeta(s)||{emoji:"🜁",description:""};
+  const admin=canAdminSantuario(); const members=santMembers(s);
+  const clans=[...new Set(members.map(x=>x.clan).filter(Boolean))];
+  const lideres=members.filter(x=>x.team_role==='LIDER'||x.team_role==='ADMIN').length;
+  const tOpen=d.tasks.filter(t=>t.status!=='Hecho').length, tDone=d.tasks.filter(t=>t.status==='Hecho').length;
+  const pOpen=d.projects.filter(p=>p.status!=='Hecho').length;
+  const need=Math.max(0,8-members.length);
+  const today=new Date().toISOString().slice(0,10);
+  const agenda=[...d.events.filter(e=>e.date&&e.date>=today).map(e=>({d:e.date,t:e.title,k:'Evento'})),
+                ...d.tasks.filter(t=>t.due&&t.status!=='Hecho').map(t=>({d:t.due,t:t.title,k:'Entrega'}))]
+                .sort((x,y)=>String(x.d).localeCompare(String(y.d))).slice(0,6);
+  const goal = need>0
+    ? `<div class="card s12" style="border:1px dashed var(--gold)"><div class="row"><span style="font-size:26px">🜁</span><div class="grow"><b>El Fogón crece</b><br><small class="muted">Un Santuario es el espacio para <b>8+ Almas</b>. Faltan <b>${need}</b> para encenderlo a pleno. Suma Almas en la pestaña <b>Almas</b> (código o invitación directa).</small></div><span class="pill gold">${members.length}/8</span></div></div>`
+    : `<div class="card s12" style="border:1px solid rgba(58,138,95,.4)"><div class="row"><span style="font-size:26px">🔥</span><div class="grow"><b>Fogón encendido</b><br><small class="muted">${members.length} Almas reunidas alrededor del Fogón.</small></div><span class="pill ok">8+ ✓</span></div></div>`;
+  const clanRow=c=>{ const mem=members.filter(x=>x.clan===c); const lead=mem.find(x=>x.team_role==='LIDER'||x.team_role==='ADMIN');
+    return `<div class="row"><span style="font-size:18px">❂</span><div class="grow"><b>${esc(c)}</b><br><small class="muted">${mem.length} Alma(s)${lead?` · ${esc(lead.name)}`:""}</small></div></div>`; };
   return `<div class="grid">
-    <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
-      <span class="pill gold">Nivel 3 · Santuario</span><h2 style="font-size:30px;letter-spacing:-.05em;margin:10px 0 4px">🜁 ${esc(s)}</h2>
-      <p class="muted">Tu organización: varios Clanes bajo una misma visión. ${canAdminSantuario()?'Como <b>Admin</b>, coordinas a todos.':'Vista del Santuario.'}</p>
-      <button class="btn ghost sm" id="santLeaveBtn" style="margin-top:8px;color:var(--danger);border-color:var(--danger)">Abandonar Santuario</button></div>
-    <div class="card s3"><div class="stat"><span class="num">${list.length}</span><span class="lbl">Almas</span></div></div>
+    ${santHeader(a,s,"Fogón",admin?"Eres Admin: reúne, organiza y coordina a toda la organización.":"La reunión viva del Santuario.")}
+    ${meta.description?`<div class="card s12"><p class="muted" style="margin:0">${esc(meta.description)}</p></div>`:""}
+    ${goal}
+    <div class="card s3"><div class="stat"><span class="num">${members.length}</span><span class="lbl">Almas</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${clans.length}</span><span class="lbl">Clanes</span></div></div>
-    <div class="card s3"><div class="stat"><span class="num">${sparks}</span><span class="lbl">Chispas</span></div></div>
-    <div class="card s3"><div class="stat"><span class="num">${list.filter(x=>(x.team_role)==='LIDER'||(x.team_role)==='ADMIN').length}</span><span class="lbl">Líderes</span></div></div>
-    <div class="card s7"><div class="section-title"><h2>Clanes del Santuario</h2></div>${clans.length?clans.map(clanRow).join(""):`<p class="muted">Aún no hay Clanes. Crea códigos por Clan desde el Panel.</p>`}</div>
-    <div class="card s5"><div class="section-title"><h2>Almas destacadas (Chispas)</h2></div>
-      ${[...list].sort((x,y)=>(y.sparks||0)-(x.sparks||0)).slice(0,6).map((m,i)=>`<div class="row"><b style="color:var(--gold);width:22px">${i+1}</b>${avatarHTML(m,"sm")}<div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${esc(m.clan||'—')}</small></div><span class="chip">${m.sparks||0} ✦</span></div>`).join("")||`<p class="muted">—</p>`}</div>
+    <div class="card s3"><div class="stat"><span class="num">${tOpen}<small style="font-size:13px">/${tOpen+tDone}</small></span><span class="lbl">Tareas activas</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num">${pOpen}</span><span class="lbl">Proyectos</span></div></div>
+    <div class="card s7"><div class="section-title"><h2 style="font-size:15px">Próximo en la agenda</h2><div class="spacer"></div><button class="btn ghost sm" data-view="sant_cal">Calendario →</button></div>
+      ${agenda.length?agenda.map(x=>`<div class="row"><div class="ev-date" style="min-width:54px"><b>${fmtDay(x.d)}</b></div><div class="grow"><b>${esc(x.t)}</b></div><span class="chip">${x.k}</span></div>`).join(""):`<p class="muted" style="font-size:13px">Sin eventos ni entregas próximas.</p>`}</div>
+    <div class="card s5"><div class="section-title"><h2 style="font-size:15px">Clanes del Santuario</h2></div>
+      ${clans.length?clans.map(clanRow).join(""):`<p class="muted" style="font-size:13px">Aún sin Clanes internos. Las Almas pueden pertenecer directo al Santuario.</p>`}</div>
+    <div class="card s7"><div class="section-title"><h2 style="font-size:15px">Últimos informes</h2><div class="spacer"></div><button class="btn ghost sm" data-view="sant_informes">Informes →</button></div>
+      ${d.reports.length?d.reports.slice(0,4).map(r=>`<div class="row"><div class="grow"><b>${esc(r.title)}</b><br><small class="muted">${esc(r.author||'Alma')}${r.period?` · ${esc(r.period)}`:''}</small></div><span class="chip">${fmtDay((r.at||'').slice(0,10))}</span></div>`).join(""):`<p class="muted" style="font-size:13px">Sin informes aún.</p>`}</div>
+    <div class="card s5"><div class="section-title"><h2 style="font-size:15px">Almas destacadas</h2></div>
+      ${[...members].sort((x,y)=>(y.xp||0)-(x.xp||0)).slice(0,5).map((m,i)=>`<div class="row"><b style="color:var(--gold);width:20px">${i+1}</b>${cAvatar(m,"sm")}<div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${esc(m.clan||'—')}</small></div><span class="chip">${(m.xp||0).toLocaleString("es-CL")}</span></div>`).join("")||`<p class="muted">—</p>`}</div>
   </div>`;
 }
+
+/* Fundar un Santuario (como un Clan) o unirse por código. */
+function vSantCreate(a){
+  if(!a.live) return clanEmpty("Santuario","Entra a tu Alma para fundar o unirte a un Santuario.");
+  const create = canFound()
+    ? `<div class="card s7"><div class="section-title"><h2>Fundar un Santuario</h2></div>
+      <p class="muted" style="font-size:13px;margin-top:-4px">Una organización viva para <b>8+ Almas</b>: varios grupos, tareas colectivas e informes. Tú serás su <b>Admin</b>.</p>
+      <div class="ci-edit" style="margin-top:10px"><input id="newSantEmoji" maxlength="3" value="🜁" title="Símbolo" style="width:54px;text-align:center">
+        <input id="newSantName" placeholder="Nombre del Santuario"></div>
+      <div class="field" style="margin-top:10px"><textarea id="newSantDesc" rows="2" placeholder="Su propósito (opcional)"></textarea></div>
+      <button class="btn gold" id="santCreateBtn">🜁 Fundar Santuario</button>
+      <div id="santCreateMsg" class="muted" style="font-size:12.5px;margin-top:8px;min-height:14px"></div></div>`
+    : `<div class="card s7"><div class="section-title"><h2>Fundar un Santuario</h2></div>
+      <p class="muted" style="font-size:13px;margin-top:-4px">Una organización viva para <b>8+ Almas</b>, guiada por un <b>Admin</b>.</p>
+      <div class="lock-card" style="margin-top:10px;padding:14px;border:1px dashed var(--line);border-radius:14px;text-align:center">
+        <div style="font-size:30px">${foundLevelEmoji()}</div>
+        <p style="margin:6px 0 2px"><b>Aún no puedes fundar un Santuario.</b></p>
+        <p class="muted" style="font-size:12.5px;margin:0">Fundar requiere alcanzar el nivel <b>${esc(foundLevelLabel())}</b> en el Árbol. Tu nivel actual: <b>${esc(levelByKey(me().level).label)}</b>.</p>
+      </div></div>`;
+  return `<div class="grid">
+    <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
+      <span class="pill gold">🜁 Santuario</span><h2 style="font-size:24px;letter-spacing:-.04em;margin:8px 0 4px">El espacio de los grupos grandes</h2>
+      <p class="muted" style="max-width:640px">El Santuario reúne a <b>muchas Almas</b> bajo una misma visión. Se funda como un Clan y se ingresa por <b>código</b> o por <b>invitación directa del Admin</b>.</p></div>
+    ${create}
+    <div class="card s5"><div class="section-title"><h2 style="font-size:15px">Unirme por código</h2></div>
+      <p class="muted" style="font-size:13px">¿Te invitaron a un Santuario? Ingresa su código.</p>
+      <div class="field"><input id="santJoinCode" placeholder="SANT-XXXX"></div>
+      <button class="btn" id="santJoinBtn">Unirme al Santuario</button></div>
+  </div>`;
+}
+
+/* PESTAÑA ALMAS — panel de membresía para grupos grandes. */
+function vSantAlmas(a){
+  const s=a.santuario; const admin=canAdminSantuario(); const members=santMembers(s);
+  const q=(state.santSearch||"").toLowerCase();
+  const shown=members.filter(m=>!q || (m.name||"").toLowerCase().includes(q) || (m.clan||"").toLowerCase().includes(q) || (m.role||"").toLowerCase().includes(q));
+  const roleCtrl=m=>{ const r=almaRole(m); if(!admin || r==='CREADOR') return roleBadge(r);
+    return `<select class="role-sel" data-santroleset="${m.id}">${ROLES.map(([k,l])=>`<option value="${k}" ${k===normRole(m.team_role)?'selected':''}>${l}</option>`).join("")}</select>`; };
+  // Agrupar por Clan para organizar grandes volúmenes.
+  const groups={}; shown.forEach(m=>{ const g=m.clan||"Sin Clan"; (groups[g]=groups[g]||[]).push(m); });
+  const groupHTML=Object.keys(groups).sort().map(g=>{
+    const rows=groups[g].map(m=>{ const lv=levelByKey(m.level);
+      return `<div class="row clan-member" data-mname="${esc((m.name||'').toLowerCase())} ${esc((m.clan||'').toLowerCase())}">${cAvatar(m,"sm",(liveMode()&&m.id!==a.almaId)?m.id:"")}
+        <div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${lv.emoji} ${esc(m.level||'')} · ${esc(m.role||m.country||'')}</small></div>
+        ${roleCtrl(m)}${(admin && m.id!==a.almaId)?`<button class="ia danger" data-santremove="${m.id}" title="Quitar del Santuario">✕</button>`:""}</div>`; }).join("");
+    return `<div class="sant-group"><div class="section-title" style="margin-top:6px"><h3 style="font-size:13.5px;margin:0">${g==='Sin Clan'?'◦ Sin Clan':'❂ '+esc(g)}</h3><div class="spacer"></div><span class="chip">${groups[g].length}</span></div>${rows}</div>`;
+  }).join("");
+  const inv=(santCache(s).invites)||[];
+  const invitesCard = admin
+    ? `<div class="card s12"><div class="section-title"><h2 style="font-size:15px">Códigos de invitación</h2><div class="spacer"></div>
+        <select id="santInviteRole" class="role-sel">${ROLES.filter(r=>r[0]!=='ADMIN').map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select>
+        <button class="btn sm gold" id="santGenInviteBtn">+ Generar código</button></div>
+        <p class="muted" style="font-size:12.5px">Comparte un código para que un Alma entre a <b>${esc(s)}</b> con el rol elegido.</p>
+        ${inv.length?inv.map(c=>`<div class="row"><code class="invite-code">${esc(c.code)}</code><div class="grow"><small class="muted">Rol: <b>${esc((ROLES.find(r=>r[0]===c.role)||['',c.role])[1])}</b></small></div>
+          <button class="btn ghost sm" data-copycode="${esc(c.code)}">Copiar</button><button class="ia danger" data-santdelinvite="${c.id}">✕</button></div>`).join(""):`<p class="muted">Aún no generaste códigos.</p>`}</div>`
+    : "";
+  return `<div class="grid">
+    ${santHeader(a,s,"Almas",admin?"Suma, organiza y asigna roles a las Almas del Santuario.":"Las Almas que habitan el Santuario.")}
+    <div class="card s12" id="santPanelCard"><div class="section-title"><h2>Panel de Almas</h2><div class="spacer"></div><span class="pill">${members.length}</span></div>
+      <div class="field" style="margin-bottom:10px"><input id="santSearch" placeholder="Buscar Alma, Clan o rol…" value="${esc(state.santSearch||"")}"></div>
+      ${shown.length?groupHTML:`<p class="muted" style="font-size:13px">Ninguna Alma coincide.</p>`}
+      ${admin?`<div class="clan-add"><button class="btn secondary sm" id="santAddBtn">+ Sumar un Alma</button><span class="muted" style="font-size:11.5px">de cualquier parte del Mundo, o por código</span></div>`:""}</div>
+    ${(admin&&state.santAddOpen)?santAddPicker(s):""}
+    ${invitesCard}
+    <div class="card s12 clan-danger"><div class="section-title"><h2 style="font-size:15px">Abandonar el Santuario</h2></div>
+      <p class="muted" style="font-size:12.5px">Conservarás tu Clan; saldrás de la organización.</p>
+      <button class="btn ghost sm" id="santLeaveBtn" style="color:var(--danger);border-color:var(--danger)">Abandonar Santuario</button></div>
+  </div>`;
+}
+function santAddPicker(s){
+  const cand=(state.cloudAlmas||[]).filter(m=>m.id && m.santuario!==s)
+    .sort((a,b)=>(a.santuario?1:0)-(b.santuario?1:0) || String(a.name||"").localeCompare(String(b.name||"")))
+    .slice(0,150);
+  const row=m=>{ const lv=levelByKey(m.level);
+    const where=m.santuario?`<span class="chip">🜁 ${esc(m.santuario)}</span>`:(m.clan?`<span class="chip">❂ ${esc(m.clan)}</span>`:`<span class="chip ok">Libre</span>`);
+    return `<div class="row" data-mname="${esc((m.name||'').toLowerCase())} ${esc((m.clan||'').toLowerCase())} ${esc((m.santuario||'').toLowerCase())}">${cAvatar(m,"sm")}
+      <div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${lv.emoji} ${esc(m.level||'')} · ${esc(m.role||m.country||'')}</small></div>
+      ${where}<button class="btn sm" data-santadd="${m.id}">${m.santuario?'Trasladar':'Sumar'}</button></div>`; };
+  return `<div class="card s12" id="santAddCard"><div class="section-title"><h2 style="font-size:15px">Sumar un Alma a ${esc(s)}</h2><div class="spacer"></div><button class="ia" id="santAddClose">✕</button></div>
+    <p class="muted" style="font-size:12.5px;margin:-2px 0 8px">Invita a <b>cualquier Alma del Mundo</b>. Si ya está en otro Santuario, se trasladará a <b>${esc(s)}</b>.</p>
+    <div class="field"><input id="santAddSearch" placeholder="Buscar cualquier Alma…" autocomplete="off"></div>
+    ${cand.length?cand.map(row).join(""):`<p class="muted" style="font-size:13px">No hay otras Almas en el Mundo todavía.</p>`}</div>`;
+}
+
+/* --- Acciones del Santuario: fundar, unirse, membresía, roles, invitaciones --- */
+async function createSantuario(){
+  const a=me(); if(!a.live){ alert("Entra a tu Alma para fundar un Santuario."); return; }
+  if(!canFound()){ const m=document.getElementById("santCreateMsg"); if(m) m.textContent="Fundar un Santuario requiere alcanzar el nivel "+foundLevelLabel()+" en el Árbol."; return; }
+  const name=(document.getElementById("newSantName").value||"").trim();
+  const emoji=(document.getElementById("newSantEmoji").value||"").trim();
+  const desc=(document.getElementById("newSantDesc").value||"").trim();
+  const msg=document.getElementById("santCreateMsg");
+  if(!name){ if(msg) msg.textContent="El Santuario necesita un nombre."; return; }
+  if(msg) msg.textContent="Fundando…";
+  try{
+    await Cloud.santuarioCreate(name, emoji, desc);
+    a.santuario=name; a.team_role="ADMIN"; a.plan="SANTUARIO";
+    try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){}
+    await loadSantMeta(name); await loadSant(name);
+    state.view="santuario"; save(); renderAll();
+  }catch(e){ if(msg) msg.textContent="No se pudo fundar: "+(e.message||e); }
+}
+async function joinSantuarioCode(){
+  const a=me(); if(!a.live){ alert("Entra a tu Alma para unirte."); return; }
+  const el=document.getElementById("santJoinCode"); const code=(el?el.value:"").trim(); if(!code) return;
+  try{ const s=await Cloud.santuarioJoinByCode(code);
+    try{ state.cloudAlmas=await Cloud.allAlmas(); const meRow=(state.cloudAlmas||[]).find(x=>x.id===a.almaId); if(meRow){ a.santuario=meRow.santuario; a.team_role=meRow.team_role; a.plan=meRow.plan; } }catch(e){}
+    a.santuario=a.santuario||s; await loadSant(a.santuario); save(); state.view="santuario"; renderAll(); toast("✦ Te uniste al Santuario "+s);
+  }catch(e){ alert("No se pudo unir: "+(e.message||e)); }
+}
+async function santSetRole(almaId, role){
+  try{ await Cloud.santuarioSetRole(almaId, role); state.cloudAlmas=await Cloud.allAlmas(); renderView(); }
+  catch(e){ alert("No se pudo cambiar el rol: "+(e.message||e)); }
+}
+async function santAddMember(almaId){
+  const s=me().santuario; if(!s) return;
+  const target=(state.cloudAlmas||[]).find(x=>x.id===almaId);
+  if(target && target.santuario && target.santuario!==s){ if(!confirm("«"+(target.name||"Esta Alma")+"» ya está en el Santuario «"+target.santuario+"». ¿Trasladarla a «"+s+"»?")) return; }
+  try{ await Cloud.santuarioAddMember(almaId, s); state.cloudAlmas=await Cloud.allAlmas(); state.santAddOpen=false; renderView(); }
+  catch(e){ alert("No se pudo sumar: "+(e.message||e)); }
+}
+async function santRemoveMember(almaId){
+  if(!confirm("¿Quitar a esta Alma del Santuario?")) return;
+  try{ await Cloud.santuarioRemoveMember(almaId); state.cloudAlmas=await Cloud.allAlmas(); renderView(); }
+  catch(e){ alert("No se pudo quitar: "+(e.message||e)); }
+}
+async function santGenInvite(){
+  const s=me().santuario; if(!s||!canAdminSantuario()) return;
+  const role=(document.getElementById("santInviteRole")||{}).value||"ALMA";
+  try{ await Cloud.santuarioGenInvite(s, role); await loadSant(s); }catch(e){ alert("No se pudo generar: "+(e.message||e)); }
+}
+async function santDelInvite(id){ const s=me().santuario; try{ await Cloud.deleteSantInvite(id); await loadSant(s); }catch(e){ alert("No se pudo eliminar: "+(e.message||e)); } }
 /* ===========================================================
    PLANIFICACIÓN DEL SANTUARIO (Alpha 2026)
    Igual que el Panel de Clan, pero a escala de organización.
    Lectura: cualquier Alma del Santuario. Edición: ADMIN (o Creador).
    =========================================================== */
-function santCache(s){ if(!state.santCache) state.santCache={}; if(!state.santCache[s]) state.santCache[s]={tasks:[],projects:[],events:[]}; return state.santCache[s]; }
+function santCache(s){ if(!state.santCache) state.santCache={}; if(!state.santCache[s]) state.santCache[s]={tasks:[],projects:[],events:[],reports:[],invites:[]}; const d=state.santCache[s]; d.tasks=d.tasks||[]; d.projects=d.projects||[]; d.events=d.events||[]; d.reports=d.reports||[]; d.invites=d.invites||[]; return d; }
 async function loadSant(s){
   if(!s || !(Cloud.enabled && me().live)) return;
+  loadSantMeta(s);
   try{
-    const [tasks,projects,events]=await Promise.all([
-      Cloud.santTasks(s).catch(()=>[]), Cloud.santProjects(s).catch(()=>[]), Cloud.santEvents(s).catch(()=>[])
+    const [tasks,projects,events,reports]=await Promise.all([
+      Cloud.santTasks(s).catch(()=>[]), Cloud.santProjects(s).catch(()=>[]), Cloud.santEvents(s).catch(()=>[]), Cloud.santReports(s).catch(()=>[])
     ]);
     state.santCache=state.santCache||{};
+    const prev=state.santCache[s]||{};
     state.santCache[s]={
-      tasks:tasks.map(t=>({id:t.id,title:t.title,assignee:t.assignee,status:t.status||'Pendiente',_cloud:true})),
-      projects:projects.map(p=>({id:p.id,title:p.title,assignee:p.assignee,due:p.due_at,status:p.status||'Pendiente',_cloud:true})),
-      events:events.map(e=>({id:e.id,title:e.title,date:e.at_date,time:e.at_time,notes:e.notes,_cloud:true}))
+      tasks:tasks.map(t=>({id:t.id,title:t.title,assignee:t.assignee,status:t.status||'Pendiente',description:t.description,area:t.area,priority:t.priority,start:t.start_date,due:t.due_at,notes:t.notes,_cloud:true})),
+      projects:projects.map(p=>({id:p.id,title:p.title,assignee:p.assignee,due:p.due_at,status:p.status||'Pendiente',pct:p.pct||0,description:p.description,area:p.area,notes:p.notes,_cloud:true})),
+      events:events.map(e=>({id:e.id,title:e.title,date:e.at_date,time:e.at_time,notes:e.notes,_cloud:true})),
+      reports:reports.map(r=>({id:r.id,alma_id:r.alma_id,author:r.author,title:r.title,body:r.body,period:r.period,status:r.status,at:r.created_at,_cloud:true})),
+      invites:prev.invites||[]
     };
-    if(state.view==="sant_plan") renderView();
+    if(canAdminSantuario()){ try{ state.santCache[s].invites=(await Cloud.santuarioInvites(s)).map(i=>({id:i.id,code:i.code,role:i.role})); }catch(e){} }
+    if(sectionOfView(state.view)==="santuario") renderView();
   }catch(e){}
 }
-function vSantPlan(a){
-  const s=a.santuario;
-  if(!s) return `<div class="grid"><div class="card s12"><span class="pill gold">Planificación</span><h2 style="margin:8px 0;letter-spacing:-.03em">Sin Santuario</h2><p class="muted" style="max-width:600px">La planificación es de la organización. Activa el plan <b>Santuario</b> en Mi Plan para coordinar varios Clanes.</p></div></div>`;
-  const can=canAdminSantuario(); const d=santCache(s);
-  const COLS=["Pendiente","En curso","Hecho"];
-  const tcard=t=>`<div class="kcard"><b>${esc(t.title)}</b><small>${esc(t.assignee||'Sin asignar')}</small>
-      <div class="kacts">${can?`<button class="ia" data-santtaskcycle="${t.id}" title="Avanzar">→</button><button class="ia danger" data-santtaskdel="${t.id}" title="Eliminar">✕</button>`:''}</div></div>`;
-  const FLOWP=["Pendiente","En curso","Revisión","Hecho"];
-  const pcard=p=>`<div class="kcard"><b>${esc(p.title)}</b><small>${esc(p.assignee||'Sin asignar')}${p.due?' · '+fmtDay(p.due):''}</small>
-      <div class="kacts">${can?`<button class="ia" data-santprojcycle="${p.id}" title="Avanzar">→</button><button class="ia danger" data-santprojdel="${p.id}" title="Eliminar">✕</button>`:''}</div></div>`;
-  const evs=[...d.events].sort((x,y)=>String(x.date||"9999").localeCompare(String(y.date||"9999")));
-  const eitem=e=>`<div class="row ev-row"><div class="ev-date"><b>${fmtDay(e.date)}</b><small>${esc(e.time||"")}</small></div>
-    <div class="grow"><b>${esc(e.title)}</b>${e.notes?`<br><small class="muted">${esc(e.notes)}</small>`:""}</div>
-    ${can?`<button class="ia danger" data-santeventdel="${e.id}">✕</button>`:""}</div>`;
+/* PESTAÑA TAREAS — tablero profesional, asignable a Almas del Santuario. */
+function vSantTareas(a){
+  const s=a.santuario; const d=santCache(s); const can=santCanEdit(); const COLS=["Pendiente","En curso","Revisión","Hecho"];
+  const card=t=>{ const pr=PRIO_META[t.priority||"Media"]||PRIO_META.Media; const over=taskOverdue(t);
+    return `<div class="kcard ${over?'overdue':''}" ${can?`data-santtaskopen="${t.id}" style="cursor:pointer"`:""}>
+      <div class="kc-top"><b>${esc(t.title)}</b>${t.priority?`<span class="prio prio-${pr[1]}" title="Prioridad ${esc(t.priority)}">${pr[0]}</span>`:""}</div>
+      <small>${esc(t.assignee||'Sin asignar')}${t.due?` · ${fmtDay(t.due)}`:''}${t.area?` · ${esc(t.area)}`:''}</small>
+      ${t.description?`<p>${esc(t.description)}</p>`:""}
+      <div class="kacts">${can?`<button class="ia" data-santtaskcycle="${t.id}" title="Avanzar">→</button><button class="ia danger" data-santtaskdel="${t.id}" title="Eliminar">✕</button>`:''}</div></div>`; };
   return `<div class="grid">
-    <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
-      <span class="pill gold">🜁 ${esc(s)} · Planificación</span>
-      <h2 style="font-size:24px;letter-spacing:-.04em;margin:10px 0 4px">Coordina tu organización</h2>
-      <p class="muted">${can?'Como <b>Admin</b> del Santuario, planificas tareas, proyectos y el calendario de toda la organización.':'Vista de la planificación del Santuario (solo el Admin puede editar).'}</p></div>
+    ${santHeader(a,s,"Tareas",can?"Designa tareas a las Almas del Santuario. Se sincronizan con el Calendario y el Fogón.":"Tablero de tareas del Santuario (solo lectura).")}
     <div class="card s12"><div class="section-title"><h2>Tablero de tareas</h2><div class="spacer"></div>${can?`<button class="btn sm gold" data-santtaskadd="1">+ Tarea</button>`:`<span class="pill">Solo lectura</span>`}</div>
-      <div class="kanban">${COLS.map(c=>`<div class="kcol"><div class="kcol-h">${c.toUpperCase()}<span>${d.tasks.filter(t=>(t.status||'Pendiente')===c).length||""}</span></div>${d.tasks.filter(t=>(t.status||'Pendiente')===c).map(tcard).join("")||`<div class="kempty">—</div>`}</div>`).join("")}</div></div>
-    <div class="card s12"><div class="section-title"><h2>Proyectos de la organización</h2><div class="spacer"></div>${can?`<button class="btn sm gold" data-santprojadd="1">+ Proyecto</button>`:`<span class="pill">Solo lectura</span>`}</div>
-      <div class="kanban">${FLOWP.map(c=>`<div class="kcol"><div class="kcol-h">${c.toUpperCase()}<span>${d.projects.filter(p=>(p.status||'Pendiente')===c).length||""}</span></div>${d.projects.filter(p=>(p.status||'Pendiente')===c).map(pcard).join("")||`<div class="kempty">—</div>`}</div>`).join("")}</div></div>
-    <div class="card s12"><div class="section-title"><h2>Calendario</h2><div class="spacer"></div>${can?`<button class="btn sm gold" data-santeventadd="1">+ Evento</button>`:`<span class="pill">Solo lectura</span>`}</div>
-      ${evs.length?evs.map(eitem).join(""):`<p class="muted">Sin eventos. ${can?'Agrega el primero.':''}</p>`}</div>
+      <div class="kanban">${COLS.map(c=>`<div class="kcol"><div class="kcol-h">${c.toUpperCase()}<span>${d.tasks.filter(t=>(t.status||'Pendiente')===c).length||""}</span></div>${d.tasks.filter(t=>(t.status||'Pendiente')===c).map(card).join("")||`<div class="kempty">—</div>`}</div>`).join("")}</div></div>
   </div>`;
 }
-async function addSantTask(){
-  if(!canAdminSantuario()){ alert("Solo el Admin del Santuario planifica."); return; }
-  const s=me().santuario; if(!s) return;
-  const title=(prompt("Tarea del Santuario:")||"").trim(); if(!title) return;
-  const assignee=(prompt("Responsable (opcional):","")||"").trim()||null;
-  try{ await Cloud.addSantTask(s,{title,assignee,status:"Pendiente"}); await loadSant(s); }catch(e){ alert("No se pudo guardar: "+(e.message||e)); }
+/* PESTAÑA PROYECTOS — encargos colectivos del Santuario. */
+function vSantProyectos(a){
+  const s=a.santuario; const d=santCache(s); const can=santCanEdit(); const COLS=["Pendiente","En curso","Revisión","Hecho"];
+  const card=p=>`<div class="kcard" ${can?`data-santprojopen="${p.id}" style="cursor:pointer"`:""}>
+      <div class="kc-top"><b>${esc(p.title)}</b></div>
+      <small>${esc(p.assignee||'Sin asignar')}${p.due?` · ${fmtDay(p.due)}`:''}${p.area?` · ${esc(p.area)}`:''}</small>
+      ${p.description?`<p>${esc(p.description)}</p>`:""}
+      <div class="kacts">${can?`<button class="ia" data-santprojcycle="${p.id}" title="Avanzar">→</button><button class="ia danger" data-santprojdel="${p.id}" title="Eliminar">✕</button>`:''}</div></div>`;
+  return `<div class="grid">
+    ${santHeader(a,s,"Proyectos",can?"Proyectos colectivos de la organización; asígnalos a Almas del Santuario.":"Proyectos del Santuario (solo lectura).")}
+    <div class="card s12"><div class="section-title"><h2>Encargos colectivos</h2><div class="spacer"></div>${can?`<button class="btn sm gold" data-santprojadd="1">+ Proyecto</button>`:`<span class="pill">Solo lectura</span>`}</div>
+      <div class="kanban">${COLS.map(c=>`<div class="kcol"><div class="kcol-h">${c.toUpperCase()}<span>${d.projects.filter(p=>(p.status||'Pendiente')===c).length||""}</span></div>${d.projects.filter(p=>(p.status||'Pendiente')===c).map(card).join("")||`<div class="kempty">—</div>`}</div>`).join("")}</div></div>
+  </div>`;
 }
+/* PESTAÑA CALENDARIO — eventos + entregas de tareas/proyectos (sincronizado). */
+function santCalItems(s){ const d=santCache(s); const items=[];
+  d.events.forEach(e=>{ if(e.date) items.push({date:e.date,time:e.time||"",title:e.title,type:"evento",id:e.id,notes:e.notes}); });
+  d.tasks.forEach(t=>{ if(t.due) items.push({date:t.due,time:"",title:t.title,type:"tarea",id:t.id}); });
+  d.projects.forEach(p=>{ if(p.due) items.push({date:p.due,time:"",title:p.title,type:"proyecto",id:p.id}); });
+  return items;
+}
+function vSantCalendario(a){
+  const s=a.santuario; const can=santCanEdit(); const items=santCalItems(s);
+  const todayIso=ymd(new Date());
+  const cur=state.scalCursor?new Date(state.scalCursor+"T00:00:00"):new Date();
+  const sel=state.scalSel||todayIso;
+  const title=CAL_MON[cur.getMonth()]+" "+cur.getFullYear();
+  const first=new Date(cur.getFullYear(),cur.getMonth(),1); const start=(first.getDay()+6)%7;
+  const dim=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate();
+  let cells=""; for(let i=0;i<start;i++) cells+=`<div class="cal-cell empty"></div>`;
+  for(let dn=1;dn<=dim;dn++){ const iso=ymd(new Date(cur.getFullYear(),cur.getMonth(),dn)); const its=calItemsOn(items,iso);
+    cells+=`<button class="cal-cell ${iso===todayIso?'today':''} ${iso===sel?'sel':''}" data-scalday="${iso}"><span class="cc-n">${dn}</span>${its.length?`<span class="cc-dots">${its.slice(0,3).map(it=>`<i class="cc-dot ${it.type}"></i>`).join("")}</span>`:""}</button>`; }
+  const its=calItemsOn(items,sel); const dd=new Date(sel+"T00:00:00");
+  const dayList=`<div class="section-title" style="margin-top:16px"><h2 style="font-size:15px">${dd.getDate()} ${CAL_MON[dd.getMonth()]}</h2><div class="spacer"></div>${can?`<button class="btn ghost sm" data-santeventadd="${sel}">+ Evento aquí</button>`:""}</div>`+
+    (its.length?its.map(it=>`<div class="row ev-row"><div class="ev-date"><b>${it.time||(it.type==='evento'?'·':'⚑')}</b></div><div class="grow"><b>${esc(it.title)}</b> <span class="chip">${it.type==='evento'?'Evento':it.type==='tarea'?'Entrega':'Proyecto'}</span></div>${(it.type==='evento'&&can)?`<button class="ia danger" data-santeventdel="${it.id}">✕</button>`:""}</div>`).join(""):`<p class="muted" style="font-size:13px">Sin eventos ni entregas este día.</p>`);
+  return `<div class="grid">
+    ${santHeader(a,s,"Calendario",can?"Eventos del Santuario y entregas, en un mismo lugar.":"Calendario del Santuario (solo lectura).")}
+    <div class="card s12">
+      <div class="cal-bar"><b class="cal-title">${esc(title)}</b><div class="spacer" style="flex:1"></div>
+        <button class="ia" data-scalnav="prev">‹</button><button class="ia" data-scalnav="next">›</button>
+        ${can?`<button class="btn sm gold" data-santeventadd="1" style="margin-left:8px">+ Evento</button>`:""}</div>
+      <div class="cal-grid"><div class="cal-head">${CAL_DOW.map(x=>`<span>${x}</span>`).join("")}</div><div class="cal-cells">${cells}</div></div>
+      ${dayList}
+    </div>
+  </div>`;
+}
+/* PESTAÑA INFORMES — informes de actividad de cada Alma. */
+function vSantInformes(a){
+  const s=a.santuario; const d=santCache(s); const admin=canAdminSantuario(); const meId=a.almaId;
+  const list=(admin? d.reports : d.reports.filter(r=>r.alma_id===meId));
+  const composer=`<div class="card s12"><div class="section-title"><h2 style="font-size:15px">Nuevo informe de actividad</h2></div>
+    <div class="cs-fields"><label class="fld"><span>Título</span><input id="rep_title" placeholder="Resumen de la semana"></label>
+      <label class="fld"><span>Período</span><input id="rep_period" placeholder="Junio · Semana 3"></label></div>
+    <div class="field" style="margin-top:8px"><textarea id="rep_body" rows="3" placeholder="¿En qué avanzaste? Logros, bloqueos y próximos pasos…"></textarea></div>
+    <button class="btn gold" id="repSendBtn">Enviar informe</button><div id="repMsg" class="muted" style="font-size:12px;margin-top:6px"></div></div>`;
+  const card=r=>`<div class="card s6"><div class="section-title"><h2 style="font-size:14px;margin:0">${esc(r.title)}</h2><div class="spacer"></div><span class="chip">${fmtDay((r.at||'').slice(0,10))}</span></div>
+    <small class="muted">${esc(r.author||'Alma')}${r.period?` · ${esc(r.period)}`:''}</small>
+    ${r.body?`<p style="font-size:13px;margin:8px 0 0;white-space:pre-wrap">${esc(r.body)}</p>`:""}
+    ${(admin||r.alma_id===meId)?`<div style="margin-top:8px"><button class="ia danger" data-santrepdel="${r.id}">✕ Eliminar</button></div>`:""}</div>`;
+  return `<div class="grid">
+    ${santHeader(a,s,"Informes",admin?"Informes de actividad de cada Alma. Como Admin, ves todos.":"Comparte tu actividad. Ves tus informes; el Admin ve los de todas las Almas.")}
+    ${composer}
+    ${list.length?list.map(card).join(""):`<div class="card s12"><p class="muted">Aún no hay informes.</p></div>`}
+  </div>`;
+}
+
+/* --- Acciones del Santuario: trabajo, calendario e informes --- */
+function addSantTask(){ openTaskModal(null,"sant"); }
 async function cycleSantTask(id){
-  if(!canAdminSantuario()) return; const s=me().santuario; const d=santCache(s); const t=d.tasks.find(x=>x.id===id); if(!t) return;
-  const order=["Pendiente","En curso","Hecho"]; t.status=order[(order.indexOf(t.status)+1)%order.length];
+  if(!santCanEdit()) return; const s=me().santuario; const d=santCache(s); const t=d.tasks.find(x=>x.id===id); if(!t) return;
+  const order=["Pendiente","En curso","Revisión","Hecho"]; t.status=order[(order.indexOf(t.status)+1)%order.length];
   try{ await Cloud.updateSantTask(id,{status:t.status}); }catch(e){} renderView();
 }
 async function delSantTask(id){
-  if(!canAdminSantuario()) return; const s=me().santuario;
+  if(!santCanEdit()) return; const s=me().santuario;
   try{ await Cloud.deleteSantTask(id); await loadSant(s); }catch(e){ alert("No se pudo eliminar: "+(e.message||e)); }
 }
-async function addSantProject(){
-  if(!canAdminSantuario()){ alert("Solo el Admin del Santuario planifica."); return; }
-  const s=me().santuario; if(!s) return;
-  const title=(prompt("Proyecto del Santuario:")||"").trim(); if(!title) return;
-  const assignee=(prompt("Responsable (opcional):","")||"").trim()||null;
-  const due_at=(prompt("Entrega (AAAA-MM-DD, opcional):","")||"").trim()||null;
-  try{ await Cloud.addSantProject(s,{title,assignee,due_at,status:"Pendiente",pct:0}); await loadSant(s); }catch(e){ alert("No se pudo guardar: "+(e.message||e)); }
-}
+function addSantProject(){ openTaskModal(null,"santproj"); }
 async function cycleSantProject(id){
-  if(!canAdminSantuario()) return; const s=me().santuario; const d=santCache(s); const p=d.projects.find(x=>x.id===id); if(!p) return;
+  if(!santCanEdit()) return; const s=me().santuario; const d=santCache(s); const p=d.projects.find(x=>x.id===id); if(!p) return;
   const order=["Pendiente","En curso","Revisión","Hecho"]; p.status=order[(order.indexOf(p.status)+1)%order.length];
   try{ await Cloud.updateSantProject(id,{status:p.status}); }catch(e){} renderView();
 }
 async function delSantProject(id){
-  if(!canAdminSantuario()) return; const s=me().santuario;
+  if(!santCanEdit()) return; const s=me().santuario;
   try{ await Cloud.deleteSantProject(id); await loadSant(s); }catch(e){ alert("No se pudo eliminar: "+(e.message||e)); }
 }
-async function addSantEvent(){
-  if(!canAdminSantuario()){ alert("Solo el Admin del Santuario planifica."); return; }
+async function addSantEvent(preDate){
+  if(!santCanEdit()){ alert("Solo el Admin o un Líder del Santuario organiza el calendario."); return; }
   const s=me().santuario; if(!s) return;
   const title=(prompt("Evento del Santuario:")||"").trim(); if(!title) return;
-  const at_date=(prompt("Fecha (AAAA-MM-DD):","")||"").trim()||null;
-  const at_time=(prompt("Hora (opcional):","")||"").trim()||null;
+  const at_date=(typeof preDate==="string"?preDate:(prompt("Fecha (AAAA-MM-DD):", state.scalSel||"")||"").trim())||null;
+  const at_time=(prompt("Hora (opcional, ej 15:00):","")||"").trim()||null;
   const notes=(prompt("Nota (opcional):","")||"").trim()||null;
   try{ await Cloud.addSantEvent(s,{title,at_date,at_time,notes}); await loadSant(s); }catch(e){ alert("No se pudo guardar: "+(e.message||e)); }
 }
 async function delSantEvent(id){
-  if(!canAdminSantuario()) return; const s=me().santuario;
+  if(!santCanEdit()) return; const s=me().santuario;
   try{ await Cloud.deleteSantEvent(id); await loadSant(s); }catch(e){ alert("No se pudo eliminar: "+(e.message||e)); }
+}
+async function sendSantReport(){
+  const s=me().santuario; if(!s) return; const g=x=>document.getElementById(x);
+  const title=(g("rep_title").value||"").trim(); const msg=g("repMsg");
+  if(!title){ if(msg) msg.textContent="El informe necesita un título."; return; }
+  const row={ alma_id:me().almaId, author:me().name, title, body:(g("rep_body").value||"").trim()||null, period:(g("rep_period").value||"").trim()||null, status:"Enviado" };
+  if(msg) msg.textContent="Enviando…";
+  try{ await Cloud.addSantReport(s,row); await loadSant(s); renderView(); toast("✦ Informe enviado."); }
+  catch(e){ if(msg) msg.textContent="No se pudo enviar: "+(e.message||e); }
+}
+async function delSantReport(id){
+  const s=me().santuario; if(!confirm("¿Eliminar este informe?")) return;
+  try{ await Cloud.deleteSantReport(id); await loadSant(s); }catch(e){ alert("No se pudo eliminar: "+(e.message||e)); }
 }
 
 /* --- Acciones de planes, roles y herramientas de Clan --- */
@@ -2771,19 +3024,21 @@ async function pickPlan(plan){
     alert("Fundar un "+(plan==="SANTUARIO"?"Santuario":"Clan")+" requiere alcanzar el nivel "+foundLevelLabel()+" en el Árbol."); return;
   }
   try{
-    if((plan==="CLAN"||plan==="SANTUARIO") && !a.clan){
-      // Funda un Clan real (entidad en la nube + rol Admin) vía RPC.
-      const name=(prompt(plan==="SANTUARIO"?"Nombre de tu Santuario (y Clan principal):":"Nombre de tu Clan:","")||"").trim();
-      if(!name) return;
-      await Cloud.clanCreate(name);            // crea el Clan, te deja como ADMIN, plan=CLAN
+    if(plan==="SANTUARIO" && !a.santuario){
+      // Funda un Santuario real (entidad + rol Admin) vía RPC. No fuerza Clan.
+      const name=(prompt("Nombre de tu Santuario:","")||"").trim(); if(!name) return;
+      await Cloud.santuarioCreate(name);
+      a.santuario=name; a.team_role="ADMIN"; a.plan="SANTUARIO";
+      await loadSantMeta(name); await loadSant(name);
+    } else if(plan==="CLAN" && !a.clan){
+      // Funda un Clan real (entidad + rol Admin) vía RPC.
+      const name=(prompt("Nombre de tu Clan:","")||"").trim(); if(!name) return;
+      await Cloud.clanCreate(name);
       a.clan=name; a.team_role="ADMIN"; a.plan="CLAN";
-      if(plan==="SANTUARIO"){ await Cloud.updateAlma(a.almaId,{plan:"SANTUARIO",santuario:name}); a.plan="SANTUARIO"; a.santuario=name; }
       await loadClanMeta(name);
     } else {
-      const patch={plan};
-      if(plan==="SANTUARIO" && a.clan && !a.santuario){ patch.santuario=a.clan; patch.team_role="ADMIN"; }
-      await Cloud.updateAlma(a.almaId,patch);
-      a.plan=patch.plan; if(patch.santuario)a.santuario=patch.santuario; if(patch.team_role)a.team_role=patch.team_role;
+      await Cloud.updateAlma(a.almaId,{plan});
+      a.plan=plan;
     }
     try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){}
     if(a.clan) await syncTeam(a.clan);
@@ -3560,7 +3815,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
    RENDER + EVENTOS
    =========================================================== */
 function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); renderWhisperBell(); if(typeof hideBootLoader==="function") hideBootLoader(); }
-function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad") loadPosts(); if(view==="sant_plan") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
+function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad") loadPosts(); if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 /* LUMBRE aún no despierta: el chat permanece desactivado. Al tocarla, en vez de
@@ -3655,15 +3910,29 @@ document.addEventListener("click", e=>{
   if(e.target.closest("[data-remadd]")){ addReminder(); return; }
   const rtg=e.target.closest("[data-remtoggle]"); if(rtg){ toggleReminder(rtg.dataset.remtoggle); return; }
   const rdl=e.target.closest("[data-remdel]"); if(rdl){ delReminder(rdl.dataset.remdel); return; }
-  // Planificación del Santuario
+  // Santuario PRO
+  if(e.target.closest("#santCreateBtn")){ createSantuario(); return; }
+  if(e.target.closest("#santJoinBtn")){ joinSantuarioCode(); return; }
+  if(e.target.closest("#santAddBtn")){ state.santAddOpen=true; renderView(); return; }
+  if(e.target.closest("#santAddClose")){ state.santAddOpen=false; renderView(); return; }
+  const sad=e.target.closest("[data-santadd]"); if(sad){ santAddMember(sad.dataset.santadd); return; }
+  const srm=e.target.closest("[data-santremove]"); if(srm){ santRemoveMember(srm.dataset.santremove); return; }
+  if(e.target.closest("#santGenInviteBtn")){ santGenInvite(); return; }
+  const sdi=e.target.closest("[data-santdelinvite]"); if(sdi){ santDelInvite(sdi.dataset.santdelinvite); return; }
   if(e.target.closest("[data-santtaskadd]")){ addSantTask(); return; }
+  const sto=e.target.closest("[data-santtaskopen]"); if(sto){ openTaskModal(sto.dataset.santtaskopen,"sant"); return; }
   const stc=e.target.closest("[data-santtaskcycle]"); if(stc){ cycleSantTask(stc.dataset.santtaskcycle); return; }
   const std=e.target.closest("[data-santtaskdel]"); if(std){ delSantTask(std.dataset.santtaskdel); return; }
   if(e.target.closest("[data-santprojadd]")){ addSantProject(); return; }
+  const spo=e.target.closest("[data-santprojopen]"); if(spo){ openTaskModal(spo.dataset.santprojopen,"santproj"); return; }
   const spc=e.target.closest("[data-santprojcycle]"); if(spc){ cycleSantProject(spc.dataset.santprojcycle); return; }
   const spd=e.target.closest("[data-santprojdel]"); if(spd){ delSantProject(spd.dataset.santprojdel); return; }
-  if(e.target.closest("[data-santeventadd]")){ addSantEvent(); return; }
+  const sea=e.target.closest("[data-santeventadd]"); if(sea){ const v=sea.dataset.santeventadd; addSantEvent(v&&v!=="1"?v:undefined); return; }
   const sed=e.target.closest("[data-santeventdel]"); if(sed){ delSantEvent(sed.dataset.santeventdel); return; }
+  const scd=e.target.closest("[data-scalday]"); if(scd){ state.scalSel=scd.dataset.scalday; renderView(); return; }
+  const scn=e.target.closest("[data-scalnav]"); if(scn){ const b=new Date((state.scalCursor||state.scalSel||ymd(new Date()))+"T00:00:00"); b.setMonth(b.getMonth()+(scn.dataset.scalnav==="next"?1:-1)); state.scalCursor=ymd(b); renderView(); return; }
+  if(e.target.closest("#repSendBtn")){ sendSantReport(); return; }
+  const srd=e.target.closest("[data-santrepdel]"); if(srd){ delSantReport(srd.dataset.santrepdel); return; }
   const vtg=e.target.closest("[data-vistoggle]"); if(vtg){ toggleVisibility(vtg.dataset.vistoggle); return; }
   const ed=e.target.closest("[data-edit]"); if(ed){ const [k,i]=ed.dataset.edit.split(":"); openRecord(k,+i); return; }
   const dl=e.target.closest("[data-del]"); if(dl){ const [k,i]=dl.dataset.del.split(":"); deleteRecord(k,+i); return; }
@@ -3765,12 +4034,19 @@ document.addEventListener("change", e=>{
   const qf=e.target.closest("#q_fmt"); if(qf){ readQuoteForm(); renderView(); return; }
   const fu=e.target.closest("input[type=file][data-imgfield]"); if(fu){ uploadImgField(fu); return; }
   const rs=e.target.closest("[data-roleset]"); if(rs){ setMemberRole(rs.dataset.roleset, rs.value); return; }
+  const srs=e.target.closest("[data-santroleset]"); if(srs){ santSetRole(srs.dataset.santroleset, srs.value); return; }
 });
 document.addEventListener("input", e=>{
   // Búsqueda en vivo del Panel de Almas / picker (sin re-render, conserva foco).
   if(e.target.id==="clanSearch" || e.target.id==="clanAddSearch"){
     const q=(e.target.value||"").toLowerCase();
     const scope=e.target.id==="clanAddSearch"?document.getElementById("clanAddCard"):document.getElementById("clanPanelCard");
+    (scope||document).querySelectorAll("[data-mname]").forEach(r=>{ r.style.display=(!q||(r.dataset.mname||"").includes(q))?"":"none"; });
+    return;
+  }
+  if(e.target.id==="santSearch" || e.target.id==="santAddSearch"){
+    const q=(e.target.value||"").toLowerCase();
+    const scope=e.target.id==="santAddSearch"?document.getElementById("santAddCard"):document.getElementById("santPanelCard");
     (scope||document).querySelectorAll("[data-mname]").forEach(r=>{ r.style.display=(!q||(r.dataset.mname||"").includes(q))?"":"none"; });
     return;
   }
