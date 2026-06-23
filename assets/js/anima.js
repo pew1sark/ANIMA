@@ -571,6 +571,8 @@ function renderView(){
   document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + bodyHTML;
   if(state.view==="comunidad" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
   if(state.view==="consola"){ requestAnimationFrame(loadWorldMonitor); }
+  // Desliza la pestaña activa al centro (sensación suave en móvil).
+  requestAnimationFrame(()=>{ const on=document.querySelector(".morada-tab.on"); if(on && on.scrollIntoView){ try{ on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){} } });
 }
 /* Ventana bloqueada por nivel — explica qué la abre. */
 function vLocked(view){
@@ -597,7 +599,7 @@ function vMiAlma(a){
       ${avatarHTML(a,"lg")}
       <div style="flex:1;min-width:200px">
         <span class="level-badge" style="border-color:${lv.color}55;color:${lv.color}">${lv.emoji} ${lv.label} · ${lv.name}</span>
-        <h2 style="font-size:30px;letter-spacing:-.05em;margin:10px 0 2px">${esc(a.name)}</h2>
+        <h2 style="font-size:30px;letter-spacing:-.05em;margin:10px 0 2px">${esc(a.name)}${almaBadges(a)}</h2>
         <div class="muted">${esc(idline||"")}${(a.territory||a.country)?" · "+esc(a.territory||a.country):""}</div>
         ${a.handle?`<div class="muted" style="font-size:12.5px;margin-top:2px">${esc(a.handle)}</div>`:""}
       </div>
@@ -620,6 +622,15 @@ function vMiAlma(a){
   const tabbar=`<div class="card s12 tabbar">${tabs.map(([k,l])=>`<button class="tabbtn ${tab===k?'on':''}" data-tab="${k}">${l}</button>`).join("")}</div>`;
   const body = tab==="identidad"?vAlmaIdentidad(a) : tab==="publica"?vAlmaPublica(a) : tab==="ajustes"?vConfigBody(a) : vAlmaResumen(a,lp);
   return `<div class="grid">${header}${tabbar}${body}</div>`;
+}
+/* Insignias muy discretas (símbolos, no medallas):
+   ◉ Primera Alma (el Creador) · ✦ Alma Fundadora (Consejo del Origen). */
+function almaBadges(a){
+  if(!a) return "";
+  const b=[];
+  if(isCreator && a.live && a.id===me().id) b.push(`<span class="alma-sigil" title="Primera Alma">◉</span>`);
+  if(a.council || a.origin_soul) b.push(`<span class="alma-sigil" title="Alma Fundadora">✦</span>`);
+  return b.length?`<span class="alma-sigils">${b.join("")}</span>`:"";
 }
 function linksHTML(a){
   const L=[]; if(a.website)L.push(["Sitio",a.website]); if(a.instagram)L.push(["Instagram",a.instagram.startsWith("http")?a.instagram:"https://instagram.com/"+a.instagram.replace("@","")]);
@@ -2734,7 +2745,11 @@ async function refreshAuth(){
   isCreator = !!(s && s.user && (s.user.email||"").toLowerCase() === CREATOR_EMAIL);
   if(s){ const pend=localStorage.getItem("anima_pending_invite"); if(pend){ try{await Cloud.redeemInvite(pend);}catch(e){} localStorage.removeItem("anima_pending_invite"); }
     await loadMyAlma(); updateAuthUI(s);
-  }else{ if(state.almas.some(x=>x.live)){ state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; } updateAuthUI(null); renderAll(); }
+  }else{
+    // Sin sesión: ya no existe la "Invitada". El Alma vuelve al HOME principal
+    // (elige ALMA · CLAN · SANTUARIO / Entrar · Crear).
+    location.replace("home.html");
+  }
 }
 async function loadMyAlma(){
   const row=await Cloud.myAlma(); if(!row) return;
@@ -3001,8 +3016,8 @@ async function doForgot(){
 /* Cerrar sesión → vuelve al Home de ANIMA (la página principal por defecto). */
 async function logout(){ if(!confirm("¿Cerrar sesión de tu Alma?"))return; try{await Cloud.log("logout");}catch(e){} try{await Cloud.signOut();}catch(e){} try{sessionStorage.removeItem("anima_logged_login");}catch(e){} try{localStorage.removeItem("anima_awakened");}catch(e){} location.href="home.html"; }
 /* Cambiar de Alma → cierra sesión y abre el acceso para entrar con otra. */
-async function switchAlmaSession(){ try{await Cloud.signOut();}catch(e){}
-  isCreator=false; state.viewAs=null; state.almas=JSON.parse(JSON.stringify(SEED_ALMAS)); state.currentId="guest"; state.view="mialma"; save(); renderAll(); updateAuthUI(null); openAuth(); }
+async function switchAlmaSession(){ try{sessionStorage.removeItem("anima_logged_login");}catch(e){} try{await Cloud.signOut();}catch(e){}
+  isCreator=false; state.viewAs=null; location.href="home.html"; }
 
 /* --- Editar perfil --- */
 function openEdit(){ const a=me(); if(!a.live){ if(Cloud.enabled){ openAuth(); } else { alert("Entra a tu Alma para editar."); } return; }
@@ -3074,7 +3089,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
 /* ===========================================================
    RENDER + EVENTOS
    =========================================================== */
-function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); renderWhisperBell(); }
+function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); renderWhisperBell(); if(typeof hideBootLoader==="function") hideBootLoader(); }
 function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad") loadPosts(); if(view==="sant_plan") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
@@ -3335,18 +3350,31 @@ async function installApp(){
   else { alert("Cómo instalar ANIMA en tu dispositivo:\n\n• iPhone/iPad (Safari): toca Compartir ⬆️ → \"Agregar a inicio\".\n• Android (Chrome): menú ⋮ → \"Agregar a pantalla principal\".\n• Computador (Chrome/Edge): ícono de instalar ⊕ en la barra de direcciones.\n\nANIMA abrirá siempre en tu HOME, lista para habitar."); }
 }
 
-/* ---------- Boot ---------- */
-/* ¿Hay una sesión guardada en este dispositivo? (token de Supabase en
-   localStorage). Si la hay, NO mostramos el estado Invitada: enseñamos un
-   respiro de carga hasta que loadMyAlma() reconcilie. Así al refrescar no
-   "se sale y entra" la sesión (sin parpadeo de logout→login). */
-function hasStoredSession(){ try{ return Object.keys(localStorage).some(k=>/^sb-.*-auth-token$/.test(k) && localStorage.getItem(k)); }catch(e){ return false; } }
-if(Cloud.enabled && hasStoredSession()){
-  const v=document.getElementById("view");
-  if(v) v.innerHTML=`<div style="display:grid;place-items:center;min-height:60vh"><div class="muted" style="font-size:13px;letter-spacing:.02em">Despertando tu Alma…</div></div>`;
-}else{
-  renderAll();
+/* ---------- Despertar del Alma (pantalla de carga) ----------
+   Blanco absoluto, pixel art mínimo respirando en grises, "Despertando Alma…".
+   Cubre toda la pantalla hasta que el Alma real esté lista (o se redirija). */
+const BOOT_PIX=["....X....","...X.X...","..X.X.X..","...XXX...","XX..X..XX","...XXX...","..X.X.X..","...X.X...","....X...."];
+function bootPixel(){ let r=""; BOOT_PIX.forEach((row,y)=>{ [...row].forEach((ch,x)=>{ if(ch==="X") r+=`<rect x="${x}" y="${y}" width="1.04" height="1.04"/>`; }); });
+  return `<svg viewBox="0 0 9 9" shape-rendering="crispEdges" fill="#b4b4ba">${r}</svg>`; }
+function showBootLoader(){
+  let el=document.getElementById("animaBoot");
+  if(!el){ el=document.createElement("div"); el.id="animaBoot";
+    el.innerHTML=`<div class="ab-art">${bootPixel()}</div><div class="ab-label">Despertando Alma…</div>`;
+    document.body.appendChild(el); }
+  el.classList.remove("fade");
 }
+function hideBootLoader(){ const el=document.getElementById("animaBoot"); if(!el) return; el.classList.add("fade"); setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); }, 650); }
+/* ¿Hay una sesión guardada en este dispositivo? (token de Supabase). */
+function hasStoredSession(){ try{ return Object.keys(localStorage).some(k=>/^sb-.*-auth-token$/.test(k) && localStorage.getItem(k)); }catch(e){ return false; } }
+
+/* Bloquear zoom por pellizco en móvil (iOS ignora user-scalable). Solo afecta
+   el gesto multi-dedo de pinch; no toca el scroll, los taps ni el desktop. */
+["gesturestart","gesturechange","gestureend"].forEach(ev=>document.addEventListener(ev, e=>e.preventDefault(), { passive:false }));
+
+/* ---------- Boot ----------
+   Con nube: mostramos el Despertar y dejamos que refreshAuth decida (cargar el
+   Alma o, si no hay sesión, llevar al HOME). Sin nube: modo local. */
+if(Cloud.enabled){ showBootLoader(); } else { renderAll(); }
 setupPullToRefresh();
 refreshAuth();
 if("serviceWorker" in navigator){ window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }

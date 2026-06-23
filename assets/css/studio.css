@@ -521,6 +521,24 @@
 .esencia-now{display:flex;align-items:center;gap:12px;margin:10px 0 6px;flex-wrap:wrap}
 #esenciaBody .row{padding:9px 0}
 
+/* Despertar del Alma — pantalla de carga (blanco absoluto, pixel en grises) */
+#animaBoot{position:fixed;inset:0;z-index:10000;background:#ffffff;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:20px;opacity:1;transition:opacity .6s ease}
+#animaBoot.fade{opacity:0;pointer-events:none}
+#animaBoot .ab-art svg{width:62px;height:62px;image-rendering:pixelated;animation:abBreathe 2.6s ease-in-out infinite}
+@keyframes abBreathe{0%,100%{opacity:.32;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}
+#animaBoot .ab-label{font-family:ui-monospace,"DejaVu Sans Mono",monospace;font-size:10.5px;letter-spacing:.34em;
+  text-transform:uppercase;color:#9a9aa0;animation:abFade 2.6s ease-in-out infinite}
+@keyframes abFade{0%,100%{opacity:.4}50%{opacity:.85}}
+@media (prefers-reduced-motion: reduce){ #animaBoot .ab-art svg,#animaBoot .ab-label{animation:none;opacity:.7} }
+
+/* Insignias muy discretas en la tarjeta del Alma (símbolos, no medallas) */
+.alma-sigils{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
+.alma-sigil{font-size:13px;color:var(--gold-deep,#7b5920);opacity:.7;cursor:default}
+
+/* Móvil: scroll horizontal suave con inercia (sensación iPhone) */
+.morada-tabs-row,.wall-filter,.cat-picker,.botnav{-webkit-overflow-scrolling:touch}
+
 /* ===========================================================
    MÓVIL — sin franja arriba: el menú vive abajo. Arriba, mínimo y limpio:
    solo Susurros + cuenta, alineados a la derecha. (LUMBRE ya está abajo.)
