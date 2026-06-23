@@ -581,7 +581,7 @@ function renderView(){
   }
   document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + bodyHTML;
   if(state.view==="comunidad" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
-  if(state.view==="consola"){ requestAnimationFrame(loadWorldMonitor); }
+  if(state.view==="consola"){ requestAnimationFrame(loadWorldMonitor); requestAnimationFrame(loadRewardPanel); }
   // Desliza la pestaña activa al centro (sensación suave en móvil).
   requestAnimationFrame(()=>{ const on=document.querySelector(".morada-tab.on"); if(on && on.scrollIntoView){ try{ on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){} } });
 }
@@ -1118,7 +1118,39 @@ function vConsola(a){
       <div class="section-title"><h2>Monitor del Mundo</h2><div class="spacer"></div><button class="btn ghost sm" id="monitorReload">↻ Actualizar</button></div>
       <p class="muted" style="font-size:12.5px;margin:-4px 0 12px">Monitoreo total del Mundo, en tiempo real. Para ver en qué seguir mejorando.</p>
       <div id="monitorBody" class="muted" style="font-size:13px">Cargando métricas…</div></div>`;
-  return `<div class="grid">${omni}${monitor}${note}${rows}</div>`;
+
+  const exp=`<div class="card s12" id="expPanel">
+      <div class="section-title"><h2>Experiencia · Esencia</h2><div class="spacer"></div><button class="btn ghost sm" id="expReload">↻ Actualizar</button></div>
+      <p class="muted" style="font-size:12.5px;margin:-4px 0 12px">Controla la Esencia que reciben las Almas por cada hito. Los cambios aplican a <b>todo el Mundo</b> al instante. Cada recompensa se cobra <b>una sola vez por Alma</b> (en cualquier dispositivo, sin repetir).</p>
+      <div id="expBody" class="muted" style="font-size:13px">Cargando experiencia…</div></div>`;
+  return `<div class="grid">${omni}${monitor}${exp}${note}${rows}</div>`;
+}
+/* Panel de Experiencia (Creador): edita montos de Esencia y ve cuántas Almas
+   cobraron cada recompensa. Aplica a todo el Mundo vía reward_config. */
+async function loadRewardPanel(){
+  const body=document.getElementById("expBody"); if(!body) return;
+  if(!isCreator || !Cloud.enabled){ body.textContent="Disponible solo para el Creador conectado."; return; }
+  try{
+    const [cfg, stats]=await Promise.all([Cloud.rewardConfig(), Cloud.rewardStats().catch(()=>[])]);
+    const smap={}; (stats||[]).forEach(s=>{ smap[s.key]=s; });
+    body.innerHTML = cfg.map(c=>{ const st=smap[c.key]||{claims:0,total:0};
+      return `<div class="row exp-row" style="gap:10px;align-items:flex-end;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:10px 0">
+        <div class="grow" style="min-width:190px"><b>${esc(c.label)}</b><br><small class="muted">${esc(c.key)} · ${st.claims||0} cobros · ${(st.total||0).toLocaleString("es-CL")} Esencia repartida</small></div>
+        <label class="fld" style="width:120px"><span>Esencia</span><input id="exp_amt_${esc(c.key)}" type="number" min="0" value="${c.amount}"></label>
+        <label class="fld" style="width:110px"><span>Activa</span><select id="exp_on_${esc(c.key)}"><option value="1" ${c.enabled?"selected":""}>Sí</option><option value="0" ${!c.enabled?"selected":""}>No</option></select></label>
+        <button class="btn sm gold" data-expsave="${esc(c.key)}">Guardar</button>
+      </div>`; }).join("") || `<p class="muted">Sin parámetros de experiencia.</p>`;
+  }catch(e){ body.textContent="No se pudo cargar: "+(e.message||e); }
+}
+async function saveRewardConfig(key){
+  if(!isCreator || !Cloud.enabled) return;
+  const amtEl=document.getElementById("exp_amt_"+key), onEl=document.getElementById("exp_on_"+key);
+  const amt=parseInt((amtEl||{}).value,10); const on=((onEl||{}).value)==="1";
+  try{
+    await Cloud.rewardConfigSet(key, isNaN(amt)?null:amt, on);
+    await loadRewardConfig(); await loadRewardPanel();
+    toast("✦ Experiencia actualizada.");
+  }catch(e){ alert("No se pudo guardar: "+(e.message||e)); }
 }
 /* Monitor del Mundo (Creador): agregados de monitoreo desde la nube. */
 async function loadWorldMonitor(){
@@ -1728,27 +1760,48 @@ function toast(msg){
    en el dispositivo; los hitos por conteo (1ª obra/proyecto) son además
    idempotentes por naturaleza. Aditivo: se suma a la xp por acción.
    =========================================================== */
+/* Config de la experiencia (montos por acción). El Creador la edita en la
+   Consola; el cobro real usa SIEMPRE el valor del servidor. */
+async function loadRewardConfig(){
+  if(!Cloud.enabled) return;
+  try{ const rows=await Cloud.rewardConfig(); state.rewardCfg={}; rows.forEach(r=>state.rewardCfg[r.key]=r); }catch(e){}
+}
+function rewardAmt(key, def){ const c=state.rewardCfg&&state.rewardCfg[key]; if(!c) return def; if(c.enabled===false) return 0; return (typeof c.amount==="number")?c.amount:def; }
+/* Registro local de respaldo (solo cuando no hay nube). */
 function rewardKey(){ return "anima_rewards_"+(me().almaId||me().id||"local"); }
 function rewardStore(){ try{ return JSON.parse(localStorage.getItem(rewardKey()))||{}; }catch(e){ return {}; } }
 function rewardSave(s){ try{ localStorage.setItem(rewardKey(), JSON.stringify(s)); }catch(e){} }
 function esenciaToast(amount, reason){ toast("✦ +"+amount+" Esencia"+(reason?" · "+reason:"")); }
+/* Suma de Esencia repetible (no se rastrea). Atómica si hay nube. */
 async function grantEsencia(amount, reason, opts){
-  const a=me(); if(!amount || !a) return;
+  const a=me(); if(!amount || amount<=0 || !a) return;
   a.xp=(a.xp||0)+amount;
   if(a.live){ try{ await Cloud.setXP(a.almaId, a.xp); }catch(e){} }
   await syncLevel(a); save();
   if(!(opts&&opts.silent)){ esenciaToast(amount, reason); setTimeout(maybeLevelGuide,400); }
 }
-/* Otorga una sola vez por clave (por Alma). Devuelve true si se otorgó ahora. */
+/* Otorga una sola vez por clave (durable y CROSS-DEVICE vía servidor). El monto
+   lo decide el servidor (reward_config). 'amount' es solo respaldo offline/toast.
+   Devuelve true si se otorgó ahora. */
 async function rewardOnce(key, amount, reason){
+  const a=me();
+  if(a && a.live && Cloud.enabled){
+    try{
+      const r=await Cloud.claimReward(key);
+      if(typeof (r&&r.xp)==="number"){ a.xp=r.xp; await syncLevel(a); save(); }
+      if(r && r.granted){ esenciaToast(r.amount||amount, reason); setTimeout(maybeLevelGuide,400); return true; }
+      return false;   // ya cobrada (otro dispositivo / sesión anterior) o deshabilitada
+    }catch(e){ /* sin red: respaldo local */ }
+  }
   const s=rewardStore(); if(s[key]) return false;
   s[key]=Date.now(); rewardSave(s);
   await grantEsencia(amount, reason);
   return true;
 }
-/* Otorga una vez por día (por Alma). */
+/* Otorga una vez por día (clave + fecha → única por jornada). */
 async function rewardDaily(key, amount, reason){
   const today=new Date().toISOString().slice(0,10);
+  if(me() && me().live && Cloud.enabled) return rewardOnce(key+":"+today, amount, reason);
   const s=rewardStore(); if(s[key]===today) return false;
   s[key]=today; rewardSave(s);
   await grantEsencia(amount, reason);
@@ -1841,7 +1894,7 @@ async function doFollow(id){
       try{ Cloud.emitEcho("eco","✦ "+nick+" y "+onick+" forman una nueva Constelación"); }catch(_){}
     }
     // Esencia: +100 por cada Alma nueva con la que te vinculas (sin re-farmeo).
-    if(nowFollowing) await rewardOnce("vinc_"+id,100,"Te vinculaste con un Alma");
+    if(nowFollowing) await rewardOnce("vinculo:"+id,100,"Te vinculaste con un Alma");
     openPublic(id);
     if(state.view==="comunidad") renderView();
   }catch(e){ alert("No se pudo vincular: "+(e.message||e)); }
@@ -1918,7 +1971,7 @@ async function sendPost(){
   try{ await Cloud.insertRow("posts",{author_alma_id:a.almaId,kind:"post",title,body,image_url:image_url||null,category});
     // Esencia: 1ª Huella en la Comunidad +300; luego +150 por cada publicación.
     const firstHuella=await rewardOnce("primera_huella",300,"Tu primera Huella en la Comunidad");
-    if(!firstHuella) await grantEsencia(150,"Nueva Huella en la Comunidad");
+    if(!firstHuella) await grantEsencia(rewardAmt("huella",150),"Nueva Huella en la Comunidad");
     if(window.WorldTree) WorldTree.onHuella({ almaName:a.name, branch:branchOf(a), country:a.country, targetId:a.almaId });
     await loadPosts(); }
   catch(e){ alert("No se pudo publicar: "+(e.message||e)); }
@@ -2997,10 +3050,13 @@ async function saveRecord(){
       const item={...v};
       if(a.live){ const row=await Cloud.insertRow(cfg.table, {...cfg.toRow(v), alma_id:a.almaId}); item._id=row.id; }
       arr[cfg.push==="push"?"push":"unshift"](item);
-      if(cfg.xp){ a.xp=(a.xp||0)+cfg.xp; if(a.live){ try{await Cloud.setXP(a.almaId,a.xp);}catch(e){} } await syncLevel(a); }
-      // Esencia: hitos de "primera vez" (sobre la xp normal por acción).
-      if(kind==="obra" && arr.length===1) await rewardOnce("primera_obra",200,"Tu primera obra");
-      if(kind==="proyecto" && arr.length===1) await rewardOnce("primer_proyecto",150,"Tu primer Proyecto");
+      // Esencia: la PRIMERA obra/proyecto otorga el bono grande (reemplaza la xp
+      // normal de la acción); las siguientes suman la xp por acción de siempre.
+      const milestone = (kind==="obra" && arr.length===1) ? ["primera_obra",200,"Tu primera obra"]
+                      : (kind==="proyecto" && arr.length===1) ? ["primer_proyecto",150,"Tu primer Proyecto"] : null;
+      let claimed=false;
+      if(milestone) claimed=await rewardOnce(milestone[0],milestone[1],milestone[2]);
+      if(!claimed && cfg.xp){ a.xp=(a.xp||0)+cfg.xp; if(a.live){ try{await Cloud.setXP(a.almaId,a.xp);}catch(e){} } await syncLevel(a); }
       if(a.live) recordAlphaEvents(kind, v, arr);
       if(kind==="proyecto") await interconnectProject(a, v);   // Proyecto ↔ Cliente ↔ Raíz ↔ Flujo
     }else{
@@ -3171,8 +3227,9 @@ async function loadMyAlma(){
   try{ const p=await Cloud.getPrefs(row.id); if(p) localStorage.setItem("anima_cfg_"+row.id, JSON.stringify(p)); }catch(e){}
   state.almas=[a];   // tu Alma viva, limpia (las de muestra no se mezclan)
   state.currentId=a.id; state.view="mialma"; state.chat=[]; renderAll();
-  // Esencia de bienvenida y de ingreso diario (generosa en los primeros pasos).
-  if((a.xp||0)===0) rewardOnce("crear_alma",100,"Naciste en ANIMA");
+  // Experiencia: carga montos y otorga Esencia de bienvenida + ingreso diario.
+  await loadRewardConfig();
+  rewardOnce("crear_alma",100,"Naciste en ANIMA");        // servidor: 1 sola vez por Alma
   rewardDaily("ingreso_diario",30,"Primer ingreso del día");
   // Sistema de logs (Alpha 2026): registra el inicio de sesión una vez por sesión.
   try{ if(!sessionStorage.getItem("anima_logged_login")){ Cloud.log("login"); sessionStorage.setItem("anima_logged_login","1"); } }catch(e){}
@@ -3560,6 +3617,8 @@ document.addEventListener("click", e=>{
   const rn=e.target.closest("[data-reino]"); if(rn){ toggleReino(rn.dataset.reino); return; }
   const va=e.target.closest("[data-viewas]"); if(va){ setViewAs(va.dataset.viewas); return; }
   if(e.target.closest("#monitorReload")){ loadWorldMonitor(); return; }
+  if(e.target.closest("#expReload")){ loadRewardPanel(); return; }
+  const xs=e.target.closest("[data-expsave]"); if(xs){ saveRewardConfig(xs.dataset.expsave); return; }
   if(e.target.closest("#chSend")){ publishChangelog(); return; }
   const chd=e.target.closest("[data-chdel]"); if(chd){ deleteChangelogEntry(chd.dataset.chdel); return; }
   const cs=e.target.closest("[data-cssave]"); if(cs){ consolaSave(cs.dataset.cssave); return; }
