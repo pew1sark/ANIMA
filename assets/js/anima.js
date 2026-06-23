@@ -659,8 +659,8 @@ function vAlmaResumen(a,lp){
     <div class="card s3"><div class="stat"><span class="num">${a.clan?esc(a.clan):"—"}</span><span class="lbl">${a.clan?"Tu Clan":"Sin Clan aún"}</span></div></div>`:``}
     ${cfg.cards.camino!==false?`<div class="card s12 camino-card">${caminoPixelHTML(lp)}</div>`:``}
     ${cfg.cards.graficos!==false?`
-    <div class="card s6"><div class="section-title"><h2>Raíz por mes</h2></div>${chartFinance(a)}</div>
-    <div class="card s6"><div class="section-title"><h2>Trabajos por estado</h2></div>${chartProjects(a)}</div>`:``}
+    <div class="card s6 card-link" data-go="finanzas"><div class="section-title"><h2>Raíz por mes</h2><div class="spacer"></div><span class="card-link-go">Ver Raíz →</span></div>${chartFinance(a)}${raizStats(a)}</div>
+    <div class="card s6 card-link" data-go="proyectos"><div class="section-title"><h2>Flujo de trabajo</h2><div class="spacer"></div><span class="card-link-go">Ver Flujo →</span></div>${flowSummary(a)}</div>`:``}
     ${cfg.cards.hoy!==false?`<div class="card s6"><div class="section-title"><h2>Hoy</h2><div class="spacer"></div><button class="btn sm" data-add="cita">+ Cita</button></div>
       ${a.agenda.map((x,i)=>`<div class="row"><b style="color:var(--gold);width:60px">${esc(x.h)}</b><div class="grow">${esc(x.t)}</div>${acts("cita",i)}</div>`).join("")||`<p class="muted">Sin agenda hoy.</p>`}</div>`:``}
     ${cfg.cards.memoria!==false?`<div class="card s6"><div class="section-title"><h2>Última memoria</h2><div class="spacer"></div><button class="btn sm" data-add="memoria">+ Memoria</button></div>
@@ -713,6 +713,39 @@ function chartProjects(a){
   const counts=FLOW.map(s=>({s,n:a.projects.filter(p=>flowOf(p.st)===s).length}));
   const max=Math.max(1,...counts.map(c=>c.n));
   return `<div>${counts.map(c=>`<div class="hbar"><small>${c.s}</small><div class="hb"><span style="width:${Math.round(c.n/max*100)}%"></span></div><b>${c.n}</b></div>`).join("")}</div>`;
+}
+/* Raíz por mes — análisis: promedio, mejor mes, variación y tendencia. */
+const MON_ABBR=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+function raizStats(a){
+  const map={};
+  a.finance.income.forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k)(map[k]=map[k]||{i:0,e:0}).i+=x.a;});
+  a.finance.expense.forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k)(map[k]=map[k]||{i:0,e:0}).e+=x.a;});
+  const keys=Object.keys(map).sort(); if(!keys.length) return "";
+  const profits=keys.map(k=>map[k].i-map[k].e);
+  const avg=profits.reduce((t,n)=>t+n,0)/profits.length;
+  let bi=0; profits.forEach((p,i)=>{ if(p>profits[bi]) bi=i; });
+  const last=profits[profits.length-1], prev=profits.length>1?profits[profits.length-2]:null;
+  const growth=(prev!=null && prev!==0)?Math.round((last-prev)/Math.abs(prev)*100):null;
+  const trend=(prev==null)?"→":(last>prev?"↑":last<prev?"↓":"→");
+  const fm=k=>{ const [y,m]=k.split("-"); return MON_ABBR[(+m)-1]+" "+y.slice(2); };
+  const cell=(k,v)=>`<div><span class="rs-k">${k}</span><b>${v}</b></div>`;
+  return `<div class="raiz-stats">
+    ${cell("Promedio", money(Math.round(avg)))}
+    ${cell("Mejor mes", fm(keys[bi])+" · "+money(profits[bi]))}
+    ${cell("Variación", growth==null?"—":((growth>=0?"+":"")+growth+"%"))}
+    ${cell("Tendencia", trend+" "+(last>=0?"Ganancia":"Pérdida"))}
+  </div>`;
+}
+/* Flujo de trabajo — por estado, con cantidad, monto y porcentaje. */
+function flowSummary(a){
+  if(!a.projects.length) return `<p class="muted" style="font-size:13px">Aún no registras trabajos.</p>`;
+  const total=a.projects.length;
+  const buckets=FLOW.map(s=>{ const ps=a.projects.filter(p=>flowOf(p.st)===s); return {s,n:ps.length,monto:ps.reduce((t,p)=>t+(+p.budget||0),0)}; }).filter(b=>b.n>0);
+  return `<div class="flow-rows">${buckets.map(b=>`<div class="flow-row">
+      <span class="fr-s">${esc(b.s)}</span>
+      <span class="fr-track"><span class="fr-fill" style="width:${Math.max(5,Math.round(b.n/total*100))}%"></span></span>
+      <span class="fr-meta"><b>${b.n}</b> · ${money(b.monto)} · ${Math.round(b.n/total*100)}%</span>
+    </div>`).join("")}</div>`;
 }
 async function saveIdentity(){
   const a=me(); if(!a.live) return;
