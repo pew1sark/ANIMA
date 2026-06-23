@@ -577,6 +577,19 @@
   border-radius:14px;background:radial-gradient(circle at 0% 0%,rgba(208,170,99,.1),transparent 70%)}
 .mon-stage .ms-g{font-size:30px;line-height:1}
 
+/* Clan — identidad, panel de Almas, zona del Admin */
+.clan-identity .ci-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.clan-identity .ci-emoji{font-size:36px;line-height:1;width:62px;height:62px;display:grid;place-items:center;
+  border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.5);flex:0 0 auto}
+.clan-identity .ci-edit,.card .ci-edit{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.ci-edit input{border:1px solid var(--line);border-radius:11px;padding:10px 12px;font:inherit;font-size:14px;background:#fff}
+.ci-edit input#clanName,.ci-edit input#clanDesc,.ci-edit input#newClanName{flex:1;min-width:140px}
+.ci-edit input#clanEmoji,.ci-edit input#newClanEmoji{font-size:18px;text-align:center}
+.clan-member{align-items:center}
+.clan-member .role-sel{flex:0 0 auto}
+.clan-add{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.clan-danger{border:1px solid rgba(192,57,43,.3)}
+
 /* ===========================================================
    MÓVIL — sin franja arriba: el menú vive abajo. Arriba, mínimo y limpio:
    solo Susurros + cuenta, alineados a la derecha. (LUMBRE ya está abajo.)

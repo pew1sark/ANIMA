@@ -178,6 +178,17 @@ const Cloud = {
   async updateTeamTask(id, patch){ const { error } = await _sb.from("team_tasks").update(patch).eq("id", id); if(error) throw error; },
   async deleteTeamTask(id){ const { error } = await _sb.from("team_tasks").delete().eq("id", id); if(error) throw error; },
 
+  /* Clan como entidad (migración 0027): identidad + gestión por el Admin. */
+  async clan(name){ if(!_sb||!name) return null; const { data } = await _sb.from("clans").select("*").eq("name", name).maybeSingle(); return data; },
+  async clans(){ if(!_sb) return []; const { data } = await _sb.from("clans").select("*").order("created_at",{ascending:true}); return data||[]; },
+  async clanCreate(name, emoji, desc){ const { data, error } = await _sb.rpc("clan_create", { p_name:name, p_emoji:emoji||null, p_desc:desc||null }); if(error) throw error; return data; },
+  async clanUpdate(name, emoji, desc){ const { error } = await _sb.rpc("clan_update", { p_name:name, p_emoji:emoji||null, p_desc:desc||null }); if(error) throw error; },
+  async clanRename(oldN, newN){ const { data, error } = await _sb.rpc("clan_rename", { p_old:oldN, p_new:newN }); if(error) throw error; return data; },
+  async clanDelete(name){ const { error } = await _sb.rpc("clan_delete", { p_name:name }); if(error) throw error; },
+  async clanSetRole(alma, role){ const { error } = await _sb.rpc("clan_set_role", { p_alma:alma, p_role:role }); if(error) throw error; },
+  async clanRemoveMember(alma){ const { error } = await _sb.rpc("clan_remove_member", { p_alma:alma }); if(error) throw error; },
+  async clanAddMember(alma, clan){ const { error } = await _sb.rpc("clan_add_member", { p_alma:alma, p_clan:clan }); if(error) throw error; },
+
   /* Clan: calendario sincronizado y proyectos (migración 0011) */
   async clanEvents(clan){ const { data, error } = await _sb.from("clan_events").select("*").eq("clan", clan).order("at_date",{ascending:true}); if(error) throw error; return data||[]; },
   async addClanEvent(clan, row){ const { data, error } = await _sb.from("clan_events").insert({ clan, ...row }).select().single(); if(error) throw error; return data; },
