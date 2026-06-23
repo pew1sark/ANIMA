@@ -97,7 +97,6 @@
         '<p style="margin-left:auto;margin-right:auto">ANIMA es un mundo vivo habitado por Almas.</p>' +
       '</div>' +
 
-      // Estado del Mundo — Almas actuales
       '<div class="hcard" style="text-align:center">' +
         '<div class="label">Almas del Origen</div>' +
         '<div class="big" style="font-size:40px;margin-top:4px"><span id="homeSouls">·</span> <span style="color:var(--muted);font-size:20px;font-weight:700">/ 100</span></div>' +
@@ -106,7 +105,6 @@
         '<div class="hint" id="homeSoulsSub" style="margin-top:10px">El Umbral de ANIMA.</div>' +
       '</div>' +
 
-      // Entrar / Despertar
       '<div class="home-cta">' +
         '<a class="cbtn gold" href="entrar.html" style="padding:12px 22px">Entrar a mi Alma</a>' +
         '<a class="cbtn ghost" href="umbral.html" style="padding:12px 22px">✦ Despertar una nueva Alma</a>' +
@@ -134,10 +132,6 @@
       entry("ALMA", "✦", "Mi Alma", "Tu espacio privado: identidad, proyectos y memoria.", "studio.html") +
       entry("CLAN", "❂", "Clan", "Tu equipo (2–8 Almas): agenda y memoria colectiva.", "studio.html#go=clanpanel") +
       entry("SANTUARIO", "🜁", "Santuario", "La organización (8+): múltiples Clanes.", "studio.html#go=santuario");
-
-    var sleepLine = SLEPT
-      ? '<div class="soul-sleep"><span class="moon">☽</span><div>Tu Alma durmió por <b>' + esc(SLEPT) + '</b>. Bienvenida de vuelta.</div></div>'
-      : '';
 
     var sleepLine = SLEPT
       ? '<div class="soul-sleep"><span class="moon">☽</span><div>Tu Alma durmió por <b>' + esc(SLEPT) + '</b>. Bienvenida de vuelta, ' + esc(nameFirst) + '.</div></div>'
@@ -202,7 +196,6 @@
           var row = await Cloud.myAlma();
           if (row) {
             ctx.plan = row.plan || "ALMA";
-            ctx.awakened = !!row.awakening_completed;
             var st = AnimaState.get();
             if (row.name) st.name = row.name;
             if (row.affinity) st.affinity = row.affinity;
