@@ -103,6 +103,13 @@ const Cloud = {
   async addEssence(amount){ if(!_sb) return null; const { data } = await _sb.rpc("add_essence", { p_amount:amount }); return data; },
   setEssence(almaId, essence){ return _sb.from("almas").update({ essence }).eq("id", almaId); },
 
+  /* Experiencia / recompensas de Esencia (migración 0030). Cross-device:
+     el cobro y el incremento de xp son atómicos en el servidor. */
+  async claimReward(key){ if(!_sb) return { granted:false }; const { data, error } = await _sb.rpc("claim_reward", { p_key:key }); if(error) throw error; return data||{ granted:false }; },
+  async rewardConfig(){ if(!_sb) return []; const { data } = await _sb.from("reward_config").select("*").order("sort",{ascending:true}); return data||[]; },
+  async rewardConfigSet(key, amount, enabled){ const { error } = await _sb.rpc("reward_config_set", { p_key:key, p_amount:(amount==null?null:amount), p_enabled:(enabled==null?null:enabled) }); if(error) throw error; },
+  async rewardStats(){ if(!_sb) return []; const { data, error } = await _sb.rpc("reward_stats"); if(error) throw error; return data||[]; },
+
   /* Consola del Creador: edita otra Alma. .select() permite saber si
      RLS dejó pasar el cambio (data vacío = bloqueado, falta migración 0005). */
   async adminUpdateAlma(almaId, patch){
