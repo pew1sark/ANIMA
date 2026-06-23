@@ -537,6 +537,7 @@ function renderView(){
     sant_plan:vSantPlan }[state.view] || vMiAlma;
   document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + animaWrap(fn(me()));
   if(state.view==="comunidad" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
+  if(state.view==="consola"){ requestAnimationFrame(loadWorldMonitor); }
 }
 /* Ventana bloqueada por nivel — explica qué la abre. */
 function vLocked(view){
@@ -718,7 +719,8 @@ function imgUpField(inputId, label, val, folder){
 const UPLOAD_BUCKETS = {
   perfil:{ bucket:"avatars",   maxMB:2,  folder:"avatar" },
   obra:  { bucket:"portfolio", maxMB:10, folder:"obra" },
-  banner:{ bucket:"media",     maxMB:10, folder:"banner" }
+  banner:{ bucket:"media",     maxMB:10, folder:"banner" },
+  huella:{ bucket:"media",     maxMB:10, folder:"huella" }   // fotos de Huellas/Ritual (no cuentan al límite del portafolio)
 };
 async function uploadImgField(fileInput){
   const file = fileInput.files && fileInput.files[0]; if(!file) return;
@@ -1008,7 +1010,35 @@ function vConsola(a){
       </div>`;
   }).join("") : `<div class="card s12"><p class="muted">Aún no hay Almas reales. Cuando alguien cruce el umbral aparecerá aquí.</p></div>`;
 
-  return `<div class="grid">${omni}${note}${rows}</div>`;
+  const monitor=`<div class="card s12" id="worldMonitor">
+      <div class="section-title"><h2>Monitor del Mundo</h2><div class="spacer"></div><button class="btn ghost sm" id="monitorReload">↻ Actualizar</button></div>
+      <p class="muted" style="font-size:12.5px;margin:-4px 0 12px">Monitoreo total del Mundo, en tiempo real. Para ver en qué seguir mejorando.</p>
+      <div id="monitorBody" class="muted" style="font-size:13px">Cargando métricas…</div></div>`;
+  return `<div class="grid">${omni}${monitor}${note}${rows}</div>`;
+}
+/* Monitor del Mundo (Creador): agregados de monitoreo desde la nube. */
+async function loadWorldMonitor(){
+  const body=document.getElementById("monitorBody"); if(!body) return;
+  if(!isCreator || !Cloud.enabled){ body.textContent="Disponible solo para el Creador conectado."; return; }
+  try{
+    const m=await Cloud.worldMonitor(); if(!m){ body.textContent="Sin datos."; return; }
+    const tile=(n,l)=>`<div class="mon-tile"><div class="n">${(n??0).toLocaleString("es-CL")}</div><span class="l">${l}</span></div>`;
+    const grid=`<div class="mon-grid">
+      ${tile(m.souls,"Almas / 100")}${tile(m.awakened,"Despertadas")}${tile(m.origin,"del Origen / 50")}${tile(m.new_week,"Nuevas (7d)")}
+      ${tile(m.active_today,"Activas hoy")}${tile(m.active_week,"Activas (7d)")}${tile(m.with_photo,"Con foto")}${tile(m.with_country,"Con país")}
+      ${tile(m.posts,"Huellas")}${tile(m.posts_week,"Huellas (7d)")}${tile(m.rituals,"Rituales")}${tile(m.sparks,"Chispas")}
+      ${tile(m.follows,"Vínculos")}${tile(m.constellations,"Constelaciones")}${tile(m.echoes_today,"Ecos hoy")}${tile(m.works,"Obras")}
+    </div>`;
+    const lv=(m.by_level&&typeof m.by_level==="object")?LEVELS.map(l=>({l,n:m.by_level[l.key]||0})).filter(d=>d.n>0):[];
+    const lvMax=lv.reduce((mx,d)=>Math.max(mx,d.n),1);
+    const lvBars=lv.length?`<div class="section-title" style="margin-top:16px"><h3 style="font-size:14px;margin:0">Almas por nivel</h3></div>
+      <div class="wt-bars">${lv.map(d=>`<div class="wt-bar"><span>${d.l.emoji} ${esc(d.l.label)}</span><span class="track"><span class="fill" style="width:${Math.max(6,Math.round(d.n/lvMax*100))}%"></span></span><b>${d.n}</b></div>`).join("")}</div>`:"";
+    const co=Array.isArray(m.by_country)?m.by_country.filter(c=>c&&c.country&&c.country!=="En tránsito"):[];
+    const coMax=co.reduce((mx,c)=>Math.max(mx,c.n||0),1);
+    const coBars=co.length?`<div class="section-title" style="margin-top:14px"><h3 style="font-size:14px;margin:0">Almas por país</h3></div>
+      <div class="wt-bars">${co.slice(0,8).map(c=>`<div class="wt-bar"><span>${esc(countryLabel(c.country))}</span><span class="track"><span class="fill" style="width:${Math.max(6,Math.round((c.n||0)/coMax*100))}%"></span></span><b>${c.n}</b></div>`).join("")}</div>`:"";
+    body.innerHTML=grid+lvBars+coBars;
+  }catch(e){ body.textContent="No se pudo cargar el monitor: "+(e.message||e); }
 }
 async function consolaSave(almaId){
   if(!isCreator || !Cloud.enabled) return;
@@ -1371,12 +1401,12 @@ function vComunidad(a){
         <div><div class="num">${nivelesCount}</div><span class="lbl">Niveles habitando el Mundo</span></div>
       </div></div>`;
   // ALMAS CONECTADAS — tu Constelación (vínculos mutuos) o la del Mundo.
-  let myConstel=null, constelTitle="Almas conectadas", constelCount="";
+  let myConstel=null, constelTitle="Almas conectadas", constelCount="", chipList=list.slice(0,8);
   if(a.live && state.following && state.followers){
     const mutual=list.filter(m=> m.id && state.following.has(m.id) && state.followers.has(m.id));
-    if(mutual.length){ myConstel=[a, ...mutual]; constelTitle="Tu Constelación"; constelCount=`<div class="spacer"></div><span class="pill gold">${mutual.length}</span>`; }
+    if(mutual.length){ myConstel=[a, ...mutual]; chipList=mutual; constelTitle="Tu Constelación"; constelCount=`<div class="spacer"></div><span class="pill gold">${mutual.length}</span>`; }
   }
-  const connect = `<div class="card s4"><div class="section-title"><h2 style="font-size:15px">${constelTitle}</h2>${constelCount}</div>${constelMini(myConstel||list)}</div>`;
+  const connect = `<div class="card s4 constel-card"><div class="section-title"><h2 style="font-size:15px">${constelTitle}</h2>${constelCount}</div>${constelMini(myConstel||list)}${constelChips(chipList)}</div>`;
 
   // DISTRIBUCIÓN POR PAÍS — barras.
   const maxC=countriesArr.length?countriesArr[0][1]:1;
@@ -1398,6 +1428,7 @@ function vComunidad(a){
   const create = a.live ? `<div class="card s12"><div class="section-title"><h2>Comparte con la comunidad</h2></div>
       <div class="field"><input id="postTitle" placeholder="Título (opcional)"></div>
       <div class="field"><textarea id="postBody" rows="2" placeholder="¿Qué estás creando? Comparte un proyecto, idea o pregunta…"></textarea></div>
+      ${imgUpField("postImg","Foto del proyecto (opcional)","","huella")}
       <button class="btn" id="postSend">Dejar mi Huella</button></div>`
     : `<div class="card s12"><p class="muted">Entra a tu Alma para dejar tu Huella en la comunidad.</p></div>`;
   const wall = `<div class="card s12"><div class="section-title"><h2>Muro de la comunidad</h2><div class="spacer"></div><span class="pill ${liveMode()?'gold':''}">${feed.length} Huellas</span></div>
@@ -1409,7 +1440,8 @@ function vComunidad(a){
         return `<div class="post">${cAvatar(au,"sm",visitId)}
           <div class="grow">
             <div data-openpost="${p.id}" style="cursor:pointer"><b>${esc(p.title||au.name)}</b>${isRit?` <span class="pill gold" style="font-size:9px">🜂 Ritual</span>`:""}<br><small class="muted">${esc(au.name)} · ${timeAgo(p.created_at)}</small>
-            <p style="margin:6px 0 0">${esc((p.body||"").slice(0,160))}${(p.body||"").length>160?"…":""}</p></div>
+            ${p.body?`<p style="margin:6px 0 0">${esc((p.body||"").slice(0,160))}${(p.body||"").length>160?"…":""}</p>`:""}
+            ${p.image_url?`<div class="post-img" style="background-image:url('${esc(p.image_url)}')"></div>`:""}</div>
             <div class="post-foot">
               <button class="spark-btn ${sparked?'on':''}" data-spark="${p.id}" title="${sparked?'Quitar tu Chispa':'Dar una Chispa'}">✦ <b>${sc}</b></button>
               <button class="eco-link" data-openpost="${p.id}">◎ Ecos</button>
@@ -1447,6 +1479,15 @@ function constelMini(list){
     stars+=`<span class="wt-star ${act?'pub-link':''}" ${act} title="${esc(p.m.name)}" style="left:${p.x}%;top:${p.y}%;${bg}">${url?"":initials(p.m.name)}</span>`; });
   return `<div class="wt-constel">${links}${stars}</div>`;
 }
+/* Fila de Almas (avatar + nombre) bajo la constelación — clic para visitar. */
+function constelChips(arr){
+  const top=(arr||[]).filter(m=>m && m.id).slice(0,8);
+  if(!top.length) return "";
+  return `<div class="constel-names">${top.map(m=>{
+    const visit=(liveMode()&&!m.live)?`data-pub="${m.id}"`:"";
+    return `<button class="constel-chip ${visit?'pub-link':''}" ${visit}>${cAvatar(m,"sm")}<span>${esc((m.name||"").split(" ")[0])}</span></button>`;
+  }).join("")}</div>`;
+}
 /* Monta el Árbol Vivo y enlaza el Estado del Mundo con el DOM (en vivo). */
 function updateWtDom(s){
   const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
@@ -1483,6 +1524,8 @@ function doRitual(kind){
   document.getElementById("ritualBody").value="";
   document.getElementById("ritualTitle").value="";
   document.getElementById("ritualMsg").textContent="";
+  const ri=document.getElementById("ritualImg"); if(ri) ri.value="";
+  const rp=document.getElementById("prev_ritualImg"); if(rp){ rp.style.backgroundImage=""; rp.textContent="Sin imagen"; rp.classList.remove("has"); }
   document.getElementById("ritualModal").classList.add("open");
   setTimeout(()=>{ const t=document.getElementById("ritualBody"); if(t) t.focus(); },120);
 }
@@ -1492,11 +1535,12 @@ async function sendRitual(){
   if(ritualDoneToday(a)){ closeRitual(); toast("🜂 Ya encendiste la vela hoy."); renderView(); return; }
   const body=document.getElementById("ritualBody").value.trim();
   const title=(document.getElementById("ritualTitle").value.trim())||"Mi Huella de la semana";
+  const image_url=(document.getElementById("ritualImg")||{}).value||"";
   const msg=document.getElementById("ritualMsg");
-  if(!body){ msg.textContent="Cuenta qué creaste esta semana para encender la vela."; return; }
+  if(!body && !image_url){ msg.textContent="Cuenta qué creaste esta semana (o sube una foto) para encender la vela."; return; }
   msg.textContent="Encendiendo la vela…";
   try{
-    await Cloud.insertRow("posts",{ author_alma_id:a.almaId, kind:"ritual", title, body });
+    await Cloud.insertRow("posts",{ author_alma_id:a.almaId, kind:"ritual", title, body, image_url:image_url||null });
     try{ localStorage.setItem(ritualKey(a),"1"); }catch(e){}
     if(window.WorldTree){ WorldTree.onRitual({ almaName:a.name, country:a.country }); WorldTree.onHuella({ almaName:a.name, branch:branchOf(a), country:a.country, targetId:a.almaId }); }
     if(window.AnimaState){ AnimaState.addEsencia(20,"Ritual del Eco"); setTimeout(maybeLevelGuide,400); }
@@ -1613,8 +1657,9 @@ function ensureEcoRealtime(){
 async function sendPost(){
   const a=me(); if(!a.live){ alert("Entra a tu Alma para publicar."); return; }
   const title=document.getElementById("postTitle").value.trim(), body=document.getElementById("postBody").value.trim();
-  if(!title && !body) return;
-  try{ await Cloud.insertRow("posts",{author_alma_id:a.almaId,kind:"post",title,body});
+  const image_url=(document.getElementById("postImg")||{}).value||"";
+  if(!title && !body && !image_url) return;
+  try{ await Cloud.insertRow("posts",{author_alma_id:a.almaId,kind:"post",title,body,image_url:image_url||null});
     if(window.AnimaState){ AnimaState.addEsencia(15,"Publicar en comunidad"); setTimeout(maybeLevelGuide,400); }
     if(window.WorldTree) WorldTree.onHuella({ almaName:a.name, branch:branchOf(a), country:a.country, targetId:a.almaId });
     await loadPosts(); }
@@ -1644,7 +1689,8 @@ function openPost(id){
       <div style="flex:1"><b ${visitId?'class="pub-link" data-pub="'+visitId+'"':""}>${esc(au.name)}</b><br><small class="muted">${timeAgo(p.created_at)}</small></div>
       <button class="spark-btn ${sparked?'on':''}" data-spark="${p.id}" title="${sparked?'Quitar tu Chispa':'Dar una Chispa'}">✦ <b>${sc}</b></button></div>
     ${p.title?`<h2 style="margin:12px 0 4px;letter-spacing:-.03em">${esc(p.title)}</h2>`:""}
-    <p style="white-space:pre-wrap">${esc(p.body||"")}</p>
+    ${p.body?`<p style="white-space:pre-wrap">${esc(p.body||"")}</p>`:""}
+    ${p.image_url?`<img class="post-modal-img" src="${esc(p.image_url)}" alt="" loading="lazy">`:""}
     <div class="section-title" style="margin-top:14px"><h3 style="font-size:14px;margin:0">Ecos</h3></div>
     <div id="postComments" class="muted">Cargando…</div>
     <div class="lum-input" style="margin-top:10px"><input id="commentInput" placeholder="Escribe un Eco…"><button class="btn" id="commentSend" data-post="${id}">↑</button></div>`;
@@ -2863,6 +2909,7 @@ document.addEventListener("click", e=>{
   const pvEarly=e.target.closest("[data-pub]"); if(pvEarly){ openPublic(pvEarly.dataset.pub); return; }
   const rn=e.target.closest("[data-reino]"); if(rn){ toggleReino(rn.dataset.reino); return; }
   const va=e.target.closest("[data-viewas]"); if(va){ setViewAs(va.dataset.viewas); return; }
+  if(e.target.closest("#monitorReload")){ loadWorldMonitor(); return; }
   const cs=e.target.closest("[data-cssave]"); if(cs){ consolaSave(cs.dataset.cssave); return; }
   if(e.target.closest("[data-teamadd]")){ addTeamTask(); return; }
   const tcy=e.target.closest("[data-taskcycle]"); if(tcy){ cycleTask(tcy.dataset.taskcycle); return; }

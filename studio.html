@@ -184,6 +184,13 @@
       <p class="muted" style="font-size:13px;margin:2px 0 10px">Comparte tu Huella de la semana. Se publicará en el Muro de la comunidad y el Árbol resonará contigo.</p>
       <div class="field"><label>¿Qué creaste esta semana?</label><textarea id="ritualBody" rows="4" placeholder="Una obra, un avance, una idea que tomó forma…"></textarea></div>
       <div class="field"><label>Título (opcional)</label><input id="ritualTitle" placeholder="Dale un nombre a tu Huella"></div>
+      <div class="field"><label>Foto del proyecto (opcional)</label>
+        <div class="img-up">
+          <div class="img-prev" id="prev_ritualImg">Sin imagen</div>
+          <label class="btn sm secondary img-pick">⤒ Subir foto<input type="file" accept="image/*" hidden data-imgfield="1" data-imgfolder="huella" data-imgtarget="ritualImg" data-imgprev="prev_ritualImg" data-imgstatus="up_ritualImg"></label>
+          <input id="ritualImg" data-imgurl="prev_ritualImg" type="text" placeholder="o pega el enlace de una imagen" value="">
+        </div>
+        <small class="muted img-hint" id="up_ritualImg">JPG · PNG · WebP — hasta 10 MB.</small></div>
       <button class="btn gold" id="ritualSend" style="width:100%">🜂 Encender la vela</button>
       <div id="ritualMsg" class="muted" style="font-size:12.5px;margin-top:10px;min-height:16px"></div>
     </div>
