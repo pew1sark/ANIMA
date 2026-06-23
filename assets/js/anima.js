@@ -629,8 +629,8 @@ function vAlmaResumen(a,lp){
   const active=a.projects.filter(p=>!["Entregado","Cerrado","Terminado"].includes(p.st)).length;
   const createCTA=(!a.live && Cloud.enabled)?`<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
       <span class="pill gold">Estás viendo una Alma de muestra</span>
-      <p style="margin:8px 0 0">Crea tu propia Alma para construir tu trayectoria real y aparecer en la constelación.</p>
-      <div style="margin-top:12px"><button class="btn" id="createAlmaBtn">✦ Crear mi Alma</button></div></div>`:``;
+      <p style="margin:8px 0 0">Entra a tu Alma o crea una nueva para construir tu trayectoria real y aparecer en la constelación.</p>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="enterAlmaBtn">Entrar</button><button class="btn secondary" id="createAlmaBtn">✦ Crear mi Alma</button></div></div>`:``;
   const onboarding=(a.live && a.memories.length===0 && a.projects.length===0)?`<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
       <span class="pill gold">Bienvenida, Alma nueva</span>
       <p style="margin:8px 0 0">Empieza por <b>Identidad</b>: pon tu foto y datos. Luego crea tu primer trabajo o memoria. Cada acción da Esencia.</p>
@@ -2779,6 +2779,8 @@ function renderAlmaMenu(){
     }
     items.push(`<div class="apop-sep"></div>`);
   }
+  // Cómo instalar ANIMA (siempre disponible en el menú del nombre).
+  items.push(`<button class="apop-item" id="almaInstall">⤓ Cómo instalar ANIMA</button>`);
   if(me().live) items.push(`<button class="apop-item" id="almaPass">🔑 Cambiar contraseña</button>`);
   items.push(`<button class="apop-item" id="almaSwitch">⤿ Cambiar de Alma</button>`);
   items.push(`<button class="apop-item danger" id="almaLogout">⏻ Cerrar sesión</button>`);
@@ -3148,6 +3150,7 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#q_save")) qSave();
   if(e.target.closest("#q_export")) qExport();
   if(e.target.closest("#createAlmaBtn")) openAuth();
+  if(e.target.closest("#enterAlmaBtn")) openAuth();
   if(e.target.closest("#idSave")) saveIdentity();
   if(e.target.closest("#edSave")) saveEdit();
   if(e.target.closest("#edClose")||bdClose(e,"editModal")) closeEdit();
@@ -3187,6 +3190,7 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#almaTour")){ closeAlmaMenu(); startTour(); return; }
   if(e.target.closest("#almaFeedback")){ closeAlmaMenu(); openFeedback(); return; }
   if(e.target.closest("#almaCodice")){ closeAlmaMenu(); openCodice(); return; }
+  if(e.target.closest("#almaInstall")){ closeAlmaMenu(); installApp(); return; }
   if(e.target.closest("#almaPass")){ closeAlmaMenu(); openChangePass(); return; }
   if(e.target.closest("#almaSwitch")){ closeAlmaMenu(); switchAlmaSession(); return; }
   if(e.target.closest("#almaLogout")){ closeAlmaMenu(); logout(); return; }
@@ -3268,11 +3272,12 @@ function tourNext(){ tourStep((state.tourI||0)+1); }
 function tourKey(){ return "anima_tour_done_"+(me().almaId||me().id||"guest"); }
 function tourDone(){ try{ return localStorage.getItem(tourKey())==="1"; }catch(e){ return false; } }
 function endTour(){ document.getElementById("tour").classList.remove("open"); try{ localStorage.setItem(tourKey(),"1"); }catch(e){} }
-/* Lanza el tutorial automáticamente solo si esta Alma no lo ha visto nunca. */
+/* Lanza el tutorial automáticamente UNA sola vez por Alma. Se marca como visto
+   en cuanto se abre (no hace falta terminarlo): así no reaparece en cada visita. */
 function maybeAutoTour(){
   if(tourDone()) return;
   const tEl=document.getElementById("tour"); if(tEl && tEl.classList.contains("open")) return;
-  setTimeout(()=>{ if(!tourDone()){ const t=document.getElementById("tour"); if(t && !t.classList.contains("open")) startTour(); } }, 900);
+  setTimeout(()=>{ if(tourDone()) return; const t=document.getElementById("tour"); if(t && !t.classList.contains("open")){ try{ localStorage.setItem(tourKey(),"1"); }catch(e){} startTour(); } }, 900);
 }
 
 /* ---------- PWA (instalable) ---------- */
@@ -3281,14 +3286,23 @@ window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferred
 window.addEventListener("appinstalled", ()=>{ deferredPrompt=null; const b=document.getElementById("installBtn"); if(b) b.hidden=true; });
 async function installApp(){
   if(deferredPrompt){ deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; const b=document.getElementById("installBtn"); if(b) b.hidden=true; }
-  else { alert("Para instalar ANIMA:\n\n• iPhone/iPad (Safari): botón Compartir → \"Agregar a inicio\".\n• Android (Chrome): menú ⋮ → \"Instalar app\".\n• Computador (Chrome/Edge): ícono de instalar en la barra de direcciones."); }
+  else { alert("Cómo instalar ANIMA en tu dispositivo:\n\n• iPhone/iPad (Safari): toca Compartir ⬆️ → \"Agregar a inicio\".\n• Android (Chrome): menú ⋮ → \"Agregar a pantalla principal\".\n• Computador (Chrome/Edge): ícono de instalar ⊕ en la barra de direcciones.\n\nANIMA abrirá siempre en tu HOME, lista para habitar."); }
 }
 
 /* ---------- Boot ---------- */
-renderAll();
+/* ¿Hay una sesión guardada en este dispositivo? (token de Supabase en
+   localStorage). Si la hay, NO mostramos el estado Invitada: enseñamos un
+   respiro de carga hasta que loadMyAlma() reconcilie. Así al refrescar no
+   "se sale y entra" la sesión (sin parpadeo de logout→login). */
+function hasStoredSession(){ try{ return Object.keys(localStorage).some(k=>/^sb-.*-auth-token$/.test(k) && localStorage.getItem(k)); }catch(e){ return false; } }
+if(Cloud.enabled && hasStoredSession()){
+  const v=document.getElementById("view");
+  if(v) v.innerHTML=`<div style="display:grid;place-items:center;min-height:60vh"><div class="muted" style="font-size:13px;letter-spacing:.02em">Despertando tu Alma…</div></div>`;
+}else{
+  renderAll();
+}
 setupPullToRefresh();
 refreshAuth();
 if("serviceWorker" in navigator){ window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
-/* Auto-tutorial: una sola vez por Alma. Si hay sesión, loadMyAlma() lo dispara
-   con el Alma real ya cargada; aquí cubrimos el caso Invitada / sin nube. */
-setTimeout(()=>{ if(!(Cloud.enabled)) maybeAutoTour(); else Cloud.session().then(s=>{ if(!s) maybeAutoTour(); }).catch(()=>maybeAutoTour()); }, 1400);
+/* Auto-tutorial: SOLO para un Alma con sesión (lo dispara loadMyAlma una vez por
+   Alma). No se muestra a la Invitada para no repetirlo en cada apertura. */
