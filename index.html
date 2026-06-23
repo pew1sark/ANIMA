@@ -351,7 +351,7 @@
            sola vez. Un Alma que ya despertó en este dispositivo entra DIRECTO a
            su HOME (studio.html), sin volver a pasar por el Umbral. La nube sigue
            siendo la verdad: el gate (despertar.html) revalida en otros equipos. --- */
-    try{ if(localStorage.getItem("anima_awakened")==="1"){ location.replace("studio.html"); return; } }catch(e){}
+    try{ if(localStorage.getItem("anima_awakened")==="1"){ location.replace("home.html"); return; } }catch(e){}
     /* --- todos cruzan el Umbral: el gate (despertar.html) decide con la nube
            si esta Alma ya despertó (→ su Alma) o debe vivir el Primer Despertar. --- */
     function entryHref(){ return "despertar.html"; }
@@ -408,7 +408,7 @@
               Cloud.session().then(function(sess){
                 if(!sess) return;
                 Cloud.myAlma().then(function(alma){
-                  if(alma && alma.awakening_completed){ try{localStorage.setItem("anima_awakened","1");}catch(e){} location.replace("studio.html"); }
+                  if(alma && alma.awakening_completed){ try{localStorage.setItem("anima_awakened","1");}catch(e){} location.replace("home.html"); }
                 }).catch(function(){});
               }).catch(function(){});
             }
