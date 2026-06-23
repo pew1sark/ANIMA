@@ -139,6 +139,10 @@
       ? '<div class="soul-sleep"><span class="moon">☽</span><div>Tu Alma durmió por <b>' + esc(SLEPT) + '</b>. Bienvenida de vuelta.</div></div>'
       : '';
 
+    var sleepLine = SLEPT
+      ? '<div class="soul-sleep"><span class="moon">☽</span><div>Tu Alma durmió por <b>' + esc(SLEPT) + '</b>. Bienvenida de vuelta, ' + esc(nameFirst) + '.</div></div>'
+      : '';
+
     home.innerHTML =
       topBar() +
 
@@ -198,6 +202,7 @@
           var row = await Cloud.myAlma();
           if (row) {
             ctx.plan = row.plan || "ALMA";
+            ctx.awakened = !!row.awakening_completed;
             var st = AnimaState.get();
             if (row.name) st.name = row.name;
             if (row.affinity) st.affinity = row.affinity;
