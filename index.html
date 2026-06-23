@@ -352,9 +352,10 @@
            su HOME (studio.html), sin volver a pasar por el Umbral. La nube sigue
            siendo la verdad: el gate (despertar.html) revalida en otros equipos. --- */
     try{ if(localStorage.getItem("anima_awakened")==="1"){ location.replace("home.html"); return; } }catch(e){}
-    /* --- todos cruzan el Umbral: el gate (despertar.html) decide con la nube
-           si esta Alma ya despertó (→ su Alma) o debe vivir el Primer Despertar. --- */
-    function entryHref(){ return "despertar.html"; }
+    /* --- Toda entrada lleva al HOME PRINCIPAL. Allí el Alma ve el Resumen del
+           Mundo (si no ha iniciado sesión) o su propia Alma (si la inició), y
+           desde el HOME puede elegir cruzar el Umbral para despertar. --- */
+    function entryHref(){ return "home.html"; }
     /* --- Portal inmersivo negro→blanco, luego navega --- */
     var navigating=false;
     function enter(e){
