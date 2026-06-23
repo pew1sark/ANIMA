@@ -47,7 +47,9 @@ const LUMBRE_MODES = [
   { key:"CLOUD",  name:"IA Conectada", desc:"Conecta Claude, OpenAI, Gemini u Ollama (opcional)." }
 ];
 
-const money = n => "$" + Number(n||0).toLocaleString("es-CL");
+/* Modo discreto: oculta ingresos, ganancias y montos con •••••• (privacidad). */
+let ANIMA_DISCREET = (()=>{ try{ return localStorage.getItem("anima_discreet")==="1"; }catch(e){ return false; } })();
+const money = n => ANIMA_DISCREET ? "••••••" : "$" + Number(n||0).toLocaleString("es-CL");
 
 /* --- Alma invitada (solo cuando no hay sesión) --- */
 const SEED_ALMAS = [{

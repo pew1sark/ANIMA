@@ -290,9 +290,8 @@
     render(
       '<div class="eyebrow mono">Crear Alma</div>'+
       '<p class="big">Da forma a tu Alma</p>'+
-      '<p class="sub">Aquí no hay usuarios. Hay Almas. Esto es lo único que necesitamos para que nazcas.</p>'+
+      '<p class="sub">Aquí no hay usuarios. Hay Almas. Esto es lo único que necesitamos para que nazcas. Tu nombre lo elegirás después, dentro de ANIMA.</p>'+
       '<form class="form" id="crearForm" autocomplete="on" novalidate>'+
-        '<div class="field"><label>Nombre del Alma</label><input id="f_name" name="name" placeholder="¿Cómo te llamarás dentro de ANIMA?" autocomplete="name" /></div>'+
         '<div class="field"><label>Correo</label><input id="f_email" name="email" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" /></div>'+
         '<div class="field"><label>Contraseña</label><input id="f_pass" name="password" type="password" placeholder="Una clave secreta (mín. 6)" autocomplete="new-password" /></div>'+
         '<div class="field"><label>Código del Origen</label><input id="f_code" name="code" placeholder="'+esc(ALPHA)+'" autocomplete="off" /></div>'+
@@ -305,7 +304,6 @@
         '<div style="text-align:center"><a class="tiny-link" id="c_have">¿Ya tienes un Alma? · Entrar</a></div>'+
       '</form>',
       function(){
-        document.getElementById("f_name").value=form.name;
         document.getElementById("f_email").value=form.email;
         document.getElementById("f_code").value=form.code;
         bind("b_back", sPacto);
@@ -317,9 +315,9 @@
 
   async function nacer(){
     var g=function(id){ return (document.getElementById(id).value||"").trim(); };
-    form.name=g("f_name"); form.email=g("f_email"); form.pass=document.getElementById("f_pass").value; form.code=g("f_code");
+    form.email=g("f_email"); form.pass=document.getElementById("f_pass").value; form.code=g("f_code");
+    form.name=(form.email.split("@")[0]||"Alma");   // el nombre se elige después, dentro de ANIMA
     var err=document.getElementById("f_err");
-    if(!form.name){ err.textContent="Toda Alma necesita un nombre."; return; }
     if(!form.email || !/.+@.+\..+/.test(form.email)){ err.textContent="Necesitamos un correo válido."; return; }
     if(!form.pass || form.pass.length<6){ err.textContent="Tu clave debe tener al menos 6 caracteres."; return; }
     var okCode = window.AnimaState ? AnimaState.checkAlphaCode(form.code) : (form.code.toUpperCase()===ALPHA);

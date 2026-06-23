@@ -103,10 +103,11 @@
         <div style="flex:1"><b>Entra a tu Alma</b><br><small class="muted">Tu espacio privado, en la nube.</small></div>
         <button class="btn ghost sm" id="authClose">✕</button>
       </div>
-      <div class="field"><label>Nombre (solo al crear)</label><input id="authName" placeholder="Tu nombre de Alma" autocomplete="name" /></div>
       <div class="field"><label>Correo</label><input id="authEmail" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" /></div>
       <div class="field"><label>Contraseña</label><input id="authPass" type="password" placeholder="••••••••" autocomplete="current-password" /></div>
-      <div class="field"><label>Código de invitación (solo al crear)</label><input id="authCode" placeholder="Beta cerrada — pídeselo a SARK" autocomplete="off" /></div>
+      <label class="field" style="display:flex;align-items:center;gap:9px;cursor:pointer"><input type="checkbox" id="authRemember" checked style="width:16px;height:16px;accent-color:var(--gold)"><span style="font-size:13px">Recordar sesión</span></label>
+      <div class="field"><label>Código del Origen (solo al crear)</label><input id="authCode" placeholder="Beta cerrada — pídeselo a SARK" autocomplete="off" /></div>
+      <p class="muted" style="font-size:12px;margin:-4px 0 6px">Tu nombre de Alma lo eliges después, dentro de ANIMA.</p>
       <div style="display:flex;gap:10px;margin-top:6px">
         <button class="btn" id="authSignIn" style="flex:1">Entrar</button>
         <button class="btn secondary" id="authSignUp" style="flex:1">Crear Alma</button>
