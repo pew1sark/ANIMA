@@ -3741,36 +3741,73 @@ function setupPullToRefresh(){
 
 /* ---------- Deslizar para navegar entre moradas (móvil) ----------
    Igual orden que la barra inferior: Mi Alma · Taller · Mundo (+ Clan/Santuario
-   si el plan da acceso). Deslizar a la izquierda avanza; a la derecha retrocede. */
+   si el plan da acceso). La ventana sigue el dedo y, al soltar, completa el
+   cambio con una transición suave (tipo Instagram) o vuelve a su sitio. Solo
+   navega entre las moradas del menú inferior; en los bordes rebota y NUNCA
+   sale al HOME. */
 function swipeSectionViews(){
   const list=["mialma","proyectos","comunidad"];
   if(planAllows("clanpanel")) list.push("clanpanel");
   if(planAllows("santuario")) list.push("santuario");
   return list;
 }
-function swipeNav(dir){
+function swipeTargetView(dir){
   const views=swipeSectionViews();
   const map={mialma:"mialma",taller:"proyectos",mundo:"comunidad",clan:"clanpanel",santuario:"santuario"};
   let idx=views.indexOf(map[sectionOfView(state.view)]);
   if(idx<0) idx=0;
   const ni=idx+dir;
-  if(ni<0||ni>=views.length) return;
-  go(views[ni]);
+  if(ni<0||ni>=views.length) return null;   // borde: no hay morada → rebota
+  return views[ni];
 }
 function setupSwipeNav(){
+  const view=document.getElementById("view"); if(!view) return;
   const overlayOpen=()=>document.querySelector('[id$="Modal"].open, #drawer.open, #side.open, #tour.open, .alma-pop.open, .whisper-pop.open')!=null;
-  let x0=0,y0=0,active=false;
+  const W=()=>Math.min(window.innerWidth, 560);
+  let x0=0,y0=0,dx=0,axis=null,active=false,animating=false;
+  const setX=px=>{ view.style.transform = px ? "translateX("+px+"px)" : ""; };
+  const ease=()=>{ view.style.transition="transform .22s cubic-bezier(.22,.61,.36,1)"; };
+  const reset=()=>{ view.style.transition=""; view.style.transform=""; };
+
   window.addEventListener("touchstart",e=>{
-    if(window.innerWidth>960 || e.touches.length!==1 || overlayOpen()){ active=false; return; }
-    x0=e.touches[0].clientX; y0=e.touches[0].clientY; active=true;
+    if(animating || window.innerWidth>960 || e.touches.length!==1 || overlayOpen()){ active=false; return; }
+    x0=e.touches[0].clientX; y0=e.touches[0].clientY; dx=0; axis=null; active=true;
+    view.style.transition="none";
   },{passive:true});
-  window.addEventListener("touchend",e=>{
+
+  window.addEventListener("touchmove",e=>{
+    if(!active) return;
+    const t=e.touches[0], mx=t.clientX-x0, my=t.clientY-y0;
+    if(axis===null){
+      if(Math.abs(mx)<8 && Math.abs(my)<8) return;          // aún sin decidir el eje
+      axis = Math.abs(mx) > Math.abs(my)*1.2 ? "x" : "y";
+    }
+    if(axis!=="x"){ active=false; reset(); return; }         // vertical → deja scroll / refresco
+    e.preventDefault();                                      // bloquea el "atrás" del navegador
+    dx = mx;
+    if(!swipeTargetView(dx<0?1:-1)) dx = mx*0.3;             // resistencia elástica en el borde
+    setX(dx);
+  },{passive:false});
+
+  window.addEventListener("touchend",()=>{
     if(!active) return; active=false;
-    if(overlayOpen()) return;
-    const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0;
-    // Debe ser un gesto claramente horizontal y con recorrido suficiente.
-    if(Math.abs(dx)<70 || Math.abs(dx)<Math.abs(dy)*1.6) return;
-    swipeNav(dx<0?1:-1);
+    if(axis!=="x") return;
+    const w=W(), target=swipeTargetView(dx<0?1:-1), commit = target && Math.abs(dx) > w*0.25;
+    if(commit){
+      animating=true;
+      const out = dx<0 ? -w : w, inFrom = dx<0 ? w : -w;
+      ease(); setX(out);
+      setTimeout(()=>{
+        go(target);                                          // re-renderiza la nueva morada
+        view.style.transition="none"; setX(inFrom);
+        void view.offsetWidth;                               // fuerza reflow
+        ease(); setX(0);
+        setTimeout(()=>{ reset(); animating=false; }, 240);
+      }, 200);
+    } else {
+      ease(); setX(0);                                       // rebote a su sitio
+      setTimeout(reset, 240);
+    }
   },{passive:true});
 }
 async function doAuth(mode){
