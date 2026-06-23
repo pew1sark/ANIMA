@@ -89,14 +89,15 @@ function openLevels(){
   document.getElementById("levelModal").classList.add("open");
 }
 function closeLevels(){ document.getElementById("levelModal").classList.remove("open"); }
-/* Cómo se gana Esencia (informativo, igual al mapa de niveles). */
+/* Cómo se gana Esencia (informativo, refleja las recompensas reales). */
 const ESENCIA_WAYS = [
-  ["✦","Completar tu identidad","+20","una sola vez"],
-  ["🜂","Ritual del Eco","+20","una vez al día"],
-  ["▦","Publicar una Huella en el Mundo","+15",""],
-  ["◎","Dejar un Eco (comentar una Huella)","+5",""],
-  ["⚖","Proponer en el Consejo","+20",""],
-  ["○","Cruzar el Umbral (Primer Despertar)","+1","al nacer"]
+  ["○","Nacer en ANIMA","+100","al crear tu Alma"],
+  ["✦","Completar tu Núcleo","+150","una sola vez"],
+  ["✧","Subir tu primera obra","+200","luego +40 c/u"],
+  ["▦","Crear tu primer Proyecto","+150","luego +60 c/u"],
+  ["📜","Tu primera Huella en la Comunidad","+300","luego +150 c/u"],
+  ["🌱","Vincularte con otra Alma","+100","por cada Alma nueva"],
+  ["🜂","Primer ingreso del día","+30","una vez al día"]
 ];
 function openEsencia(){
   const a=me(); const lp=levelProgress(a.xp);
@@ -770,7 +771,10 @@ async function saveIdentity(){
     a.instagram=patch.instagram; a.portfolio_url=patch.portfolio_url; a.shop_url=patch.shop_url; a.tags=patch.tags;
     a.role=patch.discipline||a.role;
     // Esencia: completar el perfil con lo esencial (una sola vez)
-    if(window.AnimaState && patch.bio && patch.discipline && (patch.tags||[]).length){ AnimaState.addEsenciaOnce("perfil",20,"Completar tu Alma"); setTimeout(maybeLevelGuide,400); }
+    if(patch.bio && patch.discipline && (patch.tags||[]).length){
+      if(window.AnimaState) AnimaState.addEsenciaOnce("perfil",20,"Completar tu Alma");
+      rewardOnce("completar_nucleo",150,"Completaste tu Núcleo");   // Esencia visible
+    }
     renderAll(); updateAuthUI(await Cloud.session()); alert("Identidad guardada ✓");
   }catch(e){ alert("No se pudo guardar (¿aplicaste la migración 0003?): "+(e.message||e)); }
 }
@@ -1716,6 +1720,40 @@ function toast(msg){
   t.textContent=msg; requestAnimationFrame(()=>{ t.style.opacity="1"; t.style.transform="translateX(-50%) translateY(-4px)"; });
   clearTimeout(t._h); t._h=setTimeout(()=>{ t.style.opacity="0"; t.style.transform="translateX(-50%)"; },2600);
 }
+/* ===========================================================
+   ESENCIA — Recompensas de crecimiento (primeros pasos).
+   Otorgan Esencia visible (xp) por hitos para que el Alma sienta pronto
+   "estoy creciendo dentro de ANIMA". Las de "primera vez" se cobran una
+   sola vez por Alma; el ingreso diario, una vez por día. Registro durable
+   en el dispositivo; los hitos por conteo (1ª obra/proyecto) son además
+   idempotentes por naturaleza. Aditivo: se suma a la xp por acción.
+   =========================================================== */
+function rewardKey(){ return "anima_rewards_"+(me().almaId||me().id||"local"); }
+function rewardStore(){ try{ return JSON.parse(localStorage.getItem(rewardKey()))||{}; }catch(e){ return {}; } }
+function rewardSave(s){ try{ localStorage.setItem(rewardKey(), JSON.stringify(s)); }catch(e){} }
+function esenciaToast(amount, reason){ toast("✦ +"+amount+" Esencia"+(reason?" · "+reason:"")); }
+async function grantEsencia(amount, reason, opts){
+  const a=me(); if(!amount || !a) return;
+  a.xp=(a.xp||0)+amount;
+  if(a.live){ try{ await Cloud.setXP(a.almaId, a.xp); }catch(e){} }
+  await syncLevel(a); save();
+  if(!(opts&&opts.silent)){ esenciaToast(amount, reason); setTimeout(maybeLevelGuide,400); }
+}
+/* Otorga una sola vez por clave (por Alma). Devuelve true si se otorgó ahora. */
+async function rewardOnce(key, amount, reason){
+  const s=rewardStore(); if(s[key]) return false;
+  s[key]=Date.now(); rewardSave(s);
+  await grantEsencia(amount, reason);
+  return true;
+}
+/* Otorga una vez por día (por Alma). */
+async function rewardDaily(key, amount, reason){
+  const today=new Date().toISOString().slice(0,10);
+  const s=rewardStore(); if(s[key]===today) return false;
+  s[key]=today; rewardSave(s);
+  await grantEsencia(amount, reason);
+  return true;
+}
 /* Resumen general del Mundo (clanes, santuarios, panorama). Acceso restringido. */
 function worldSummaryCard(list){
   const clanes=[...new Set(list.map(x=>x.clan).filter(Boolean))];
@@ -1802,6 +1840,8 @@ async function doFollow(id){
       toast("✦ Nació una Constelación con "+((other&&other.name)||"otra Alma"));
       try{ Cloud.emitEcho("eco","✦ "+nick+" y "+onick+" forman una nueva Constelación"); }catch(_){}
     }
+    // Esencia: +100 por cada Alma nueva con la que te vinculas (sin re-farmeo).
+    if(nowFollowing) await rewardOnce("vinc_"+id,100,"Te vinculaste con un Alma");
     openPublic(id);
     if(state.view==="comunidad") renderView();
   }catch(e){ alert("No se pudo vincular: "+(e.message||e)); }
@@ -1876,7 +1916,9 @@ async function sendPost(){
   const catEl=document.querySelector(".cat-pick.on"); const category=(catEl&&catEl.dataset.postcat)||state.postCat||"obra";
   if(!title && !body && !image_url) return;
   try{ await Cloud.insertRow("posts",{author_alma_id:a.almaId,kind:"post",title,body,image_url:image_url||null,category});
-    if(window.AnimaState){ AnimaState.addEsencia(15,"Publicar en comunidad"); setTimeout(maybeLevelGuide,400); }
+    // Esencia: 1ª Huella en la Comunidad +300; luego +150 por cada publicación.
+    const firstHuella=await rewardOnce("primera_huella",300,"Tu primera Huella en la Comunidad");
+    if(!firstHuella) await grantEsencia(150,"Nueva Huella en la Comunidad");
     if(window.WorldTree) WorldTree.onHuella({ almaName:a.name, branch:branchOf(a), country:a.country, targetId:a.almaId });
     await loadPosts(); }
   catch(e){ alert("No se pudo publicar: "+(e.message||e)); }
@@ -2956,6 +2998,9 @@ async function saveRecord(){
       if(a.live){ const row=await Cloud.insertRow(cfg.table, {...cfg.toRow(v), alma_id:a.almaId}); item._id=row.id; }
       arr[cfg.push==="push"?"push":"unshift"](item);
       if(cfg.xp){ a.xp=(a.xp||0)+cfg.xp; if(a.live){ try{await Cloud.setXP(a.almaId,a.xp);}catch(e){} } await syncLevel(a); }
+      // Esencia: hitos de "primera vez" (sobre la xp normal por acción).
+      if(kind==="obra" && arr.length===1) await rewardOnce("primera_obra",200,"Tu primera obra");
+      if(kind==="proyecto" && arr.length===1) await rewardOnce("primer_proyecto",150,"Tu primer Proyecto");
       if(a.live) recordAlphaEvents(kind, v, arr);
       if(kind==="proyecto") await interconnectProject(a, v);   // Proyecto ↔ Cliente ↔ Raíz ↔ Flujo
     }else{
@@ -3126,6 +3171,9 @@ async function loadMyAlma(){
   try{ const p=await Cloud.getPrefs(row.id); if(p) localStorage.setItem("anima_cfg_"+row.id, JSON.stringify(p)); }catch(e){}
   state.almas=[a];   // tu Alma viva, limpia (las de muestra no se mezclan)
   state.currentId=a.id; state.view="mialma"; state.chat=[]; renderAll();
+  // Esencia de bienvenida y de ingreso diario (generosa en los primeros pasos).
+  if((a.xp||0)===0) rewardOnce("crear_alma",100,"Naciste en ANIMA");
+  rewardDaily("ingreso_diario",30,"Primer ingreso del día");
   // Sistema de logs (Alpha 2026): registra el inicio de sesión una vez por sesión.
   try{ if(!sessionStorage.getItem("anima_logged_login")){ Cloud.log("login"); sessionStorage.setItem("anima_logged_login","1"); } }catch(e){}
   // Insignia Persistencia: 30 días habitando ANIMA (best-effort).
