@@ -1113,7 +1113,9 @@ async function loadWorldMonitor(){
   try{
     const m=await Cloud.worldMonitor(); if(!m){ body.textContent="Sin datos."; return; }
     const tile=(n,l)=>`<div class="mon-tile"><div class="n">${(n??0).toLocaleString("es-CL")}</div><span class="l">${l}</span></div>`;
-    const grid=`<div class="mon-grid">
+    const ts=treeStage(m.souls||0);
+    const stageBanner=`<div class="mon-stage"><span class="ms-g">${ts.glyph}</span><div class="grow"><b>Estado del Árbol: ${esc(ts.label)}</b><div class="ebar" style="margin:7px 0 4px"><span style="width:${ts.pct}%"></span></div><small class="muted">${ts.next?`${ts.pct}% hacia ${esc(ts.next.label)} · faltan ${Math.max(0,ts.next.min-(m.souls||0))} Almas`:"Santuario Vivo · forma máxima ∞"}</small></div></div>`;
+    const grid=stageBanner+`<div class="mon-grid">
       ${tile(m.souls,"Almas / 100")}${tile(m.awakened,"Despertadas")}${tile(m.origin,"del Origen / 50")}${tile(m.new_week,"Nuevas (7d)")}
       ${tile(m.active_today,"Activas hoy")}${tile(m.active_week,"Activas (7d)")}${tile(m.with_photo,"Con foto")}${tile(m.with_country,"Con país")}
       ${tile(m.posts,"Huellas")}${tile(m.posts_week,"Huellas (7d)")}${tile(m.rituals,"Rituales")}${tile(m.sparks,"Chispas")}
@@ -1423,6 +1425,20 @@ function authorOf(id){ return (state.cloudAlmas||[]).find(x=>x.id===id) || {name
    "Esto forma parte de la ventana de Comunidad." (Alpha 2026)
    =========================================================== */
 const ECO_ICON={ despertar:"✦", huella:"▦", nivel:"⤴", eco:"◎", senal:"➶", consejo:"⚖" };
+/* ESTADO DEL ÁRBOL — evoluciona según cuántas Almas lo habitan.
+   Semilla → Brote → Raíz → Tronco → Bosque → Santuario Vivo. */
+const TREE_STAGES=[
+  {key:"semilla",  label:"Semilla",        glyph:"🌰", min:0},
+  {key:"brote",    label:"Brote",          glyph:"🌱", min:10},
+  {key:"raiz",     label:"Raíz",           glyph:"🌿", min:25},
+  {key:"tronco",   label:"Tronco",         glyph:"🪴", min:50},
+  {key:"bosque",   label:"Bosque",         glyph:"🌳", min:75},
+  {key:"santuario",label:"Santuario Vivo", glyph:"🜁", min:100}
+];
+function treeStage(n){ let s=TREE_STAGES[0]; for(const t of TREE_STAGES){ if((n||0)>=t.min) s=t; }
+  const idx=TREE_STAGES.indexOf(s), next=TREE_STAGES[idx+1]||null;
+  const lo=s.min, hi=next?next.min:100; const pct=Math.max(0,Math.min(100,Math.round(((n-lo)/Math.max(1,hi-lo))*100)));
+  return { ...s, idx, next, pct }; }
 /* Categorías de Huella — lenguaje de ANIMA (no nombres tradicionales).
    Obra=comparto un trabajo · Semilla=idea/inspiración · Búsqueda=pregunta ·
    Hito=logro · Llamado=anuncio. (Las Huellas del Ritual llevan su propio sello.) */
@@ -1473,10 +1489,11 @@ function vComunidad(a){
   const nivelesCount=new Set(list.map(x=>x.level).filter(Boolean)).size;
 
   // EL ÁRBOL VIVO — corazón del Mundo (pixel art reactivo).
+  const tstage=treeStage(n);
   const tree = `<div class="card s8 wt-card">
       <div class="wt-head">
-        <span class="wt-title">🌳 Árbol de Almas</span>
-        <span class="pill ${liveMode()?'gold':''}">${n} / 100</span>
+        <span class="wt-title">${tstage.glyph} Árbol de Almas</span>
+        <span class="pill ${liveMode()?'gold':''}" title="Estado del Árbol">${esc(tstage.label)} · ${n}/100</span>
         <div class="wt-sizes">${["sm","md","lg"].map(s=>`<button class="wt-msz ${sz===s?'on':''}" data-mapsize="${s}">${s.toUpperCase()}</button>`).join("")}</div>
       </div>
       <div class="wt-stage ${sz}">
@@ -1567,9 +1584,23 @@ function vComunidad(a){
       <p class="muted">${clan?clan.desc:"Comunidad privada por invitación (2 a 8 Almas)."}</p>
       <div class="alma-grid" style="margin-top:14px">${members.map(almaMini).join("")}</div></div>`
     : "";
+  // ESTADO DEL ÁRBOL — cómo evoluciona y qué lo alimenta.
+  const huellasN=(state.cloudPosts||[]).length;
+  const treeStateCard=`<div class="card s12 tree-state"><div class="section-title"><h2 style="font-size:15px">Estado del Árbol</h2><div class="spacer"></div><span class="pill gold">${tstage.glyph} ${esc(tstage.label)}</span></div>
+      <div class="ts-track">${TREE_STAGES.map((t,i)=>`<div class="ts-step ${i===tstage.idx?'cur':''} ${i<tstage.idx?'passed':''}"><span class="ts-g">${t.glyph}</span><b>${esc(t.label)}</b><small>${t.min===0?'1':t.min}+</small></div>`).join("")}</div>
+      <div class="ebar" style="margin:14px 0 6px"><span style="width:${tstage.pct}%"></span></div>
+      <div class="muted" style="font-size:12.5px">${tstage.next?`${tstage.pct}% hacia <b>${esc(tstage.next.label)}</b> — faltan <b>${Math.max(0,tstage.next.min-n)}</b> Almas.`:"El Árbol alcanzó su forma viva: <b>Santuario Vivo</b>. ∞"}</div>
+      <div class="ts-feeds">
+        <div><div class="num">${n}</div><span class="lbl">Almas</span></div>
+        <div><div class="num">${ecosToday}</div><span class="lbl">Ecos hoy</span></div>
+        <div><div class="num">${huellasN}</div><span class="lbl">Huellas</span></div>
+        <div><div class="num">${newWeek}</div><span class="lbl">Almas (7d)</span></div>
+      </div>
+      <p class="muted" style="font-size:12px;margin:12px 0 0">El Árbol crece con cada Alma que despierta, cada <b>Huella</b> que dejas y cada <b>Eco</b> que resuena. Al reunir más Almas evoluciona: Semilla → Brote → Raíz → Tronco → Bosque → Santuario Vivo.</p>
+    </div>`;
   // RESUMEN DEL MUNDO (clanes/santuarios) — solo Almas con acceso o el Creador.
   const worldCard = (a.world_access || (isCreator && !state.viewAs)) ? worldSummaryCard(list) : "";
-  return `<div class="grid">${tree}${aside}${week}${connect}${paisCard}${ritual}${create}${wall}${clanCard}${worldCard}</div>`;
+  return `<div class="grid">${tree}${aside}${treeStateCard}${week}${connect}${paisCard}${ritual}${create}${wall}${clanCard}${worldCard}</div>`;
 }
 /* Glifos del Estado del Mundo (símbolos oficiales del Árbol). */
 const WT_GLYPH={ LATENTE:"○", SERENO:"🌱", RESONANDO:"〰", FLORECIENDO:"✧", LUMINOSO:"◎", DESPERTAR:"∞" };
