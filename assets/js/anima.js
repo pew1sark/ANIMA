@@ -2392,9 +2392,18 @@ function vClanPanel(a){
         ${inv.length?inv.map(c=>`<div class="row"><code class="invite-code">${esc(c.code)}</code><div class="grow"><small class="muted">Rol al unirse: <b>${esc((ROLES.find(r=>r[0]===c.role)||['',c.role])[1])}</b></small></div>
           <button class="btn ghost sm" data-copycode="${esc(c.code)}">Copiar</button><button class="ia danger" data-delinvite="${c.id}">✕</button></div>`).join(""):`<p class="muted">Aún no generaste códigos.</p>`}</div>`
     : "";
-  const danger = isAdmin ? `<div class="card s12 clan-danger"><div class="section-title"><h2 style="font-size:15px">Zona del Admin</h2></div>
+  // Abandonar el Clan: derecho de toda Alma (la RPC transfiere o disuelve si es Admin).
+  const leaveBtn=`<button class="btn ghost sm" id="clanLeaveBtn" style="color:var(--danger);border-color:var(--danger)">Abandonar Clan</button>`;
+  const leaveNote=(almaRole(me())==="ADMIN")
+    ? `Si abandonas el Clan siendo Admin, el liderazgo pasa a otra Alma; si eres la única, el Clan se disuelve.`
+    : `Quedarás libre para crear tu propio Clan o unirte a otro.`;
+  const danger = isAdmin
+    ? `<div class="card s12 clan-danger"><div class="section-title"><h2 style="font-size:15px">Zona del Admin</h2></div>
       <p class="muted" style="font-size:12.5px">Eliminar el Clan libera a todas sus Almas y borra su Plan, Calendario y Proyectos. No se puede deshacer.</p>
-      <button class="btn ghost sm" id="clanDeleteBtn" style="color:var(--danger);border-color:var(--danger)">Eliminar Clan</button></div>` : "";
+      <div class="row" style="gap:8px;flex-wrap:wrap">${leaveBtn}<button class="btn ghost sm" id="clanDeleteBtn" style="color:var(--danger);border-color:var(--danger)">Eliminar Clan</button></div>
+      <p class="muted" style="font-size:11.5px;margin-top:6px">${leaveNote}</p></div>`
+    : `<div class="card s12 clan-danger"><div class="section-title"><h2 style="font-size:15px">Abandonar el Clan</h2></div>
+      <p class="muted" style="font-size:12.5px">${leaveNote}</p>${leaveBtn}</div>`;
   return `<div class="grid">
     ${clanHeader(a,clan,"Panel",isAdmin?"Eres Admin: personaliza el Clan y gestiona a sus Almas.":lead?"Eres Líder: organiza al Clan.":"Tu Clan y sus Almas.")}
     ${identity}${panel}${legend}${(isAdmin&&state.clanAddOpen)?clanAddPicker(clan):""}${invitesCard}${danger}
@@ -2535,7 +2544,8 @@ function vSantuarioLive(a){
   return `<div class="grid">
     <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
       <span class="pill gold">Nivel 3 · Santuario</span><h2 style="font-size:30px;letter-spacing:-.05em;margin:10px 0 4px">🜁 ${esc(s)}</h2>
-      <p class="muted">Tu organización: varios Clanes bajo una misma visión. ${canAdminSantuario()?'Como <b>Admin</b>, coordinas a todos.':'Vista del Santuario.'}</p></div>
+      <p class="muted">Tu organización: varios Clanes bajo una misma visión. ${canAdminSantuario()?'Como <b>Admin</b>, coordinas a todos.':'Vista del Santuario.'}</p>
+      <button class="btn ghost sm" id="santLeaveBtn" style="margin-top:8px;color:var(--danger);border-color:var(--danger)">Abandonar Santuario</button></div>
     <div class="card s3"><div class="stat"><span class="num">${list.length}</span><span class="lbl">Almas</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${clans.length}</span><span class="lbl">Clanes</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${sparks}</span><span class="lbl">Chispas</span></div></div>
@@ -2716,17 +2726,62 @@ async function removeClanMember(almaId){
   try{ await Cloud.clanRemoveMember(almaId); state.cloudAlmas=await Cloud.allAlmas(); renderView(); }
   catch(e){ alert("No se pudo quitar: "+(e.message||e)); }
 }
+/* Toda Alma puede abandonar su Clan. Si es Admin, el liderazgo se transfiere
+   (o el Clan se disuelve si queda vacío) — la RPC lo resuelve en el servidor. */
+async function leaveClan(){
+  const a=me(), clan=a.clan; if(!clan){ return; }
+  const admin=almaRole(me())==="ADMIN";
+  const others=clanMembers(clan).filter(m=>m.id!==a.almaId).length;
+  let msg="¿Abandonar el Clan «"+clan+"»? Dejarás de ver su Plan, Calendario y Proyectos.";
+  if(admin && others>0) msg="Eres el Admin de «"+clan+"». Al abandonarlo, el liderazgo pasará a otra Alma. ¿Continuar?";
+  if(admin && others===0) msg="Eres la única Alma de «"+clan+"». Al abandonarlo, el Clan se disolverá por completo. ¿Continuar?";
+  if(!confirm(msg)) return;
+  try{
+    await Cloud.clanLeave();
+    a.clan=null; a.team_role=null; if(a.santuario===clan) a.santuario=null;
+    try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){}
+    save(); state.view="clanpanel"; renderAll();
+    toast("✦ Has abandonado el Clan.");
+  }catch(e){ alert("No se pudo abandonar: "+(e.message||e)); }
+}
+/* Toda Alma puede abandonar su Santuario (conserva su Clan). */
+async function leaveSantuario(){
+  const a=me(), s=a.santuario; if(!s) return;
+  if(!confirm("¿Abandonar el Santuario «"+s+"»? Seguirás en tu Clan, pero saldrás de la organización.")) return;
+  try{
+    await Cloud.santuarioLeave();
+    a.santuario=null;
+    try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){}
+    save(); renderAll();
+    toast("✦ Has abandonado el Santuario.");
+  }catch(e){ alert("No se pudo abandonar: "+(e.message||e)); }
+}
 async function addClanMember(almaId){
   const clan=me().clan; if(!clan) return;
+  const target=(state.cloudAlmas||[]).find(x=>x.id===almaId);
+  if(target && target.clan && target.clan!==clan){
+    if(!confirm("«"+(target.name||"Esta Alma")+"» ya pertenece al Clan «"+target.clan+"». ¿Trasladarla a «"+clan+"»?")) return;
+  }
   try{ await Cloud.clanAddMember(almaId, clan); state.cloudAlmas=await Cloud.allAlmas(); state.clanAddOpen=false; renderView(); }
   catch(e){ alert("No se pudo sumar: "+(e.message||e)); }
 }
 function clanAddPicker(clan){
-  const cand=(state.cloudAlmas||[]).filter(m=>m.id && !m.clan).slice(0,60);
+  // Invitar a cualquier Alma del MUNDO: libres primero, luego las que ya tienen Clan
+  // (sumarlas las traslada a este Clan). Excluye a quien ya está aquí.
+  const cand=(state.cloudAlmas||[]).filter(m=>m.id && m.clan!==clan)
+    .sort((a,b)=>(a.clan?1:0)-(b.clan?1:0) || String(a.name||"").localeCompare(String(b.name||"")))
+    .slice(0,120);
+  const row=m=>{ const lv=levelByKey(m.level);
+    const where=m.clan?`<span class="chip" title="Ya pertenece a otro Clan">${esc(meta_emoji(m.clan))} ${esc(m.clan)}</span>`:`<span class="chip ok">Libre</span>`;
+    return `<div class="row" data-mname="${esc((m.name||'').toLowerCase())} ${esc((m.clan||'').toLowerCase())}">${cAvatar(m,"sm")}
+      <div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${lv.emoji} ${esc(m.level||'')} · ${esc(m.role||m.country||'')}</small></div>
+      ${where}<button class="btn sm" data-clanadd="${m.id}"${m.clan?' data-moved="1"':''}>${m.clan?'Trasladar':'Añadir'}</button></div>`; };
   return `<div class="card s12" id="clanAddCard"><div class="section-title"><h2 style="font-size:15px">Sumar un Alma a ${esc(clan)}</h2><div class="spacer"></div><button class="ia" id="clanAddClose">✕</button></div>
-    <div class="field"><input id="clanAddSearch" placeholder="Buscar Alma libre…" autocomplete="off"></div>
-    ${cand.length?cand.map(m=>`<div class="row" data-mname="${esc((m.name||'').toLowerCase())}">${cAvatar(m,"sm")}<div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${esc(m.role||m.country||'')}</small></div><button class="btn sm" data-clanadd="${m.id}">Añadir</button></div>`).join(""):`<p class="muted" style="font-size:13px">No hay Almas libres por ahora.</p>`}</div>`;
+    <p class="muted" style="font-size:12.5px;margin:-2px 0 8px">Puedes invitar a <b>cualquier Alma del Mundo</b>. Si ya pertenece a otro Clan, se trasladará a <b>${esc(clan)}</b>.</p>
+    <div class="field"><input id="clanAddSearch" placeholder="Buscar cualquier Alma…" autocomplete="off"></div>
+    ${cand.length?cand.map(row).join(""):`<p class="muted" style="font-size:13px">No hay otras Almas en el Mundo todavía.</p>`}</div>`;
 }
+function meta_emoji(clan){ const m=clanMeta(clan); return (m&&m.emoji)||"❂"; }
 async function loadInvites(clan){
   if(!(Cloud.enabled && me().live && clan && canLead())) return;
   try{ const inv=await Cloud.clanInvites(clan); const d=teamCache(clan); d.invites=inv.map(c=>({id:c.id,code:c.code,role:c.role})); if(state.view==='clanpanel') renderView(); }catch(e){}
@@ -3445,6 +3500,8 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#clanCreateBtn")){ createClan(); return; }
   if(e.target.closest("#clanSave")){ saveClanIdentity(); return; }
   if(e.target.closest("#clanDeleteBtn")){ deleteClan(); return; }
+  if(e.target.closest("#clanLeaveBtn")){ leaveClan(); return; }
+  if(e.target.closest("#santLeaveBtn")){ leaveSantuario(); return; }
   if(e.target.closest("#clanAddBtn")){ state.clanAddOpen=true; renderView(); return; }
   if(e.target.closest("#clanAddClose")){ state.clanAddOpen=false; renderView(); return; }
   const crm=e.target.closest("[data-clanremove]"); if(crm){ removeClanMember(crm.dataset.clanremove); return; }

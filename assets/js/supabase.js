@@ -188,6 +188,8 @@ const Cloud = {
   async clanSetRole(alma, role){ const { error } = await _sb.rpc("clan_set_role", { p_alma:alma, p_role:role }); if(error) throw error; },
   async clanRemoveMember(alma){ const { error } = await _sb.rpc("clan_remove_member", { p_alma:alma }); if(error) throw error; },
   async clanAddMember(alma, clan){ const { error } = await _sb.rpc("clan_add_member", { p_alma:alma, p_clan:clan }); if(error) throw error; },
+  async clanLeave(){ const { error } = await _sb.rpc("clan_leave"); if(error) throw error; },
+  async santuarioLeave(){ const { error } = await _sb.rpc("santuario_leave"); if(error) throw error; },
 
   /* Clan: calendario sincronizado y proyectos (migración 0011) */
   async clanEvents(clan){ const { data, error } = await _sb.from("clan_events").select("*").eq("clan", clan).order("at_date",{ascending:true}); if(error) throw error; return data||[]; },
