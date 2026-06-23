@@ -613,6 +613,7 @@ function vMiAlma(a){
     <div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       ${(a.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}
       ${linksHTML(a)}<span style="flex:1"></span>
+      ${a.live?`<button class="btn ghost sm" id="discreetBtn" title="Privacidad: oculta tus montos">${ANIMA_DISCREET?"👁 Mostrar montos":"🙈 Ocultar montos"}</button>`:""}
       ${a.live?`<button class="btn ghost sm" id="sharePf">↗ Compartir portafolio</button>`:""}
       <button class="btn ghost sm" data-export>⤓ PDF</button>
     </div>
@@ -2962,15 +2963,17 @@ function setupPullToRefresh(){
 }
 async function doAuth(mode){
   const g=id=>document.getElementById(id).value, email=g("authEmail").trim(), pass=g("authPass"),
-    name=g("authName").trim(), code=(g("authCode")||"").trim().toUpperCase(), msg=document.getElementById("authMsg");
+    code=(g("authCode")||"").trim().toUpperCase(), msg=document.getElementById("authMsg");
+  const remember=document.getElementById("authRemember"); try{ localStorage.setItem("anima_remember",(remember&&!remember.checked)?"0":"1"); sessionStorage.setItem("anima_tab","1"); }catch(e){}
   if(!email||!pass){ msg.textContent="Ingresa correo y contraseña."; return; }
   msg.textContent="…";
   try{
     if(mode==="up"){
-      if(!code){ msg.textContent="Necesitas un código de invitación (beta cerrada)."; return; }
-      if(!await Cloud.checkInvite(code)){ msg.textContent="Código de invitación inválido o ya usado."; return; }
+      if(!code){ msg.textContent="Necesitas un Código del Origen (beta cerrada)."; return; }
+      if(!await Cloud.checkInvite(code)){ msg.textContent="Código inválido o ya usado."; return; }
       localStorage.setItem("anima_pending_invite",code);
-      const {data,error}=await Cloud.signUp(email,pass,name||email.split("@")[0]); if(error) throw error;
+      // El nombre del Alma se elige después, dentro de ANIMA (parte del correo por ahora).
+      const {data,error}=await Cloud.signUp(email,pass,email.split("@")[0]); if(error) throw error;
       if(!data.session){ msg.textContent="Alma creada. Revisa tu correo para confirmar y vuelve a entrar."; return; }
     }else{ const {error}=await Cloud.signIn(email,pass); if(error) throw error; }
     closeAuth(); await refreshAuth();
@@ -3245,6 +3248,7 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#levelClose")||bdClose(e,"levelModal")) closeLevels();
   if(e.target.closest("#esenciaInfo")) openEsencia();
   if(e.target.closest("#esenciaClose")||bdClose(e,"esenciaModal")) closeEsencia();
+  if(e.target.closest("#discreetBtn")){ ANIMA_DISCREET=!ANIMA_DISCREET; try{localStorage.setItem("anima_discreet",ANIMA_DISCREET?"1":"0");}catch(e){} renderAll(); return; }
   if(e.target.closest("#sharePf")) sharePortfolio();
   if(e.target.closest("[data-export]")) exportPDF();
   const ag=e.target.closest("[data-almago]"); if(ag){ closeAlmaMenu(); go(ag.dataset.almago); return; }
@@ -3373,10 +3377,21 @@ function hasStoredSession(){ try{ return Object.keys(localStorage).some(k=>/^sb-
 
 /* ---------- Boot ----------
    Con nube: mostramos el Despertar y dejamos que refreshAuth decida (cargar el
-   Alma o, si no hay sesión, llevar al HOME). Sin nube: modo local. */
-if(Cloud.enabled){ showBootLoader(); } else { renderAll(); }
-setupPullToRefresh();
-refreshAuth();
+   Alma o, si no hay sesión, llevar al HOME). Sin nube: modo local.
+   "Recordar sesión": si el Alma marcó NO recordar (anima_remember="0") y esto es
+   un arranque nuevo (la pestaña se cerró → sessionStorage limpio), cerramos sesión.
+   Por defecto (sin marca) SIEMPRE recuerda — no toca a las Almas actuales. */
+(async function boot(){
+  try{
+    if(Cloud.enabled && localStorage.getItem("anima_remember")==="0" && !sessionStorage.getItem("anima_tab")){
+      await Cloud.signOut();
+    }
+    sessionStorage.setItem("anima_tab","1");
+  }catch(e){}
+  if(Cloud.enabled){ showBootLoader(); } else { renderAll(); }
+  setupPullToRefresh();
+  refreshAuth();
+})();
 if("serviceWorker" in navigator){ window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
 /* Auto-tutorial: SOLO para un Alma con sesión (lo dispara loadMyAlma una vez por
    Alma). No se muestra a la Invitada para no repetirlo en cada apertura. */
