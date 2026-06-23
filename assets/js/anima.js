@@ -191,10 +191,9 @@ const VIEW_MIN_LEVEL = {
   estadisticas:"TOTEM", visibilidad:"TOTEM"
 };
 function levelAllows(view){
-  if(isCreator && !state.viewAs) return true;
-  const need = VIEW_MIN_LEVEL[view];
-  if(!need) return true;
-  return levelRank(me().level) >= levelRank(need);
+  // Todo el menú está descubierto al entrar a ANIMA: ya no se oculta ni se
+  // bloquea por nivel. (El acceso a Clan/Santuario sigue dependiendo del plan.)
+  return true;
 }
 /* Fundar un Clan o Santuario requiere que el Alma haya crecido en el Árbol
    hasta cierto nivel. Umbral único y fácil de ajustar. */
@@ -258,8 +257,9 @@ function navItemLocked(n, sub){
   const need=VIEW_MIN_LEVEL[n.v]; const lv=levelByKey(need);
   return `<div class="nav-item ${sub?'sub':''} locked" data-view="${n.v}" title="Se abre en ${lv.label}"><span class="ico">${ANIMA_ICON("lock","🔒")}</span>${n.t}<span class="lock-lv">${lv.emoji} ${lv.label}</span></div>`;
 }
-/* Los reinos arrancan COLABSADOS: el Alma los despliega para descubrir. */
-function reinoOpen(key){ if(!state.navOpen) state.navOpen={}; return state.navOpen[key]===true; }
+/* Los reinos arrancan ABIERTOS: el menú está descubierto al entrar. El Alma
+   puede colapsarlos si quiere (se recuerda su preferencia por reino). */
+function reinoOpen(key){ if(!state.navOpen) state.navOpen={}; return state.navOpen[key]!==false; }
 function toggleReino(key){ if(!state.navOpen) state.navOpen={}; state.navOpen[key]=!reinoOpen(key); save(); renderNav(); }
 /* Reino colapsable genérico (lo usan Mi Alma, Taller, Clan y Mundo). */
 function navReino(key, ico, ic, t, kids){
@@ -340,11 +340,6 @@ function renderNav(){
   // No se ocultan por la llegada progresiva: si hay acceso, están en el menú.
   if(planAllows("clanpanel")) h += navSectionItem("clan","❂","constelacion","Clan","clanpanel");
   if(planAllows("santuario")) h += navSectionItem("santuario","🜁","santuario","Santuario","santuario");
-  // Pista: qué se abre al subir de nivel.
-  const lpNav=levelProgress(me().xp);
-  if(lpNav.next && UNLOCKS[lpNav.next.key]){
-    h+=`<div class="nav-next">Al alcanzar <b>${lpNav.next.label}</b>: ${UNLOCKS[lpNav.next.key]}</div>`;
-  }
   // El bloque Creador se oculta mientras se previsualiza un plan (vista fiel).
   if(isCreator && !state.viewAs){
     h+=`<div class="nav-label">Creador</div>`
@@ -1916,6 +1911,17 @@ async function loadFollows(){
     const r=await Cloud.myFollowers(a.almaId); state.followers=new Set((r||[]).map(x=>x.follower_alma_id));
   }catch(e){ state.following=state.following||new Set(); state.followers=state.followers||new Set(); }
 }
+/* Pinta el estado de la Chispa SOLO en sus botones (feed + modal), sin
+   re-renderizar la vista: así el muro no salta al inicio al dar una Chispa. */
+function paintSpark(postId){
+  const on=!!(state.mySparkSet && state.mySparkSet.has(postId));
+  const sc=(state.postSparkCount && state.postSparkCount[postId])||0;
+  document.querySelectorAll('[data-spark="'+String(postId).replace(/"/g,'')+'"]').forEach(function(btn){
+    btn.classList.toggle("on", on);
+    btn.title = on ? "Quitar tu Chispa" : "Dar una Chispa";
+    const b=btn.querySelector("b"); if(b) b.textContent=sc;
+  });
+}
 /* Dar / quitar una Chispa a una Huella (máx. 1 por Alma). Optimista. */
 async function doSpark(postId){
   const a=me(); if(!a.live){ alert("Entra a tu Alma para dar una Chispa."); return; }
@@ -1923,13 +1929,12 @@ async function doSpark(postId){
   const had=state.mySparkSet.has(postId);
   if(had){ state.mySparkSet.delete(postId); state.postSparkCount[postId]=Math.max(0,(state.postSparkCount[postId]||1)-1); }
   else { state.mySparkSet.add(postId); state.postSparkCount[postId]=(state.postSparkCount[postId]||0)+1; }
-  if(state.view==="comunidad") renderView();
-  if(document.getElementById("postModal").classList.contains("open")) openPost(postId);
+  paintSpark(postId);   // actualización en sitio (conserva el scroll del muro)
   try{
     const n=await Cloud.togglePostSpark(postId);
-    if(n!=null){ state.postSparkCount[postId]=n; }
+    if(n!=null){ state.postSparkCount[postId]=n; paintSpark(postId); }
     if(!had && window.WorldTree) WorldTree.onEco({ almaName:a.name, country:a.country });
-  }catch(e){ await loadPostSparks(); if(state.view==="comunidad") renderView(); }
+  }catch(e){ await loadPostSparks(); paintSpark(postId); }
 }
 /* Vincular / desvincular a otra Alma. Si es mutuo, nace una Constelación. */
 async function doFollow(id){
@@ -3733,6 +3738,41 @@ function setupPullToRefresh(){
     if(ind.offsetHeight>=TRIG*0.5){ ind.classList.add("spin"); ind.style.height="52px"; if(lbl) lbl.textContent="Actualizando…";
       setTimeout(()=>location.reload(),450); } else { ind.style.height="0px"; } });
 }
+
+/* ---------- Deslizar para navegar entre moradas (móvil) ----------
+   Igual orden que la barra inferior: Mi Alma · Taller · Mundo (+ Clan/Santuario
+   si el plan da acceso). Deslizar a la izquierda avanza; a la derecha retrocede. */
+function swipeSectionViews(){
+  const list=["mialma","proyectos","comunidad"];
+  if(planAllows("clanpanel")) list.push("clanpanel");
+  if(planAllows("santuario")) list.push("santuario");
+  return list;
+}
+function swipeNav(dir){
+  const views=swipeSectionViews();
+  const map={mialma:"mialma",taller:"proyectos",mundo:"comunidad",clan:"clanpanel",santuario:"santuario"};
+  let idx=views.indexOf(map[sectionOfView(state.view)]);
+  if(idx<0) idx=0;
+  const ni=idx+dir;
+  if(ni<0||ni>=views.length) return;
+  go(views[ni]);
+}
+function setupSwipeNav(){
+  const overlayOpen=()=>document.querySelector('[id$="Modal"].open, #drawer.open, #side.open, #tour.open, .alma-pop.open, .whisper-pop.open')!=null;
+  let x0=0,y0=0,active=false;
+  window.addEventListener("touchstart",e=>{
+    if(window.innerWidth>960 || e.touches.length!==1 || overlayOpen()){ active=false; return; }
+    x0=e.touches[0].clientX; y0=e.touches[0].clientY; active=true;
+  },{passive:true});
+  window.addEventListener("touchend",e=>{
+    if(!active) return; active=false;
+    if(overlayOpen()) return;
+    const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0;
+    // Debe ser un gesto claramente horizontal y con recorrido suficiente.
+    if(Math.abs(dx)<70 || Math.abs(dx)<Math.abs(dy)*1.6) return;
+    swipeNav(dx<0?1:-1);
+  },{passive:true});
+}
 async function doAuth(mode){
   const g=id=>document.getElementById(id).value, email=g("authEmail").trim(), pass=g("authPass"),
     code=(g("authCode")||"").trim().toUpperCase(), msg=document.getElementById("authMsg");
@@ -4159,13 +4199,9 @@ function tourNext(){ tourStep((state.tourI||0)+1); }
 function tourKey(){ return "anima_tour_done_"+(me().almaId||me().id||"guest"); }
 function tourDone(){ try{ return localStorage.getItem(tourKey())==="1"; }catch(e){ return false; } }
 function endTour(){ document.getElementById("tour").classList.remove("open"); try{ localStorage.setItem(tourKey(),"1"); }catch(e){} }
-/* Lanza el tutorial automáticamente UNA sola vez por Alma. Se marca como visto
-   en cuanto se abre (no hace falta terminarlo): así no reaparece en cada visita. */
-function maybeAutoTour(){
-  if(tourDone()) return;
-  const tEl=document.getElementById("tour"); if(tEl && tEl.classList.contains("open")) return;
-  setTimeout(()=>{ if(tourDone()) return; const t=document.getElementById("tour"); if(t && !t.classList.contains("open")){ try{ localStorage.setItem(tourKey(),"1"); }catch(e){} startTour(); } }, 900);
-}
+/* El tutorial inicial ya NO se lanza solo: el menú está descubierto al entrar.
+   Sigue disponible bajo demanda desde el menú del nombre ("Ver tutorial"). */
+function maybeAutoTour(){ /* sin auto-tutorial */ }
 
 /* ---------- PWA (instalable) ---------- */
 let deferredPrompt=null;
@@ -4212,6 +4248,7 @@ function hasStoredSession(){ try{ return Object.keys(localStorage).some(k=>/^sb-
   }catch(e){}
   if(Cloud.enabled){ showBootLoader(); } else { renderAll(); }
   setupPullToRefresh();
+  setupSwipeNav();
   refreshAuth();
 })();
 if("serviceWorker" in navigator){ window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
