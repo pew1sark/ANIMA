@@ -539,26 +539,48 @@ function acts(kind,i){ return `<span class="acts"><button class="ia" data-edit="
 /* Submenú de la morada como PESTAÑAS dentro del dashboard.
    Al entrar a una morada ves sus sub-secciones en pestañas (no solo en la
    barra). Navegan con go() (data-view). Las bloqueadas por nivel se marcan. */
-function moradaTabs(view){
-  const sec=sectionOfView(view); if(!sec) return "";
+/* Sub-pestañas de una morada (con icono), filtradas por plan/módulos. */
+function moradaKids(sec){
   const cfg=getCfg(me()); let kids=[];
-  if(sec==="mialma"){ kids=NAV_TREE[0].children.slice(); kids.push({v:"miplan",t:"Forma"}); }   // Mi Plan plegado aquí
+  if(sec==="mialma"){ kids=NAV_TREE[0].children.slice(); kids.push({v:"miplan",t:"Forma",ico:"❖",ic:"forma"}); }   // Mi Plan plegado aquí
   else if(sec==="taller"){ kids=NAV_TREE[1].children.slice(); }
   else if(sec==="mundo"){
-    if(planAllows("comunidad")) kids.push({v:"comunidad",t:"Constelación"});
-    kids.push({v:"cronica",t:"Crónica"});
-    if(me().council||(isCreator&&!state.viewAs)) kids.push({v:"consejo",t:"Consejo"});
+    if(planAllows("comunidad")) kids.push({v:"comunidad",t:"Constelación",ico:"❂",ic:"constelacion"});
+    kids.push({v:"cronica",t:"Crónica",ico:"✦",ic:"susurro"});
+    if(me().council||(isCreator&&!state.viewAs)) kids.push({v:"consejo",t:"Consejo",ico:"⚖",ic:"panel"});
   }
   else if(sec==="clan"){ kids=NAV_TREE[2].children.slice(); }                                    // Panel · Plan de trabajo · Calendario · Proyectos · Recordatorios
   else if(sec==="santuario"){
-    kids.push({v:"santuario",t:"Fogón"});
-    if(me().santuario){ kids.push({v:"sant_almas",t:"Almas"},{v:"sant_tareas",t:"Tareas"},{v:"sant_proyectos",t:"Proyectos"},{v:"sant_cal",t:"Calendario"},{v:"sant_informes",t:"Informes"}); }
+    kids.push({v:"santuario",t:"Fogón",ico:"🜁",ic:"santuario"});
+    if(me().santuario){ kids.push({v:"sant_almas",t:"Almas",ico:"☺",ic:"constelacion"},{v:"sant_tareas",t:"Tareas",ico:"▦",ic:"obra"},{v:"sant_proyectos",t:"Proyectos",ico:"◷",ic:"proceso"},{v:"sant_cal",t:"Calendario",ico:"☷",ic:"agenda"},{v:"sant_informes",t:"Informes",ico:"📄",ic:"documento"}); }
   }
-  kids=kids.filter(c=>planAllows(c.v) && cfg.modules[c.v]!==false);
+  return kids.filter(c=>planAllows(c.v) && cfg.modules[c.v]!==false);
+}
+const MORADA_LABEL={mialma:"Mi Alma",taller:"Taller",mundo:"Mundo",clan:"Clan",santuario:"Santuario"};
+/* Vista de portada (landing) de cada morada: ahí se muestra el resumen-hub. */
+const SECTION_DEFAULT={mialma:"mialma",taller:"proyectos",mundo:"comunidad",clan:"clanpanel",santuario:"santuario"};
+function moradaTabs(view){
+  const sec=sectionOfView(view); if(!sec) return "";
+  const kids=moradaKids(sec);
   if(kids.length<2) return "";
-  const label={mialma:"Mi Alma",taller:"Taller",mundo:"Mundo",clan:"Clan",santuario:"Santuario"}[sec]||"";
+  const label=MORADA_LABEL[sec]||"";
   return `<div class="morada-tabs"><span class="morada-tabs-label">${esc(label)}</span><div class="morada-tabs-row">`+
-    kids.map(c=>`<button class="morada-tab ${state.view===c.v?'on':''}" data-view="${c.v}">${esc(c.t)}${levelAllows(c.v)?"":' <span class="mt-lock">🔒</span>'}</button>`).join("")+
+    kids.map(c=>`<button class="morada-tab ${state.view===c.v?'on':''}" data-view="${c.v}"><span class="mt-ico">${ANIMA_ICON(c.ic,c.ico||"◆")}</span>${esc(c.t)}${levelAllows(c.v)?"":' <span class="mt-lock">🔒</span>'}</button>`).join("")+
+    `</div></div>`;
+}
+/* Resumen-hub de la morada: tarjetas de acceso directo a cada sub-pestaña.
+   Solo en la portada de cada morada, para entrar más fluido y entendible. */
+function moradaHub(view){
+  const sec=sectionOfView(view); if(!sec) return "";
+  if(SECTION_DEFAULT[sec]!==view) return "";
+  const kids=moradaKids(sec); if(kids.length<2) return "";
+  const label=MORADA_LABEL[sec]||"";
+  return `<div class="morada-hub"><div class="hub-head"><b>${esc(label)}</b><small>Accesos directos</small></div>`+
+    `<div class="hub-grid">`+
+    kids.map(c=>{ const lk=!levelAllows(c.v);
+      return `<button class="hub-card ${state.view===c.v?'on':''}${lk?' locked':''}" data-view="${c.v}">`+
+        `<span class="hub-ico">${ANIMA_ICON(c.ic,c.ico||"◆")}</span><span class="hub-t">${esc(c.t)}</span>${lk?'<span class="hub-lock">🔒</span>':''}</button>`;
+    }).join("")+
     `</div></div>`;
 }
 /* Transición suave: el cuerpo de cada vista "abre los ojos" en cada render.
@@ -587,7 +609,11 @@ function renderView(){
     console.error("ANIMA · error al dibujar la vista", state.view, err);
     bodyHTML = animaWrap(`<div class="grid"><div class="card s12"><p class="muted">Esta ventana tuvo un tropiezo al cargar. Intenta de nuevo o entra a <button class="btn sm" data-view="mialma">Mi Alma</button>.</p></div></div>`);
   }
-  document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + bodyHTML;
+  // En la portada de cada morada mostramos el resumen-hub (accesos directos);
+  // en las sub-pestañas, la barra de pestañas compacta para moverse.
+  const hub = moradaHub(state.view);
+  const tabs = hub ? "" : moradaTabs(state.view);
+  document.getElementById("view").innerHTML = previewBanner() + tabs + hub + bodyHTML;
   if(state.view==="comunidad" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
   if(state.view==="consola"){ requestAnimationFrame(loadWorldMonitor); requestAnimationFrame(loadRewardPanel); }
   // Desliza la pestaña activa al centro (sensación suave en móvil).
@@ -3767,52 +3793,69 @@ function swipeTargetView(dir){
   return views[ni];
 }
 function setupSwipeNav(){
-  const view=document.getElementById("view"); if(!view) return;
+  const view=()=>document.getElementById("view");
   const overlayOpen=()=>document.querySelector('[id$="Modal"].open, #drawer.open, #side.open, #tour.open, .alma-pop.open, .whisper-pop.open')!=null;
-  const W=()=>Math.min(window.innerWidth, 560);
+  const EASE="transform .3s cubic-bezier(.33,0,.2,1)";
   let x0=0,y0=0,dx=0,axis=null,active=false,animating=false;
-  const setX=px=>{ view.style.transform = px ? "translateX("+px+"px)" : ""; };
-  const ease=()=>{ view.style.transition="transform .22s cubic-bezier(.22,.61,.36,1)"; };
-  const reset=()=>{ view.style.transition=""; view.style.transform=""; };
+  const setX=px=>{ const v=view(); if(v) v.style.transform = px ? "translateX("+px+"px)" : ""; };
+  const reset=()=>{ const v=view(); if(v){ v.style.transition=""; v.style.transform=""; } };
+
+  /* Deslizamiento de dos paneles: el contenido saliente (un clon-fantasma) y el
+     entrante se mueven juntos en un solo gesto continuo, como una app nativa. */
+  function commitSlide(target, dir, startDx){
+    const v=view(); if(!v){ animating=false; return; }
+    animating=true;
+    const w=window.innerWidth;
+    v.style.transition="none"; v.style.transform="none";
+    const base=v.getBoundingClientRect();
+    const ghost=v.cloneNode(true); ghost.removeAttribute("id");
+    const gs=ghost.style;
+    gs.position="fixed"; gs.left=base.left+"px"; gs.top=base.top+"px";
+    gs.width=base.width+"px"; gs.height=base.height+"px";
+    gs.margin="0"; gs.overflow="hidden"; gs.zIndex="15"; gs.pointerEvents="none";
+    gs.transition="none"; gs.transform="translateX("+startDx+"px)";
+    document.body.appendChild(ghost);
+    go(target);                                  // el view real pasa a la nueva morada
+    try{ window.scrollTo(0,0); }catch(e){}
+    const inFrom = dir>0 ? w : -w, outTo = dir>0 ? -w : w;
+    v.style.transition="none"; v.style.transform="translateX("+inFrom+"px)";
+    void v.offsetWidth;                          // fuerza reflow antes de animar
+    requestAnimationFrame(()=>{
+      ghost.style.transition=EASE; v.style.transition=EASE;
+      ghost.style.transform="translateX("+outTo+"px)";
+      v.style.transform="translateX(0)";
+    });
+    setTimeout(()=>{ ghost.remove(); reset(); animating=false; }, 340);
+  }
 
   window.addEventListener("touchstart",e=>{
     if(animating || window.innerWidth>960 || e.touches.length!==1 || overlayOpen()){ active=false; return; }
     x0=e.touches[0].clientX; y0=e.touches[0].clientY; dx=0; axis=null; active=true;
-    view.style.transition="none";
+    const v=view(); if(v) v.style.transition="none";
   },{passive:true});
 
   window.addEventListener("touchmove",e=>{
     if(!active) return;
     const t=e.touches[0], mx=t.clientX-x0, my=t.clientY-y0;
     if(axis===null){
-      if(Math.abs(mx)<8 && Math.abs(my)<8) return;          // aún sin decidir el eje
-      axis = Math.abs(mx) > Math.abs(my)*1.2 ? "x" : "y";
+      if(Math.abs(mx)<10 && Math.abs(my)<10) return;        // aún sin decidir el eje
+      axis = Math.abs(mx) > Math.abs(my)*1.3 ? "x" : "y";
     }
     if(axis!=="x"){ active=false; reset(); return; }         // vertical → deja scroll / refresco
     e.preventDefault();                                      // bloquea el "atrás" del navegador
     dx = mx;
-    if(!swipeTargetView(dx<0?1:-1)) dx = mx*0.3;             // resistencia elástica en el borde
+    if(!swipeTargetView(dx<0?1:-1)) dx = mx*0.32;            // resistencia elástica en el borde
     setX(dx);
   },{passive:false});
 
   window.addEventListener("touchend",()=>{
     if(!active) return; active=false;
     if(axis!=="x") return;
-    const w=W(), target=swipeTargetView(dx<0?1:-1), commit = target && Math.abs(dx) > w*0.25;
-    if(commit){
-      animating=true;
-      const out = dx<0 ? -w : w, inFrom = dx<0 ? w : -w;
-      ease(); setX(out);
-      setTimeout(()=>{
-        go(target);                                          // re-renderiza la nueva morada
-        view.style.transition="none"; setX(inFrom);
-        void view.offsetWidth;                               // fuerza reflow
-        ease(); setX(0);
-        setTimeout(()=>{ reset(); animating=false; }, 240);
-      }, 200);
+    const w=Math.min(window.innerWidth,560), target=swipeTargetView(dx<0?1:-1);
+    if(target && Math.abs(dx) > w*0.22){
+      commitSlide(target, dx<0?1:-1, dx);
     } else {
-      ease(); setX(0);                                       // rebote a su sitio
-      setTimeout(reset, 240);
+      const v=view(); if(v){ v.style.transition=EASE; v.style.transform="translateX(0)"; setTimeout(reset,300); }
     }
   },{passive:true});
 }
