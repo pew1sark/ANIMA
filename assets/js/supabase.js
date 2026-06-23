@@ -239,6 +239,8 @@ const Cloud = {
 
   /* Panel del Fundador — agregados (solo el Creador; si no, lanza error). */
   async founderStats(){ if(!_sb) return null; const { data, error } = await _sb.rpc("founder_stats"); if(error) throw error; return data; },
+  /* Monitor del Mundo (solo el Creador) — métricas de monitoreo (migración 0024). */
+  async worldMonitor(){ if(!_sb) return null; const { data, error } = await _sb.rpc("world_monitor"); if(error) throw error; return data; },
 
   /* Consejo de Almas — propuestas y votaciones (migración 0015). */
   async proposals(){ if(!_sb) return []; try{ const { data } = await _sb.rpc("list_proposals"); return data || []; }catch(e){ return []; } },
