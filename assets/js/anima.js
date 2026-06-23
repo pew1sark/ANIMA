@@ -22,8 +22,19 @@ const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
 /* ---------- Avatar ---------- */
 function initials(name){ return (name||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
 function avatarHTML(a, cls=""){
-  if(a.photo) return `<span class="avatar ${cls}" style="background-image:url('${esc(a.photo)}');background-size:cover;background-position:center"></span>`;
+  const url = a && (a.photo || a.avatar_url);
+  if(url) return `<span class="avatar ${cls}" style="background-image:url('${esc(url)}');background-size:cover;background-position:center"></span>`;
   return `<span class="avatar ${cls}" style="background:linear-gradient(145deg,${a.color},${shade(a.color,-22)})">${initials(a.name)}</span>`;
+}
+/* Avatar de una Alma de la comunidad (foto real si la tiene). Opcionalmente
+   enlazable para visitar su Alma pública (data-pub). */
+function cAvatar(au, cls, visitId){
+  const url = au && (au.photo || au.avatar_url);
+  const link = visitId ? `data-pub="${visitId}" title="Visitar Alma"` : "";
+  const klass = `avatar ${cls||"sm"} ${visitId?"pub-link":""}`;
+  if(url) return `<span class="${klass}" ${link} style="background-image:url('${esc(url)}');background-size:cover;background-position:center"></span>`;
+  const c=(au&&au.color)||"#888";
+  return `<span class="${klass}" ${link} style="background:linear-gradient(145deg,${c},${shade(c,-22)})">${initials((au&&au.name)||"?")}</span>`;
 }
 function shade(hex,p){ hex=hex||"#111111"; const n=parseInt(hex.slice(1),16); let r=(n>>16)+p,g=(n>>8&255)+p,b=(n&255)+p;
   r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));
@@ -1359,8 +1370,13 @@ function vComunidad(a){
         <div><div class="num">${santuariosCount}</div><span class="lbl">Santuarios activos</span></div>
         <div><div class="num">${nivelesCount}</div><span class="lbl">Niveles habitando el Mundo</span></div>
       </div></div>`;
-  // ALMAS CONECTADAS — constelación viva.
-  const connect = `<div class="card s4"><div class="section-title"><h2 style="font-size:15px">Almas conectadas</h2></div>${constelMini(list)}</div>`;
+  // ALMAS CONECTADAS — tu Constelación (vínculos mutuos) o la del Mundo.
+  let myConstel=null, constelTitle="Almas conectadas", constelCount="";
+  if(a.live && state.following && state.followers){
+    const mutual=list.filter(m=> m.id && state.following.has(m.id) && state.followers.has(m.id));
+    if(mutual.length){ myConstel=[a, ...mutual]; constelTitle="Tu Constelación"; constelCount=`<div class="spacer"></div><span class="pill gold">${mutual.length}</span>`; }
+  }
+  const connect = `<div class="card s4"><div class="section-title"><h2 style="font-size:15px">${constelTitle}</h2>${constelCount}</div>${constelMini(myConstel||list)}</div>`;
 
   // DISTRIBUCIÓN POR PAÍS — barras.
   const maxC=countriesArr.length?countriesArr[0][1]:1;
@@ -1386,11 +1402,19 @@ function vComunidad(a){
     : `<div class="card s12"><p class="muted">Entra a tu Alma para dejar tu Huella en la comunidad.</p></div>`;
   const wall = `<div class="card s12"><div class="section-title"><h2>Muro de la comunidad</h2><div class="spacer"></div><span class="pill ${liveMode()?'gold':''}">${feed.length} Huellas</span></div>
       ${feed.length?feed.map(p=>{ const au=authorOf(p.author_alma_id);
-        const visit=(au.id && au.id!==a.almaId)?`data-pub="${au.id}"`:"";
+        const visitId=(au.id && au.id!==a.almaId)?au.id:"";
         const isRit=p.kind==="ritual";
-        return `<div class="post" data-openpost="${p.id}"><span class="avatar sm pub-link" ${visit} title="${visit?'Visitar Alma':''}" style="background:linear-gradient(145deg,${au.color},${shade(au.color,-22)})">${initials(au.name)}</span>
-          <div class="grow"><b>${esc(p.title||au.name)}</b>${isRit?` <span class="pill gold" style="font-size:9px">🜂 Ritual</span>`:""}<br><small class="muted">${esc(au.name)} · ${timeAgo(p.created_at)}</small>
-          <p style="margin:6px 0 0">${esc((p.body||"").slice(0,160))}${(p.body||"").length>160?"…":""}</p></div></div>`;
+        const sc=(state.postSparkCount&&state.postSparkCount[p.id])||0;
+        const sparked=state.mySparkSet && state.mySparkSet.has(p.id);
+        return `<div class="post">${cAvatar(au,"sm",visitId)}
+          <div class="grow">
+            <div data-openpost="${p.id}" style="cursor:pointer"><b>${esc(p.title||au.name)}</b>${isRit?` <span class="pill gold" style="font-size:9px">🜂 Ritual</span>`:""}<br><small class="muted">${esc(au.name)} · ${timeAgo(p.created_at)}</small>
+            <p style="margin:6px 0 0">${esc((p.body||"").slice(0,160))}${(p.body||"").length>160?"…":""}</p></div>
+            <div class="post-foot">
+              <button class="spark-btn ${sparked?'on':''}" data-spark="${p.id}" title="${sparked?'Quitar tu Chispa':'Dar una Chispa'}">✦ <b>${sc}</b></button>
+              <button class="eco-link" data-openpost="${p.id}">◎ Ecos</button>
+            </div>
+          </div></div>`;
       }).join(""):`<p class="muted">Aún no hay Huellas.${a.live?" ¡Deja la primera!":""}</p>`}</div>`;
   const clanCard = a.clan ? `<div class="card s12"><div class="section-title"><h2>${clan?clan.emoji:"🖤"} ${esc(a.clan)}</h2><div class="spacer"></div><span class="pill">Clan · Nivel 2</span></div>
       <p class="muted">${clan?clan.desc:"Comunidad privada por invitación (2 a 8 Almas)."}</p>
@@ -1418,7 +1442,9 @@ function constelMini(list){
   const cx=50, cy=48; let links="", stars="";
   const pts=top.map((m,i)=>{ if(i===0) return {x:cx,y:cy,m}; const ang=((i-1)/(top.length-1))*Math.PI*2; return {x:cx+Math.cos(ang)*32, y:cy+Math.sin(ang)*34, m}; });
   pts.forEach((p,i)=>{ if(i===0) return; const dx=p.x-cx, dy=p.y-cy; const len=Math.sqrt(dx*dx+dy*dy); const ang=Math.atan2(dy,dx)*180/Math.PI; links+=`<span class="wt-link" style="left:${cx}%;top:${cy}%;width:${len}%;transform:rotate(${ang}deg)"></span>`; });
-  pts.forEach(p=>{ const c=p.m.color||"#888"; const act=(liveMode()&&!p.m.live&&p.m.id)?`data-pub="${p.m.id}"`:""; stars+=`<span class="wt-star ${act?'pub-link':''}" ${act} title="${esc(p.m.name)}" style="left:${p.x}%;top:${p.y}%;background:linear-gradient(145deg,${c},${shade(c,-22)})">${initials(p.m.name)}</span>`; });
+  pts.forEach(p=>{ const c=p.m.color||"#888"; const act=(liveMode()&&!p.m.live&&p.m.id)?`data-pub="${p.m.id}"`:""; const url=p.m.photo||p.m.avatar_url;
+    const bg=url?`background-image:url('${esc(url)}');background-size:cover;background-position:center`:`background:linear-gradient(145deg,${c},${shade(c,-22)})`;
+    stars+=`<span class="wt-star ${act?'pub-link':''}" ${act} title="${esc(p.m.name)}" style="left:${p.x}%;top:${p.y}%;${bg}">${url?"":initials(p.m.name)}</span>`; });
   return `<div class="wt-constel">${links}${stars}</div>`;
 }
 /* Monta el Árbol Vivo y enlaza el Estado del Mundo con el DOM (en vivo). */
@@ -1516,7 +1542,57 @@ function worldSummaryCard(list){
     <div class="country-rows">${dist.map(d=>`<div class="country-row"><span>${d.l.emoji} ${esc(d.l.label)} · ${esc(d.l.name)}</span><b>${d.n}</b></div>`).join("")}</div>
   </div>`;
 }
-async function loadPosts(){ if(!Cloud.enabled) return; try{ state.cloudPosts=await Cloud.posts(); if(state.view==="comunidad") renderView(); }catch(e){} }
+async function loadPosts(){ if(!Cloud.enabled) return; try{ state.cloudPosts=await Cloud.posts(); await loadPostSparks(); if(state.view==="comunidad") renderView(); }catch(e){} }
+/* Chispas por Huella: conteo por post + las que dio mi Alma. */
+async function loadPostSparks(){
+  if(!Cloud.enabled){ state.postSparkCount={}; state.mySparkSet=new Set(); return; }
+  try{
+    const rows=await Cloud.allPostSparks(); const cnt={}; const mine=new Set(); const myId=me().almaId;
+    rows.forEach(r=>{ cnt[r.post_id]=(cnt[r.post_id]||0)+1; if(myId && r.alma_id===myId) mine.add(r.post_id); });
+    state.postSparkCount=cnt; state.mySparkSet=mine;
+  }catch(e){ state.postSparkCount=state.postSparkCount||{}; state.mySparkSet=state.mySparkSet||new Set(); }
+}
+/* Vínculos: a quién sigo (vinculo) y quién me sigue → Constelaciones (mutuos). */
+async function loadFollows(){
+  const a=me();
+  if(!Cloud.enabled || !a.live){ state.following=new Set(); state.followers=new Set(); return; }
+  try{
+    const f=await Cloud.myFollowing(a.almaId); state.following=new Set((f||[]).map(r=>r.following_alma_id));
+    const r=await Cloud.myFollowers(a.almaId); state.followers=new Set((r||[]).map(x=>x.follower_alma_id));
+  }catch(e){ state.following=state.following||new Set(); state.followers=state.followers||new Set(); }
+}
+/* Dar / quitar una Chispa a una Huella (máx. 1 por Alma). Optimista. */
+async function doSpark(postId){
+  const a=me(); if(!a.live){ alert("Entra a tu Alma para dar una Chispa."); return; }
+  state.mySparkSet=state.mySparkSet||new Set(); state.postSparkCount=state.postSparkCount||{};
+  const had=state.mySparkSet.has(postId);
+  if(had){ state.mySparkSet.delete(postId); state.postSparkCount[postId]=Math.max(0,(state.postSparkCount[postId]||1)-1); }
+  else { state.mySparkSet.add(postId); state.postSparkCount[postId]=(state.postSparkCount[postId]||0)+1; }
+  if(state.view==="comunidad") renderView();
+  if(document.getElementById("postModal").classList.contains("open")) openPost(postId);
+  try{
+    const n=await Cloud.togglePostSpark(postId);
+    if(n!=null){ state.postSparkCount[postId]=n; }
+    if(!had && window.WorldTree) WorldTree.onEco({ almaName:a.name, country:a.country });
+  }catch(e){ await loadPostSparks(); if(state.view==="comunidad") renderView(); }
+}
+/* Vincular / desvincular a otra Alma. Si es mutuo, nace una Constelación. */
+async function doFollow(id){
+  const a=me(); if(!a.live){ alert("Entra a tu Alma para vincularte."); return; }
+  if(id===a.almaId) return;
+  try{
+    const nowFollowing=await Cloud.toggleFollow(id);
+    state.following=state.following||new Set();
+    if(nowFollowing) state.following.add(id); else state.following.delete(id);
+    if(nowFollowing && state.followers && state.followers.has(id)){
+      const other=authorOf(id); const nick=(a.name||"Alma").split(" ")[0]; const onick=((other&&other.name)||"otra Alma").split(" ")[0];
+      toast("✦ Nació una Constelación con "+((other&&other.name)||"otra Alma"));
+      try{ Cloud.emitEcho("eco","✦ "+nick+" y "+onick+" forman una nueva Constelación"); }catch(_){}
+    }
+    openPublic(id);
+    if(state.view==="comunidad") renderView();
+  }catch(e){ alert("No se pudo vincular: "+(e.message||e)); }
+}
 async function loadCommunityExtras(){
   if(!Cloud.enabled){ state.cloudEcos=[]; return; }
   try{ const r=await Promise.all([Cloud.echoes(12), Cloud.soulsCount()]); state.cloudEcos=r[0]; state.cloudSoulsCount=r[1]; ensureEcoRealtime(); if(state.view==="comunidad") renderView(); }
@@ -1559,11 +1635,14 @@ function branchOf(a){
 function openPost(id){
   const p=(state.cloudPosts||[]).find(x=>x.id===id); if(!p) return; const au=authorOf(p.author_alma_id);
   document.getElementById("postModal").classList.add("open");
-  const visit=(au.id && au.id!==me().almaId)?`data-pub="${au.id}"`:"";
+  const visitId=(au.id && au.id!==me().almaId)?au.id:"";
+  const sc=(state.postSparkCount&&state.postSparkCount[p.id])||0;
+  const sparked=state.mySparkSet && state.mySparkSet.has(p.id);
   document.getElementById("postModalBody").innerHTML=`
     <div style="display:flex;gap:10px;align-items:center">
-      <span class="avatar sm ${visit?'pub-link':''}" ${visit} title="${visit?'Visitar Alma':''}" style="background:linear-gradient(145deg,${au.color},${shade(au.color,-22)})">${initials(au.name)}</span>
-      <div><b ${visit?'class="pub-link" '+visit:""}>${esc(au.name)}</b><br><small class="muted">${timeAgo(p.created_at)}</small></div></div>
+      ${cAvatar(au,"sm",visitId)}
+      <div style="flex:1"><b ${visitId?'class="pub-link" data-pub="'+visitId+'"':""}>${esc(au.name)}</b><br><small class="muted">${timeAgo(p.created_at)}</small></div>
+      <button class="spark-btn ${sparked?'on':''}" data-spark="${p.id}" title="${sparked?'Quitar tu Chispa':'Dar una Chispa'}">✦ <b>${sc}</b></button></div>
     ${p.title?`<h2 style="margin:12px 0 4px;letter-spacing:-.03em">${esc(p.title)}</h2>`:""}
     <p style="white-space:pre-wrap">${esc(p.body||"")}</p>
     <div class="section-title" style="margin-top:14px"><h3 style="font-size:14px;margin:0">Ecos</h3></div>
@@ -1574,7 +1653,8 @@ function openPost(id){
 async function loadComments(postId){
   try{ const cs=await Cloud.comments(postId); const box=document.getElementById("postComments"); if(!box) return;
     box.innerHTML=cs.length?cs.map(c=>{ const au=authorOf(c.author_alma_id);
-      return `<div class="row"><span class="avatar sm" style="background:linear-gradient(145deg,${au.color},${shade(au.color,-22)})">${initials(au.name)}</span><div class="grow"><b>${esc(au.name)}</b> <small class="muted">${timeAgo(c.created_at)}</small><br>${esc(c.body)}</div></div>`;
+      const visitId=(au.id && au.id!==me().almaId)?au.id:"";
+      return `<div class="row">${cAvatar(au,"sm",visitId)}<div class="grow"><b>${esc(au.name)}</b> <small class="muted">${timeAgo(c.created_at)}</small><br>${esc(c.body)}</div></div>`;
     }).join(""):`<p class="muted">Sé la primera Alma en dejar un Eco.</p>`;
   }catch(e){}
 }
@@ -2485,6 +2565,7 @@ async function loadMyAlma(){
   }catch(e){} }
   applyHashView();               // entrada directa a Clan/Santuario desde el Home
   ensureLocation(a);             // sincroniza la ubicación del Alma (automática)
+  loadFollows();                 // mis vínculos y Constelaciones (mutuos)
   maybeAutoTour();               // tutorial único por Alma (solo la primera vez)
 }
 /* ===========================================================
@@ -2689,18 +2770,27 @@ async function openPublic(id){
   const av=row.avatar_url?`background-image:url('${esc(row.avatar_url)}');background-size:cover;background-position:center`:`background:linear-gradient(145deg,${row.color},${shade(row.color,-22)})`;
   const loc=show("location")?(row.territory||(row.city&&row.country?row.city+", "+row.country:(row.country||row.city||""))):"";
   const since=row.created_at?new Date(row.created_at).toLocaleDateString("es-CL",{month:"long",year:"numeric"}):"";
+  const meLive=me().live && me().almaId, isMe=meLive && id===me().almaId;
+  const following=state.following && state.following.has(id);
+  const followsMe=state.followers && state.followers.has(id);
+  const mutual=following && followsMe;
   const summary=`<div class="pub-summary">
       ${loc?`<span class="chip">📍 ${esc(loc)}</span>`:""}
       <span class="chip">${lv.emoji} ${esc(lv.label)} · ${esc(lv.name)}</span>
       ${row.sparks?`<span class="chip">✦ ${row.sparks} Chispas</span>`:""}
+      ${mutual?`<span class="chip" style="border-color:rgba(208,170,99,.5);color:var(--gold-deep,#7b5920)">✦ Constelación</span>`:(followsMe?`<span class="chip">Te vincula</span>`:"")}
       ${since?`<span class="chip">Alma desde ${esc(since)}</span>`:""}
     </div>`;
+  const followBtn = (meLive && !isMe)
+    ? `<button class="btn ${following?'secondary':''} sm" data-follow="${id}" style="margin-right:8px">${following?'✓ Vinculada':'✦ Vincular'}</button>`
+    : "";
   document.getElementById("publicModal").classList.add("open");
   document.getElementById("pubBody").innerHTML=`<div style="text-align:center">
       <span class="avatar lg" style="margin:0 auto 10px;${av}">${row.avatar_url?"":initials(row.name)}</span>
       <h2 style="margin:0;letter-spacing:-.04em">${esc(row.name)}</h2><div class="muted">${esc([row.discipline||row.role,row.specialty].filter(Boolean).join(" · "))}${loc?" · "+esc(loc):""}</div>
       ${summary}
-      <div style="margin-top:12px"><a class="btn sm" href="portfolio.html?alma=${id}" target="_blank" rel="noopener">Ver portafolio completo →</a></div></div>
+      ${mutual?`<p class="muted" style="font-size:12px;margin:8px 0 0">✦ Tú y ${esc((row.name||"").split(" ")[0])} forman una Constelación.</p>`:""}
+      <div style="margin-top:12px">${followBtn}<a class="btn sm" href="portfolio.html?alma=${id}" target="_blank" rel="noopener">Ver portafolio →</a></div></div>
     ${show("bio")&&row.bio?`<p style="margin-top:14px">${esc(row.bio||"")}</p>`:""}${show("tags")?`<div>${(row.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}
     <div id="pubExtra" class="muted" style="font-size:12.5px;margin-top:12px">Cargando…</div>`;
   try{ const m=await Cloud.loadModules(id);
@@ -2765,6 +2855,10 @@ function bdClose(e, id){ return e.target.id===id && (!_downTarget || _downTarget
 
 document.addEventListener("click", e=>{
   if(e.target.closest("[data-reveal]")){ revealNext(); return; }
+  // Chispa a una Huella y Vínculo entre Almas tienen prioridad (van dentro de
+  // tarjetas que abren la Huella o visitan el Alma).
+  const spk=e.target.closest("[data-spark]"); if(spk){ doSpark(spk.dataset.spark); return; }
+  const flw=e.target.closest("[data-follow]"); if(flw){ doFollow(flw.dataset.follow); return; }
   // Visitar otra Alma tiene prioridad (p. ej. el avatar dentro de una Huella).
   const pvEarly=e.target.closest("[data-pub]"); if(pvEarly){ openPublic(pvEarly.dataset.pub); return; }
   const rn=e.target.closest("[data-reino]"); if(rn){ toggleReino(rn.dataset.reino); return; }

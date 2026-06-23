@@ -379,8 +379,17 @@
 .post{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);cursor:pointer;transition:.15s}
 .post:last-child{border-bottom:0}
 .post:hover{background:rgba(255,255,255,.5);border-radius:14px;padding-left:10px;padding-right:10px}
+.post{cursor:default}
 .post .grow{min-width:0}
 .post p{color:var(--muted);font-size:13.5px}
+.post-foot{display:flex;align-items:center;gap:10px;margin-top:9px}
+.spark-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:rgba(255,255,255,.6);
+  color:var(--muted);border-radius:999px;padding:5px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:.16s}
+.spark-btn b{font-weight:800;font-variant-numeric:tabular-nums}
+.spark-btn:hover{border-color:var(--gold-deep,#7b5920);color:var(--gold-deep,#7b5920);transform:translateY(-1px)}
+.spark-btn.on{border-color:rgba(208,170,99,.6);background:radial-gradient(circle at 30% 30%,rgba(208,170,99,.22),rgba(208,170,99,.1));color:var(--gold-deep,#7b5920)}
+.eco-link{border:0;background:none;color:var(--muted);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:5px 4px;border-radius:8px}
+.eco-link:hover{color:var(--ink,#111)}
 
 /* ---------- Acciones de ítem (editar/eliminar) ---------- */
 .acts{display:inline-flex;gap:4px;flex:0 0 auto}
