@@ -12,50 +12,19 @@
   <meta name="apple-mobile-web-app-title" content="ANIMA" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>ANIMA — El mundo vivo de las Almas</title>
-  <meta name="description" content="ANIMA es un mundo vivo habitado por Almas. Entra al HOME: el resumen del mundo, tu Alma, tu Clan y tu Santuario." />
+  <meta name="description" content="ANIMA es un mundo vivo habitado por Almas. Entra al HOME: el estado del mundo, tu Alma, tu Clan y tu Santuario." />
   <link rel="stylesheet" href="assets/css/umbral.css" />
   <style>
-    /* --- Resumen del Mundo (vista de invitado) --- */
-    .world-state{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:16px;
-      background:var(--line-2);border:1px solid var(--line);border-radius:18px;overflow:hidden}
-    .world-state>div{background:var(--card);padding:18px 16px}
-    .world-state .k{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-    .world-state .v{font-size:22px;font-weight:850;letter-spacing:-.02em;margin-top:8px;color:var(--ink)}
-    .world-state .v small{font-size:12px;font-weight:700;color:var(--muted)}
-
-    .moradas{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:16px}
-    .morada{border:1px solid var(--line);border-radius:16px;padding:16px 12px;text-align:center;background:var(--card)}
-    .morada .sy{font-size:22px;color:var(--gold-deep)}
-    .morada b{display:block;margin-top:8px;font-size:13px;letter-spacing:-.01em}
-    .morada small{display:block;margin-top:6px;color:var(--muted);font-size:11px;line-height:1.45}
-
-    .lex{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
-    .lex div{border:1px solid var(--line-2);border-radius:14px;padding:14px;background:var(--card)}
-    .lex b{font-size:14px;letter-spacing:-.01em}
-    .lex small{display:block;margin-top:4px;color:var(--muted);font-size:12px;line-height:1.45}
-
-    .home-cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
-    .sect-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
-      color:var(--gold-deep);margin:30px 0 4px}
-    .sect-title{font-size:clamp(20px,3.4vw,26px);font-weight:800;letter-spacing:-.02em;margin:0 0 4px;color:var(--ink)}
-
-    /* --- Resumen del Alma (sesión iniciada) --- */
+    /* HOME minimalista — mismo diseño en todo dispositivo, solo adaptado. */
+    .world-line{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+      margin-top:12px;font-size:13px;color:var(--muted)}
+    .world-line .pip{width:5px;height:5px;border-radius:50%;background:var(--gold);opacity:.7}
     .soul-sleep{display:flex;align-items:center;gap:12px;padding:14px 18px;border:1px solid var(--line);
-      border-radius:16px;background:linear-gradient(135deg,rgba(208,170,99,.10),transparent);margin-bottom:16px}
-    .soul-sleep .moon{font-size:22px}
+      border-radius:16px;background:linear-gradient(135deg,rgba(208,170,99,.10),transparent);margin-bottom:18px}
+    .soul-sleep .moon{font-size:20px}
     .soul-sleep b{color:var(--gold-deep)}
-    .soul-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:14px;
-      background:var(--line-2);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-    .soul-stats>div{background:var(--card);padding:14px 12px;text-align:center}
-    .soul-stats .k{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-    .soul-stats .v{font-size:18px;font-weight:850;letter-spacing:-.02em;margin-top:6px;color:var(--ink)}
-
-    @media(max-width:760px){
-      .world-state{grid-template-columns:repeat(2,1fr)}
-      .moradas{grid-template-columns:repeat(2,1fr)}
-      .lex{grid-template-columns:1fr}
-      .soul-stats{grid-template-columns:repeat(2,1fr)}
-    }
+    .home-cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:18px}
+    @media(max-width:680px){ .home-cta .cbtn{flex:1;text-align:center} }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase.js"></script>
@@ -69,23 +38,20 @@
   <script src="assets/js/rite.js"></script>
   <script>
   /* ===========================================================
-     HOME PRINCIPAL — la morada de entrada para TODA Alma.
-     Sin sesión → Resumen del Mundo (lo que late hoy en ANIMA).
-     Con sesión → Resumen del Alma (cuánto durmió + sus estadísticas)
-                  y el acceso a Mi Alma / Clan / Santuario.
-     El rito del Umbral ya NO se fuerza: se elige desde aquí.
+     HOME PRINCIPAL — minimalista, igual en todo dispositivo.
+     Sin sesión → Almas actuales + Estado del Mundo.
+     Con sesión → Tiempo que el Alma llevaba sin entrar + acceso a
+                  Mi Alma / Clan / Santuario (si tienen acceso).
      =========================================================== */
   var CREATOR_EMAIL = "sarkgraff@gmail.com";
   var home = document.getElementById("home");
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
   var PEAK = '<svg viewBox="23 27 54 48" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-  /* El sueño del Alma: tiempo desde la última presencia (se lee ANTES de
-     volver a sellar la hora). */
+  /* Tiempo que el Alma llevaba sin entrar (se lee ANTES de re-sellar la hora). */
   var SLEPT = AnimaState.sleptText(AnimaState.lastSeen());
 
-  /* Estado de sesión/plan (se completa con la nube si hay sesión). */
-  var ctx = { signedIn: false, email: "", plan: "ALMA", isCreator: false, awakened: false };
+  var ctx = { signedIn: false, email: "", plan: "ALMA", isCreator: false };
 
   function planAllows(level){
     if (ctx.isCreator) return true;
@@ -94,7 +60,7 @@
     return true;
   }
 
-  /* ---------- Cabecera común (marca + menú/entrada) ---------- */
+  /* Cabecera común: marca + (menú del Alma | Entrar). */
   function topBar(){
     var s = AnimaState.get();
     var nameFirst = (s.name || "Alma").split(" ")[0];
@@ -105,109 +71,53 @@
             (planAllows("CLAN") ? '<a class="apop-item" href="studio.html#go=clanpanel">❂ Mi Clan</a>' : '') +
             (planAllows("SANTUARIO") ? '<a class="apop-item" href="studio.html#go=santuario">🜁 Santuario</a>' : '') +
             '<div class="apop-sep"></div>' +
-            '<button class="apop-item" id="switchAlma">⤿ Cambiar de Alma</button>' +
             '<button class="apop-item danger" id="logoutAlma">⏻ Cerrar sesión</button>' +
           '</div></div>'
       : '<a class="cbtn" href="entrar.html" style="padding:10px 18px;font-size:13.5px">Entrar a mi Alma</a>';
     return '<div class="home-top">' +
         '<div class="home-brand"><span class="m">' + PEAK + '</span>ANIMA</div>' +
-        '<div style="display:flex;align-items:center;gap:10px">' +
-          '<button class="cbtn ghost" data-install style="padding:9px 15px;font-size:13px">⤓ Instalar app</button>' +
-          right +
-        '</div>' +
+        right +
       '</div>';
   }
 
-  /* ---------- Pie común ---------- */
   function foot(){
     return '<div class="home-foot">' +
-        '<strong>ANIMA TSC — The Soul of Creativity</strong> · The Founding Era<br>' +
-        '<a href="index.html">El Umbral</a>·<a href="planes.html">Mi Plan</a>·<a href="arbol.html">Árbol de Almas</a>·<a href="legal.html#privacidad">Privacidad</a><br>' +
-        '<span style="opacity:.6">Tus datos son privados; tú decides qué compartir.</span>' +
+        '<strong>ANIMA TSC</strong> · The Founding Era<br>' +
+        '<a href="arbol.html">Árbol de Almas</a>·<a href="planes.html">Mi Plan</a>·<a href="legal.html#privacidad">Privacidad</a>' +
       '</div>';
   }
 
-  /* ===========================================================
-     VISTA INVITADO — Resumen general del Mundo
-     =========================================================== */
+  /* ---------- Sin sesión: Almas actuales + Estado del Mundo ---------- */
   function renderGuest(){
-    var moradas = [
-      ['◆','Mi Alma','Identidad, Senda, trayectoria y portafolio.'],
-      ['₵','Taller','Lo que creas: proyectos, clientes y agenda.'],
-      ['❂','Clan','Con quién creas: panel, plan y calendario.'],
-      ['❂','Mundo','Constelación, Árbol, Ecos y Consejo.'],
-      ['❖','Mi Plan','Cómo habitas: Alma, Clan o Santuario.']
-    ].map(function(m){
-      return '<div class="morada"><div class="sy">' + m[0] + '</div><b>' + m[1] + '</b><small>' + m[2] + '</small></div>';
-    }).join("");
-
-    var lex = [
-      ['Alma','Quien habita ANIMA. Tú.'],
-      ['Esencia','La huella viva que dejas. Solo crece.'],
-      ['Eco','Una creación que resuena en el mundo.'],
-      ['Clan','De 2 a 8 Almas que crean juntas.'],
-      ['Árbol','El corazón vivo, alimentado por todas las Almas.'],
-      ['Lumbre','La presencia que acompaña y recuerda.']
-    ].map(function(l){
-      return '<div><b>' + l[0] + '</b><small>' + l[1] + '</small></div>';
-    }).join("");
-
     home.innerHTML =
       topBar() +
 
-      '<div class="home-hero">' +
+      '<div class="home-hero" style="text-align:center">' +
         '<h1>Un mundo está despertando.</h1>' +
-        '<p>ANIMA no es una app: es un mundo vivo habitado por Almas. Aquí no compites por atención — resuenas. Esto es lo que late hoy.</p>' +
+        '<p style="margin-left:auto;margin-right:auto">ANIMA es un mundo vivo habitado por Almas.</p>' +
       '</div>' +
 
-      // Estado del mundo
-      '<div class="hcard">' +
-        '<div class="label">Estado actual del mundo</div>' +
-        '<div class="world-state">' +
-          '<div><div class="k">Era</div><div class="v">Origen</div></div>' +
-          '<div><div class="k">El Árbol</div><div class="v" id="treeState">Despertando</div></div>' +
-          '<div><div class="k">Almas del Origen</div><div class="v"><span id="homeSouls">·</span> <small>/ 100</small></div></div>' +
-          '<div><div class="k">Acceso</div><div class="v" style="font-size:15px">Por Umbral</div></div>' +
-        '</div>' +
+      '<div class="hcard" style="text-align:center">' +
+        '<div class="label">Almas del Origen</div>' +
+        '<div class="big" style="font-size:40px;margin-top:4px"><span id="homeSouls">·</span> <span style="color:var(--muted);font-size:20px;font-weight:700">/ 100</span></div>' +
         '<div class="ebar" style="margin-top:14px"><span id="homeSoulsBar" style="background:linear-gradient(90deg,var(--gold,#d0aa63),var(--gold-deep,#7b5920))"></span></div>' +
-        '<div class="hint" id="homeSoulsSub" style="margin-top:8px">El Umbral de ANIMA.</div>' +
+        '<div class="world-line"><span>Era del Origen</span><span class="pip"></span><span>El Árbol: Despertando</span></div>' +
+        '<div class="hint" id="homeSoulsSub" style="margin-top:10px">El Umbral de ANIMA.</div>' +
       '</div>' +
 
-      // El mundo que habitarás
-      '<div class="sect-eyebrow">El mundo que habitarás</div>' +
-      '<h2 class="sect-title">Cinco moradas. Todo lo demás vive dentro.</h2>' +
-      '<div class="moradas">' + moradas + '</div>' +
-
-      // El lenguaje del mundo
-      '<div class="sect-eyebrow">El lenguaje del mundo</div>' +
-      '<h2 class="sect-title">Aprender ANIMA es aprender a nombrar.</h2>' +
-      '<div class="lex">' + lex + '</div>' +
-
-      // Llamado: entrar o despertar
-      '<div class="hcard" style="margin-top:26px;text-align:center">' +
-        '<div class="label">El Pacto del Origen</div>' +
-        '<div class="big" style="font-size:22px;margin-top:8px">¿Deseas habitar ANIMA?</div>' +
-        '<div class="hint" style="margin-top:6px">Si ya tienes un Alma, entra. Si no, cruza el Umbral y despierta una nueva.</div>' +
-        '<div class="home-cta" style="justify-content:center">' +
-          '<a class="cbtn gold" href="entrar.html" style="padding:12px 22px">Entrar a mi Alma</a>' +
-          '<a class="cbtn ghost" href="umbral.html" style="padding:12px 22px">✦ Despertar una nueva Alma</a>' +
-        '</div>' +
-        '<div style="margin-top:14px"><a class="link" href="arbol.html" style="font-size:13px;color:var(--gold-deep);font-weight:800;text-decoration:none">✦ Ver el Árbol de Almas →</a></div>' +
+      '<div class="home-cta">' +
+        '<a class="cbtn gold" href="entrar.html" style="padding:12px 22px">Entrar a mi Alma</a>' +
+        '<a class="cbtn ghost" href="umbral.html" style="padding:12px 22px">✦ Despertar una nueva Alma</a>' +
       '</div>' +
 
       foot();
 
     fillSouls();
-    if (window.Rite && Rite.initInstall) Rite.initInstall();
   }
 
-  /* ===========================================================
-     VISTA ALMA — Resumen del Alma + accesos
-     =========================================================== */
+  /* ---------- Con sesión: tiempo sin entrar + accesos ---------- */
   function renderSignedIn(){
     var s = AnimaState.get();
-    var p = AnimaState.progress();
-    var afn = AnimaState.affinity(s.affinity);
     var nameFirst = (s.name || "Alma").split(" ")[0];
 
     function entry(level, glyph, title, desc, href){
@@ -219,9 +129,9 @@
         '<a class="ego" href="planes.html">Desbloquear plan →</a></div>';
     }
     var entries =
-      entry("ALMA", "✦", "Mi Alma", "Tu espacio privado: identidad, proyectos, memoria y portafolio.", "studio.html") +
-      entry("CLAN", "❂", "Clan", "Tu equipo (2–8 Almas): agenda, vínculos y memoria colectiva.", "studio.html#go=clanpanel") +
-      entry("SANTUARIO", "🜁", "Santuario", "La organización (8+): múltiples Clanes y vista general.", "studio.html#go=santuario");
+      entry("ALMA", "✦", "Mi Alma", "Tu espacio privado: identidad, proyectos y memoria.", "studio.html") +
+      entry("CLAN", "❂", "Clan", "Tu equipo (2–8 Almas): agenda y memoria colectiva.", "studio.html#go=clanpanel") +
+      entry("SANTUARIO", "🜁", "Santuario", "La organización (8+): múltiples Clanes.", "studio.html#go=santuario");
 
     var sleepLine = SLEPT
       ? '<div class="soul-sleep"><span class="moon">☽</span><div>Tu Alma durmió por <b>' + esc(SLEPT) + '</b>. Bienvenida de vuelta, ' + esc(nameFirst) + '.</div></div>'
@@ -232,56 +142,18 @@
 
       '<div class="home-hero">' +
         '<h1>Hola, ' + esc(nameFirst) + '.</h1>' +
-        '<p>Tu Alma está despierta' + (afn ? ' · ' + afn.glyph + ' ' + esc(afn.name) : '') + '. Esto es lo que te espera hoy en ANIMA.</p>' +
+        '<p>Elige por dónde entrar hoy en ANIMA.</p>' +
       '</div>' +
 
       sleepLine +
 
-      // Resumen del Alma: estadísticas relevantes
-      '<div class="hcard" style="margin-bottom:16px">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">' +
-          '<div style="display:flex;align-items:center;gap:10px">' +
-            '<span class="lv-badge">' + p.level.glyph + ' ' + p.level.name.toUpperCase() + '</span>' +
-            '<span class="hint" style="margin:0">Nivel ' + p.level.n + ' de 7</span></div>' +
-          '<span class="hint" style="margin:0">Esencia ' + p.into + ' / ' + p.span + '</span>' +
-        '</div>' +
-        '<div class="ebar" style="margin-top:14px"><span data-pct="' + p.pct + '"></span></div>' +
-        '<div class="soul-stats">' +
-          '<div><div class="k">Esencia</div><div class="v">' + (s.esencia || 0) + '</div></div>' +
-          '<div><div class="k">Nivel</div><div class="v">' + p.level.glyph + '</div></div>' +
-          '<div><div class="k">Afinidad</div><div class="v" style="font-size:16px">' + (afn ? afn.glyph + ' ' + esc(afn.name) : '—') + '</div></div>' +
-          '<div><div class="k">Plan</div><div class="v" style="font-size:16px">' + esc(ctx.plan || 'ALMA') + '</div></div>' +
-        '</div>' +
-        '<div class="hint" style="margin-top:10px">' + (p.next
-          ? 'Sigue creando para despertar <b style="color:var(--gold-deep)">' + p.next.name + '</b> y desbloquear más de ANIMA.'
-          : 'Has recorrido todo el camino. ∞') + '</div>' +
-      '</div>' +
-
-      // Accesos: Mi Alma / Clan / Santuario
-      '<div class="sect-eyebrow">Ingresa a tu Alma</div>' +
       '<div class="entry-grid">' + entries + '</div>' +
-
-      // El Umbral: contador del mundo
-      '<div class="hcard" style="margin-top:16px">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">' +
-          '<div><div style="font-size:22px;font-weight:850;letter-spacing:-.01em"><span id="homeSouls">·</span> <span style="color:var(--muted);font-weight:700">/ 100 Almas</span></div>' +
-          '<div class="hint" id="homeSoulsSub" style="margin:4px 0 0">El Umbral de ANIMA.</div></div>' +
-          '<a class="cbtn ghost" href="arbol.html" style="padding:9px 15px;font-size:13px">✦ Árbol de Almas</a>' +
-        '</div>' +
-        '<div class="ebar" style="margin-top:14px"><span id="homeSoulsBar" style="background:linear-gradient(90deg,var(--gold,#d0aa63),var(--gold-deep,#7b5920))"></span></div>' +
-        (ctx.isCreator ? '<div style="margin-top:14px"><a class="cbtn ghost" href="fundador.html" style="padding:9px 15px;font-size:13px">⬡ Panel del Fundador</a></div>' : '') +
-      '</div>' +
 
       foot();
 
-    var bar = home.querySelector(".ebar > span[data-pct]");
-    if (bar) setTimeout(function () { bar.style.width = (bar.dataset.pct || 0) + "%"; }, 250);
-    fillSouls();
-    if (window.Rite && Rite.initInstall) Rite.initInstall();
     wireAlmaMenu();
   }
 
-  /* Menú del Alma (abrir/cerrar + acciones). */
   function wireAlmaMenu(){
     var pill = document.getElementById("almaPill");
     if (!pill) return;
@@ -291,15 +163,13 @@
       pop.classList.toggle("open");
     });
     document.addEventListener("click", function (e) { if (!e.target.closest("#almaPill")) pop.classList.remove("open"); });
-    var sw = document.getElementById("switchAlma");
-    if (sw) sw.addEventListener("click", async function () { try { await Cloud.signOut(); } catch (e) {} location.href = "studio.html"; });
     var lo = document.getElementById("logoutAlma");
     if (lo) lo.addEventListener("click", async function () { try { await Cloud.signOut(); } catch (e) {} ctx.signedIn = false; render(); });
   }
 
   function render(){ if (ctx.signedIn) renderSignedIn(); else renderGuest(); }
 
-  /* El Umbral: "X / 100 Almas" — contador vivo desde la nube. */
+  /* Almas actuales — contador vivo desde la nube. */
   async function fillSouls(){
     var nEl = document.getElementById("homeSouls");
     if (!nEl) return;
@@ -308,13 +178,13 @@
     nEl.textContent = n;
     var sub = document.getElementById("homeSoulsSub");
     if (sub) sub.textContent = n >= 100 ? "El Umbral está completo."
-      : n >= 90 ? "El Umbral está casi completo. " + n + " Almas han despertado."
+      : n >= 90 ? "El Umbral está casi completo."
       : "Quedan " + (100 - n) + " lugares en ANIMA.";
     var b = document.getElementById("homeSoulsBar");
     if (b) setTimeout(function(){ b.style.width = Math.max(2, Math.round(n)) + "%"; }, 260);
   }
 
-  /* Init: reconcilia con la nube (sesión/plan/esencia) y pinta una vez. */
+  /* Init: reconcilia con la nube (sesión/plan) y pinta una vez. */
   (async function init() {
     try {
       if (typeof Cloud !== "undefined" && Cloud.enabled) {
@@ -326,7 +196,6 @@
           var row = await Cloud.myAlma();
           if (row) {
             ctx.plan = row.plan || "ALMA";
-            ctx.awakened = !!row.awakening_completed;
             var st = AnimaState.get();
             if (row.name) st.name = row.name;
             if (row.affinity) st.affinity = row.affinity;
