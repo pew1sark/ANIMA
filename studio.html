@@ -156,6 +156,14 @@
     </div>
   </div>
 
+  <!-- MODAL ESENCIA (informativo) -->
+  <div class="auth-modal" id="esenciaModal">
+    <div class="auth-box">
+      <div class="auth-head"><div style="flex:1"><b>La Esencia</b><br><small class="muted">La energía que reúnes al crear. Te hace subir de nivel.</small></div><button class="btn ghost sm" id="esenciaClose">✕</button></div>
+      <div id="esenciaBody"></div>
+    </div>
+  </div>
+
   <!-- MODAL EDITOR DE REGISTRO -->
   <div class="auth-modal" id="recordModal">
     <div class="auth-box">
@@ -188,13 +196,14 @@
       <p class="muted" style="font-size:13px;margin:2px 0 10px">Comparte tu Huella de la semana. Se publicará en el Muro de la comunidad y el Árbol resonará contigo.</p>
       <div class="field"><label>¿Qué creaste esta semana?</label><textarea id="ritualBody" rows="4" placeholder="Una obra, un avance, una idea que tomó forma…"></textarea></div>
       <div class="field"><label>Título (opcional)</label><input id="ritualTitle" placeholder="Dale un nombre a tu Huella"></div>
-      <div class="field"><label>Foto del proyecto (opcional)</label>
-        <div class="img-up">
-          <div class="img-prev" id="prev_ritualImg">Sin imagen</div>
-          <label class="btn sm secondary img-pick">⤒ Subir foto<input type="file" accept="image/*" hidden data-imgfield="1" data-imgfolder="huella" data-imgtarget="ritualImg" data-imgprev="prev_ritualImg" data-imgstatus="up_ritualImg"></label>
-          <input id="ritualImg" data-imgurl="prev_ritualImg" type="text" placeholder="o pega el enlace de una imagen" value="">
-        </div>
-        <small class="muted img-hint" id="up_ritualImg">JPG · PNG · WebP — hasta 10 MB.</small></div>
+      <div class="post-compose-foot" style="margin-bottom:12px">
+        <span class="attach-wrap">
+          <label class="attach-btn"><span class="attach-clip">📎</span> Adjuntar foto<input type="file" accept="image/*" hidden data-imgfield="1" data-imgfolder="huella" data-imgtarget="ritualImg" data-imgprev="prev_ritualImg" data-imgstatus="up_ritualImg"></label>
+          <span class="attach-prev" id="prev_ritualImg" hidden></span>
+          <input id="ritualImg" type="hidden" value="">
+          <small class="muted attach-hint" id="up_ritualImg"></small>
+        </span>
+      </div>
       <button class="btn gold" id="ritualSend" style="width:100%">🜂 Encender la vela</button>
       <div id="ritualMsg" class="muted" style="font-size:12.5px;margin-top:10px;min-height:16px"></div>
     </div>
@@ -234,7 +243,12 @@
         <details><summary>Esencia</summary><p>La energía que reúnes al crear y participar. Sustituye a los “puntos”. Sube con cada acción (completar tu identidad, subir obras, dejar Ecos, el Ritual) y te lleva de un nivel al siguiente.</p></details>
         <details><summary>Niveles del camino</summary><p>El Alma crece por moradas: <b>Origen → Chispa → Raíz → Pulso → Huella → Tótem → Aura → ANIMA</b>. Cada nivel revela nuevas ventanas y posibilidades. No se desbloquea todo de golpe: ANIMA se descubre a tu ritmo.</p></details>
         <details><summary>Huella</summary><p>Lo que dejas en el mundo: una obra publicada o una entrada en el Muro de la comunidad. Tus Huellas forman tu rastro creativo y hacen resonar el Árbol.</p></details>
-        <details><summary>Eco</summary><p>Una respuesta, un comentario, una señal entre Almas. Sustituye a los “me gusta”: en ANIMA las cosas resuenan, no se acumulan.</p></details>
+        <details><summary>Eco</summary><p>Una respuesta, un comentario en una Huella. Sustituye a los “me gusta”: en ANIMA las cosas resuenan, no se acumulan.</p></details>
+        <details><summary>Chispa</summary><p>El aprecio del mundo a una Huella. Puedes dar <b>una sola Chispa por Huella</b> en el muro. Las Chispas que recibes quedan en tu Alma.</p></details>
+        <details><summary>Vínculo · Constelación</summary><p><b>Vincular</b> es seguir a otra Alma. Si esa Alma te vincula de vuelta, nace una <b>Constelación</b>: una conexión mutua que aparece en tu mapa de Almas conectadas.</p></details>
+        <details><summary>Susurro</summary><p>Las notificaciones de tu Alma — solo lo importante. Te avisan cuando alguien se vincula, te da una Chispa o te envía una señal. Viven en la campana, junto a tu nombre.</p></details>
+        <details><summary>Señal</summary><p>Un mensaje privado de Alma a Alma. La envías desde la tarjeta pública de otra Alma; le llega como un Susurro.</p></details>
+        <details><summary>Crónica</summary><p>El registro vivo de ANIMA: lo que vamos integrando y mejorando. Vive en el Mundo, para que tu Alma sepa cómo crece el mundo.</p></details>
         <details><summary>Umbral · Primer Despertar</summary><p>El rito de entrada a ANIMA. Se vive <b>una sola vez</b>: al cruzarlo, tu Alma nace y queda registrada. Después entras directo a tu HOME.</p></details>
         <details><summary>Árbol de Almas</summary><p>El corazón del Mundo. Un organismo vivo que crece con la actividad de todas las Almas: cuantas más crean, más despierta el Árbol.</p></details>
         <details><summary>Ritual del Eco</summary><p>Una ceremonia diaria: <b>una vez al día</b> compartes una Huella sobre lo que creaste esta semana. Enciende el Árbol y suma Esencia.</p></details>

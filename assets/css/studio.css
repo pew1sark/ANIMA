@@ -475,6 +475,35 @@
 .cronica-head b{font-size:15px;letter-spacing:-.01em}
 .cronica-head .pill{font-size:10px}
 
+/* ===========================================================
+   ADJUNTAR COMPACTO — el cuadro grande se oculta dentro de la función
+   =========================================================== */
+.post-compose-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.attach-wrap{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}
+.attach-btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);
+  background:rgba(255,255,255,.6);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;
+  color:var(--ink,#111);cursor:pointer;transition:.15s}
+.attach-btn:hover{border-color:var(--ink,#111)}
+.attach-clip{font-size:14px}
+.attach-prev{width:40px;height:40px;border-radius:10px;background-size:cover;background-position:center;
+  border:1px solid var(--line);flex:0 0 auto}
+.attach-hint{font-size:11px}
+
+/* Banner del portafolio en la tarjeta del Alma */
+.alma-hero-banner{height:130px;margin:-24px -24px 18px;background-size:cover;background-position:center}
+@media(max-width:560px){ .alma-hero-banner{height:100px} }
+
+/* Panel de Vínculos (Estadísticas) */
+.vinc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.vinc-stats > div{background:#fff;padding:16px 10px;text-align:center}
+.vinc-stats .num{font-size:24px;font-weight:850;letter-spacing:-.03em;line-height:1}
+.vinc-stats .lbl{display:block;font-size:11px;color:var(--muted);margin-top:5px}
+
+/* Esencia (informativo) */
+.esencia-now{display:flex;align-items:center;gap:12px;margin:10px 0 6px;flex-wrap:wrap}
+#esenciaBody .row{padding:9px 0}
+
 /* ---------- Acciones de ítem (editar/eliminar) ---------- */
 .acts{display:inline-flex;gap:4px;flex:0 0 auto}
 .ia{border:1px solid var(--line);background:rgba(255,255,255,.7);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:13px;color:#555;display:grid;place-items:center;transition:.15s}
