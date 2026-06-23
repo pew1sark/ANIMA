@@ -15,6 +15,7 @@
 
   var LS_KEY = "anima_state";
   var LS_ONBOARDING = "anima_onboarding_completed";
+  var LS_SEEN = "anima_last_seen";
 
   /* Código Alpha de la Founding Era */
   var ALPHA_CODE = "ANIMA-2026";
@@ -227,11 +228,50 @@
       } catch (e) { return Promise.resolve(false); }
     },
 
-    /* Ruta de entrada según estado (req. 11) */
+    /* Ruta de entrada: el HOME es la morada principal para TODA Alma, en
+       cualquier dispositivo. Quien no ha despertado verá el Resumen del Mundo;
+       quien ya despertó verá su Alma. El rito (umbral) ya no se fuerza: se
+       elige. Así ANIMA siempre inicia en el HOME PRINCIPAL. */
     entryHref: function () {
-      return API.isCompleted() ? "home.html" : "umbral.html";
+      return "home.html";
+    },
+
+    /* --- El sueño del Alma ---
+       Cada vez que un Alma deja ANIMA, dejamos la hora de su última presencia.
+       Al volver, sabemos cuánto durmió. Es por dispositivo (local) y honesto:
+       describe el tiempo que esta morada estuvo en silencio. */
+    lastSeen: function () {
+      try { var v = parseInt(localStorage.getItem(LS_SEEN), 10); return isNaN(v) ? null : v; }
+      catch (e) { return null; }
+    },
+    touch: function () {
+      try { localStorage.setItem(LS_SEEN, String(Date.now())); } catch (e) {}
+    },
+    /* Texto poético del tiempo dormido desde 'fromMs' hasta ahora. */
+    sleptText: function (fromMs) {
+      if (!fromMs) return null;
+      var ms = Date.now() - fromMs;
+      if (ms < 60 * 1000) return "un instante";
+      var mins = Math.floor(ms / 60000);
+      if (mins < 60) return mins + (mins === 1 ? " minuto" : " minutos");
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + (hrs === 1 ? " hora" : " horas");
+      var days = Math.floor(hrs / 24);
+      if (days < 30) return days + (days === 1 ? " día" : " días");
+      var months = Math.floor(days / 30);
+      return months + (months === 1 ? " mes" : " meses");
     }
   };
+
+  /* Registrar la presencia al salir, sin forzar nada al entrar (así el HOME
+     puede leer la última visita antes de actualizarla). */
+  try {
+    var _stamp = function () { API.touch(); };
+    global.addEventListener("pagehide", _stamp);
+    global.addEventListener("visibilitychange", function () {
+      if (global.document && global.document.visibilityState === "hidden") _stamp();
+    });
+  } catch (e) {}
 
   global.AnimaState = API;
 })(window);

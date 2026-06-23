@@ -3593,6 +3593,9 @@ function renderAlmaMenu(){
   if(planAllows("clanpanel")) items.push(`<button class="apop-item" data-almago="clanpanel">❂ Mi Clan</button>`);
   if(planAllows("santuario")) items.push(`<button class="apop-item" data-almago="santuario">🜁 Santuario</button>`);
   items.push(`<div class="apop-sep"></div>`);
+  // Volver al HOME principal de ANIMA (la morada de entrada).
+  items.push(`<a class="apop-item" href="home.html">⌂ Volver al HOME</a>`);
+  items.push(`<div class="apop-sep"></div>`);
   // En móvil el menú lateral está oculto: sus acciones secundarias (tutorial,
   // feedback y, para el Creador, Consola/Personalizar) viven aquí, en el menú
   // del Alma, para mantener la app limpia sin perder el acceso.
