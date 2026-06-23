@@ -89,6 +89,26 @@ function openLevels(){
   document.getElementById("levelModal").classList.add("open");
 }
 function closeLevels(){ document.getElementById("levelModal").classList.remove("open"); }
+/* Cómo se gana Esencia (informativo, igual al mapa de niveles). */
+const ESENCIA_WAYS = [
+  ["✦","Completar tu identidad","+20","una sola vez"],
+  ["🜂","Ritual del Eco","+20","una vez al día"],
+  ["▦","Publicar una Huella en el Mundo","+15",""],
+  ["◎","Dejar un Eco (comentar una Huella)","+5",""],
+  ["⚖","Proponer en el Consejo","+20",""],
+  ["○","Cruzar el Umbral (Primer Despertar)","+1","al nacer"]
+];
+function openEsencia(){
+  const a=me(); const lp=levelProgress(a.xp);
+  document.getElementById("esenciaBody").innerHTML=
+    `<p class="muted" style="font-size:13px">La <b>Esencia</b> es la energía viva de tu Alma: la reúnes al crear y participar, y te lleva de un nivel al siguiente. No es un puntaje vacío — es tu huella acumulada.</p>
+     <div class="esencia-now"><span class="pixel-font" style="font-size:11px;color:#7b5920">${a.xp.toLocaleString("es-CL")} Esencia</span>${lp.next?`<small class="muted">faltan ${(lp.next.xp-a.xp).toLocaleString("es-CL")} para ${esc(lp.next.label)}</small>`:`<small class="muted">nivel máximo ∞</small>`}</div>
+     <div class="section-title" style="margin-top:6px"><h3 style="font-size:14px;margin:0">Cómo se gana</h3></div>
+     ${ESENCIA_WAYS.map(([g,t,n,note])=>`<div class="row"><div style="width:30px;text-align:center;color:var(--gold-deep)">${g}</div><div class="grow"><b>${esc(t)}</b>${note?` <small class="muted">· ${esc(note)}</small>`:""}</div><b style="color:var(--gold-deep)">${esc(n)}</b></div>`).join("")}
+     <p class="muted" style="font-size:11.5px;margin-top:12px">Cada nivel abre nuevas ventanas. Mira el mapa completo en <b>Tu camino</b> (la ⓘ junto al camino del Alma).</p>`;
+  document.getElementById("esenciaModal").classList.add("open");
+}
+function closeEsencia(){ document.getElementById("esenciaModal").classList.remove("open"); }
 
 /* ---------- Personalización (mostrar/ocultar) ---------- */
 
@@ -568,7 +588,9 @@ function vMiAlma(a){
   const lp=levelProgress(a.xp), lv=levelByKey(a.level);
   let tab=state.almaTab||"resumen"; if(tab==="ajustes"&&!isCreator) tab="resumen";
   const idline=[a.discipline||a.role, a.specialty].filter(Boolean).join(" · ");
-  const header=`<div class="card s12">
+  const bannerHTML=(a.banner && isImgUrl(a.banner))?`<div class="alma-hero-banner" style="background-image:url('${esc(a.banner)}')"></div>`:"";
+  const header=`<div class="card s12 ${bannerHTML?'has-banner':''}">
+    ${bannerHTML}
     <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
       ${avatarHTML(a,"lg")}
       <div style="flex:1;min-width:200px">
@@ -578,7 +600,7 @@ function vMiAlma(a){
         ${a.handle?`<div class="muted" style="font-size:12.5px;margin-top:2px">${esc(a.handle)}</div>`:""}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-        <span class="pixel-font" style="font-size:10px;color:#7b5920">${a.xp.toLocaleString("es-CL")} Esencia</span>
+        <span class="pixel-font" style="font-size:10px;color:#7b5920;display:inline-flex;align-items:center;gap:5px">${a.xp.toLocaleString("es-CL")} Esencia <button class="ia" id="esenciaInfo" title="¿Qué es la Esencia y cómo se gana?" style="font-size:11px">ⓘ</button></span>
         <div class="bar" style="width:170px"><span style="width:${lp.pct}%"></span></div>
         <small class="muted" style="font-size:11px">${lp.next?`hacia ${lp.next.label}`:"Alma Despierta ∞"}</small>
       </div>
@@ -725,6 +747,16 @@ function imgUpField(inputId, label, val, folder){
     </div>
     <small class="muted img-hint" id="up_${inputId}">JPG · PNG · WebP — hasta 15 MB, en alta calidad.</small></div>`;
 }
+/* Adjuntar compacto: un botón "📎" que vive DENTRO de la caja (sin cuadro grande).
+   La miniatura aparece sólo después de adjuntar. Ideal para Huellas y Ritual. */
+function attachField(inputId, folder, label){
+  return `<span class="attach-wrap">
+    <label class="attach-btn"><span class="attach-clip">📎</span> ${label||"Adjuntar foto"}<input type="file" accept="image/*" hidden data-imgfield="1" data-imgfolder="${folder||'huella'}" data-imgtarget="${inputId}" data-imgprev="prev_${inputId}" data-imgstatus="up_${inputId}"></label>
+    <span class="attach-prev" id="prev_${inputId}" hidden></span>
+    <input id="${inputId}" type="hidden" value="">
+    <small class="muted attach-hint" id="up_${inputId}"></small>
+  </span>`;
+}
 /* Buckets separados (Alpha 2026): cada tipo de archivo en su sitio,
    con su propio límite. avatars ≤ 2 MB · portfolio ≤ 10 MB. */
 const UPLOAD_BUCKETS = {
@@ -758,7 +790,7 @@ async function uploadImgField(fileInput){
       ? await Cloud.uploadMedia(file, dest.folder)
       : await Cloud.uploadTo(dest.bucket, file, dest.folder);
     const inp = document.getElementById(fileInput.dataset.imgtarget); if(inp) inp.value = url;
-    const prev = document.getElementById(fileInput.dataset.imgprev); if(prev){ prev.style.backgroundImage = `url('${url}')`; prev.textContent = ""; prev.classList.add("has"); }
+    const prev = document.getElementById(fileInput.dataset.imgprev); if(prev){ prev.style.backgroundImage = `url('${url}')`; prev.textContent = ""; prev.classList.add("has"); prev.hidden = false; }
     setS("Listo ✓ Imagen en alta calidad.");
   }catch(err){ setS("No se pudo subir: "+(err.message||err)); }
   done();
@@ -1439,8 +1471,7 @@ function vComunidad(a){
   const create = a.live ? `<div class="card s12"><div class="section-title"><h2>Comparte con la comunidad</h2></div>
       <div class="field"><input id="postTitle" placeholder="Título (opcional)"></div>
       <div class="field"><textarea id="postBody" rows="2" placeholder="¿Qué estás creando? Comparte un proyecto, idea o pregunta…"></textarea></div>
-      ${imgUpField("postImg","Foto del proyecto (opcional)","","huella")}
-      <button class="btn" id="postSend">Dejar mi Huella</button></div>`
+      <div class="post-compose-foot">${attachField("postImg","huella","Adjuntar foto")}<span style="flex:1"></span><button class="btn" id="postSend">Dejar mi Huella</button></div></div>`
     : `<div class="card s12"><p class="muted">Entra a tu Alma para dejar tu Huella en la comunidad.</p></div>`;
   const wall = `<div class="card s12"><div class="section-title"><h2>Muro de la comunidad</h2><div class="spacer"></div><span class="pill ${liveMode()?'gold':''}">${feed.length} Huellas</span></div>
       ${feed.length?feed.map(p=>{ const au=authorOf(p.author_alma_id);
@@ -1536,7 +1567,8 @@ function doRitual(kind){
   document.getElementById("ritualTitle").value="";
   document.getElementById("ritualMsg").textContent="";
   const ri=document.getElementById("ritualImg"); if(ri) ri.value="";
-  const rp=document.getElementById("prev_ritualImg"); if(rp){ rp.style.backgroundImage=""; rp.textContent="Sin imagen"; rp.classList.remove("has"); }
+  const rp=document.getElementById("prev_ritualImg"); if(rp){ rp.style.backgroundImage=""; rp.textContent=""; rp.classList.remove("has"); rp.hidden=true; }
+  const rh=document.getElementById("up_ritualImg"); if(rh) rh.textContent="";
   document.getElementById("ritualModal").classList.add("open");
   setTimeout(()=>{ const t=document.getElementById("ritualBody"); if(t) t.focus(); },120);
 }
@@ -1876,7 +1908,25 @@ function vEstadisticas(a){
     <div class="card s5"><div class="section-title"><h2>Tu pulso</h2></div>
       <p class="muted" style="font-size:13px;line-height:1.6">Cada obra, memoria e hito suma Esencia y te acerca al siguiente nivel. ${p.next?`Te faltan <b>${(p.next.xp-a.xp).toLocaleString("es-CL")} XP</b> para <b>${esc(p.next.label)}</b>.`:"Has recorrido todo el camino."}</p>
       ${a.live?"":`<p class="muted" style="font-size:12px">Entra a tu Alma en la nube para contar tus insignias y recuerdos.</p>`}</div>
+    ${a.live?vinculosPanel(a):""}
   </div>`;
+}
+/* Panel de Vínculos del Alma: a quién vincula, quién la vincula y sus Constelaciones. */
+function vinculosPanel(a){
+  const fW=state.following, fR=state.followers;
+  if(!fW || !fR){ loadFollows().then(()=>{ if(state.view==="estadisticas") renderView(); }); }
+  const followingN=fW?fW.size:0, followersN=fR?fR.size:0;
+  const mutualIds=(fW&&fR)?[...fW].filter(id=>fR.has(id)):[];
+  const mutualAlmas=(state.cloudAlmas||[]).filter(m=>mutualIds.indexOf(m.id)>-1);
+  const chips=mutualAlmas.length
+    ? `<div class="constel-names" style="margin-top:14px">${mutualAlmas.slice(0,12).map(m=>`<button class="constel-chip pub-link" data-pub="${m.id}">${cAvatar(m,"sm")}<span>${esc((m.name||"").split(" ")[0])}</span></button>`).join("")}</div>`
+    : `<p class="muted" style="font-size:13px;margin-top:10px">Aún no tienes Constelaciones. Visita otras Almas y vincúlate; si te vinculan de vuelta, nace una Constelación.</p>`;
+  return `<div class="card s12"><div class="section-title"><h2 style="font-size:16px">Tus Vínculos</h2><div class="spacer"></div><span class="pill gold">${mutualIds.length} Constelación${mutualIds.length===1?"":"es"}</span></div>
+    <div class="vinc-stats">
+      <div><div class="num">${followingN}</div><span class="lbl">Vinculas</span></div>
+      <div><div class="num">${followersN}</div><span class="lbl">Te vinculan</span></div>
+      <div><div class="num" style="color:var(--gold-deep)">${mutualIds.length}</div><span class="lbl">Constelaciones</span></div>
+    </div>${chips}</div>`;
 }
 
 /* ===========================================================
@@ -3129,6 +3179,8 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#tourSkip")) endTour();
   if(e.target.closest("#levelsInfo")) openLevels();
   if(e.target.closest("#levelClose")||bdClose(e,"levelModal")) closeLevels();
+  if(e.target.closest("#esenciaInfo")) openEsencia();
+  if(e.target.closest("#esenciaClose")||bdClose(e,"esenciaModal")) closeEsencia();
   if(e.target.closest("#sharePf")) sharePortfolio();
   if(e.target.closest("[data-export]")) exportPDF();
   const ag=e.target.closest("[data-almago]"); if(ag){ closeAlmaMenu(); go(ag.dataset.almago); return; }
