@@ -225,7 +225,23 @@ const Cloud = {
   async deleteSantProject(id){ const { error } = await _sb.from("santuario_projects").delete().eq("id", id); if(error) throw error; },
   async santEvents(s){ const { data, error } = await _sb.from("santuario_events").select("*").eq("santuario", s).order("at_date",{ascending:true}); if(error) throw error; return data||[]; },
   async addSantEvent(s, row){ const { data, error } = await _sb.from("santuario_events").insert({ santuario:s, ...row }).select().single(); if(error) throw error; return data; },
+  async updateSantEvent(id, patch){ const { error } = await _sb.from("santuario_events").update(patch).eq("id", id); if(error) throw error; },
   async deleteSantEvent(id){ const { error } = await _sb.from("santuario_events").delete().eq("id", id); if(error) throw error; },
+
+  /* Santuario PRO (migración 0031): entidad, membresía, informes e invitaciones. */
+  async santuario(name){ if(!_sb||!name) return null; const { data } = await _sb.from("santuarios").select("*").eq("name", name).maybeSingle(); return data; },
+  async santuarioCreate(name, emoji, desc){ const { data, error } = await _sb.rpc("santuario_create", { p_name:name, p_emoji:emoji||null, p_desc:desc||null }); if(error) throw error; return data; },
+  async santuarioUpdate(name, emoji, desc){ const { error } = await _sb.rpc("santuario_update", { p_name:name, p_emoji:emoji||null, p_desc:desc||null }); if(error) throw error; },
+  async santuarioSetRole(alma, role){ const { error } = await _sb.rpc("santuario_set_role", { p_alma:alma, p_role:role }); if(error) throw error; },
+  async santuarioAddMember(alma, s){ const { error } = await _sb.rpc("santuario_add_member", { p_alma:alma, p_santuario:s }); if(error) throw error; },
+  async santuarioRemoveMember(alma){ const { error } = await _sb.rpc("santuario_remove_member", { p_alma:alma }); if(error) throw error; },
+  async santuarioGenInvite(s, role){ const { data, error } = await _sb.rpc("santuario_gen_invite", { p_santuario:s, p_role:role||"ALMA" }); if(error) throw error; return data; },
+  async santuarioJoinByCode(code){ const { data, error } = await _sb.rpc("santuario_join_by_code", { p_code:code }); if(error) throw error; return data; },
+  async santuarioInvites(s){ const { data } = await _sb.from("santuario_invites").select("*").eq("santuario", s).eq("active",true).order("created_at",{ascending:false}); return data||[]; },
+  async deleteSantInvite(id){ const { error } = await _sb.from("santuario_invites").delete().eq("id", id); if(error) throw error; },
+  async santReports(s){ const { data, error } = await _sb.from("santuario_reports").select("*").eq("santuario", s).order("created_at",{ascending:false}); if(error) throw error; return data||[]; },
+  async addSantReport(s, row){ const { data, error } = await _sb.from("santuario_reports").insert({ santuario:s, ...row }).select().single(); if(error) throw error; return data; },
+  async deleteSantReport(id){ const { error } = await _sb.from("santuario_reports").delete().eq("id", id); if(error) throw error; },
 
   /* ===========================================================
      ALPHA 2026 (migración 0013)

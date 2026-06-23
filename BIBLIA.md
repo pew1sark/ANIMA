@@ -312,18 +312,23 @@ privado con **identidad propia**: nombre, símbolo y descripción.
 No es una sección: es un **estado superior**. Una **organización viva (8+ Almas)** que
 reúne **varios Clanes** bajo un mismo techo.
 
-- **Estructura:** Santuario → contiene **Clanes** → contienen **Almas**.
-- **Para qué:** coordinar múltiples Clanes con una **vista general** (Panel del Santuario),
-  Ecos privados, eventos, símbolos únicos y su propio pulso del Árbol.
-- **Quién puede fundarlo:** mismo requisito que el Clan (nivel **RAÍZ** del Árbol). Fundar
-  un Santuario crea su Clan principal y deja al Alma como **Admin**. El Origen también lo concede.
-- **Abandonar:** un Alma puede **abandonar el Santuario** y conservar su Clan; al disolverse
-  su Clan asociado, también sale del Santuario.
-- **Roles:** el **Admin del Santuario** coordina los Clanes; cada Clan conserva su
-  Admin/Líder/Alma.
+- **Estructura:** Santuario → reúne **muchas Almas** (pueden agruparse por Clanes internos).
+- **EL FOGÓN:** su panel principal — la **ventana de reunión**. Resumen vivo de toda la
+  organización: Almas, Clanes, tareas, proyectos, agenda e informes, todo sincronizado.
+- **Pestañas (como el Clan, a gran escala):** **Fogón · Almas · Tareas · Proyectos ·
+  Calendario · Informes**. Formularios profesionales; las tareas y proyectos se **asignan a
+  Almas que pertenecen al Santuario**.
+- **Quién puede fundarlo:** se funda **igual que un Clan** (nivel **RAÍZ** del Árbol) y deja
+  al Alma como **Admin**. Es el espacio para **grupos grandes (8+ Almas)**: el Fogón muestra
+  el progreso hasta encenderlo a pleno. El Origen también lo concede.
+- **Cómo se ingresa:** por **código de invitación** o por **invitación directa del Admin**
+  (que puede sumar a cualquier Alma del Mundo).
+- **Roles:** **Admin** (coordina todo), **Líder** (organiza trabajo y calendario) y **Alma**.
+- **Informes:** cada Alma envía **informes de actividad**; el Admin los ve todos.
+- **Abandonar:** un Alma puede **abandonar el Santuario** cuando quiera (conserva su Clan).
 
-> Regla: una tarea, un evento o un proyecto **nunca viven aislados** — se sincronizan entre
-> Calendario, Plan de trabajo, perfil del Alma, Dashboard y estadísticas.
+> Regla: una tarea, un evento, un proyecto o un informe **nunca viven aislados** — se
+> sincronizan entre Fogón, Calendario, Tareas, Proyectos e Informes del Santuario.
 
 ---
 
