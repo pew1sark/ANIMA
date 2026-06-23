@@ -11,7 +11,12 @@ const SB_KEY = "sb_publishable_vrVyAVt19nSsedXoCzYr-g_QFQc9w_R";
 let _sb = null;
 try{
   if(window.supabase && window.supabase.createClient){
-    _sb = window.supabase.createClient(SB_URL, SB_KEY);
+    /* Sesión recordada en el dispositivo: persiste y se renueva sola. El Alma
+       solo se cierra cuando lo pide. (No cambiamos storageKey para no desconectar
+       a las Almas que ya tienen sesión.) */
+    _sb = window.supabase.createClient(SB_URL, SB_KEY, {
+      auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+    });
   }
 }catch(e){ console.warn("ANIMA: Supabase no disponible, modo local.", e); }
 
