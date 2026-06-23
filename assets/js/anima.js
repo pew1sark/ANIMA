@@ -422,6 +422,8 @@ function renderTop(){ const [t,s]=TITLES[state.view]||["ANIMA",""]; document.get
 
 /* ---------- Mapamundi de Almas ---------- */
 function hashStr(s){ s=String(s||""); let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; } return h; }
+function postDate(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return ""; const days=(Date.now()-d.getTime())/86400000;
+  return days<7 ? timeAgo(iso) : d.toLocaleDateString("es-CL",{day:"numeric",month:"short",year:"numeric"}); }
 function timeAgo(iso){ if(!iso) return ""; const d=(Date.now()-new Date(iso).getTime())/1000;
   if(isNaN(d)) return ""; if(d<60) return "ahora"; if(d<3600) return Math.floor(d/60)+" min"; if(d<86400) return Math.floor(d/3600)+" h"; return Math.floor(d/86400)+" d"; }
 const WORLD_IMG="https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg";
@@ -1376,6 +1378,23 @@ function authorOf(id){ return (state.cloudAlmas||[]).find(x=>x.id===id) || {name
    "Esto forma parte de la ventana de Comunidad." (Alpha 2026)
    =========================================================== */
 const ECO_ICON={ despertar:"✦", huella:"▦", nivel:"⤴", eco:"◎", senal:"➶", consejo:"⚖" };
+/* Categorías de Huella — lenguaje de ANIMA (no nombres tradicionales).
+   Obra=comparto un trabajo · Semilla=idea/inspiración · Búsqueda=pregunta ·
+   Hito=logro · Llamado=anuncio. (Las Huellas del Ritual llevan su propio sello.) */
+const POST_CATS = [
+  { key:"obra",     label:"Obra",     glyph:"▦" },
+  { key:"semilla",  label:"Semilla",  glyph:"🌱" },
+  { key:"busqueda", label:"Búsqueda", glyph:"✧" },
+  { key:"hito",     label:"Hito",     glyph:"✷" },
+  { key:"llamado",  label:"Llamado",  glyph:"➶" }
+];
+function catMeta(k){ return POST_CATS.find(c=>c.key===k); }
+function postCatKey(p){ return p.kind==="ritual" ? "ritual" : (catMeta(p.category) ? p.category : "obra"); }
+function catBadge(p){
+  if(p.kind==="ritual") return `<span class="post-cat ritual">🜂 Ritual</span>`;
+  const c=catMeta(p.category)||POST_CATS[0];
+  return `<span class="post-cat cat-${c.key}">${c.glyph} ${esc(c.label)}</span>`;
+}
 function vComunidad(a){
   const list=roster(); const clan=SEED_CLANS.find(c=>c.name===a.clan);
   const members=a.clan?list.filter(m=>m.clan===a.clan):[];
@@ -1468,28 +1487,37 @@ function vComunidad(a){
             ? `<button class="btn secondary" disabled style="opacity:.7;cursor:default">✓ Ya encendiste la vela hoy</button><div class="muted" style="font-size:12px;margin-top:8px">Vuelve mañana para dejar una nueva Huella.</div>`
             : `<button class="btn" data-ritual="eco">✦ Participar en el Ritual</button>`)}</div>`;
 
+  const curCat=state.postCat||"obra";
+  const catPicker=`<div class="cat-picker">${POST_CATS.map(c=>`<button type="button" class="cat-pick ${c.key===curCat?'on':''}" data-postcat="${c.key}">${c.glyph} ${esc(c.label)}</button>`).join("")}</div>`;
   const create = a.live ? `<div class="card s12"><div class="section-title"><h2>Comparte con la comunidad</h2></div>
+      ${catPicker}
       <div class="field"><input id="postTitle" placeholder="Título (opcional)"></div>
       <div class="field"><textarea id="postBody" rows="2" placeholder="¿Qué estás creando? Comparte un proyecto, idea o pregunta…"></textarea></div>
       <div class="post-compose-foot">${attachField("postImg","huella","Adjuntar foto")}<span style="flex:1"></span><button class="btn" id="postSend">Dejar mi Huella</button></div></div>`
     : `<div class="card s12"><p class="muted">Entra a tu Alma para dejar tu Huella en la comunidad.</p></div>`;
+  // Filtro sutil por categoría (píldoras pequeñas).
+  const flt=state.wallFilter||"all";
+  const filterPills=`<div class="wall-filter"><button class="wf-pill ${flt==='all'?'on':''}" data-wallfilter="all">Todas</button>${POST_CATS.map(c=>`<button class="wf-pill ${flt===c.key?'on':''}" data-wallfilter="${c.key}">${c.glyph} ${esc(c.label)}</button>`).join("")}<button class="wf-pill ${flt==='ritual'?'on':''}" data-wallfilter="ritual">🜂 Ritual</button></div>`;
   const wall = `<div class="card s12"><div class="section-title"><h2>Muro de la comunidad</h2><div class="spacer"></div><span class="pill ${liveMode()?'gold':''}">${feed.length} Huellas</span></div>
-      ${feed.length?feed.map(p=>{ const au=authorOf(p.author_alma_id);
+      ${filterPills}
+      <div id="wallList">${feed.length?feed.map(p=>{ const au=authorOf(p.author_alma_id);
         const visitId=(au.id && au.id!==a.almaId)?au.id:"";
-        const isRit=p.kind==="ritual";
+        const ck=postCatKey(p);
         const sc=(state.postSparkCount&&state.postSparkCount[p.id])||0;
         const sparked=state.mySparkSet && state.mySparkSet.has(p.id);
-        return `<div class="post">${cAvatar(au,"sm",visitId)}
+        const ec=(state.commentCount&&state.commentCount[p.id])||0;
+        const hide=(flt!=="all" && ck!==flt);
+        return `<div class="post" data-cat="${ck}"${hide?' style="display:none"':''}>${cAvatar(au,"sm",visitId)}
           <div class="grow">
-            <div data-openpost="${p.id}" style="cursor:pointer"><b>${esc(p.title||au.name)}</b>${isRit?` <span class="pill gold" style="font-size:9px">🜂 Ritual</span>`:""}<br><small class="muted">${esc(au.name)} · ${timeAgo(p.created_at)}</small>
+            <div data-openpost="${p.id}" style="cursor:pointer"><div class="post-top"><b>${esc(p.title||au.name)}</b>${catBadge(p)}</div><small class="muted">${esc(au.name)} · ${esc(postDate(p.created_at))}</small>
             ${p.body?`<p style="margin:6px 0 0">${esc((p.body||"").slice(0,160))}${(p.body||"").length>160?"…":""}</p>`:""}
             ${p.image_url?`<div class="post-img" style="background-image:url('${esc(p.image_url)}')"></div>`:""}</div>
             <div class="post-foot">
               <button class="spark-btn ${sparked?'on':''}" data-spark="${p.id}" title="${sparked?'Quitar tu Chispa':'Dar una Chispa'}">✦ <b>${sc}</b></button>
-              <button class="eco-link" data-openpost="${p.id}">◎ Ecos</button>
+              <button class="eco-link" data-openpost="${p.id}">◎ <b>${ec}</b> ${ec===1?'Eco':'Ecos'}</button>
             </div>
           </div></div>`;
-      }).join(""):`<p class="muted">Aún no hay Huellas.${a.live?" ¡Deja la primera!":""}</p>`}</div>`;
+      }).join(""):`<p class="muted">Aún no hay Huellas.${a.live?" ¡Deja la primera!":""}</p>`}</div></div>`;
   const clanCard = a.clan ? `<div class="card s12"><div class="section-title"><h2>${clan?clan.emoji:"🖤"} ${esc(a.clan)}</h2><div class="spacer"></div><span class="pill">Clan · Nivel 2</span></div>
       <p class="muted">${clan?clan.desc:"Comunidad privada por invitación (2 a 8 Almas)."}</p>
       <div class="alma-grid" style="margin-top:14px">${members.map(almaMini).join("")}</div></div>`
@@ -1629,7 +1657,19 @@ function worldSummaryCard(list){
     <div class="country-rows">${dist.map(d=>`<div class="country-row"><span>${d.l.emoji} ${esc(d.l.label)} · ${esc(d.l.name)}</span><b>${d.n}</b></div>`).join("")}</div>
   </div>`;
 }
-async function loadPosts(){ if(!Cloud.enabled) return; try{ state.cloudPosts=await Cloud.posts(); await loadPostSparks(); if(state.view==="comunidad") renderView(); }catch(e){} }
+async function loadPosts(){ if(!Cloud.enabled) return; try{ state.cloudPosts=await Cloud.posts(); await loadPostSparks(); await loadCommentCounts(); if(state.view==="comunidad") renderView(); }catch(e){} }
+/* Filtro del muro por categoría — muestra/oculta sin re-render (no pierde texto). */
+function applyWallFilter(cat){
+  state.wallFilter=cat;
+  document.querySelectorAll(".wall-filter .wf-pill").forEach(b=>b.classList.toggle("on", b.dataset.wallfilter===cat));
+  document.querySelectorAll("#wallList .post").forEach(p=>{ p.style.display=(cat==="all"||p.dataset.cat===cat)?"":"none"; });
+}
+/* Conteo de Ecos (comentarios) por Huella. */
+async function loadCommentCounts(){
+  if(!Cloud.enabled){ state.commentCount={}; return; }
+  try{ const rows=await Cloud.allCommentCounts(); const cnt={}; (rows||[]).forEach(r=>{ cnt[r.post_id]=(cnt[r.post_id]||0)+1; }); state.commentCount=cnt; }
+  catch(e){ state.commentCount=state.commentCount||{}; }
+}
 /* Chispas por Huella: conteo por post + las que dio mi Alma. */
 async function loadPostSparks(){
   if(!Cloud.enabled){ state.postSparkCount={}; state.mySparkSet=new Set(); return; }
@@ -1747,8 +1787,9 @@ async function sendPost(){
   const a=me(); if(!a.live){ alert("Entra a tu Alma para publicar."); return; }
   const title=document.getElementById("postTitle").value.trim(), body=document.getElementById("postBody").value.trim();
   const image_url=(document.getElementById("postImg")||{}).value||"";
+  const catEl=document.querySelector(".cat-pick.on"); const category=(catEl&&catEl.dataset.postcat)||state.postCat||"obra";
   if(!title && !body && !image_url) return;
-  try{ await Cloud.insertRow("posts",{author_alma_id:a.almaId,kind:"post",title,body,image_url:image_url||null});
+  try{ await Cloud.insertRow("posts",{author_alma_id:a.almaId,kind:"post",title,body,image_url:image_url||null,category});
     if(window.AnimaState){ AnimaState.addEsencia(15,"Publicar en comunidad"); setTimeout(maybeLevelGuide,400); }
     if(window.WorldTree) WorldTree.onHuella({ almaName:a.name, branch:branchOf(a), country:a.country, targetId:a.almaId });
     await loadPosts(); }
@@ -1775,9 +1816,10 @@ function openPost(id){
   document.getElementById("postModalBody").innerHTML=`
     <div style="display:flex;gap:10px;align-items:center">
       ${cAvatar(au,"sm",visitId)}
-      <div style="flex:1"><b ${visitId?'class="pub-link" data-pub="'+visitId+'"':""}>${esc(au.name)}</b><br><small class="muted">${timeAgo(p.created_at)}</small></div>
+      <div style="flex:1"><b ${visitId?'class="pub-link" data-pub="'+visitId+'"':""}>${esc(au.name)}</b><br><small class="muted">${esc(postDate(p.created_at))}</small></div>
       <button class="spark-btn ${sparked?'on':''}" data-spark="${p.id}" title="${sparked?'Quitar tu Chispa':'Dar una Chispa'}">✦ <b>${sc}</b></button></div>
-    ${p.title?`<h2 style="margin:12px 0 4px;letter-spacing:-.03em">${esc(p.title)}</h2>`:""}
+    <div style="margin-top:10px">${catBadge(p)}</div>
+    ${p.title?`<h2 style="margin:10px 0 4px;letter-spacing:-.03em">${esc(p.title)}</h2>`:""}
     ${p.body?`<p style="white-space:pre-wrap">${esc(p.body||"")}</p>`:""}
     ${p.image_url?`<img class="post-modal-img" src="${esc(p.image_url)}" alt="" loading="lazy">`:""}
     <div class="section-title" style="margin-top:14px"><h3 style="font-size:14px;margin:0">Ecos</h3></div>
@@ -3076,6 +3118,10 @@ document.addEventListener("click", e=>{
   const spk=e.target.closest("[data-spark]"); if(spk){ doSpark(spk.dataset.spark); return; }
   const flw=e.target.closest("[data-follow]"); if(flw){ doFollow(flw.dataset.follow); return; }
   const sig=e.target.closest("[data-signal]"); if(sig){ sendSignalTo(sig.dataset.signal); return; }
+  // Categoría al componer (toggle sin re-render, para no perder el texto).
+  const cpk=e.target.closest("[data-postcat]"); if(cpk){ state.postCat=cpk.dataset.postcat; document.querySelectorAll(".cat-pick").forEach(b=>b.classList.toggle("on", b===cpk)); return; }
+  // Filtro del muro (muestra/oculta sin re-render).
+  const wf=e.target.closest("[data-wallfilter]"); if(wf){ applyWallFilter(wf.dataset.wallfilter); return; }
   // Susurros (notificaciones)
   if(e.target.closest("#whisperBtn")){ toggleWhisperPanel(); return; }
   const wpu=e.target.closest("[data-wpub]"); if(wpu){ closeWhisperPanel(); openPublic(wpu.dataset.wpub); return; }

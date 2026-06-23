@@ -388,8 +388,25 @@
 .spark-btn b{font-weight:800;font-variant-numeric:tabular-nums}
 .spark-btn:hover{border-color:var(--gold-deep,#7b5920);color:var(--gold-deep,#7b5920);transform:translateY(-1px)}
 .spark-btn.on{border-color:rgba(208,170,99,.6);background:radial-gradient(circle at 30% 30%,rgba(208,170,99,.22),rgba(208,170,99,.1));color:var(--gold-deep,#7b5920)}
-.eco-link{border:0;background:none;color:var(--muted);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:5px 4px;border-radius:8px}
+.eco-link{display:inline-flex;align-items:center;gap:5px;border:0;background:none;color:var(--muted);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:5px 4px;border-radius:8px}
+.eco-link b{font-variant-numeric:tabular-nums}
 .eco-link:hover{color:var(--ink,#111)}
+/* Categorías de Huella (lenguaje ANIMA) + filtro sutil */
+.cat-picker{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.cat-pick{border:1px solid var(--line);background:rgba(255,255,255,.5);border-radius:999px;padding:6px 12px;
+  font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s}
+.cat-pick:hover{border-color:var(--ink,#111)}
+.cat-pick.on{background:#111;color:#fff;border-color:#111}
+.wall-filter{display:flex;flex-wrap:wrap;gap:5px;margin:-2px 0 14px;overflow-x:auto;scrollbar-width:none}
+.wall-filter::-webkit-scrollbar{display:none}
+.wf-pill{border:1px solid transparent;background:none;border-radius:999px;padding:5px 11px;font:inherit;
+  font-size:12px;font-weight:600;color:var(--faint,#9a9aa0);cursor:pointer;transition:.15s;white-space:nowrap}
+.wf-pill:hover{color:var(--ink,#111)}
+.wf-pill.on{color:var(--ink,#111);border-color:var(--line);background:rgba(0,0,0,.04)}
+.post-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.post-top b{font-size:15px}
+.post-cat{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;letter-spacing:.01em;
+  color:var(--gold-deep,#7b5920);background:rgba(208,170,99,.12);border-radius:999px;padding:2px 8px;white-space:nowrap}
 /* Foto del proyecto en una Huella */
 .post-img{margin-top:10px;height:160px;border-radius:14px;background-size:cover;background-position:center;
   border:1px solid var(--line);cursor:pointer}

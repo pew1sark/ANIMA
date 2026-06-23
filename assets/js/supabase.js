@@ -138,6 +138,7 @@ const Cloud = {
   /* Comunidad */
   async posts(){ const { data } = await _sb.from("posts").select("*").order("created_at",{ascending:false}).limit(100); return data||[]; },
   async comments(postId){ const { data } = await _sb.from("comments").select("*").eq("post_id", postId).order("created_at",{ascending:true}); return data||[]; },
+  async allCommentCounts(){ if(!_sb) return []; const { data } = await _sb.from("comments").select("post_id"); return data||[]; },
 
   /* Chispas por Huella (1 por Alma) y Vínculos (seguir/Constelación) — migración 0023 */
   async allPostSparks(){ if(!_sb) return []; const { data } = await _sb.from("post_sparks").select("post_id,alma_id"); return data||[]; },
