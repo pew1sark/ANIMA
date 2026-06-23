@@ -1545,8 +1545,8 @@ function vComunidad(a){
   const tstage=treeStage(n);
   const tree = `<div class="card s8 wt-card">
       <div class="wt-head">
-        <span class="wt-title">${tstage.glyph} Árbol de Almas</span>
-        <span class="pill ${liveMode()?'gold':''}" title="Estado del Árbol">${esc(tstage.label)} · ${n}/100</span>
+        <span class="wt-title">🌳 Árbol de Almas</span>
+        <span class="pill ${liveMode()?'gold':''}" title="Almas en ANIMA">${n}/100</span>
         <div class="wt-sizes">${["sm","md","lg"].map(s=>`<button class="wt-msz ${sz===s?'on':''}" data-mapsize="${s}">${s.toUpperCase()}</button>`).join("")}</div>
       </div>
       <div class="wt-stage ${sz}">
@@ -1653,7 +1653,51 @@ function vComunidad(a){
     </div>`;
   // RESUMEN DEL MUNDO (clanes/santuarios) — solo Almas con acceso o el Creador.
   const worldCard = (a.world_access || (isCreator && !state.viewAs)) ? worldSummaryCard(list) : "";
-  return `<div class="grid">${tree}${aside}${treeStateCard}${week}${connect}${paisCard}${ritual}${create}${wall}${clanCard}${worldCard}</div>`;
+  // La Voz del Mundo va ARRIBA del Árbol. El "Estado del Árbol" queda oculto.
+  return `<div class="grid">${voiceOfWorldCard()}${tree}${aside}${week}${connect}${paisCard}${ritual}${create}${wall}${clanCard}${worldCard}</div>`;
+}
+/* La Voz del Mundo — avisos fijados por el Creador (desplegables, con link opcional). */
+function voiceOfWorldCard(){
+  const creator=isCreator && !state.viewAs;
+  if(state.cloudNotices==null) loadNotices();
+  const list=state.cloudNotices||[]; state.noticeOpen=state.noticeOpen||{};
+  const row=n=>{ const open=!!state.noticeOpen[n.id]; const hasMore=!!(n.body||n.link);
+    return `<div style="border-top:1px solid var(--line);padding:8px 0">
+      <div class="row" ${hasMore?`data-noticetoggle="${n.id}" style="cursor:pointer"`:""}>
+        <span style="color:var(--gold);margin-right:8px">✦</span>
+        <b class="grow" style="font-size:13.5px">${esc(n.title)}</b>
+        ${hasMore?`<span class="muted" style="font-size:12px">${open?'▴':'▾'}</span>`:""}
+        ${creator?`<button class="ia danger" data-noticedel="${n.id}" title="Quitar" style="margin-left:6px">✕</button>`:""}
+      </div>
+      ${open?`<div style="padding:6px 0 2px 22px">${n.body?`<p class="muted" style="font-size:12.5px;margin:0 0 6px;white-space:pre-wrap">${esc(n.body)}</p>`:""}${n.link?`<a href="${esc(n.link)}" target="_blank" rel="noopener" class="btn ghost sm">➶ Entrar a la reunión</a>`:""}</div>`:""}
+    </div>`; };
+  const composer = creator ? `<div style="border-top:1px dashed var(--line);margin-top:8px;padding-top:10px;display:flex;flex-direction:column;gap:6px">
+      <input id="ntTitle" placeholder="Título (ej: Próximo miércoles · Reunión de Almas)">
+      <textarea id="ntBody" rows="2" placeholder="Detalle (opcional)"></textarea>
+      <input id="ntLink" placeholder="Link de reunión / Zoom (opcional)">
+      <button class="btn sm gold" id="ntAddBtn" style="align-self:flex-start">+ Fijar aviso</button>
+    </div>` : "";
+  return `<div class="card s12"><div class="section-title"><h2 style="font-size:15px">📣 La Voz del Mundo</h2><div class="spacer"></div>${list.length?`<span class="pill">${list.length}</span>`:""}</div>
+    <p class="muted" style="font-size:12px;margin:-4px 0 6px">Avisos importantes del Mundo. Toca un aviso para ver el detalle.</p>
+    ${list.length?list.map(row).join(""):`<p class="muted" style="font-size:12.5px;margin:0">Sin avisos por ahora.</p>`}
+    ${composer}</div>`;
+}
+async function loadNotices(){
+  if(!Cloud.enabled){ state.cloudNotices=[]; return; }
+  try{ state.cloudNotices=await Cloud.worldNotices(); }catch(e){ state.cloudNotices=[]; }
+  if(state.view==="comunidad") renderView();
+}
+async function addWorldNotice(){
+  if(!isCreator) return; const g=x=>document.getElementById(x);
+  const title=(g("ntTitle").value||"").trim(); if(!title) return;
+  const body=(g("ntBody").value||"").trim(); const link=(g("ntLink").value||"").trim();
+  try{ await Cloud.worldNoticeAdd(title, body, link); state.cloudNotices=await Cloud.worldNotices(); renderView(); toast("✦ Aviso fijado en la Voz del Mundo."); }
+  catch(e){ alert("No se pudo fijar: "+(e.message||e)); }
+}
+async function delWorldNotice(id){
+  if(!isCreator) return; if(!confirm("¿Quitar este aviso?")) return;
+  try{ await Cloud.worldNoticeDelete(id); state.cloudNotices=(state.cloudNotices||[]).filter(n=>n.id!==id); renderView(); }
+  catch(e){ alert("No se pudo quitar: "+(e.message||e)); }
 }
 /* Glifos del Estado del Mundo (símbolos oficiales del Árbol). */
 const WT_GLYPH={ LATENTE:"○", SERENO:"🌱", RESONANDO:"〰", FLORECIENDO:"✧", LUMINOSO:"◎", DESPERTAR:"∞" };
@@ -1954,8 +1998,11 @@ async function deleteChangelogEntry(id){
 }
 async function loadCommunityExtras(){
   if(!Cloud.enabled){ state.cloudEcos=[]; return; }
-  try{ const r=await Promise.all([Cloud.echoes(12), Cloud.soulsCount()]); state.cloudEcos=r[0]; state.cloudSoulsCount=r[1]; ensureEcoRealtime(); if(state.view==="comunidad") renderView(); }
-  catch(e){ state.cloudEcos=[]; }
+  // Independientes: un fallo en el conteo no debe dejar los Ecos vacíos.
+  try{ state.cloudEcos = await Cloud.echoes(12) || []; }catch(e){ if(state.cloudEcos==null) state.cloudEcos=[]; }
+  try{ const c = await Cloud.soulsCount(); if(c!=null) state.cloudSoulsCount=c; }catch(e){}
+  ensureEcoRealtime();
+  if(state.view==="comunidad") renderView();
 }
 /* Ecos en vivo: un solo canal para toda la sesión. */
 function ensureEcoRealtime(){
@@ -3815,7 +3862,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
    RENDER + EVENTOS
    =========================================================== */
 function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); renderWhisperBell(); if(typeof hideBootLoader==="function") hideBootLoader(); }
-function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad") loadPosts(); if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
+function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad"){ loadPosts(); loadCommunityExtras(); loadNotices(); } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 /* LUMBRE aún no despierta: el chat permanece desactivado. Al tocarla, en vez de
@@ -3875,6 +3922,9 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#expReload")){ loadRewardPanel(); return; }
   const xs=e.target.closest("[data-expsave]"); if(xs){ saveRewardConfig(xs.dataset.expsave); return; }
   if(e.target.closest("#chSend")){ publishChangelog(); return; }
+  if(e.target.closest("#ntAddBtn")){ addWorldNotice(); return; }
+  const ndl=e.target.closest("[data-noticedel]"); if(ndl){ delWorldNotice(ndl.dataset.noticedel); return; }
+  const ntg=e.target.closest("[data-noticetoggle]"); if(ntg){ const id=ntg.dataset.noticetoggle; state.noticeOpen=state.noticeOpen||{}; state.noticeOpen[id]=!state.noticeOpen[id]; renderView(); return; }
   const chd=e.target.closest("[data-chdel]"); if(chd){ deleteChangelogEntry(chd.dataset.chdel); return; }
   const cs=e.target.closest("[data-cssave]"); if(cs){ consolaSave(cs.dataset.cssave); return; }
   if(e.target.closest("[data-teamadd]")){ addTeamTask(); return; }
