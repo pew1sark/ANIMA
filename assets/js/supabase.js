@@ -146,6 +146,20 @@ const Cloud = {
   async myFollowing(almaId){ if(!_sb) return []; const { data } = await _sb.from("follows").select("following_alma_id").eq("follower_alma_id", almaId); return data||[]; },
   async myFollowers(almaId){ if(!_sb) return []; const { data } = await _sb.from("follows").select("follower_alma_id").eq("following_alma_id", almaId); return data||[]; },
 
+  /* Susurros (notificaciones por Alma) — migración 0025. RLS limita a su dueño. */
+  async myWhispers(){ if(!_sb) return []; const { data } = await _sb.from("whispers").select("*").order("created_at",{ascending:false}).limit(40); return data||[]; },
+  async markWhispersRead(){ if(!_sb) return; try{ await _sb.rpc("mark_whispers_read"); }catch(e){} },
+  async sendSignal(target, text){ if(!_sb) return null; const { data, error } = await _sb.rpc("send_signal", { p_target:target, p_text:text }); if(error) throw error; return data; },
+  subscribeWhispers(cb){ if(!_sb) return null;
+    try{ return _sb.channel("whispers-live")
+      .on("postgres_changes", { event:"INSERT", schema:"public", table:"whispers" }, p=>{ try{ cb(p.new); }catch(e){} })
+      .subscribe(); }catch(e){ return null; } },
+
+  /* Crónica (registro de integraciones y mejoras) — lectura pública; escribe el Creador. */
+  async changelog(){ if(!_sb) return []; const { data } = await _sb.from("changelog").select("*").order("created_at",{ascending:false}).limit(50); return data||[]; },
+  async addChangelog(row){ const { data, error } = await _sb.from("changelog").insert(row).select().single(); if(error) throw error; return data; },
+  async deleteChangelog(id){ const { error } = await _sb.from("changelog").delete().eq("id", id); if(error) throw error; },
+
   /* Clan: recordatorios y tablero del equipo (Fase 4, tablas de migración 0006).
      Si la tabla no existe aún, lanza error y el front cae a modo local. */
   async reminders(clan){ const { data, error } = await _sb.from("reminders").select("*").eq("clan", clan).order("due_at",{ascending:true}); if(error) throw error; return data||[]; },

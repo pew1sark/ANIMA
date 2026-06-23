@@ -267,7 +267,7 @@ function sectionOfView(v){
   if(["proyectos","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
   if(["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "clan";
   if(["santuario","sant_plan"].includes(v)) return "santuario";
-  if(["comunidad","consejo"].includes(v)) return "mundo";
+  if(["comunidad","consejo","cronica"].includes(v)) return "mundo";
   return null;
 }
 /* Ítem de morada en la barra: navega a su vista por defecto y se marca activo
@@ -395,6 +395,7 @@ const TITLES = {
   proyectos_clan:["Proyectos del Clan","Encargos compartidos y su avance."],
   recordatorios:["Recordatorios","Lo que el Clan no puede olvidar."],
   comunidad:["Mundo","La constelación de Almas, el Árbol vivo y los Ecos del mundo."],
+  cronica:["Crónica de ANIMA","Lo que vamos integrando y mejorando — para que tu Alma esté al tanto."],
   santuario:["Santuario","Nivel 3: la organización completa de ANIMA."]
 };
 function renderTop(){ const [t,s]=TITLES[state.view]||["ANIMA",""]; document.getElementById("topTitle").innerHTML=`<h1>${t}</h1><div class="sub">${s}</div>`; }
@@ -505,6 +506,7 @@ function moradaTabs(view){
   else if(sec==="taller"){ kids=NAV_TREE[1].children.slice(); }
   else if(sec==="mundo"){
     if(planAllows("comunidad")) kids.push({v:"comunidad",t:"Constelación"});
+    kids.push({v:"cronica",t:"Crónica"});
     if(me().council||(isCreator&&!state.viewAs)) kids.push({v:"consejo",t:"Consejo"});
   }
   else if(sec==="clan"){ kids=NAV_TREE[2].children.slice(); }                                    // Panel · Plan de trabajo · Calendario · Proyectos · Recordatorios
@@ -537,7 +539,7 @@ function renderView(){
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, santuario:vSantuario,
-    sant_plan:vSantPlan }[state.view] || vMiAlma;
+    sant_plan:vSantPlan, cronica:vCronica }[state.view] || vMiAlma;
   let bodyHTML;
   try{ bodyHTML = animaWrap(fn(me())); }
   catch(err){
@@ -1646,6 +1648,52 @@ async function doFollow(id){
     if(state.view==="comunidad") renderView();
   }catch(e){ alert("No se pudo vincular: "+(e.message||e)); }
 }
+/* ===========================================================
+   CRÓNICA — registro minimalista de integraciones y mejoras de ANIMA.
+   Lectura pública; el Creador publica entradas. Scroll, como los Ecos.
+   =========================================================== */
+function vCronica(a){
+  if(!Cloud.enabled){ return `<div class="grid"><div class="card s12"><p class="muted">La Crónica vive en la nube.</p></div></div>`; }
+  if(state.cloudChangelog==null){ loadChangelog(); return `<div class="grid"><div class="card s12"><p class="muted">Cargando la Crónica…</p></div></div>`; }
+  const list=state.cloudChangelog||[]; const creator=isCreator && !state.viewAs;
+  const composer = creator ? `<div class="card s12"><div class="section-title"><h2 style="font-size:15px">Publicar en la Crónica</h2></div>
+      <div class="field"><input id="chTitle" placeholder="Título de la actualización"></div>
+      <div class="field"><textarea id="chBody" rows="2" placeholder="Qué cambió o mejoró…"></textarea></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="chTag" placeholder="Etiqueta (opcional): Mundo, Identidad…" style="flex:1;min-width:160px"><button class="btn" id="chSend">Publicar</button></div>
+      <div id="chMsg" class="muted" style="font-size:12px;margin-top:8px;min-height:14px"></div></div>` : "";
+  const feed = list.length
+    ? `<div class="cronica-feed">${list.map(c=>{ const d=new Date(c.created_at); const day=isNaN(d)?"":d.toLocaleDateString("es-CL",{day:"numeric",month:"short",year:"numeric"});
+        return `<div class="cronica-item"><span class="cronica-dot">✦</span>
+          <div class="grow"><div class="cronica-head"><b>${esc(c.title)}</b>${c.tag?`<span class="pill">${esc(c.tag)}</span>`:""}<small class="muted">${esc(day)}</small></div>
+          ${c.body?`<p class="muted" style="margin:4px 0 0">${esc(c.body)}</p>`:""}</div>
+          ${creator?`<button class="ia danger" data-chdel="${c.id}" title="Eliminar">✕</button>`:""}</div>`;
+      }).join("")}</div>`
+    : `<p class="muted" style="font-size:13px">Aún no hay entradas. Pronto verás aquí lo que vamos integrando y mejorando.</p>`;
+  return `<div class="grid">${composer}
+    <div class="card s12"><div class="section-title"><h2>Crónica de ANIMA</h2><div class="spacer"></div><span class="pill gold">${list.length}</span></div>
+      <p class="muted" style="font-size:12.5px;margin:-4px 0 12px">El registro vivo de ANIMA: lo que vamos integrando y mejorando, para que tu Alma esté al tanto.</p>
+      ${feed}</div></div>`;
+}
+async function loadChangelog(){
+  if(!Cloud.enabled){ state.cloudChangelog=[]; return; }
+  try{ state.cloudChangelog=await Cloud.changelog(); }catch(e){ state.cloudChangelog=[]; }
+  if(state.view==="cronica") renderView();
+}
+async function publishChangelog(){
+  if(!isCreator) return; const msg=document.getElementById("chMsg");
+  const title=(document.getElementById("chTitle").value||"").trim();
+  const body=(document.getElementById("chBody").value||"").trim();
+  const tag=(document.getElementById("chTag").value||"").trim();
+  if(!title){ if(msg) msg.textContent="Escribe un título."; return; }
+  if(msg) msg.textContent="Publicando…";
+  try{ await Cloud.addChangelog({ title, body:body||null, tag:tag||null }); state.cloudChangelog=await Cloud.changelog(); renderView(); }
+  catch(e){ if(msg) msg.textContent="No se pudo publicar: "+(e.message||e); }
+}
+async function deleteChangelogEntry(id){
+  if(!isCreator) return; if(!confirm("¿Eliminar esta entrada de la Crónica?")) return;
+  try{ await Cloud.deleteChangelog(id); state.cloudChangelog=(state.cloudChangelog||[]).filter(c=>c.id!==id); renderView(); }
+  catch(e){ alert("No se pudo eliminar: "+(e.message||e)); }
+}
 async function loadCommunityExtras(){
   if(!Cloud.enabled){ state.cloudEcos=[]; return; }
   try{ const r=await Promise.all([Cloud.echoes(12), Cloud.soulsCount()]); state.cloudEcos=r[0]; state.cloudSoulsCount=r[1]; ensureEcoRealtime(); if(state.view==="comunidad") renderView(); }
@@ -2621,6 +2669,7 @@ async function loadMyAlma(){
   applyHashView();               // entrada directa a Clan/Santuario desde el Home
   ensureLocation(a);             // sincroniza la ubicación del Alma (automática)
   loadFollows();                 // mis vínculos y Constelaciones (mutuos)
+  loadWhispers();                // susurros (notificaciones) del Alma
   maybeAutoTour();               // tutorial único por Alma (solo la primera vez)
 }
 /* ===========================================================
@@ -2689,6 +2738,63 @@ function toggleAlmaMenu(){ const pop=document.getElementById("almaPop"); if(!pop
   if(pop.classList.contains("open")){ pop.classList.remove("open"); return; }
   renderAlmaMenu(); pop.classList.add("open"); }
 function closeAlmaMenu(){ const pop=document.getElementById("almaPop"); if(pop) pop.classList.remove("open"); }
+
+/* ===========================================================
+   SUSURROS — notificaciones del Alma (lo importante, nada de ruido)
+   Panel junto al nombre (arriba a la derecha): vínculos, Chispas y señales.
+   =========================================================== */
+const WHISPER_ICON={ vinculo:"✦", constelacion:"❂", chispa:"✦", senal:"✉" };
+function whisperUnread(){ return (state.whispers||[]).filter(w=>!w.read).length; }
+function renderWhisperBell(){
+  const wrap=document.getElementById("whisperWrap"); if(!wrap) return;
+  const live=!!me().live; wrap.hidden=!live; if(!live){ closeWhisperPanel(); return; }
+  const ico=wrap.querySelector(".wb-ico"); if(ico && !ico.innerHTML) ico.innerHTML=ANIMA_ICON("susurro","✦");
+  const dot=document.getElementById("whisperDot"); const n=whisperUnread();
+  if(dot){ if(n>0){ dot.hidden=false; dot.textContent=n>9?"9+":String(n); } else dot.hidden=true; }
+}
+async function loadWhispers(){
+  if(!Cloud.enabled || !me().live){ state.whispers=[]; renderWhisperBell(); return; }
+  try{ state.whispers=await Cloud.myWhispers(); }catch(e){ state.whispers=state.whispers||[]; }
+  renderWhisperBell(); ensureWhisperRealtime();
+}
+function ensureWhisperRealtime(){
+  if(window.__whisperSub) return;
+  window.__whisperSub=Cloud.subscribeWhispers(function(w){
+    if(!w || !me().live || w.recipient_alma_id!==me().almaId) return;   // solo los míos
+    const cur=state.whispers||[]; if(cur.some(x=>x.id===w.id)) return;
+    state.whispers=[w,...cur].slice(0,40); renderWhisperBell();
+    const pop=document.getElementById("whisperPop"); if(pop && pop.classList.contains("open")) renderWhisperPanel();
+    toast("✦ Un nuevo susurro");
+  });
+}
+function renderWhisperPanel(){
+  const pop=document.getElementById("whisperPop"); if(!pop) return;
+  const list=state.whispers||[];
+  const body=list.length
+    ? list.map(w=>{ const au=authorOf(w.actor_alma_id); const ico=WHISPER_ICON[w.kind]||"✦";
+        const act = (w.kind==="chispa" && w.post_id) ? `data-wpost="${w.post_id}"` : (w.actor_alma_id?`data-wpub="${w.actor_alma_id}"`:"");
+        return `<button class="whisper-item ${w.read?'':'unread'}" ${act}>${cAvatar(au,"sm")}
+          <div class="grow"><div class="wi-text">${esc(w.text||(au.name+" te susurró"))}</div><small class="muted">${esc(timeAgo(w.created_at))}</small></div>
+          <span class="wi-ico">${ico}</span></button>`;
+      }).join("")
+    : `<div class="whisper-empty">Aún no hay susurros. Cuando alguien se vincule, te dé una Chispa o te envíe una señal, aparecerá aquí.</div>`;
+  pop.innerHTML=`<div class="whisper-head"><b>Susurros</b></div><div class="whisper-list">${body}</div>`;
+}
+function toggleWhisperPanel(){
+  const pop=document.getElementById("whisperPop"); if(!pop) return;
+  if(pop.classList.contains("open")){ pop.classList.remove("open"); return; }
+  closeAlmaMenu(); renderWhisperPanel(); pop.classList.add("open");
+  if(whisperUnread()>0){ (state.whispers||[]).forEach(w=>w.read=true); renderWhisperBell(); Cloud.markWhispersRead(); }
+}
+function closeWhisperPanel(){ const pop=document.getElementById("whisperPop"); if(pop) pop.classList.remove("open"); }
+/* Enviar una señal (mensaje privado de Alma a Alma) desde la tarjeta pública. */
+async function sendSignalTo(id){
+  const el=document.getElementById("signalText"), msg=document.getElementById("signalMsg");
+  const text=((el&&el.value)||"").trim(); if(!text){ if(msg) msg.textContent="Escribe un mensaje."; return; }
+  if(msg) msg.textContent="Enviando…";
+  try{ await Cloud.sendSignal(id, text); if(el) el.value=""; if(msg) msg.textContent="✦ Señal enviada."; }
+  catch(e){ if(msg) msg.textContent="No se pudo enviar: "+(e.message||e); }
+}
 
 /* ---------- Entrada directa a una vista desde el Home (#go=vista) ---------- */
 function applyHashView(){
@@ -2847,6 +2953,9 @@ async function openPublic(id){
       ${mutual?`<p class="muted" style="font-size:12px;margin:8px 0 0">✦ Tú y ${esc((row.name||"").split(" ")[0])} forman una Constelación.</p>`:""}
       <div style="margin-top:12px">${followBtn}<a class="btn sm" href="portfolio.html?alma=${id}" target="_blank" rel="noopener">Ver portafolio →</a></div></div>
     ${show("bio")&&row.bio?`<p style="margin-top:14px">${esc(row.bio||"")}</p>`:""}${show("tags")?`<div>${(row.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}
+    ${(meLive && !isMe)?`<details class="signal-box"><summary>✉ Enviar una señal</summary>
+      <div class="signal-form"><textarea id="signalText" rows="2" placeholder="Un mensaje privado para ${esc((row.name||"").split(" ")[0])}…"></textarea>
+      <div style="display:flex;align-items:center;gap:10px"><button class="btn sm" data-signal="${id}">Enviar señal</button><span id="signalMsg" class="muted" style="font-size:12px"></span></div></div></details>`:""}
     <div id="pubExtra" class="muted" style="font-size:12.5px;margin-top:12px">Cargando…</div>`;
   try{ const m=await Cloud.loadModules(id);
     const tj=show("trajectory")?(m.trajectory||[]).map(x=>`<div class="node"><div class="yr">${esc(x.year)}</div><b>${esc(x.title)}</b><p class="muted" style="margin:2px 0 0">${esc(x.detail||"")}</p></div>`).join(""):"";
@@ -2871,7 +2980,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
 /* ===========================================================
    RENDER + EVENTOS
    =========================================================== */
-function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); }
+function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); renderWhisperBell(); }
 function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad") loadPosts(); if(view==="sant_plan") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
@@ -2914,11 +3023,19 @@ document.addEventListener("click", e=>{
   // tarjetas que abren la Huella o visitan el Alma).
   const spk=e.target.closest("[data-spark]"); if(spk){ doSpark(spk.dataset.spark); return; }
   const flw=e.target.closest("[data-follow]"); if(flw){ doFollow(flw.dataset.follow); return; }
+  const sig=e.target.closest("[data-signal]"); if(sig){ sendSignalTo(sig.dataset.signal); return; }
+  // Susurros (notificaciones)
+  if(e.target.closest("#whisperBtn")){ toggleWhisperPanel(); return; }
+  const wpu=e.target.closest("[data-wpub]"); if(wpu){ closeWhisperPanel(); openPublic(wpu.dataset.wpub); return; }
+  const wpo=e.target.closest("[data-wpost]"); if(wpo){ closeWhisperPanel(); openPost(wpo.dataset.wpost); return; }
+  if(!e.target.closest("#whisperPop") && !e.target.closest("#whisperBtn")) closeWhisperPanel();
   // Visitar otra Alma tiene prioridad (p. ej. el avatar dentro de una Huella).
   const pvEarly=e.target.closest("[data-pub]"); if(pvEarly){ openPublic(pvEarly.dataset.pub); return; }
   const rn=e.target.closest("[data-reino]"); if(rn){ toggleReino(rn.dataset.reino); return; }
   const va=e.target.closest("[data-viewas]"); if(va){ setViewAs(va.dataset.viewas); return; }
   if(e.target.closest("#monitorReload")){ loadWorldMonitor(); return; }
+  if(e.target.closest("#chSend")){ publishChangelog(); return; }
+  const chd=e.target.closest("[data-chdel]"); if(chd){ deleteChangelogEntry(chd.dataset.chdel); return; }
   const cs=e.target.closest("[data-cssave]"); if(cs){ consolaSave(cs.dataset.cssave); return; }
   if(e.target.closest("[data-teamadd]")){ addTeamTask(); return; }
   const tcy=e.target.closest("[data-taskcycle]"); if(tcy){ cycleTask(tcy.dataset.taskcycle); return; }
