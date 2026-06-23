@@ -139,6 +139,13 @@ const Cloud = {
   async posts(){ const { data } = await _sb.from("posts").select("*").order("created_at",{ascending:false}).limit(100); return data||[]; },
   async comments(postId){ const { data } = await _sb.from("comments").select("*").eq("post_id", postId).order("created_at",{ascending:true}); return data||[]; },
 
+  /* Chispas por Huella (1 por Alma) y Vínculos (seguir/Constelación) — migración 0023 */
+  async allPostSparks(){ if(!_sb) return []; const { data } = await _sb.from("post_sparks").select("post_id,alma_id"); return data||[]; },
+  async togglePostSpark(postId){ if(!_sb) return null; const { data, error } = await _sb.rpc("toggle_post_spark", { p_post:postId }); if(error) throw error; return data; },
+  async toggleFollow(target){ if(!_sb) return null; const { data, error } = await _sb.rpc("toggle_follow", { p_target:target }); if(error) throw error; return data; },
+  async myFollowing(almaId){ if(!_sb) return []; const { data } = await _sb.from("follows").select("following_alma_id").eq("follower_alma_id", almaId); return data||[]; },
+  async myFollowers(almaId){ if(!_sb) return []; const { data } = await _sb.from("follows").select("follower_alma_id").eq("following_alma_id", almaId); return data||[]; },
+
   /* Clan: recordatorios y tablero del equipo (Fase 4, tablas de migración 0006).
      Si la tabla no existe aún, lanza error y el front cae a modo local. */
   async reminders(clan){ const { data, error } = await _sb.from("reminders").select("*").eq("clan", clan).order("due_at",{ascending:true}); if(error) throw error; return data||[]; },
