@@ -194,6 +194,12 @@ function levelAllows(view){
   if(!need) return true;
   return levelRank(me().level) >= levelRank(need);
 }
+/* Fundar un Clan o Santuario requiere que el Alma haya crecido en el Árbol
+   hasta cierto nivel. Umbral único y fácil de ajustar. */
+const FOUND_MIN_LEVEL = "ROOT"; // RAÍZ
+function foundLevelLabel(){ return levelByKey(FOUND_MIN_LEVEL).label; }
+function foundLevelEmoji(){ return levelByKey(FOUND_MIN_LEVEL).emoji; }
+function canFound(){ return (isCreator && !state.viewAs) || levelRank(me().level) >= levelRank(FOUND_MIN_LEVEL); }
 /* ¿La sesión puede gestionar el equipo? (Líder, Admin o Creador) */
 function canLead(){
   if(isCreator && !state.viewAs) return true;
@@ -326,8 +332,9 @@ function renderNav(){
   if(next){
     h += `<button class="nav-reveal" data-reveal title="${esc(SECTION_REVEAL[next.id]||"")}">✦ Descubrir ${esc(SECTION_TITLE[next.id]||"")} →</button>`;
   }
-  // Clan y Santuario: moradas del menú que SOLO aparecen si el Alma tiene acceso
-  // a esa Forma (plan). Ese acceso solo lo concede el Creador desde la Consola.
+  // Clan y Santuario: moradas del menú que SOLO aparecen si el Alma ya habita
+  // esa Forma (fundó/se unió a un Clan, o tiene Santuario). Fundar requiere
+  // alcanzar el nivel del Árbol (ver canFound); el Creador puede asignarla.
   // No se ocultan por la llegada progresiva: si hay acceso, están en el menú.
   if(planAllows("clanpanel")) h += navSectionItem("clan","❂","constelacion","Clan","clanpanel");
   if(planAllows("santuario")) h += navSectionItem("santuario","🜁","santuario","Santuario","santuario");
@@ -2412,15 +2419,25 @@ function vClanPanel(a){
 /* Crear Clan (cuando el Alma aún no tiene uno). */
 function vClanCreate(a){
   if(!a.live) return clanEmpty("Clan","Entra a tu Alma para crear o unirte a un Clan.");
-  return `<div class="grid">
-    ${clanHeader(a,null,"Clan","Crea tu Clan o únete a uno por código.")}
-    <div class="card s7"><div class="section-title"><h2>Crear un Clan</h2></div>
+  const create = canFound()
+    ? `<div class="card s7"><div class="section-title"><h2>Crear un Clan</h2></div>
       <p class="muted" style="font-size:13px;margin-top:-4px">Una constelación de 2 a 8 Almas que crean juntas. Tú serás su <b>Admin</b>.</p>
       <div class="ci-edit" style="margin-top:10px"><input id="newClanEmoji" maxlength="3" value="❂" title="Símbolo" style="width:54px;text-align:center">
         <input id="newClanName" placeholder="Nombre del Clan"></div>
       <div class="field" style="margin-top:10px"><textarea id="newClanDesc" rows="2" placeholder="Descripción (opcional)"></textarea></div>
       <button class="btn gold" id="clanCreateBtn">✦ Crear Clan</button>
-      <div id="clanCreateMsg" class="muted" style="font-size:12.5px;margin-top:8px;min-height:14px"></div></div>
+      <div id="clanCreateMsg" class="muted" style="font-size:12.5px;margin-top:8px;min-height:14px"></div></div>`
+    : `<div class="card s7"><div class="section-title"><h2>Crear un Clan</h2></div>
+      <p class="muted" style="font-size:13px;margin-top:-4px">Una constelación de 2 a 8 Almas que crean juntas, guiada por un <b>Admin</b>.</p>
+      <div class="lock-card" style="margin-top:10px;padding:14px;border:1px dashed var(--line);border-radius:14px;text-align:center">
+        <div style="font-size:30px">${foundLevelEmoji()}</div>
+        <p style="margin:6px 0 2px"><b>Aún no puedes fundar un Clan.</b></p>
+        <p class="muted" style="font-size:12.5px;margin:0">Fundar un Clan requiere alcanzar el nivel <b>${esc(foundLevelLabel())}</b> en el Árbol. Sigue dejando Huellas: tu Esencia crece y, al llegar, podrás reunir tu propia constelación.</p>
+        <p class="muted" style="font-size:12px;margin:8px 0 0">Tu nivel actual: <b>${esc(levelByKey(me().level).label)}</b></p>
+      </div></div>`;
+  return `<div class="grid">
+    ${clanHeader(a,null,"Clan","Crea tu Clan o únete a uno por código.")}
+    ${create}
     <div class="card s5"><div class="section-title"><h2 style="font-size:15px">Unirme por código</h2></div>
       <p class="muted" style="font-size:13px">¿Te invitaron? Ingresa el código del Clan.</p>
       <div class="field"><input id="joinCode" placeholder="CLAN-XXXX"></div>
@@ -2518,13 +2535,14 @@ function vMiPlan(a){
       <small class="muted">${m.sub}</small>
       <ul class="feat">${PLAN_PICK_FEATURES[k].map(f=>`<li><span class="ck">✦</span> ${f}</li>`).join("")}</ul>
       ${on?`<span class="pill ok" style="width:max-content">Tu Forma actual</span>`
-          :admin?`<button class="btn ${k==='CLAN'?'gold':'secondary'}" data-pickplan="${k}">Asignar ${m.t}</button>`
-          :(k==='ALMA'?`<span class="pill" style="width:max-content">Tu Forma de origen</span>`
-                      :`<span class="pill" style="width:max-content">La concede el Creador</span>`)}
+          :k==='ALMA'?`<span class="pill" style="width:max-content">Tu Forma de origen</span>`
+          :(admin||canFound())
+              ?`<button class="btn ${k==='CLAN'?'gold':'secondary'}" data-pickplan="${k}">${admin?'Asignar':'Fundar'} ${m.t}</button>`
+              :`<span class="pill" style="width:max-content">${foundLevelEmoji()} Requiere nivel ${esc(foundLevelLabel())}</span>`}
     </div>`; };
   const intro = admin
     ? `<p class="muted" style="max-width:640px">Como Creador, asignas la Forma de cada Alma desde la <b>Consola</b>. Aquí puedes asignar la tuya.</p>`
-    : `<p class="muted" style="max-width:640px">Tu Forma define cómo habitas ANIMA. Toda Alma nace como <b>Alma</b>. <b>Clan</b> y <b>Santuario</b> son moradas que <b>concede el Creador de ANIMA</b> — no se activan solas.</p>`;
+    : `<p class="muted" style="max-width:640px">Tu Forma define cómo habitas ANIMA. Toda Alma nace como <b>Alma</b>. Al crecer en el Árbol hasta el nivel <b>${esc(foundLevelLabel())}</b> podrás <b>fundar tu propio Clan</b> —y, con él, un <b>Santuario</b>— para crear junto a otras Almas.</p>`;
   return `<div class="grid">
     <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
       <span class="pill gold">Forma</span>
@@ -2652,22 +2670,30 @@ async function delSantEvent(id){
 
 /* --- Acciones de planes, roles y herramientas de Clan --- */
 async function pickPlan(plan){
-  const a=me(); if(!a.live){ alert("Entra a tu Alma en la nube para activar un plan."); return; }
-  // Clan y Santuario son moradas concedidas: solo el Creador las asigna (Consola).
-  if((plan==="CLAN"||plan==="SANTUARIO") && !(isCreator && !state.viewAs)){
-    alert("Clan y Santuario los concede el Creador de ANIMA."); return;
+  const a=me(); if(!a.live){ alert("Entra a tu Alma en la nube para activar tu Forma."); return; }
+  // Fundar un Clan o Santuario requiere alcanzar el nivel del Árbol (o ser el Creador).
+  if((plan==="CLAN"||plan==="SANTUARIO") && !canFound()){
+    alert("Fundar un "+(plan==="SANTUARIO"?"Santuario":"Clan")+" requiere alcanzar el nivel "+foundLevelLabel()+" en el Árbol."); return;
   }
-  const patch={plan};
-  if(plan==="CLAN" || plan==="SANTUARIO"){
-    if(!a.clan){ const name=(prompt(plan==="SANTUARIO"?"Nombre de tu Santuario (y Clan principal):":"Nombre de tu Clan:","")||"").trim(); if(!name) return; patch.clan=name; patch.team_role="LIDER"; if(plan==="SANTUARIO"){ patch.santuario=name; patch.team_role="ADMIN"; } }
-    else if(plan==="SANTUARIO" && !a.santuario){ patch.santuario=a.clan; patch.team_role="ADMIN"; }
-  }
-  try{ await Cloud.updateAlma(a.almaId,patch);
-    a.plan=patch.plan; if(patch.clan)a.clan=patch.clan; if(patch.team_role)a.team_role=patch.team_role; if(patch.santuario)a.santuario=patch.santuario;
+  try{
+    if((plan==="CLAN"||plan==="SANTUARIO") && !a.clan){
+      // Funda un Clan real (entidad en la nube + rol Admin) vía RPC.
+      const name=(prompt(plan==="SANTUARIO"?"Nombre de tu Santuario (y Clan principal):":"Nombre de tu Clan:","")||"").trim();
+      if(!name) return;
+      await Cloud.clanCreate(name);            // crea el Clan, te deja como ADMIN, plan=CLAN
+      a.clan=name; a.team_role="ADMIN"; a.plan="CLAN";
+      if(plan==="SANTUARIO"){ await Cloud.updateAlma(a.almaId,{plan:"SANTUARIO",santuario:name}); a.plan="SANTUARIO"; a.santuario=name; }
+      await loadClanMeta(name);
+    } else {
+      const patch={plan};
+      if(plan==="SANTUARIO" && a.clan && !a.santuario){ patch.santuario=a.clan; patch.team_role="ADMIN"; }
+      await Cloud.updateAlma(a.almaId,patch);
+      a.plan=patch.plan; if(patch.santuario)a.santuario=patch.santuario; if(patch.team_role)a.team_role=patch.team_role;
+    }
     try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){}
     if(a.clan) await syncTeam(a.clan);
-    save(); renderAll(); alert("Plan "+PLAN_META[plan].t+" activado ✓");
-  }catch(e){ alert("No se pudo activar el plan: "+(e.message||e)); }
+    save(); renderAll(); toast("✦ Forma "+PLAN_META[plan].t+" activada.");
+  }catch(e){ alert("No se pudo activar tu Forma: "+(e.message||e)); }
 }
 async function joinClanCode(){
   const a=me(); if(!a.live){ alert("Entra a tu Alma para unirte a un Clan."); return; }
@@ -2687,6 +2713,7 @@ async function setMemberRole(almaId, role){
 /* ----- Gestión del Clan (Admin) ----- */
 async function createClan(){
   const a=me(); if(!a.live){ alert("Entra a tu Alma para crear un Clan."); return; }
+  if(!canFound()){ const m=document.getElementById("clanCreateMsg"); if(m) m.textContent="Fundar un Clan requiere alcanzar el nivel "+foundLevelLabel()+" en el Árbol."; return; }
   const name=(document.getElementById("newClanName").value||"").trim();
   const emoji=(document.getElementById("newClanEmoji").value||"").trim();
   const desc=(document.getElementById("newClanDesc").value||"").trim();

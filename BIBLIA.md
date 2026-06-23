@@ -292,8 +292,13 @@ privado con **identidad propia**: nombre, símbolo y descripción.
 
 - **Para qué:** proyectos compartidos, un **Plan de trabajo** común, un **Calendario**
   sincronizado y la memoria colectiva del equipo.
-- **Cómo despierta:** al reunir Esencia (*Despertar Clan*) o por invitación; el Origen
-  (Creador) también puede concederlo.
+- **Quién puede fundarlo:** un Alma que haya **crecido en el Árbol hasta el nivel RAÍZ**
+  (umbral `FOUND_MIN_LEVEL`, ajustable). Quien lo funda nace como **Admin**. El Origen
+  (Creador) puede fundar/asignar sin restricción. Cualquier Alma puede **unirse por código**
+  aunque aún no alcance el nivel para fundar.
+- **Abandonar:** **toda Alma puede abandonar** su Clan cuando quiera. Si el **Admin** lo
+  abandona, el liderazgo se **transfiere** a otra Alma (primero un Líder, luego la más
+  antigua); si era la única, el Clan **se disuelve** con su Plan, Calendario y Proyectos.
 - **Roles dentro del Clan:**
   - **Admin** — representa al Clan. Control total: crear/editar/eliminar el Clan, su
     nombre, símbolo y descripción; gestionar Almas y roles.
@@ -310,7 +315,10 @@ reúne **varios Clanes** bajo un mismo techo.
 - **Estructura:** Santuario → contiene **Clanes** → contienen **Almas**.
 - **Para qué:** coordinar múltiples Clanes con una **vista general** (Panel del Santuario),
   Ecos privados, eventos, símbolos únicos y su propio pulso del Árbol.
-- **Cómo despierta:** al alcanzar gran Esencia (*Despertar Santuario*) o lo concede el Origen.
+- **Quién puede fundarlo:** mismo requisito que el Clan (nivel **RAÍZ** del Árbol). Fundar
+  un Santuario crea su Clan principal y deja al Alma como **Admin**. El Origen también lo concede.
+- **Abandonar:** un Alma puede **abandonar el Santuario** y conservar su Clan; al disolverse
+  su Clan asociado, también sale del Santuario.
 - **Roles:** el **Admin del Santuario** coordina los Clanes; cada Clan conserva su
   Admin/Líder/Alma.
 
