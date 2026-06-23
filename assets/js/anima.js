@@ -288,8 +288,11 @@ function buildSections(cfg){
 function renderNav(){
   const cfg=getCfg(me());
   const built=buildSections(cfg);
-  // Cuántas moradas revelar: manual + por nivel. El Creador ve todo.
-  let stage = (isCreator && !state.viewAs) ? built.length : Math.max(1, storedReveal(), levelReveal());
+  // Las moradas base (Mi Alma · Taller · Mundo) están SIEMPRE accesibles en la
+  // barra lateral, igual que en la barra inferior móvil. Así el Mundo nunca
+  // queda fuera de alcance en escritorio (la afordancia "Descubrir" ya no oculta
+  // el acceso; el descubrimiento vive en el tutorial y en la llegada al mundo).
+  let stage = built.length;
   // Nunca ocultes la morada que el Alma está viendo ahora.
   const curSec=sectionOfView(state.view);
   if(curSec){ const ci=built.findIndex(s=>s.id===curSec); if(ci>=0) stage=Math.max(stage, ci+1); }
@@ -535,7 +538,13 @@ function renderView(){
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, santuario:vSantuario,
     sant_plan:vSantPlan }[state.view] || vMiAlma;
-  document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + animaWrap(fn(me()));
+  let bodyHTML;
+  try{ bodyHTML = animaWrap(fn(me())); }
+  catch(err){
+    console.error("ANIMA · error al dibujar la vista", state.view, err);
+    bodyHTML = animaWrap(`<div class="grid"><div class="card s12"><p class="muted">Esta ventana tuvo un tropiezo al cargar. Intenta de nuevo o entra a <button class="btn sm" data-view="mialma">Mi Alma</button>.</p></div></div>`);
+  }
+  document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + bodyHTML;
   if(state.view==="comunidad" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
   if(state.view==="consola"){ requestAnimationFrame(loadWorldMonitor); }
 }
