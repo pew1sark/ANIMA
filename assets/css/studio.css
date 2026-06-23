@@ -557,6 +557,26 @@
 .fr-meta b{color:var(--ink,#111)}
 @media(max-width:560px){ .flow-row{grid-template-columns:84px 1fr} .fr-meta{grid-column:1/-1;text-align:right;margin-top:-4px} }
 
+/* Estado del Árbol — evolución (Semilla → Santuario Vivo) */
+.ts-track{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:6px}
+.ts-step{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;padding:10px 4px;
+  border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.4);opacity:.5;transition:.15s}
+.ts-step .ts-g{font-size:20px;line-height:1}
+.ts-step b{font-size:11px;letter-spacing:-.01em}
+.ts-step small{font-size:9.5px;color:var(--muted)}
+.ts-step.passed{opacity:.8}
+.ts-step.cur{opacity:1;border-color:rgba(208,170,99,.6);box-shadow:0 6px 18px rgba(208,170,99,.16);background:rgba(208,170,99,.08)}
+.ts-feeds{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:12px;overflow:hidden;margin-top:14px}
+.ts-feeds > div{background:#fff;padding:13px 8px;text-align:center}
+.ts-feeds .num{font-size:20px;font-weight:850;letter-spacing:-.03em;line-height:1}
+.ts-feeds .lbl{display:block;font-size:10px;color:var(--muted);margin-top:5px}
+@media(max-width:560px){ .ts-track{grid-template-columns:repeat(3,1fr)} }
+/* Monitor del Creador — banner de estado del Árbol */
+.mon-stage{display:flex;align-items:center;gap:14px;padding:14px 16px;margin-bottom:12px;border:1px solid rgba(208,170,99,.4);
+  border-radius:14px;background:radial-gradient(circle at 0% 0%,rgba(208,170,99,.1),transparent 70%)}
+.mon-stage .ms-g{font-size:30px;line-height:1}
+
 /* ===========================================================
    MÓVIL — sin franja arriba: el menú vive abajo. Arriba, mínimo y limpio:
    solo Susurros + cuenta, alineados a la derecha. (LUMBRE ya está abajo.)
