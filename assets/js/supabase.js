@@ -173,6 +173,11 @@ const Cloud = {
   async addChangelog(row){ const { data, error } = await _sb.from("changelog").insert(row).select().single(); if(error) throw error; return data; },
   async deleteChangelog(id){ const { error } = await _sb.from("changelog").delete().eq("id", id); if(error) throw error; },
 
+  /* La Voz del Mundo: avisos fijados por el Creador (migración 0032). */
+  async worldNotices(){ if(!_sb) return []; const { data } = await _sb.from("world_notices").select("*").order("sort",{ascending:false}).order("created_at",{ascending:false}); return data||[]; },
+  async worldNoticeAdd(title, body, link){ const { data, error } = await _sb.from("world_notices").insert({ title, body:body||null, link:link||null }).select().single(); if(error) throw error; return data; },
+  async worldNoticeDelete(id){ const { error } = await _sb.from("world_notices").delete().eq("id", id); if(error) throw error; },
+
   /* Clan: recordatorios y tablero del equipo (Fase 4, tablas de migración 0006).
      Si la tabla no existe aún, lanza error y el front cae a modo local. */
   async reminders(clan){ const { data, error } = await _sb.from("reminders").select("*").eq("clan", clan).order("due_at",{ascending:true}); if(error) throw error; return data||[]; },
