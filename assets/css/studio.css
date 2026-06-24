@@ -894,6 +894,14 @@ a.nav-item{text-decoration:none;color:inherit}
 .tl-list .row:first-child{border-top:0}
 .taller-intro h2{font-size:20px;letter-spacing:-.02em}
 
+/* Moneda del Flujo de valores + conversor. */
+.cur-pick{display:inline-flex;align-items:center;gap:8px}
+.cur-pick select,.conv-controls select,.conv-controls input{font:inherit;padding:8px 11px;
+  border:1px solid var(--line);border-radius:10px;background:var(--card-solid,#fff);color:var(--text);outline:none}
+.cur-pick select:focus,.conv-controls select:focus,.conv-controls input:focus{border-color:var(--gold,#d0aa63)}
+.conv-controls{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.conv-controls label{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+
 /* ===========================================================
    TRANSICIONES SUAVES — "ANIMA cerró los ojos un instante y volvió a abrirlos"
    Fade + leve desplazamiento vertical. Sin rebotes, sin zoom, sin loaders.
