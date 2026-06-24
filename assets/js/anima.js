@@ -1787,18 +1787,21 @@ function vWanderingTraces(a){
 function wtHuellaHTML(a){
   const t=state.wtCurrent; if(!t){ wtPickOne(); }
   const cur=state.wtCurrent; if(!cur) return `<div class="card s12 wt-empty"><p class="muted">Sin señal.</p></div>`;
-  const al=cur.alma||{}; const disc=al.role||al.crew_role||""; const place=al.country?countryLabel(al.country):(al.city||"");
-  const phrase=(al.bio||"").trim();
+  const al=cur.alma||{};
+  // Junto a la foto va la OBRA (título · técnica · año · descripción). La
+  // identidad del Alma vive en su tarjeta/perfil (botón Ver Alma).
+  const title=(cur.title||"").trim()||"Obra sin título";
+  const tech=(cur.kind||"").trim();
+  const desc=(cur.desc||"").trim();
   const saved=state.wtSaved&&state.wtSaved.has(cur.id);
   const sparked=state.wtSparked&&state.wtSparked.has(cur.id);
   return `<div class="card s12 wt-stage" data-wtcard="${esc(cur.id)}">
       <div class="wt-figure"><div class="wt-figure-img" style="background-image:url('${esc(cur.img)}')"></div><span class="wt-figure-mark">✦</span></div>
       <div class="wt-meta">
-        <span class="wt-eyebrow">Una señal del mundo</span>
-        <h3 class="wt-author">${esc(al.name||"Alma")}</h3>
-        <div class="wt-sub">${disc?`<b>${esc(disc)}</b>`:""}${disc&&place?`<span class="wt-dot">·</span>`:""}${place?esc(place):""}</div>
-        ${cur.title?`<div class="wt-work">“${esc(cur.title)}”${cur.year?`<span class="wt-year"> · ${esc(cur.year)}</span>`:""}</div>`:""}
-        ${phrase?`<p class="wt-phrase">${esc(phrase.slice(0,180))}${phrase.length>180?"…":""}</p>`:""}
+        <span class="wt-eyebrow">Una huella del mundo</span>
+        <h3 class="wt-author">${esc(title)}</h3>
+        <div class="wt-sub">${tech?`<b>${esc(tech)}</b>`:""}${tech&&cur.year?`<span class="wt-dot">·</span>`:""}${cur.year?esc(cur.year):""}</div>
+        ${desc?`<p class="wt-phrase">${esc(desc.slice(0,220))}${desc.length>220?"…":""}</p>`:`<p class="wt-phrase wt-faint">Una pieza del portafolio de un Alma. Descubre quién la creó.</p>`}
         <div class="wt-actions">
           <button class="btn" data-wtnext>↻ Otra Huella</button>
           <button class="btn secondary" data-pub="${esc(al.id)}">Ver Alma</button>
@@ -1814,8 +1817,8 @@ function wtConstelHTML(){
   const items=state.wtConstel||[]; if(!items.length){ wtPickConstel(); }
   const list=state.wtConstel||[];
   return `<div class="card s12 wt-constel-card">
-      <div class="wt-constel" data-count="${list.length}">${list.map(t=>{ const al=t.alma||{};
-        return `<button class="wt-cell" data-wtopen="${esc(t.id)}" style="background-image:url('${esc(t.img)}')" title="${esc(al.name||'Alma')}"><span class="wt-cell-info"><b>${esc(al.name||"Alma")}</b><small>${esc(al.role||al.crew_role||"")}</small></span></button>`;
+      <div class="wt-constel" data-count="${list.length}">${list.map(t=>{ const ti=(t.title||"").trim()||"Obra sin título"; const tk=(t.kind||"").trim();
+        return `<button class="wt-cell" data-wtopen="${esc(t.id)}" style="background-image:url('${esc(t.img)}')" title="${esc(ti)}"><span class="wt-cell-info"><b>${esc(ti)}</b>${tk?`<small>${esc(tk)}</small>`:""}</span></button>`;
       }).join("")}</div>
       <div style="text-align:center;margin-top:18px"><button class="btn sm secondary" data-wtnext>Otra Constelación</button></div>
     </div>`;

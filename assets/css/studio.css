@@ -930,6 +930,7 @@ a.nav-item{text-decoration:none;color:inherit}
 .wt-work{margin-top:14px;font-style:italic;color:#1a1a1d;font-size:16px}
 .wt-work .wt-year{font-style:normal;color:var(--muted)}
 .wt-phrase{color:#4a4a4f;font-size:14.5px;line-height:1.65;margin:14px 0 0;max-width:46ch}
+.wt-phrase.wt-faint{color:var(--muted);font-style:italic}
 .wt-actions{display:flex;gap:11px;flex-wrap:wrap;margin-top:24px}
 .wt-actions-sub{display:flex;gap:10px;flex-wrap:wrap;margin-top:11px}
 .btn.wt-on{color:#0a0a0b;border-color:rgba(208,170,99,.6);background:rgba(208,170,99,.12)}
