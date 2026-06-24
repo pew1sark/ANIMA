@@ -1432,7 +1432,12 @@ function vClientes(a){
 const CURRENCIES={CLP:"$",USD:"US$",EUR:"€",MXN:"MX$",ARS:"AR$",COP:"CO$",PEN:"S/"};
 const fmtq=(n,c)=>(CURRENCIES[c]||"$")+Number(n||0).toLocaleString("es-CL");
 function blankQuote(){ return { id:null, client_id:null, project_id:null, docType:"cotizacion", title:"Cotización", client:"", date:new Date().toISOString().slice(0,10),
-  discipline:"", currency:"CLP", taxPct:0, notes:"", items:[{desc:"",qty:1,price:0,unit:"unidad"}] }; }
+  discipline:"", currency:"CLP", taxPct:0, notes:"", items:[{desc:"",qty:1,price:0,unit:"unidad"}],
+  theme:"papel", accent:"#d0aa63", font:"mixta", cover:true, showLogo:true }; }
+const QD_THEMES=[{k:"claro",t:"Claro"},{k:"papel",t:"Papel"},{k:"oscuro",t:"Oscuro"},{k:"tinta",t:"Tinta"}];
+const QD_ACCENTS=["#d0aa63","#c8543f","#3a8a5f","#3a6e8a","#6a4a78","#b23b8a","#111111"];
+const QD_FONTS=[{k:"mixta",t:"Mixta"},{k:"serif",t:"Serif"},{k:"sans",t:"Sans"}];
+function animaMark(c){ c=c||"#111"; return `<svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="${c}" stroke-width="6.5" stroke-linejoin="round"/><circle cx="50" cy="49" r="5.5" fill="${c}"/></svg>`; }
 
 /* ---------- Centro documental: formatos + plantillas (estilo Canva, identidad ANIMA) ---------- */
 const DOC_FORMATS=[
@@ -1483,9 +1488,9 @@ function applyTemplate(tpl){
   quoteDraft.discipline=tpl.disc||""; quoteDraft.notes=tpl.note||"";
   const its=(tpl.items||[]).map(normItem); quoteDraft.items=its.length?its:[{desc:"",qty:1,price:0,unit:"unidad"}];
 }
-function cotUseFormat(id){ quoteDraft=blankQuote(); quoteDraft.docType=id; quoteDraft.title=docFmt(id).t; state.cotMode="editor"; renderView(); }
-function cotUseTemplate(id){ const a=me(); const tpl=TEMPLATES.find(t=>t.id===id)||loadTpls(a).find(t=>t.id===id); if(!tpl) return; applyTemplate(tpl); state.cotMode="editor"; renderView(); }
-function cotBlank(){ quoteDraft=blankQuote(); state.cotMode="editor"; renderView(); }
+function cotUseFormat(id){ quoteDraft=blankQuote(); quoteDraft.docType=id; quoteDraft.title=docFmt(id).t; state.cotMode="editor"; state.cotTab="contenido"; renderView(); }
+function cotUseTemplate(id){ const a=me(); const tpl=TEMPLATES.find(t=>t.id===id)||loadTpls(a).find(t=>t.id===id); if(!tpl) return; applyTemplate(tpl); state.cotMode="editor"; state.cotTab="contenido"; renderView(); }
+function cotBlank(){ quoteDraft=blankQuote(); state.cotMode="editor"; state.cotTab="contenido"; renderView(); }
 function cotGallery(){ state.cotMode="galeria"; renderView(); }
 function cotSaveTemplate(){
   readQuoteForm(); const a=me();
@@ -1501,12 +1506,19 @@ const quotesKey = a => "anima_quotes_"+(a.almaId||a.id);
 function loadQuotes(a){ try{ return JSON.parse(localStorage.getItem(quotesKey(a)))||[]; }catch(e){ return []; } }
 function saveQuotes(a,q){ localStorage.setItem(quotesKey(a), JSON.stringify(q)); }
 function quoteTotals(){ const sub=quoteDraft.items.reduce((t,it)=>t+(+it.qty||0)*(+it.price||0),0); const tax=sub*(+quoteDraft.taxPct||0)/100; return {sub,tax,total:sub+tax}; }
+// Lee sólo los campos presentes en el DOM (cada pestaña del inspector
+// muestra un subconjunto), así cambiar de pestaña nunca borra datos.
 function readQuoteForm(){
-  const g=id=>{const e=document.getElementById(id);return e?e.value:"";};
-  quoteDraft.title=g("q_title"); quoteDraft.client=g("q_client"); quoteDraft.date=g("q_date");
-  quoteDraft.discipline=g("q_disc"); quoteDraft.currency=g("q_cur"); quoteDraft.taxPct=+g("q_tax")||0; quoteDraft.notes=g("q_notes");
-  if(g("q_fmt")) quoteDraft.docType=g("q_fmt");
-  quoteDraft.items=quoteDraft.items.map((it,i)=>({ desc:g("qi_desc_"+i), qty:+g("qi_qty_"+i)||0, price:+g("qi_price_"+i)||0, unit:g("qi_unit_"+i)||"unidad" }));
+  const el=id=>document.getElementById(id); const g=id=>{const e=el(id);return e?e.value:null;};
+  const set=(k,id)=>{ const v=g(id); if(v!==null) quoteDraft[k]=v; };
+  set("title","q_title"); set("client","q_client"); set("date","q_date");
+  set("discipline","q_disc"); set("currency","q_cur"); set("notes","q_notes");
+  set("accent","q_accent"); set("font","q_font");
+  const tax=g("q_tax"); if(tax!==null) quoteDraft.taxPct=+tax||0;
+  const fmt=g("q_fmt"); if(fmt!==null) quoteDraft.docType=fmt;
+  const cv=el("q_cover"); if(cv) quoteDraft.cover=cv.checked;
+  const lg=el("q_logo"); if(lg) quoteDraft.showLogo=lg.checked;
+  if(el("qi_desc_0")){ const items=[]; let i=0; while(el("qi_desc_"+i)){ items.push({desc:g("qi_desc_"+i)||"",qty:+g("qi_qty_"+i)||0,price:+g("qi_price_"+i)||0,unit:g("qi_unit_"+i)||"unidad"}); i++; } quoteDraft.items=items; }
 }
 function vCotizador(a){ return state.cotMode==="editor" ? vCotEditor(a) : vCotGaleria(a); }
 
@@ -1556,55 +1568,91 @@ function vCotGaleria(a){
   </div>`;
 }
 
+// Editor visual: panel de edición (izquierda) + lienzo del documento en vivo (derecha).
 function vCotEditor(a){
-  const t=quoteTotals(), cur=quoteDraft.currency, fmt=docFmt(quoteDraft.docType);
-  const itemsRows = quoteDraft.items.map((it,i)=>`<div class="qitem">
-      <input id="qi_desc_${i}" placeholder="Concepto / obra / servicio" value="${esc(it.desc)}">
-      <input id="qi_qty_${i}" type="number" min="0" step="any" value="${it.qty}" title="Cantidad">
-      <input id="qi_unit_${i}" placeholder="unidad" value="${esc(it.unit)}" title="Unidad (m², hora, pieza…)">
-      <input id="qi_price_${i}" type="number" min="0" step="any" value="${it.price}" title="Precio unitario">
-      <div class="qsub">${fmtq((+it.qty||0)*(+it.price||0),cur)}</div>
-      <button class="ia danger" data-qdel="${i}" title="Quitar">✕</button>
-    </div>`).join("");
-  return `<div class="grid">
-    <div class="card s8">
-      <div class="section-title">
-        <button class="btn ghost sm" data-cotback>← Centro</button>
-        <h2 style="font-size:20px">${fmt.ico} ${fmt.t}</h2><div class="spacer"></div>
-        <button class="btn ghost sm" id="q_tpl" title="Guardar este documento como plantilla reutilizable">✶ Plantilla</button>
-        <button class="btn secondary sm" id="q_save">Guardar</button>
-        <button class="btn sm" id="q_export">⤓ PDF</button>
+  const fmt=docFmt(quoteDraft.docType), cur=quoteDraft.currency, tab=state.cotTab||"contenido";
+  const tabBtn=(k,t)=>`<button class="cot-tab ${tab===k?'on':''}" data-cottab="${k}">${t}</button>`;
+  let panel="";
+  if(tab==="contenido"){
+    panel=`
+      <div class="field"><label>Formato</label><select id="q_fmt">${DOC_FORMATS.map(f=>`<option value="${f.id}" ${f.id===quoteDraft.docType?'selected':''}>${f.ico} ${f.t}</option>`).join("")}</select></div>
+      <div class="field"><label>Título del documento</label><input id="q_title" value="${esc(quoteDraft.title)}" placeholder="Cotización mural…"></div>
+      <div class="cot-row2">
+        <div class="field"><label>Fecha</label><input id="q_date" type="date" value="${esc(quoteDraft.date)}"></div>
+        <div class="field"><label>Disciplina</label><input id="q_disc" value="${esc(quoteDraft.discipline)}" placeholder="Mural, tattoo, branding…"></div>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <div class="field" style="flex:1;min-width:150px"><label>Formato</label><select id="q_fmt">${DOC_FORMATS.map(f=>`<option value="${f.id}" ${f.id===quoteDraft.docType?'selected':''}>${f.t}</option>`).join("")}</select></div>
-        <div class="field" style="flex:2;min-width:180px"><label>Título</label><input id="q_title" value="${esc(quoteDraft.title)}"></div>
-        <div class="field" style="flex:1;min-width:120px"><label>Fecha</label><input id="q_date" type="date" value="${esc(quoteDraft.date)}"></div>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <div class="field" style="flex:2;min-width:180px"><label>Vínculo</label><input id="q_client" placeholder="Nombre del vínculo" value="${esc(quoteDraft.client)}"></div>
-        <div class="field" style="flex:2;min-width:160px"><label>Disciplina / rama</label><input id="q_disc" placeholder="Mural, tattoo, branding, música…" value="${esc(quoteDraft.discipline)}"></div>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <div class="field" style="flex:1;min-width:120px"><label>Moneda</label><select id="q_cur">${Object.keys(CURRENCIES).map(c=>`<option ${c===cur?'selected':''}>${c}</option>`).join("")}</select></div>
-        <div class="field" style="flex:1;min-width:120px"><label>Impuesto %</label><input id="q_tax" type="number" min="0" step="any" value="${quoteDraft.taxPct}"></div>
-      </div>
-
-      <div class="section-title" style="margin-top:8px"><h2 style="font-size:16px">Ítems</h2><div class="spacer"></div><button class="btn sm" data-qadd>+ Ítem</button></div>
-      <div class="qhead"><span>Concepto</span><span>Cant.</span><span>Unidad</span><span>Precio</span><span>Subtotal</span><span></span></div>
+      <div class="field"><label>Vínculo <small class="muted">(se sincroniza)</small></label>
+        <input id="q_client" list="q_clients" value="${esc(quoteDraft.client)}" placeholder="Nombre del cliente / vínculo">
+        <datalist id="q_clients">${(a.clients||[]).map(c=>`<option value="${esc(c.name)}">`).join("")}</datalist></div>
+      <div class="field"><label>Notas / condiciones</label><textarea id="q_notes" rows="4" placeholder="Validez, anticipo, plazos, formas de pago…">${esc(quoteDraft.notes)}</textarea></div>`;
+  } else if(tab==="items"){
+    const itemsRows=quoteDraft.items.map((it,i)=>`<div class="qitem">
+        <input id="qi_desc_${i}" placeholder="Concepto / obra / servicio" value="${esc(it.desc)}">
+        <input id="qi_qty_${i}" type="number" min="0" step="any" value="${it.qty}" title="Cantidad">
+        <input id="qi_unit_${i}" placeholder="unidad" value="${esc(it.unit)}" title="Unidad">
+        <input id="qi_price_${i}" type="number" min="0" step="any" value="${it.price}" title="Precio unitario">
+        <button class="ia danger" data-qdel="${i}" title="Quitar">✕</button>
+      </div>`).join("");
+    panel=`<div class="qhead"><span>Concepto</span><span>Cant.</span><span>Unidad</span><span>Precio</span><span></span></div>
       ${itemsRows||`<p class="muted">Agrega tu primer ítem.</p>`}
-
-      <div class="field" style="margin-top:14px"><label>Notas / condiciones</label><textarea id="q_notes" rows="2" placeholder="Validez, anticipo, plazos, formas de pago…">${esc(quoteDraft.notes)}</textarea></div>
+      <button class="btn sm" data-qadd style="margin-top:10px">+ Ítem</button>
+      <div class="cot-row2" style="margin-top:14px">
+        <div class="field"><label>Moneda</label><select id="q_cur">${Object.keys(CURRENCIES).map(c=>`<option ${c===cur?'selected':''}>${c}</option>`).join("")}</select></div>
+        <div class="field"><label>Impuesto %</label><input id="q_tax" type="number" min="0" step="any" value="${quoteDraft.taxPct}"></div>
+      </div>`;
+  } else { // diseño
+    panel=`
+      <div class="field"><label>Tema</label><div class="qd-swatches">${QD_THEMES.map(th=>`<button class="qd-theme ${(quoteDraft.theme||'papel')===th.k?'on':''}" data-qtheme="${th.k}"><span class="qd-prev qd-${th.k}"></span>${th.t}</button>`).join("")}</div></div>
+      <div class="field"><label>Color de acento</label><div class="qd-accents">
+        ${QD_ACCENTS.map(c=>`<button class="qd-acc ${(quoteDraft.accent||'').toLowerCase()===c?'on':''}" data-qacc="${c}" style="background:${c}"></button>`).join("")}
+        <input id="q_accent" type="color" value="${esc(quoteDraft.accent||'#d0aa63')}" title="Color personalizado"></div></div>
+      <div class="field"><label>Tipografía</label><select id="q_font">${QD_FONTS.map(f=>`<option value="${f.k}" ${(quoteDraft.font||'mixta')===f.k?'selected':''}>${f.t}</option>`).join("")}</select></div>
+      <label class="cot-toggle"><input id="q_cover" type="checkbox" ${quoteDraft.cover!==false?'checked':''}> Portada con banda de color</label>
+      <label class="cot-toggle"><input id="q_logo" type="checkbox" ${quoteDraft.showLogo!==false?'checked':''}> Mostrar marca ANIMA + nombre del Alma</label>`;
+  }
+  return `<div class="grid">
+    <div class="card s12 cot-bar">
+      <button class="btn ghost sm" data-cotback>← Centro</button>
+      <b style="flex:1;font-size:15px;letter-spacing:-.02em">${fmt.ico} ${esc(quoteDraft.title||fmt.t)}</b>
+      <button class="btn ghost sm" id="q_tpl" title="Guardar como plantilla">✶ Plantilla</button>
+      <button class="btn secondary sm" id="q_save">Guardar</button>
+      <button class="btn sm" id="q_export">⤓ PDF</button>
     </div>
-
-    <div class="card s4" style="align-self:start">
-      <span class="pill gold">Resumen</span>
-      <div class="row"><div class="grow muted">Subtotal</div><b>${fmtq(t.sub,cur)}</b></div>
-      <div class="row"><div class="grow muted">Impuesto (${quoteDraft.taxPct||0}%)</div><b>${fmtq(t.tax,cur)}</b></div>
-      <div class="row"><div class="grow"><b>Total</b></div><span class="kpi" style="font-size:24px">${fmtq(t.total,cur)}</span></div>
-      <p class="muted" style="font-size:12px;margin-top:8px">${esc(fmt.d)} Exporta un PDF limpio con tu identidad, listo para enviar.</p>
+    <div class="cot-editor s12">
+      <div class="card cot-inspector">
+        <div class="cot-tabs">${tabBtn("contenido","Contenido")}${tabBtn("items","Ítems")}${tabBtn("diseno","Diseño")}</div>
+        <div class="cot-panel">${panel}</div>
+      </div>
+      <div class="cot-canvas"><div id="qdoc">${renderQDoc(a)}</div></div>
     </div>
   </div>`;
 }
+// Renderiza el documento (lienzo en vivo y base del PDF).
+function renderQDoc(a, opt){
+  opt=opt||{}; const t=quoteTotals(), cur=quoteDraft.currency, fmt=docFmt(quoteDraft.docType);
+  const ac=quoteDraft.accent||"#d0aa63"; const theme=opt.print?"claro":(quoteDraft.theme||"papel");
+  const font="qf-"+(quoteDraft.font||"mixta");
+  const cover=quoteDraft.cover!==false?`<div class="qd-cover"><div class="qd-cover-tx"><span class="qd-kicker">${esc(fmt.t)}</span><h1>${esc(quoteDraft.title||"Sin título")}</h1>${quoteDraft.discipline?`<p>${esc(quoteDraft.discipline)}</p>`:""}</div>${quoteDraft.showLogo!==false?`<span class="qd-mark">${animaMark("#fff")}</span>`:""}</div>`:"";
+  const head=quoteDraft.showLogo!==false?`<div class="qd-brand"><span class="qd-bmark">${animaMark(ac)}</span><b>${esc(a.name)}</b><small>ANIMA</small></div>`:"";
+  const meta=`<div class="qd-meta"><div><span>Para</span><b>${esc(quoteDraft.client||"—")}</b></div><div><span>Fecha</span><b>${esc(quoteDraft.date||"")}</b></div><div><span>Documento</span><b>${esc(fmt.t)}</b></div></div>`;
+  const rows=quoteDraft.items.filter(it=>it.desc||it.price).map(it=>`<tr><td>${esc(it.desc||"—")}</td><td>${it.qty}</td><td>${esc(it.unit)}</td><td>${fmtq(it.price,cur)}</td><td>${fmtq((+it.qty||0)*(+it.price||0),cur)}</td></tr>`).join("")||`<tr><td colspan="5" style="opacity:.5">Agrega ítems en la pestaña «Ítems»…</td></tr>`;
+  const notes=quoteDraft.notes?`<div class="qd-notes"><h3>Notas y condiciones</h3><p>${esc(quoteDraft.notes)}</p></div>`:"";
+  return `<div class="qdoc qd-${theme} ${font}" style="--qa:${esc(ac)}">
+    ${cover}
+    <div class="qd-body">
+      ${head}${meta}
+      <table class="qd-table"><thead><tr><th>Concepto</th><th>Cant.</th><th>Unidad</th><th>P. unit.</th><th>Subtotal</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="qd-totals"><div><span>Subtotal</span><b>${fmtq(t.sub,cur)}</b></div><div><span>Impuesto (${quoteDraft.taxPct||0}%)</span><b>${fmtq(t.tax,cur)}</b></div><div class="qd-grand"><span>Total</span><b>${fmtq(t.total,cur)}</b></div></div>
+      ${notes}
+      <div class="qd-foot">${esc(a.name)}${a.city?" · "+esc(a.city):""}${a.country?" "+esc(a.country):""} · ANIMA — The Soul of Creativity</div>
+    </div>
+  </div>`;
+}
+function qSetTab(k){ readQuoteForm(); state.cotTab=k; renderView(); }
+function qSetTheme(k){ readQuoteForm(); quoteDraft.theme=k; renderView(); }
+function qSetAccent(c){ readQuoteForm(); quoteDraft.accent=c; renderView(); }
+// Refresca sólo el lienzo (sin re-render del inspector → conserva el foco al escribir).
+function qLive(){ const el=document.getElementById("qdoc"); if(el){ readQuoteForm(); el.innerHTML=renderQDoc(me()); } }
 function qAddItem(){ readQuoteForm(); quoteDraft.items.push({desc:"",qty:1,price:0,unit:"unidad"}); renderView(); }
 function qDelItem(i){ readQuoteForm(); quoteDraft.items.splice(i,1); if(!quoteDraft.items.length) quoteDraft.items.push({desc:"",qty:1,price:0,unit:"unidad"}); renderView(); }
 function qNew(){ quoteDraft=blankQuote(); renderView(); }
@@ -1632,7 +1680,8 @@ async function qSaveCloud(a){
     }
     const payload={ alma_id:a.almaId, client_id:clientId, project_id:projectId, title:quoteDraft.title, client_name:quoteDraft.client,
       discipline:quoteDraft.discipline, currency:quoteDraft.currency, tax_pct:quoteDraft.taxPct, notes:quoteDraft.notes,
-      items:quoteDraft.items, subtotal:Math.round(t.sub), total:Math.round(t.total) };
+      items:quoteDraft.items, subtotal:Math.round(t.sub), total:Math.round(t.total), doc_type:quoteDraft.docType,
+      design:{ theme:quoteDraft.theme, accent:quoteDraft.accent, font:quoteDraft.font, cover:quoteDraft.cover, showLogo:quoteDraft.showLogo } };
     if(quoteDraft.id){ await Cloud.updateRow("quotes",quoteDraft.id,payload); }
     else { const qrow=await Cloud.insertRow("quotes",payload); quoteDraft.id=qrow.id; }
     quoteDraft.client_id=clientId; quoteDraft.project_id=projectId;
@@ -1641,14 +1690,15 @@ async function qSaveCloud(a){
   }catch(e){ alert("No se pudo guardar la cotización: "+(e.message||e)); }
 }
 function qLoad(id){
-  const a=me(); state.cotMode="editor";
-  if(a.live){ const q=(state.cloudQuotes||[]).find(x=>x.id===id);
+  const a=me(); state.cotMode="editor"; state.cotTab="contenido"; const D=blankQuote();
+  if(a.live){ const q=(state.cloudQuotes||[]).find(x=>x.id===id); const dz=q&&q.design||{};
     if(q){ quoteDraft={ id:q.id, client_id:q.client_id, project_id:q.project_id, docType:q.doc_type||"cotizacion", title:q.title||"Cotización", client:q.client_name||"",
       date:(q.created_at||"").slice(0,10), discipline:q.discipline||"", currency:q.currency||"CLP", taxPct:+q.tax_pct||0, notes:q.notes||"",
-      items:(q.items&&q.items.length)?q.items:[{desc:"",qty:1,price:0,unit:"unidad"}] }; renderView(); }
+      items:(q.items&&q.items.length)?q.items:[{desc:"",qty:1,price:0,unit:"unidad"}],
+      theme:dz.theme||D.theme, accent:dz.accent||D.accent, font:dz.font||D.font, cover:dz.cover!==false, showLogo:dz.showLogo!==false }; renderView(); }
     return;
   }
-  const ql=loadQuotes(a).find(x=>x.id===id); if(ql){ quoteDraft=JSON.parse(JSON.stringify(ql)); if(!quoteDraft.docType) quoteDraft.docType="cotizacion"; renderView(); }
+  const ql=loadQuotes(a).find(x=>x.id===id); if(ql){ quoteDraft=Object.assign(D,JSON.parse(JSON.stringify(ql))); renderView(); }
 }
 async function qDeleteSaved(id){
   if(!confirm("¿Eliminar esta cotización?"))return; const a=me();
@@ -1656,17 +1706,9 @@ async function qDeleteSaved(id){
   saveQuotes(a,loadQuotes(a).filter(x=>x.id!==id)); renderView();
 }
 function qExport(){
-  readQuoteForm(); const a=me(), t=quoteTotals(), cur=quoteDraft.currency;
-  document.getElementById("printArea").innerHTML=`
-    <div class="p-head"><div class="brand"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>ANIMA · ${esc(a.name)}</div><small>${esc(docFmt(quoteDraft.docType).t)} · ${esc(quoteDraft.date)}</small></div>
-    <h1 class="p-name">${esc(quoteDraft.title)}</h1>
-    <div class="p-sub">${esc(quoteDraft.discipline||a.role||"")} · Vínculo: ${esc(quoteDraft.client||"—")}</div>
-    <table class="p-table"><thead><tr><th>Concepto</th><th>Cant.</th><th>Unidad</th><th>P. unitario</th><th>Subtotal</th></tr></thead><tbody>
-      ${quoteDraft.items.map(it=>`<tr><td>${esc(it.desc)}</td><td>${it.qty}</td><td>${esc(it.unit)}</td><td>${fmtq(it.price,cur)}</td><td>${fmtq((+it.qty||0)*(+it.price||0),cur)}</td></tr>`).join("")}
-    </tbody></table>
-    <table class="p-tot"><tr><td>Subtotal</td><td>${fmtq(t.sub,cur)}</td></tr><tr><td>Impuesto (${quoteDraft.taxPct||0}%)</td><td>${fmtq(t.tax,cur)}</td></tr><tr class="grand"><td>Total</td><td>${fmtq(t.total,cur)}</td></tr></table>
-    ${quoteDraft.notes?`<h2>Notas</h2><p>${esc(quoteDraft.notes)}</p>`:``}
-    <div class="p-foot">${esc(a.name)} · ${esc(a.city||"")} ${esc(a.country||"")} · ANIMA TSC — The Soul of Creativity</div>`;
+  readQuoteForm();
+  // El PDF usa el mismo lienzo que ves, en variante para impresión (fondo claro).
+  document.getElementById("printArea").innerHTML=renderQDoc(me(),{print:true});
   window.print();
 }
 
@@ -4448,6 +4490,9 @@ document.addEventListener("click", e=>{
   const ctp=e.target.closest("[data-cottpl]"); if(ctp){ cotUseTemplate(ctp.dataset.cottpl); return; }
   if(e.target.closest("[data-cotblank]")){ cotBlank(); return; }
   if(e.target.closest("[data-cotback]")){ cotGallery(); return; }
+  const ctab=e.target.closest("[data-cottab]"); if(ctab){ qSetTab(ctab.dataset.cottab); return; }
+  const qth=e.target.closest("[data-qtheme]"); if(qth){ qSetTheme(qth.dataset.qtheme); return; }
+  const qac=e.target.closest("[data-qacc]"); if(qac){ qSetAccent(qac.dataset.qacc); return; }
   const ql=e.target.closest("[data-qload]"); if(ql){ qLoad(ql.dataset.qload); return; }
   const qx=e.target.closest("[data-qdelete]"); if(qx){ qDeleteSaved(qx.dataset.qdelete); return; }
   const qd=e.target.closest("[data-qdel]"); if(qd){ qDelItem(+qd.dataset.qdel); return; }
@@ -4532,12 +4577,14 @@ document.addEventListener("change", e=>{
   const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); return; }
   const tks=e.target.closest(".tk-status"); if(tks){ setTaskStatus(+tks.dataset.tstatus, tks.value); return; }
   const qf=e.target.closest("#q_fmt"); if(qf){ readQuoteForm(); renderView(); return; }
+  if(e.target.closest(".cot-inspector")){ qLive(); return; }
   const fu=e.target.closest("input[type=file][data-imgfield]"); if(fu){ uploadImgField(fu); return; }
   const rs=e.target.closest("[data-roleset]"); if(rs){ setMemberRole(rs.dataset.roleset, rs.value); return; }
   const srs=e.target.closest("[data-santroleset]"); if(srs){ santSetRole(srs.dataset.santroleset, srs.value); return; }
 });
 document.addEventListener("input", e=>{
   if(e.target.id==="convRate"){ updateConvOut(); return; }
+  if(e.target.closest(".cot-inspector")){ qLive(); return; }
   // Búsqueda en vivo del Panel de Almas / picker (sin re-render, conserva foco).
   if(e.target.id==="clanSearch" || e.target.id==="clanAddSearch"){
     const q=(e.target.value||"").toLowerCase();
