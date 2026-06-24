@@ -317,7 +317,7 @@ function sectionOfView(v){
   if(["taller","proyectos","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
   if(["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "clan";
   if(SANT_VIEWS.includes(v)) return "santuario";
-  if(["mundo","comunidad","consejo","cronica"].includes(v)) return "mundo";
+  if(["mundo","comunidad","consejo","cronica","world_wandering_traces"].includes(v)) return "mundo";
   return null;
 }
 /* Ítem de morada en la barra: navega a su vista por defecto y se marca activo
@@ -565,6 +565,7 @@ function moradaKids(sec){
   else if(sec==="mundo"){
     kids.push({v:"mundo",t:"Resumen",ico:"❂",ic:"nucleo"});
     if(planAllows("comunidad")) kids.push({v:"comunidad",t:"Muro",ico:"❂",ic:"constelacion"});
+    kids.push({v:"world_wandering_traces",t:"Huellas Errantes",ico:"✦",ic:"huellas"});
     kids.push({v:"cronica",t:"Crónica",ico:"✦",ic:"susurro"});
     if(me().council||(isCreator&&!state.viewAs)) kids.push({v:"consejo",t:"Consejo",ico:"⚖",ic:"panel"});
   }
@@ -604,7 +605,7 @@ function renderView(){
     finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
-    recordatorios:vRecordatorios, comunidad:vComunidad, santuario:vSantuario,
+    recordatorios:vRecordatorios, comunidad:vComunidad, world_wandering_traces:vWanderingTraces, santuario:vSantuario,
     sant_almas:vSantAlmas, sant_tareas:vSantTareas, sant_proyectos:vSantProyectos, sant_cal:vSantCalendario, sant_informes:vSantInformes,
     sant_plan:vSantTareas, cronica:vCronica }[state.view] || vMiAlma;
   let bodyHTML;
@@ -1720,6 +1721,125 @@ function vComunidad(a){
       <div class="alma-grid" style="margin-top:14px">${members.map(almaMini).join("")}</div></div>`
     : "";
   return `<div class="grid">${ritual}${create}${wall}${clanCard}</div>`;
+}
+/* ===========================================================
+   HUELLAS ERRANTES (world_wandering_traces)
+   -----------------------------------------------------------
+   Un visualizador contemplativo de portafolios: muestra obras
+   individuales tomadas al azar de los portafolios PÚBLICOS de
+   las Almas. No es un feed: no hay scroll infinito, ni orden por
+   popularidad/fecha. Una señal creativa a la vez (o una pequeña
+   Constelación). Identidad blanca, minimalista; pixel solo detalle.
+   =========================================================== */
+function wtShuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function wtDistinctAlmas(pool){ return new Set((pool||[]).map(t=>t.alma&&t.alma.id)).size; }
+async function loadWanderingTraces(){
+  if(typeof Cloud==="undefined" || !Cloud.enabled){ state.wtPool=[]; if(state.view==="world_wandering_traces") renderView(); return; }
+  try{
+    const rows = await Cloud.allPortfolio();
+    const almas = roster();
+    const byId = {}; almas.forEach(a=>{ if(a&&a.id) byId[a.id]=a; });
+    const pool = (rows||[]).map(r=>{
+      const al = byId[r.alma_id] || null;
+      const imgs = Array.isArray(r.images) ? r.images.filter(isImgUrl) : [];
+      const img = imgs[0] || (isImgUrl(r.link)? r.link : null);
+      return { id:r.id, title:r.title||"", kind:r.kind||"", year:r.year||"", desc:r.description||"", img, alma:al };
+    }).filter(t=> t.img && t.alma && t.alma.visibility && t.alma.visibility.public===true );
+    state.wtPool = pool;
+    wtPickOne(); wtPickConstel();
+  }catch(e){ state.wtPool=[]; }
+  if(state.view==="world_wandering_traces") renderView();
+}
+/* Elige UNA Huella: prioriza un Alma que no se haya visto recién (diversidad). */
+function wtPickOne(){
+  const pool=state.wtPool||[]; if(!pool.length){ state.wtCurrent=null; return; }
+  const recent=state.wtRecent||[];
+  const shuffled=wtShuffle(pool);
+  const pick = shuffled.find(t=> !recent.includes(t.alma.id)) || shuffled[0];
+  state.wtCurrent=pick;
+  const cap=Math.max(1, Math.min(6, wtDistinctAlmas(pool)-1));
+  state.wtRecent=[pick.alma.id, ...recent.filter(id=>id!==pick.alma.id)].slice(0,cap);
+}
+/* Elige 6–9 Huellas, una por Alma cuando se pueda (diversidad de disciplinas/países). */
+function wtPickConstel(){
+  const pool=state.wtPool||[]; const target=Math.max(6, Math.min(9, pool.length||0));
+  const shuffled=wtShuffle(pool); const byAlma=new Set(); const out=[];
+  for(const t of shuffled){ if(out.length>=target) break; if(byAlma.has(t.alma.id)) continue; byAlma.add(t.alma.id); out.push(t); }
+  if(out.length<target){ for(const t of shuffled){ if(out.length>=target) break; if(out.indexOf(t)<0) out.push(t); } }
+  state.wtConstel=out;
+}
+function vWanderingTraces(a){
+  const mode = state.wtMode==="constelacion" ? "constelacion" : "huella";
+  const head = `<div class="card s12 wt-head-card">
+      <div class="section-title"><h2 style="font-size:18px">Huellas Errantes</h2><div class="spacer"></div>
+        <div class="wt-modes-pick">
+          <button class="wt-mp ${mode!=='constelacion'?'on':''}" data-wtmode="huella">Huella</button>
+          <button class="wt-mp ${mode==='constelacion'?'on':''}" data-wtmode="constelacion">Constelación</button>
+        </div></div>
+      <div class="muted" style="font-size:12.5px">Señales creativas del mundo, tomadas al azar de los portafolios públicos. No es un feed: es una forma de descubrir.</div>
+    </div>`;
+  const pool=state.wtPool;
+  if(pool==null) return `<div class="grid">${head}<div class="card s12 wt-empty"><div class="wt-pixel">✦</div><p class="muted">Buscando señales en el mundo…</p></div></div>`;
+  if(!pool.length) return `<div class="grid">${head}<div class="card s12 wt-empty"><div class="wt-pixel">✦</div><p class="muted">Aún no hay Huellas visibles en el Mundo.<br>Cuando un Alma haga público su portafolio, sus obras se volverán señales aquí.</p></div></div>`;
+  return `<div class="grid">${head}${mode==="constelacion"?wtConstelHTML():wtHuellaHTML(a)}</div>`;
+}
+function wtHuellaHTML(a){
+  const t=state.wtCurrent; if(!t){ wtPickOne(); }
+  const cur=state.wtCurrent; if(!cur) return `<div class="card s12 wt-empty"><p class="muted">Sin señal.</p></div>`;
+  const al=cur.alma||{}; const disc=al.role||al.crew_role||""; const place=al.country?countryLabel(al.country):(al.city||"");
+  const phrase=(al.bio||"").trim();
+  const saved=state.wtSaved&&state.wtSaved.has(cur.id);
+  const sparked=state.wtSparked&&state.wtSparked.has(cur.id);
+  return `<div class="card s12 wt-stage" data-wtcard="${esc(cur.id)}">
+      <div class="wt-figure"><div class="wt-figure-img" style="background-image:url('${esc(cur.img)}')"></div><span class="wt-figure-mark">✦</span></div>
+      <div class="wt-meta">
+        <h3 class="wt-author">${esc(al.name||"Alma")}</h3>
+        <div class="wt-sub">${[esc(disc),esc(place)].filter(Boolean).join("&nbsp;·&nbsp;")||"&nbsp;"}</div>
+        ${cur.title?`<div class="wt-work">“${esc(cur.title)}”${cur.year?` · ${esc(cur.year)}`:""}</div>`:""}
+        ${phrase?`<p class="wt-phrase">${esc(phrase.slice(0,160))}${phrase.length>160?"…":""}</p>`:""}
+        <div class="wt-actions">
+          <button class="btn sm" data-pub="${esc(al.id)}">Ver Alma</button>
+          <button class="btn sm secondary" data-wtnext>Otra Huella</button>
+          <button class="btn ghost sm ${saved?'wt-on':''}" data-wtsave="${esc(cur.id)}">${saved?"✓ Guardada":"Guardar Huella"}</button>
+          <button class="btn ghost sm wt-chispa ${sparked?'wt-on':''}" data-wtchispa="${esc(cur.id)}">✦ ${sparked?"Chispa enviada":"Enviar Chispa"}</button>
+        </div>
+      </div>
+    </div>`;
+}
+function wtConstelHTML(){
+  const items=state.wtConstel||[]; if(!items.length){ wtPickConstel(); }
+  const list=state.wtConstel||[];
+  return `<div class="card s12 wt-constel-card">
+      <div class="wt-constel" data-count="${list.length}">${list.map(t=>{ const al=t.alma||{};
+        return `<button class="wt-cell" data-wtopen="${esc(t.id)}" style="background-image:url('${esc(t.img)}')" title="${esc(al.name||'Alma')}"><span class="wt-cell-info"><b>${esc(al.name||"Alma")}</b><small>${esc(al.role||al.crew_role||"")}</small></span></button>`;
+      }).join("")}</div>
+      <div style="text-align:center;margin-top:18px"><button class="btn sm secondary" data-wtnext>Otra Constelación</button></div>
+    </div>`;
+}
+async function wtSaveHuella(id){
+  const a=me(); if(!a.live){ toast("Entra a tu Alma para guardar Huellas."); return; }
+  const t=(state.wtPool||[]).find(x=>x.id===id); if(!t) return;
+  state.wtSaved=state.wtSaved||new Set(); if(state.wtSaved.has(id)) return;
+  const al=t.alma||{};
+  const title="Huella · "+(t.title||("Obra de "+(al.name||"un Alma")));
+  const detail=(al.name||"Alma")+(al.role?(" · "+al.role):"")+(t.title?(" — “"+t.title+"”"):"")+(al.country?(" · "+countryLabel(al.country)):"");
+  try{
+    const item={t:title,d:detail};
+    if(a.live){ const row=await Cloud.insertRow("memories",{title:title,detail:detail,alma_id:a.almaId}); item._id=row.id; }
+    (a.memories||(a.memories=[])).unshift(item);
+    state.wtSaved.add(id); save(); toast("✦ Huella guardada en tus Memorias");
+    if(state.view==="world_wandering_traces") renderView();
+  }catch(e){ toast("No se pudo guardar la Huella."); }
+}
+/* Chispa: gesto sutil, sin contador público competitivo. */
+function wtSendChispa(id){
+  state.wtSparked=state.wtSparked||new Set(); if(state.wtSparked.has(id)) return;
+  state.wtSparked.add(id);
+  const t=(state.wtPool||[]).find(x=>x.id===id), al=t&&t.alma||{};
+  try{ const a=me(); if(a.live && t){ Cloud.emitEcho("senal","✦ Una Chispa viajó hacia una Huella de "+(al.name||"un Alma")).catch(()=>{}); } }catch(e){}
+  toast("✦ Chispa enviada");
+  const card=document.querySelector('[data-wtcard]'); if(card){ card.classList.add("wt-pulse"); setTimeout(()=>card.classList.remove("wt-pulse"),700); }
+  document.querySelectorAll('[data-wtchispa]').forEach(b=>{ if(b.dataset.wtchispa===id){ b.classList.add("wt-on"); b.innerHTML="✦ Chispa enviada"; } });
 }
 /* La Voz del Mundo — avisos fijados por el Creador (desplegables, con link opcional). */
 function voiceOfWorldCard(){
@@ -4029,7 +4149,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
    RENDER + EVENTOS
    =========================================================== */
 function renderAll(){ try{ setAnimaCurrency(getCfg(me()).currency); }catch(e){} renderNav(); renderWho(); renderTop(); renderView(); renderWhisperBell(); if(typeof hideBootLoader==="function") hideBootLoader(); }
-function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad"||view==="mundo"){ loadPosts(); loadCommunityExtras(); loadNotices(); loadChangelog(); } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
+function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad"||view==="mundo"){ loadPosts(); loadCommunityExtras(); loadNotices(); loadChangelog(); } if(view==="world_wandering_traces"){ if(state.wtPool==null) loadWanderingTraces(); else { wtPickOne(); wtPickConstel(); renderView(); } } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 /* LUMBRE aún no despierta: el chat permanece desactivado. Al tocarla, en vez de
@@ -4160,6 +4280,11 @@ document.addEventListener("click", e=>{
   const mz=e.target.closest("[data-mapsize]"); if(mz){ setMapSize(mz.dataset.mapsize); return; }
   const rit=e.target.closest("[data-ritual]"); if(rit){ doRitual(rit.dataset.ritual); return; }
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
+  const wtm=e.target.closest("[data-wtmode]"); if(wtm){ state.wtMode=wtm.dataset.wtmode; if(state.wtMode==="constelacion") wtPickConstel(); else if(!state.wtCurrent) wtPickOne(); renderView(); return; }
+  if(e.target.closest("[data-wtnext]")){ if(state.wtMode==="constelacion") wtPickConstel(); else wtPickOne(); renderView(); return; }
+  const wto=e.target.closest("[data-wtopen]"); if(wto){ const t=(state.wtPool||[]).find(x=>x.id===wto.dataset.wtopen); if(t){ state.wtCurrent=t; state.wtMode="huella"; renderView(); } return; }
+  const wsv=e.target.closest("[data-wtsave]"); if(wsv){ wtSaveHuella(wsv.dataset.wtsave); return; }
+  const wch=e.target.closest("[data-wtchispa]"); if(wch){ wtSendChispa(wch.dataset.wtchispa); return; }
   if(e.target.closest("[data-pfedit]")){ portfolioEdit(); return; }
   if(e.target.closest("[data-pfcancel]")){ portfolioCancel(); return; }
   if(e.target.closest("[data-pfpublic]")){ togglePortfolioPublic(); return; }
