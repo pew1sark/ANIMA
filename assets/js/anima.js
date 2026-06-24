@@ -390,10 +390,10 @@ function renderBottomNav(stage){
     {id:"taller",ic:"taller",ico:"₵",t:"Taller",v:"taller"},
     {id:"mundo", ic:"nucleo",ico:"❂",t:"Mundo", v:"mundo"}
   ];
-  let items=core.map(s=>`<button class="botnav-item ${cur===s.id?'on':''}" data-view="${s.v}"><span class="bi">${ANIMA_ICON(s.ic,s.ico)}</span><span class="bl">${esc(s.t)}</span></button>`);
-  if(planAllows("clanpanel")) items.push(`<button class="botnav-item ${cur==='clan'?'on':''}" data-view="clanpanel"><span class="bi">${ANIMA_ICON('constelacion','❂')}</span><span class="bl">Clan</span></button>`);
-  if(planAllows("santuario")) items.push(`<button class="botnav-item ${cur==='santuario'?'on':''}" data-view="santuario"><span class="bi">${ANIMA_ICON('santuario','🜁')}</span><span class="bl">Santuario</span></button>`);
-  items.push(`<button class="botnav-item botnav-lumbre" id="botLumbre"><span class="bi"><img src="assets/img/lumbre.svg" width="22" height="24" alt=""></span><span class="bl">LUMBRE</span></button>`);
+  let items=core.map(s=>`<button type="button" class="botnav-item ${cur===s.id?'on':''}" data-view="${s.v}"><span class="bi">${ANIMA_ICON(s.ic,s.ico)}</span><span class="bl">${esc(s.t)}</span></button>`);
+  if(planAllows("clanpanel")) items.push(`<button type="button" class="botnav-item ${cur==='clan'?'on':''}" data-view="clanpanel"><span class="bi">${ANIMA_ICON('constelacion','❂')}</span><span class="bl">Clan</span></button>`);
+  if(planAllows("santuario")) items.push(`<button type="button" class="botnav-item ${cur==='santuario'?'on':''}" data-view="santuario"><span class="bi">${ANIMA_ICON('santuario','🜁')}</span><span class="bl">Santuario</span></button>`);
+  items.push(`<button type="button" class="botnav-item botnav-lumbre" id="botLumbre"><span class="bi"><img src="assets/img/lumbre.svg" width="22" height="24" alt=""></span><span class="bl">LUMBRE</span></button>`);
   bn.innerHTML=items.join("");
 }
 /* Revela la siguiente morada, la explica y la marca. */
@@ -585,9 +585,17 @@ function moradaTabs(view){
   const kids=moradaKids(sec);
   if(kids.length<2) return "";
   const label=MORADA_LABEL[sec]||"";
+  // Stepper móvil: ‹ etiqueta › — navegación robusta entre pestañas (cíclica).
+  let idx=kids.findIndex(c=>c.v===state.view); if(idx<0) idx=0;
+  const cur=kids[idx], prev=kids[(idx-1+kids.length)%kids.length], next=kids[(idx+1)%kids.length];
+  const stepper=`<div class="morada-step">
+      <button type="button" class="morada-step-btn" data-view="${prev.v}" aria-label="Pestaña anterior">‹</button>
+      <div class="morada-step-cur"><span class="mt-ico">${ANIMA_ICON(cur.ic,cur.ico||"◆")}</span><b>${esc(cur.t)}</b><small>${idx+1} / ${kids.length}</small></div>
+      <button type="button" class="morada-step-btn" data-view="${next.v}" aria-label="Pestaña siguiente">›</button>
+    </div>`;
   return `<div class="morada-tabs"><span class="morada-tabs-label">${esc(label)}</span><div class="morada-tabs-row">`+
-    kids.map(c=>`<button class="morada-tab ${state.view===c.v?'on':''}" data-view="${c.v}"><span class="mt-ico">${ANIMA_ICON(c.ic,c.ico||"◆")}</span>${esc(c.t)}${levelAllows(c.v)?"":' <span class="mt-lock">🔒</span>'}</button>`).join("")+
-    `</div></div>`;
+    kids.map(c=>`<button type="button" class="morada-tab ${state.view===c.v?'on':''}" data-view="${c.v}"><span class="mt-ico">${ANIMA_ICON(c.ic,c.ico||"◆")}</span>${esc(c.t)}${levelAllows(c.v)?"":' <span class="mt-lock">🔒</span>'}</button>`).join("")+
+    `</div></div>${stepper}`;
 }
 /* Transición suave: el cuerpo de cada vista "abre los ojos" en cada render.
    No envuelve la barra de pestañas (queda estable, sin parpadeo). */
@@ -620,7 +628,7 @@ function renderView(){
   if(state.view==="finanzas"){ requestAnimationFrame(updateConvOut); }
   if(state.view==="consola"){ requestAnimationFrame(loadWorldMonitor); requestAnimationFrame(loadRewardPanel); }
   // Desliza la pestaña activa al centro (sensación suave en móvil).
-  requestAnimationFrame(()=>{ const on=document.querySelector(".morada-tab.on"); if(on && on.scrollIntoView){ try{ on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){} } });
+  if(window.innerWidth>720) requestAnimationFrame(()=>{ const on=document.querySelector(".morada-tab.on"); if(on && on.scrollIntoView){ try{ on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){} } });
 }
 /* Ventana bloqueada por nivel — explica qué la abre. */
 function vLocked(view){
