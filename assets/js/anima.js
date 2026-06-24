@@ -1025,31 +1025,66 @@ const FLOW=["Cotizando","Aprobado","En producción","Revisión","Entregado","Cer
 function flowOf(st){ if(FLOW.includes(st)) return st; if(st==="En curso") return "En producción"; if(st==="Terminado"||st==="Cerrado") return "Cerrado"; return "Cotizando"; }
 /* TALLER — portada/resumen de la morada: un panel por sub-pestaña
    (Proyectos, Vínculos, Cotizador, Raíz) con acceso directo a cada una. */
+function tallerSaludo(){ const h=new Date().getHours(); return h<6?"Buenas noches":h<13?"Buenos días":h<20?"Buenas tardes":"Buenas noches"; }
 function vTaller(a){
-  const activeP=a.projects.filter(p=>!["Entregado","Cerrado","Terminado"].includes(p.st));
-  const recentP=a.projects.slice(0,3);
+  const nameFirst=(a.name||"Alma").split(" ")[0];
+  const TERM=["Entregado","Cerrado","Terminado"];
+  const active=a.projects.filter(p=>!TERM.includes(p.st));
   const clients=a.clients||[];
   const quotes = a.live ? (state.cloudQuotes||[]) : (typeof loadQuotes==="function"?loadQuotes(a):[]);
-  const inc=sum(a.finance.income), exp=sum(a.finance.expense);
-  const lastExp=(a.finance.expense||[]).slice(0,3);
-  const panel=(title,go,goLabel,add,body)=>`<div class="card s6"><div class="section-title"><h2 style="font-size:16px">${title}</h2><div class="spacer"></div>${add||""}<button class="btn ghost sm" data-go="${go}">${goLabel} →</button></div>${body}</div>`;
-  const proyBody=`<div class="tl-stat"><div><b class="num">${activeP.length}</b><span class="lbl">Activos</span></div><div><b class="num">${a.projects.length}</b><span class="lbl">Totales</span></div></div>`+
-    (recentP.length?`<div class="tl-list">${recentP.map(p=>`<div class="row"><div class="grow"><b style="font-size:13.5px">${esc(p.t)}</b><br><small class="muted">${esc(flowOf(p.st))}${p.client?" · "+esc(p.client):""}</small></div></div>`).join("")}</div>`:`<p class="muted" style="font-size:13px">Aún sin trabajos. Crea el primero.</p>`);
-  const vincBody=`<div class="tl-stat"><div><b class="num">${clients.length}</b><span class="lbl">Vínculos</span></div></div>`+
-    (clients.length?`<div class="tl-list">${clients.slice(0,3).map(c=>`<div class="row"><div class="grow"><b style="font-size:13.5px">${esc(c.name)}</b>${c.email?`<br><small class="muted">${esc(c.email)}</small>`:""}</div></div>`).join("")}</div>`:`<p class="muted" style="font-size:13px">Aún no tienes vínculos.</p>`);
-  const cotBody=`<div class="tl-stat"><div><b class="num">${quotes.length}</b><span class="lbl">Documentos</span></div></div>`+
-    (quotes.length?`<div class="tl-list">${quotes.slice(0,3).map(q=>`<div class="row"><div class="grow"><b style="font-size:13.5px">${esc(q.title||"Documento")}</b><br><small class="muted">${esc(q.client_name||q.client||"")}${(q.created_at||q.date)?" · "+esc((q.created_at||q.date||"").slice(0,10)):""}</small></div></div>`).join("")}</div>`:`<p class="muted" style="font-size:13px">Aún no creas documentos.</p>`);
-  const raizBody=`<div class="tl-stat"><div><b class="num" style="color:var(--ok)">${money(inc)}</b><span class="lbl">Ingresos</span></div><div><b class="num">${money(inc-exp)}</b><span class="lbl">Ganancia</span></div></div>`+
-    `<div class="tl-sub">Últimos gastos</div>`+
-    (lastExp.length?`<div class="tl-list">${lastExp.map(x=>`<div class="row"><div class="grow"><b style="font-size:13.5px">${esc(x.t)}</b><br><small class="muted">${esc(x.d||"")}</small></div><span class="amt out">−${money(x.a)}</span></div>`).join("")}</div>`:`<p class="muted" style="font-size:13px">Sin gastos registrados.</p>`);
-  return `<div class="grid">
-    <div class="card s12 taller-intro"><div class="section-title"><h2>Taller</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px">Lo que creas — un vistazo a todo, con acceso directo.</span></div></div>
-    ${panel("Proyectos","proyectos","Ver",`<button class="btn sm" data-add="proyecto" style="margin-right:8px">+ Trabajo</button>`,proyBody)}
-    ${panel("Vínculos","clientes","Ver",`<button class="btn sm secondary" data-add="cliente" style="margin-right:8px">+ Vínculo</button>`,vincBody)}
-    ${panel("Cotizador","cotizador","Ver","",cotBody)}
-    ${panel("Raíz","finanzas","Ver","",raizBody)}
-  </div>`;
+  const inc=sum(a.finance.income), exp=sum(a.finance.expense), gan=inc-exp;
+  const now=Date.now(), soon=now+14*864e5;
+  const upcoming=active.filter(p=>p.due && !isNaN(new Date(p.due)) && new Date(p.due).getTime()>=now-864e5 && new Date(p.due).getTime()<=soon)
+                       .sort((x,y)=>new Date(x.due)-new Date(y.due));
+  const nextDue=upcoming[0];
+  const ag=(a.agenda||[]); const todayKey=new Date().toISOString().slice(0,10);
+  const agToday=ag.filter(x=>!x.date || x.date===todayKey);
+  const agNext=ag.filter(x=>x.date && x.date>=todayKey).sort((x,y)=>(x.date>y.date?1:-1))[0] || ag[0];
+
+  // PARTE SUPERIOR — saludo + "Hoy tienes".
+  const hero=`<div class="card s12 tl-hero">
+      <h2 class="tl-greet">${tallerSaludo()}, ${esc(nameFirst)}.</h2>
+      <div class="tl-today"><span class="tl-today-lbl">Hoy tienes</span>
+        <span class="tl-chip"><b>${active.length}</b> Proyectos activos</span>
+        <span class="tl-chip"><b>${quotes.length}</b> ${quotes.length===1?"Cotización":"Cotizaciones"}</span>
+        <span class="tl-chip"><b>${upcoming.length}</b> Entregas próximas</span>
+        <span class="tl-chip tl-chip-gain"><b>${money(gan)}</b> de ganancia</span>
+      </div></div>`;
+
+  // PROYECTOS
+  const proy=`<div class="card s4 tl-card"><div class="section-title"><h2 style="font-size:15px">Proyectos</h2><div class="spacer"></div><button class="btn ghost sm" data-go="proyectos">Ver Todo →</button></div>
+      <div class="tl-stat"><div><b class="num">${active.length}</b><span class="lbl">Activos</span></div><div><b class="num">${a.projects.length}</b><span class="lbl">Totales</span></div></div>
+      <div class="tl-mini">${nextDue?`<span class="tl-mini-k">Entrega próxima</span><b>${esc(nextDue.t)}</b><small class="muted">${esc(tallerDate(nextDue.due))}${nextDue.client?" · "+esc(nextDue.client):""}</small>`:`<span class="muted" style="font-size:13px">Sin entregas próximas.</span>`}</div>
+      <button class="btn sm" data-add="proyecto" style="margin-top:12px">＋ Nuevo Proyecto</button></div>`;
+
+  // VÍNCULOS
+  const vinc=`<div class="card s4 tl-card"><div class="section-title"><h2 style="font-size:15px">Vínculos</h2><div class="spacer"></div><button class="btn ghost sm" data-go="clientes">Ver →</button></div>
+      <div class="tl-stat"><div><b class="num">${clients.length}</b><span class="lbl">Clientes</span></div></div>
+      <div class="tl-mini">${clients[0]?`<span class="tl-mini-k">Último contacto</span><b>${esc(clients[0].name)}</b>${clients[0].email?`<small class="muted">${esc(clients[0].email)}</small>`:""}`:`<span class="muted" style="font-size:13px">Aún no tienes vínculos.</span>`}</div>
+      <button class="btn secondary sm" data-add="cliente" style="margin-top:12px">＋ Nuevo vínculo</button></div>`;
+
+  // RAÍZ + mini gráfico
+  const raiz=`<div class="card s4 tl-card"><div class="section-title"><h2 style="font-size:15px">Raíz</h2><div class="spacer"></div><button class="btn ghost sm" data-go="finanzas">Ver →</button></div>
+      <div class="tl-stat tl-stat-3"><div><b class="num" style="color:var(--ok)">${money(inc)}</b><span class="lbl">Ingresos</span></div><div><b class="num" style="color:var(--danger)">${money(exp)}</b><span class="lbl">Egresos</span></div><div><b class="num">${money(gan)}</b><span class="lbl">Ganancia</span></div></div>
+      <div class="tl-chart">${chartFinance(a)}</div></div>`;
+
+  // AGENDA
+  const agenda=`<div class="card s6 tl-card"><div class="section-title"><h2 style="font-size:15px">Agenda</h2><div class="spacer"></div><button class="btn ghost sm" data-go="agenda">Ver →</button></div>
+      <div class="tl-stat"><div><b class="num">${agToday.length}</b><span class="lbl">Hoy</span></div><div><b class="num">${ag.length}</b><span class="lbl">En total</span></div></div>
+      <div class="tl-mini">${agNext?`<span class="tl-mini-k">Próximo</span><b>${esc(agNext.t)}</b><small class="muted">${esc([agNext.date||"hoy",agNext.h].filter(Boolean).join(" · "))}</small>`:`<span class="muted" style="font-size:13px">Agenda libre.</span>`}</div></div>`;
+
+  // ACTIVIDAD — señales recientes (sintetizadas de tus datos).
+  const acts=[];
+  if(a.finance.income[0]) acts.push(["✦","Pago recibido",a.finance.income[0].t,"+"+money(a.finance.income[0].a)]);
+  if(a.projects[0]) acts.push(["◷","Proyecto",a.projects[0].t,flowOf(a.projects[0].st)]);
+  if(clients[0]) acts.push(["☺","Vínculo agregado",clients[0].name,""]);
+  if((a.portfolio||[])[0]) acts.push(["▦","Huella creada",a.portfolio[0].t,""]);
+  const activity=`<div class="card s6 tl-card"><div class="section-title"><h2 style="font-size:15px">Actividad</h2></div>
+      ${acts.length?`<div class="tl-act">${acts.map(x=>`<div class="tl-act-row"><span class="tl-act-ico">${x[0]}</span><div class="grow"><b>${esc(x[1])}</b><br><small class="muted">${esc(x[2])}</small></div>${x[3]?`<span class="amt ${x[3][0]==="+"?"in":""}">${esc(x[3])}</span>`:""}</div>`).join("")}</div>`:`<p class="muted" style="font-size:13px">Tu actividad aparecerá aquí cuando empieces a crear.</p>`}</div>`;
+
+  return `<div class="grid">${hero}${proy}${vinc}${raiz}${agenda}${activity}</div>`;
 }
+function tallerDate(d){ try{ const x=new Date(d); if(isNaN(x)) return String(d); return x.toLocaleDateString("es-CL",{day:"numeric",month:"short"}); }catch(e){ return String(d); } }
 function vProyectos(a){
   const cols=FLOW.map(s=>({s,items:[]}));
   a.projects.forEach((p,i)=>{ const col=cols.find(c=>c.s===flowOf(p.st)); (col||cols[0]).items.push({p,i}); });
