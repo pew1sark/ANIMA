@@ -22,9 +22,10 @@
   --danger:#b23b3b;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;overscroll-behavior-y:none}
 body{
   margin:0;
+  overscroll-behavior-y:none;
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Helvetica Neue",Arial,sans-serif;
   color:var(--text);
   background:

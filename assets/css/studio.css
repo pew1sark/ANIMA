@@ -937,6 +937,21 @@ a.nav-item{text-decoration:none;color:inherit}
 .morada-tab .mt-ico svg{width:15px;height:15px}
 .morada-tab:hover .mt-ico,.morada-tab.on .mt-ico{opacity:1}
 @media(max-width:640px){ .morada-tabs-label{display:none} .morada-tab{font-size:13.5px} }
+/* Stepper móvil ‹ pestaña › — navegación robusta entre pestañas. */
+.morada-step{display:none}
+.morada-step-btn{flex:none;width:46px;height:46px;border-radius:14px;border:1px solid var(--line);background:#fff;
+  font-size:24px;line-height:1;color:#15151a;cursor:pointer;display:grid;place-items:center;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .12s ease,background .12s ease}
+.morada-step-btn:active{transform:scale(.93);background:#f2ede3}
+.morada-step-cur{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;text-align:center}
+.morada-step-cur .mt-ico{width:18px;height:18px}.morada-step-cur .mt-ico svg{width:17px;height:17px}
+.morada-step-cur b{font-size:15px;letter-spacing:-.02em;color:#15151a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:flex;align-items:center;gap:6px}
+.morada-step-cur small{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.08em;color:var(--muted)}
+@media(max-width:640px){
+  .morada-tabs{display:none}
+  .morada-step{display:flex;align-items:center;gap:10px;margin:0 0 18px;
+    background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:18px;padding:7px}
+}
 
 /* ===========================================================
    RESUMEN de morada (Taller / Mundo) — paneles por sub-pestaña
