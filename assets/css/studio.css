@@ -916,6 +916,48 @@ a.nav-item{text-decoration:none;color:inherit}
 .tl-act-ico{width:30px;height:30px;flex:none;display:grid;place-items:center;border-radius:9px;background:rgba(208,170,99,.14);color:#7b5920;font-size:14px}
 .tl-act-row b{font-size:13.5px;color:#15151a}
 
+/* ===========================================================
+   PROYECTOS — grid de tarjetas + detalle (panel dividido).
+   =========================================================== */
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(244px,1fr));gap:14px}
+.proj-card{display:flex;flex-direction:column;gap:9px;text-align:left;border:1px solid var(--line);
+  background:var(--card-solid,#fff);border-radius:16px;padding:16px;cursor:pointer;font:inherit;
+  transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.proj-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-soft);border-color:rgba(208,170,99,.45)}
+.proj-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.proj-top b{font-size:15.5px;letter-spacing:-.02em;color:#15151a;line-height:1.2}
+.proj-client{font-size:13px;color:var(--muted)}
+.proj-badge{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.01em;padding:4px 9px;border-radius:999px;white-space:nowrap}
+.st-cot{background:rgba(110,110,115,.14);color:#5a5a5e}
+.st-apr{background:rgba(58,138,95,.16);color:#2e7d52}
+.st-pro{background:rgba(208,170,99,.2);color:#7b5920}
+.st-rev{background:rgba(123,90,138,.16);color:#6a4a78}
+.st-ent{background:rgba(58,110,138,.16);color:#37607e}
+.st-cer{background:rgba(20,20,25,.1);color:#333}
+.proj-bar{height:7px;border-radius:999px;background:rgba(0,0,0,.07);overflow:hidden}
+.proj-bar>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--gold,#d0aa63),#b8862f)}
+.proj-foot{display:flex;align-items:center;justify-content:space-between;font-size:12.5px}
+.proj-foot b{color:#15151a}
+.pd-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.pd-block{display:flex;flex-direction:column;gap:2px;margin-bottom:14px}
+.pd-k{font-family:ui-monospace,"DejaVu Sans Mono",monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.pd-block b,.pd-grid3 b{font-size:15px;color:#15151a}
+.pd-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.pd-grid3 .pd-k{margin-bottom:2px}
+.pd-select{font:inherit;padding:8px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;max-width:240px;color:var(--text)}
+.pd-soon{text-align:center;padding:34px 18px;color:var(--muted)}
+.pd-soon-ico{font-size:30px;color:var(--gold,#d0aa63);display:block;margin-bottom:10px}
+.pd-soon p{font-size:13.5px;line-height:1.6;margin:0 0 14px}
+/* Botón flotante — Nuevo Proyecto. */
+.fab{position:fixed;right:26px;bottom:26px;z-index:60;display:inline-flex;align-items:center;gap:9px;border:0;cursor:pointer;
+  background:#111;color:#fff;font:inherit;font-weight:800;font-size:15px;padding:14px 21px;border-radius:999px;
+  box-shadow:0 16px 40px rgba(0,0,0,.24);transition:transform .16s ease,box-shadow .16s ease}
+.fab:hover{transform:translateY(-2px);box-shadow:0 22px 54px rgba(0,0,0,.3)}
+@media(max-width:960px){
+  .fab{bottom:86px;right:16px;width:56px;height:56px;justify-content:center;border-radius:50%;font-size:24px;padding:0}
+  .fab>span{display:none}
+}
+
 /* Moneda del Flujo de valores + conversor. */
 .cur-pick{display:inline-flex;align-items:center;gap:8px}
 .cur-pick select,.conv-controls select,.conv-controls input{font:inherit;padding:8px 11px;
