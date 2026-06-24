@@ -881,29 +881,18 @@ a.nav-item{text-decoration:none;color:inherit}
 @media(max-width:640px){ .morada-tabs-label{display:none} .morada-tab{font-size:13.5px} }
 
 /* ===========================================================
-   RESUMEN-HUB de cada morada — accesos directos a sus pestañas.
-   Aparece en la portada de la morada para navegar más fluido.
+   RESUMEN de morada (Taller / Mundo) — paneles por sub-pestaña
+   con acceso directo. Estadísticas compactas y listas breves.
    =========================================================== */
-.morada-hub{margin:0 0 18px}
-.morada-hub .hub-head{display:flex;align-items:baseline;gap:9px;margin:0 2px 9px}
-.morada-hub .hub-head b{font-size:14px;letter-spacing:-.02em}
-.morada-hub .hub-head small{font-family:ui-monospace,"DejaVu Sans Mono",monospace;font-size:9px;
-  letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
-/* Chips compactos en una fila que envuelve: ocupan poco alto. */
-.hub-grid{display:flex;flex-wrap:wrap;gap:7px}
-.hub-card{display:inline-flex;align-items:center;gap:7px;
-  border:1px solid var(--line);background:var(--card);border-radius:11px;padding:7px 11px;
-  cursor:pointer;font:inherit;color:var(--text);position:relative;
-  transition:transform .14s ease,border-color .14s ease,background .14s ease}
-.hub-card:hover{border-color:rgba(208,170,99,.55);background:rgba(208,170,99,.07)}
-.hub-card:active{transform:scale(.97)}
-.hub-card .hub-ico{display:grid;place-items:center;width:20px;height:20px;color:#7b5920;opacity:.85}
-.hub-card .hub-ico svg{width:16px;height:16px}
-.hub-card .hub-t{font-size:13px;font-weight:640;letter-spacing:-.01em;white-space:nowrap}
-.hub-card.on{border-color:rgba(208,170,99,.7);background:rgba(208,170,99,.14)}
-.hub-card.on .hub-ico{color:#1a1505;opacity:1}
-.hub-card.locked{opacity:.55}
-.hub-card .hub-lock{font-size:11px;opacity:.7;margin-left:1px}
+.tl-stat{display:flex;gap:22px;margin:2px 0 12px}
+.tl-stat>div{display:flex;flex-direction:column}
+.tl-stat .num{font-size:26px;font-weight:850;letter-spacing:-.03em;line-height:1}
+.tl-stat .lbl{font-size:11px;color:var(--muted);margin-top:3px}
+.tl-sub{font-family:ui-monospace,"DejaVu Sans Mono",monospace;font-size:9.5px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--muted);margin:6px 0 4px}
+.tl-list .row{padding:7px 0;border-top:1px solid var(--line-2,rgba(0,0,0,.05))}
+.tl-list .row:first-child{border-top:0}
+.taller-intro h2{font-size:20px;letter-spacing:-.02em}
 
 /* ===========================================================
    TRANSICIONES SUAVES — "ANIMA cerró los ojos un instante y volvió a abrirlos"

@@ -296,10 +296,10 @@ function sectionOfView(v){
   // Mi Plan vive DENTRO de Mi Alma. Clan y Santuario son moradas propias del menú,
   // visibles SOLO si el Alma tiene acceso a esa Forma. No viven dentro de Mundo.
   if(["mialma","trayectoria","portafolio","cronologia","insignias","estadisticas","visibilidad","memoria","biblioteca","miplan"].includes(v)) return "mialma";
-  if(["proyectos","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
+  if(["taller","proyectos","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
   if(["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "clan";
   if(SANT_VIEWS.includes(v)) return "santuario";
-  if(["comunidad","consejo","cronica"].includes(v)) return "mundo";
+  if(["mundo","comunidad","consejo","cronica"].includes(v)) return "mundo";
   return null;
 }
 /* Ítem de morada en la barra: navega a su vista por defecto y se marca activo
@@ -313,8 +313,8 @@ function navSectionItem(id, ico, ic, t, defView){
 function buildSections(cfg){
   return [
     { id:"mialma", html:navSectionItem("mialma","◆","alma","Mi Alma","mialma") },
-    { id:"taller", html:navSectionItem("taller","₵","taller","Taller","proyectos") },
-    { id:"mundo",  html:navSectionItem("mundo","❂","nucleo","Mundo","comunidad") }
+    { id:"taller", html:navSectionItem("taller","₵","taller","Taller","taller") },
+    { id:"mundo",  html:navSectionItem("mundo","❂","nucleo","Mundo","mundo") }
   ];
 }
 function renderNav(){
@@ -368,8 +368,8 @@ function renderBottomNav(stage){
   const cur=sectionOfView(state.view);
   const core=[
     {id:"mialma",ic:"alma",ico:"◆",t:"Mi Alma",v:"mialma"},
-    {id:"taller",ic:"taller",ico:"₵",t:"Taller",v:"proyectos"},
-    {id:"mundo", ic:"nucleo",ico:"❂",t:"Mundo", v:"comunidad"}
+    {id:"taller",ic:"taller",ico:"₵",t:"Taller",v:"taller"},
+    {id:"mundo", ic:"nucleo",ico:"❂",t:"Mundo", v:"mundo"}
   ];
   let items=core.map(s=>`<button class="botnav-item ${cur===s.id?'on':''}" data-view="${s.v}"><span class="bi">${ANIMA_ICON(s.ic,s.ico)}</span><span class="bl">${esc(s.t)}</span></button>`);
   if(planAllows("clanpanel")) items.push(`<button class="botnav-item ${cur==='clan'?'on':''}" data-view="clanpanel"><span class="bi">${ANIMA_ICON('constelacion','❂')}</span><span class="bl">Clan</span></button>`);
@@ -543,9 +543,10 @@ function acts(kind,i){ return `<span class="acts"><button class="ia" data-edit="
 function moradaKids(sec){
   const cfg=getCfg(me()); let kids=[];
   if(sec==="mialma"){ kids=NAV_TREE[0].children.slice(); kids.push({v:"miplan",t:"Forma",ico:"❖",ic:"forma"}); }   // Mi Plan plegado aquí
-  else if(sec==="taller"){ kids=NAV_TREE[1].children.slice(); }
+  else if(sec==="taller"){ kids=[{v:"taller",t:"Resumen",ico:"₵",ic:"taller"}].concat(NAV_TREE[1].children.slice()); }
   else if(sec==="mundo"){
-    if(planAllows("comunidad")) kids.push({v:"comunidad",t:"Constelación",ico:"❂",ic:"constelacion"});
+    kids.push({v:"mundo",t:"Resumen",ico:"❂",ic:"nucleo"});
+    if(planAllows("comunidad")) kids.push({v:"comunidad",t:"Muro",ico:"❂",ic:"constelacion"});
     kids.push({v:"cronica",t:"Crónica",ico:"✦",ic:"susurro"});
     if(me().council||(isCreator&&!state.viewAs)) kids.push({v:"consejo",t:"Consejo",ico:"⚖",ic:"panel"});
   }
@@ -558,7 +559,7 @@ function moradaKids(sec){
 }
 const MORADA_LABEL={mialma:"Mi Alma",taller:"Taller",mundo:"Mundo",clan:"Clan",santuario:"Santuario"};
 /* Vista de portada (landing) de cada morada: ahí se muestra el resumen-hub. */
-const SECTION_DEFAULT={mialma:"mialma",taller:"proyectos",mundo:"comunidad",clan:"clanpanel",santuario:"santuario"};
+const SECTION_DEFAULT={mialma:"mialma",taller:"taller",mundo:"mundo",clan:"clanpanel",santuario:"santuario"};
 function moradaTabs(view){
   const sec=sectionOfView(view); if(!sec) return "";
   const kids=moradaKids(sec);
@@ -566,21 +567,6 @@ function moradaTabs(view){
   const label=MORADA_LABEL[sec]||"";
   return `<div class="morada-tabs"><span class="morada-tabs-label">${esc(label)}</span><div class="morada-tabs-row">`+
     kids.map(c=>`<button class="morada-tab ${state.view===c.v?'on':''}" data-view="${c.v}"><span class="mt-ico">${ANIMA_ICON(c.ic,c.ico||"◆")}</span>${esc(c.t)}${levelAllows(c.v)?"":' <span class="mt-lock">🔒</span>'}</button>`).join("")+
-    `</div></div>`;
-}
-/* Resumen-hub de la morada: tarjetas de acceso directo a cada sub-pestaña.
-   Solo en la portada de cada morada, para entrar más fluido y entendible. */
-function moradaHub(view){
-  const sec=sectionOfView(view); if(!sec) return "";
-  if(SECTION_DEFAULT[sec]!==view) return "";
-  const kids=moradaKids(sec); if(kids.length<2) return "";
-  const label=MORADA_LABEL[sec]||"";
-  return `<div class="morada-hub"><div class="hub-head"><b>${esc(label)}</b><small>Accesos directos</small></div>`+
-    `<div class="hub-grid">`+
-    kids.map(c=>{ const lk=!levelAllows(c.v);
-      return `<button class="hub-card ${state.view===c.v?'on':''}${lk?' locked':''}" data-view="${c.v}">`+
-        `<span class="hub-ico">${ANIMA_ICON(c.ic,c.ico||"◆")}</span><span class="hub-t">${esc(c.t)}</span>${lk?'<span class="hub-lock">🔒</span>':''}</button>`;
-    }).join("")+
     `</div></div>`;
 }
 /* Transición suave: el cuerpo de cada vista "abre los ojos" en cada render.
@@ -596,7 +582,7 @@ function renderView(){
   if(state.view==="consejo" && !(me().council || (isCreator && !state.viewAs))) state.view="mialma";
   // Gating por nivel: la ventana está realmente BLOQUEADA hasta alcanzar su nivel.
   if(!levelAllows(state.view)){ document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + animaWrap(vLocked(state.view)); return; }
-  const fn = { mialma:vMiAlma, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
+  const fn = { mialma:vMiAlma, taller:vTaller, mundo:vMundo, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
     finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
@@ -609,12 +595,8 @@ function renderView(){
     console.error("ANIMA · error al dibujar la vista", state.view, err);
     bodyHTML = animaWrap(`<div class="grid"><div class="card s12"><p class="muted">Esta ventana tuvo un tropiezo al cargar. Intenta de nuevo o entra a <button class="btn sm" data-view="mialma">Mi Alma</button>.</p></div></div>`);
   }
-  // En la portada de cada morada mostramos el resumen-hub (accesos directos);
-  // en las sub-pestañas, la barra de pestañas compacta para moverse.
-  const hub = moradaHub(state.view);
-  const tabs = hub ? "" : moradaTabs(state.view);
-  document.getElementById("view").innerHTML = previewBanner() + tabs + hub + bodyHTML;
-  if(state.view==="comunidad" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
+  document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + bodyHTML;
+  if(state.view==="mundo" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
   if(state.view==="consola"){ requestAnimationFrame(loadWorldMonitor); requestAnimationFrame(loadRewardPanel); }
   // Desliza la pestaña activa al centro (sensación suave en móvil).
   requestAnimationFrame(()=>{ const on=document.querySelector(".morada-tab.on"); if(on && on.scrollIntoView){ try{ on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){} } });
@@ -1020,6 +1002,33 @@ async function savePortfolioProfile(){
 /* --- Proyectos: Flujo de trabajo (kanban) --- */
 const FLOW=["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"];
 function flowOf(st){ if(FLOW.includes(st)) return st; if(st==="En curso") return "En producción"; if(st==="Terminado"||st==="Cerrado") return "Cerrado"; return "Cotizando"; }
+/* TALLER — portada/resumen de la morada: un panel por sub-pestaña
+   (Proyectos, Vínculos, Cotizador, Raíz) con acceso directo a cada una. */
+function vTaller(a){
+  const activeP=a.projects.filter(p=>!["Entregado","Cerrado","Terminado"].includes(p.st));
+  const recentP=a.projects.slice(0,3);
+  const clients=a.clients||[];
+  const quotes = a.live ? (state.cloudQuotes||[]) : (typeof loadQuotes==="function"?loadQuotes(a):[]);
+  const inc=sum(a.finance.income), exp=sum(a.finance.expense);
+  const lastExp=(a.finance.expense||[]).slice(0,3);
+  const panel=(title,go,goLabel,add,body)=>`<div class="card s6"><div class="section-title"><h2 style="font-size:16px">${title}</h2><div class="spacer"></div>${add||""}<button class="btn ghost sm" data-go="${go}">${goLabel} →</button></div>${body}</div>`;
+  const proyBody=`<div class="tl-stat"><div><b class="num">${activeP.length}</b><span class="lbl">Activos</span></div><div><b class="num">${a.projects.length}</b><span class="lbl">Totales</span></div></div>`+
+    (recentP.length?`<div class="tl-list">${recentP.map(p=>`<div class="row"><div class="grow"><b style="font-size:13.5px">${esc(p.t)}</b><br><small class="muted">${esc(flowOf(p.st))}${p.client?" · "+esc(p.client):""}</small></div></div>`).join("")}</div>`:`<p class="muted" style="font-size:13px">Aún sin trabajos. Crea el primero.</p>`);
+  const vincBody=`<div class="tl-stat"><div><b class="num">${clients.length}</b><span class="lbl">Vínculos</span></div></div>`+
+    (clients.length?`<div class="tl-list">${clients.slice(0,3).map(c=>`<div class="row"><div class="grow"><b style="font-size:13.5px">${esc(c.name)}</b>${c.email?`<br><small class="muted">${esc(c.email)}</small>`:""}</div></div>`).join("")}</div>`:`<p class="muted" style="font-size:13px">Aún no tienes vínculos.</p>`);
+  const cotBody=`<div class="tl-stat"><div><b class="num">${quotes.length}</b><span class="lbl">Documentos</span></div></div>`+
+    (quotes.length?`<div class="tl-list">${quotes.slice(0,3).map(q=>`<div class="row"><div class="grow"><b style="font-size:13.5px">${esc(q.title||"Documento")}</b><br><small class="muted">${esc(q.client_name||q.client||"")}${(q.created_at||q.date)?" · "+esc((q.created_at||q.date||"").slice(0,10)):""}</small></div></div>`).join("")}</div>`:`<p class="muted" style="font-size:13px">Aún no creas documentos.</p>`);
+  const raizBody=`<div class="tl-stat"><div><b class="num" style="color:var(--ok)">${money(inc)}</b><span class="lbl">Ingresos</span></div><div><b class="num">${money(inc-exp)}</b><span class="lbl">Ganancia</span></div></div>`+
+    `<div class="tl-sub">Últimos gastos</div>`+
+    (lastExp.length?`<div class="tl-list">${lastExp.map(x=>`<div class="row"><div class="grow"><b style="font-size:13.5px">${esc(x.t)}</b><br><small class="muted">${esc(x.d||"")}</small></div><span class="amt out">−${money(x.a)}</span></div>`).join("")}</div>`:`<p class="muted" style="font-size:13px">Sin gastos registrados.</p>`);
+  return `<div class="grid">
+    <div class="card s12 taller-intro"><div class="section-title"><h2>Taller</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px">Lo que creas — un vistazo a todo, con acceso directo.</span></div></div>
+    ${panel("Proyectos","proyectos","Ver",`<button class="btn sm" data-add="proyecto" style="margin-right:8px">+ Trabajo</button>`,proyBody)}
+    ${panel("Vínculos","clientes","Ver",`<button class="btn sm secondary" data-add="cliente" style="margin-right:8px">+ Vínculo</button>`,vincBody)}
+    ${panel("Cotizador","cotizador","Ver","",cotBody)}
+    ${panel("Raíz","finanzas","Ver","",raizBody)}
+  </div>`;
+}
 function vProyectos(a){
   const cols=FLOW.map(s=>({s,items:[]}));
   a.projects.forEach((p,i)=>{ const col=cols.find(c=>c.s===flowOf(p.st)); (col||cols[0]).items.push({p,i}); });
@@ -1536,29 +1545,17 @@ function catBadge(p){
   const c=catMeta(p.category)||POST_CATS[0];
   return `<span class="post-cat cat-${c.key}">${c.glyph} ${esc(c.label)}</span>`;
 }
-function vComunidad(a){
+/* Datos vivos del Mundo (compartidos por el Resumen y el Muro). */
+function worldCompute(a){
   const list=roster(); const clan=SEED_CLANS.find(c=>c.name===a.clan);
   const members=a.clan?list.filter(m=>m.clan===a.clan):[];
   const feed=state.cloudPosts||[];
   const sz=getCfg(me()).mapSize||"md";
-
-  // Contador X / 100 (vivo) + países desde las Almas presentes.
   const n = state.cloudSoulsCount!=null ? state.cloudSoulsCount : list.length;
   const counts={}; list.forEach(m=>{ const c=(m.country&&m.country.trim())?countryLabel(m.country):"✦ En tránsito"; counts[c]=(counts[c]||0)+1; });
   const countriesArr=Object.entries(counts).sort((x,y)=>y[1]-x[1]);
-
-  // Ecos (carga diferida).
   if(state.cloudEcos==null) loadCommunityExtras();
   const ecos=state.cloudEcos||[];
-  const ecosHTML = (state.cloudEcos==null)
-    ? `<p class="muted" style="font-size:13px">Escuchando los Ecos…</p>`
-    : (ecos.length
-        ? ecos.slice(0,10).map(e=>`<div class="eco-row"><span class="eco-ico">${ECO_ICON[e.kind]||"·"}</span>
-            <div><div style="font-size:13.5px">${esc(e.text||("✦ "+(e.alma_name||"Una Alma")))}</div>
-            <small class="muted">${esc(timeAgo(e.created_at))}</small></div></div>`).join("")
-        : `<p class="muted" style="font-size:13px">Aún no hay Ecos. Cuando una Alma despierte o deje una huella, aparecerá aquí.</p>`);
-
-  // Cifras vivas del Mundo.
   const todayKey=new Date().toISOString().slice(0,10);
   const ecosToday=ecos.filter(e=>(e.created_at||"").slice(0,10)===todayKey).length;
   const clanesCount=new Set(list.map(x=>x.clan).filter(Boolean)).size;
@@ -1567,9 +1564,22 @@ function vComunidad(a){
   const weekAgo=Date.now()-7*864e5;
   const newWeek=list.filter(x=>x.created_at && new Date(x.created_at).getTime()>=weekAgo).length;
   const nivelesCount=new Set(list.map(x=>x.level).filter(Boolean)).size;
-
-  // EL ÁRBOL VIVO — corazón del Mundo (pixel art reactivo).
   const tstage=treeStage(n);
+  return {list,clan,members,feed,sz,n,counts,countriesArr,ecos,ecosToday,clanesCount,santuariosCount,paisesCount,newWeek,nivelesCount,tstage};
+}
+
+/* MUNDO — portada/resumen de la morada: el Árbol vivo, las cifras del Mundo,
+   tu Constelación, y un vistazo al Muro y a la Crónica con acceso directo. */
+function vMundo(a){
+  const W=worldCompute(a);
+  const {list,feed,sz,n,countriesArr,ecos,ecosToday,clanesCount,santuariosCount,newWeek,nivelesCount}=W;
+  const ecosHTML = (state.cloudEcos==null)
+    ? `<p class="muted" style="font-size:13px">Escuchando los Ecos…</p>`
+    : (ecos.length
+        ? ecos.slice(0,10).map(e=>`<div class="eco-row"><span class="eco-ico">${ECO_ICON[e.kind]||"·"}</span>
+            <div><div style="font-size:13.5px">${esc(e.text||("✦ "+(e.alma_name||"Una Alma")))}</div>
+            <small class="muted">${esc(timeAgo(e.created_at))}</small></div></div>`).join("")
+        : `<p class="muted" style="font-size:13px">Aún no hay Ecos. Cuando una Alma despierte o deje una huella, aparecerá aquí.</p>`);
   const tree = `<div class="card s8 wt-card">
       <div class="wt-head">
         <span class="wt-title">🌳 Árbol de Almas</span>
@@ -1587,7 +1597,7 @@ function vComunidad(a){
         <div class="wt-tile"><div class="n" id="wtAlmas">${n}</div><span class="k"><span class="ic">☺</span>Almas</span></div>
         <div class="wt-tile"><div class="n" id="wtEcos">${ecosToday}</div><span class="k"><span class="ic">◎</span>Ecos hoy</span></div>
         <div class="wt-tile"><div class="n">${clanesCount}</div><span class="k"><span class="ic">❂</span>Clanes</span></div>
-        <div class="wt-tile"><div class="n">${paisesCount}</div><span class="k"><span class="ic">✦</span>Países</span></div>
+        <div class="wt-tile"><div class="n">${W.paisesCount}</div><span class="k"><span class="ic">✦</span>Países</span></div>
         <div class="wt-tile"><div class="n" id="wtEnergy">0</div><span class="k"><span class="ic">🌱</span>Esencia</span></div>
       </div>
     </div>`;
@@ -1595,8 +1605,6 @@ function vComunidad(a){
       <div class="section-title"><h2 style="font-size:15px">Ecos de ANIMA</h2></div>
       <div class="ecos-mini">${ecosHTML}</div>
     </div>`;
-
-  // RESUMEN DEL MUNDO — panorama de la semana.
   const week = `<div class="card s8"><div class="section-title"><h2>Resumen del Mundo</h2></div>
       <div class="wt-week">
         <div><div class="num">${newWeek}</div><span class="lbl">Almas nuevas esta semana</span></div>
@@ -1604,23 +1612,39 @@ function vComunidad(a){
         <div><div class="num">${santuariosCount}</div><span class="lbl">Santuarios activos</span></div>
         <div><div class="num">${nivelesCount}</div><span class="lbl">Niveles habitando el Mundo</span></div>
       </div></div>`;
-  // ALMAS CONECTADAS — tu Constelación (vínculos mutuos) o la del Mundo.
   let myConstel=null, constelTitle="Almas conectadas", constelCount="", chipList=list.slice(0,8);
   if(a.live && state.following && state.followers){
     const mutual=list.filter(m=> m.id && state.following.has(m.id) && state.followers.has(m.id));
     if(mutual.length){ myConstel=[a, ...mutual]; chipList=mutual; constelTitle="Tu Constelación"; constelCount=`<div class="spacer"></div><span class="pill gold">${mutual.length}</span>`; }
   }
   const connect = `<div class="card s4 constel-card"><div class="section-title"><h2 style="font-size:15px">${constelTitle}</h2>${constelCount}</div>${constelMini(myConstel||list)}${constelChips(chipList)}</div>`;
-
-  // DISTRIBUCIÓN POR PAÍS — barras.
   const maxC=countriesArr.length?countriesArr[0][1]:1;
   const paisCard = `<div class="card s6"><div class="section-title"><h2 style="font-size:15px">Distribución por país</h2></div>
       <div class="wt-bars">${countriesArr.length?countriesArr.slice(0,7).map(([c,k])=>`<div class="wt-bar"><span>${esc(c)}</span><span class="track"><span class="fill" style="width:${Math.max(6,Math.round(k/maxC*100))}%"></span></span><b>${k}</b></div>`).join(""):`<p class="muted" style="font-size:13px">Todavía sin geografía.</p>`}</div></div>`;
+  // VISTAZO AL MURO — últimas Huellas con acceso directo.
+  const muroPrev = `<div class="card s6"><div class="section-title"><h2 style="font-size:15px">Muro de la comunidad</h2><div class="spacer"></div><span class="pill ${liveMode()?'gold':''}">${feed.length} Huellas</span></div>
+      ${feed.length?feed.slice(0,3).map(p=>{ const au=authorOf(p.author_alma_id);
+        return `<div class="row" data-openpost="${p.id}" style="cursor:pointer"><div class="grow"><b style="font-size:13.5px">${esc(p.title||au.name)}</b><br><small class="muted">${esc(au.name)} · ${esc(postDate(p.created_at))}</small></div><span class="muted">✦ ${(state.postSparkCount&&state.postSparkCount[p.id])||0}</span></div>`;
+      }).join(""):`<p class="muted" style="font-size:13px">Aún no hay Huellas.</p>`}
+      <button class="btn ghost sm" data-view="comunidad" style="margin-top:12px">Ir al Muro →</button></div>`;
+  // VISTAZO A LA CRÓNICA — últimas integraciones del mundo.
+  if(state.cloudChangelog==null) loadChangelog();
+  const cl=state.cloudChangelog;
+  const cronPrev = `<div class="card s6"><div class="section-title"><h2 style="font-size:15px">Crónica</h2></div>
+      ${cl==null?`<p class="muted" style="font-size:13px">Cargando la Crónica…</p>`
+        :(cl.length?cl.slice(0,3).map(c=>`<div class="row"><div class="grow"><b style="font-size:13.5px">${esc(c.title)}</b>${c.tag?` <span class="pill">${esc(c.tag)}</span>`:""}<br><small class="muted">${esc((c.created_at||"").slice(0,10))}</small></div></div>`).join(""):`<p class="muted" style="font-size:13px">Aún no hay entradas.</p>`)}
+      <button class="btn ghost sm" data-view="cronica" style="margin-top:12px">Ver la Crónica →</button></div>`;
+  const worldCard = (a.world_access || (isCreator && !state.viewAs)) ? worldSummaryCard(list) : "";
+  return `<div class="grid">${voiceOfWorldCard()}${tree}${aside}${week}${connect}${paisCard}${muroPrev}${cronPrev}${worldCard}</div>`;
+}
 
-  // RITUAL ACTIVO — la vela encendida del Mundo. Una vez al día por Alma:
-  // subir una Huella (post) sobre lo que se creó esta semana.
+/* MURO — la pestaña donde compartes con la comunidad y participas en el Ritual,
+   y donde vive el muro de Huellas con sus Chispas y Ecos. */
+function vComunidad(a){
+  const W=worldCompute(a);
+  const {clan,members,feed}=W;
   const ritDone=a.live && ritualDoneToday(a);
-  const ritual = `<div class="card s6 wt-ritual"><div class="section-title"><h2 style="font-size:15px">Ritual activo</h2><div class="spacer"></div><span class="pill gold">${ritDone?"🜂 Completado hoy":"Vela encendida"}</span></div>
+  const ritual = `<div class="card s12 wt-ritual"><div class="section-title"><h2 style="font-size:15px">Ritual activo</h2><div class="spacer"></div><span class="pill gold">${ritDone?"🜂 Completado hoy":"Vela encendida"}</span></div>
       <div class="rt-name">Ritual del Eco</div>
       <p>¿Qué creaste esta semana? Sube tu Huella al Mundo y deja que el Árbol resuene contigo. <b>Una vez al día.</b></p>
       ${!a.live
@@ -1628,7 +1652,6 @@ function vComunidad(a){
         : (ritDone
             ? `<button class="btn secondary" disabled style="opacity:.7;cursor:default">✓ Ya encendiste la vela hoy</button><div class="muted" style="font-size:12px;margin-top:8px">Vuelve mañana para dejar una nueva Huella.</div>`
             : `<button class="btn" data-ritual="eco">✦ Participar en el Ritual</button>`)}</div>`;
-
   const curCat=state.postCat||"obra";
   const catPicker=`<div class="cat-picker">${POST_CATS.map(c=>`<button type="button" class="cat-pick ${c.key===curCat?'on':''}" data-postcat="${c.key}">${c.glyph} ${esc(c.label)}</button>`).join("")}</div>`;
   const create = a.live ? `<div class="card s12"><div class="section-title"><h2>Comparte con la comunidad</h2></div>
@@ -1637,7 +1660,6 @@ function vComunidad(a){
       <div class="field"><textarea id="postBody" rows="2" placeholder="¿Qué estás creando? Comparte un proyecto, idea o pregunta…"></textarea></div>
       <div class="post-compose-foot">${attachField("postImg","huella","Adjuntar foto")}<span style="flex:1"></span><button class="btn" id="postSend">Dejar mi Huella</button></div></div>`
     : `<div class="card s12"><p class="muted">Entra a tu Alma para dejar tu Huella en la comunidad.</p></div>`;
-  // Filtro sutil por categoría (píldoras pequeñas).
   const flt=state.wallFilter||"all";
   const filterPills=`<div class="wall-filter"><button class="wf-pill ${flt==='all'?'on':''}" data-wallfilter="all">Todas</button>${POST_CATS.map(c=>`<button class="wf-pill ${flt===c.key?'on':''}" data-wallfilter="${c.key}">${c.glyph} ${esc(c.label)}</button>`).join("")}<button class="wf-pill ${flt==='ritual'?'on':''}" data-wallfilter="ritual">🜂 Ritual</button></div>`;
   const wall = `<div class="card s12"><div class="section-title"><h2>Muro de la comunidad</h2><div class="spacer"></div><span class="pill ${liveMode()?'gold':''}">${feed.length} Huellas</span></div>
@@ -1664,24 +1686,7 @@ function vComunidad(a){
       <p class="muted">${clan?clan.desc:"Comunidad privada por invitación (2 a 8 Almas)."}</p>
       <div class="alma-grid" style="margin-top:14px">${members.map(almaMini).join("")}</div></div>`
     : "";
-  // ESTADO DEL ÁRBOL — cómo evoluciona y qué lo alimenta.
-  const huellasN=(state.cloudPosts||[]).length;
-  const treeStateCard=`<div class="card s12 tree-state"><div class="section-title"><h2 style="font-size:15px">Estado del Árbol</h2><div class="spacer"></div><span class="pill gold">${tstage.glyph} ${esc(tstage.label)}</span></div>
-      <div class="ts-track">${TREE_STAGES.map((t,i)=>`<div class="ts-step ${i===tstage.idx?'cur':''} ${i<tstage.idx?'passed':''}"><span class="ts-g">${t.glyph}</span><b>${esc(t.label)}</b><small>${t.min===0?'1':t.min}+</small></div>`).join("")}</div>
-      <div class="ebar" style="margin:14px 0 6px"><span style="width:${tstage.pct}%"></span></div>
-      <div class="muted" style="font-size:12.5px">${tstage.next?`${tstage.pct}% hacia <b>${esc(tstage.next.label)}</b> — faltan <b>${Math.max(0,tstage.next.min-n)}</b> Almas.`:"El Árbol alcanzó su forma viva: <b>Santuario Vivo</b>. ∞"}</div>
-      <div class="ts-feeds">
-        <div><div class="num">${n}</div><span class="lbl">Almas</span></div>
-        <div><div class="num">${ecosToday}</div><span class="lbl">Ecos hoy</span></div>
-        <div><div class="num">${huellasN}</div><span class="lbl">Huellas</span></div>
-        <div><div class="num">${newWeek}</div><span class="lbl">Almas (7d)</span></div>
-      </div>
-      <p class="muted" style="font-size:12px;margin:12px 0 0">El Árbol crece con cada Alma que despierta, cada <b>Huella</b> que dejas y cada <b>Eco</b> que resuena. Al reunir más Almas evoluciona: Semilla → Brote → Raíz → Tronco → Bosque → Santuario Vivo.</p>
-    </div>`;
-  // RESUMEN DEL MUNDO (clanes/santuarios) — solo Almas con acceso o el Creador.
-  const worldCard = (a.world_access || (isCreator && !state.viewAs)) ? worldSummaryCard(list) : "";
-  // La Voz del Mundo va ARRIBA del Árbol. El "Estado del Árbol" queda oculto.
-  return `<div class="grid">${voiceOfWorldCard()}${tree}${aside}${week}${connect}${paisCard}${ritual}${create}${wall}${clanCard}${worldCard}</div>`;
+  return `<div class="grid">${ritual}${create}${wall}${clanCard}</div>`;
 }
 /* La Voz del Mundo — avisos fijados por el Creador (desplegables, con link opcional). */
 function voiceOfWorldCard(){
@@ -1712,7 +1717,7 @@ function voiceOfWorldCard(){
 async function loadNotices(){
   if(!Cloud.enabled){ state.cloudNotices=[]; return; }
   try{ state.cloudNotices=await Cloud.worldNotices(); }catch(e){ state.cloudNotices=[]; }
-  if(state.view==="comunidad") renderView();
+  if(state.view==="comunidad"||state.view==="mundo") renderView();
 }
 async function addWorldNotice(){
   if(!isCreator) return; const g=x=>document.getElementById(x);
@@ -1984,7 +1989,7 @@ async function doFollow(id){
     // Esencia: +100 por cada Alma nueva con la que te vinculas (sin re-farmeo).
     if(nowFollowing) await rewardOnce("vinculo:"+id,100,"Te vinculaste con un Alma");
     openPublic(id);
-    if(state.view==="comunidad") renderView();
+    if(state.view==="comunidad"||state.view==="mundo") renderView();
   }catch(e){ alert("No se pudo vincular: "+(e.message||e)); }
 }
 /* ===========================================================
@@ -2039,7 +2044,7 @@ async function loadCommunityExtras(){
   try{ state.cloudEcos = await Cloud.echoes(12) || []; }catch(e){ if(state.cloudEcos==null) state.cloudEcos=[]; }
   try{ const c = await Cloud.soulsCount(); if(c!=null) state.cloudSoulsCount=c; }catch(e){}
   ensureEcoRealtime();
-  if(state.view==="comunidad") renderView();
+  if(state.view==="comunidad"||state.view==="mundo") renderView();
 }
 /* Ecos en vivo: un solo canal para toda la sesión. */
 function ensureEcoRealtime(){
@@ -2050,7 +2055,7 @@ function ensureEcoRealtime(){
     if(cur.some(e=>e.id===eco.id)) return;
     state.cloudEcos = [eco, ...cur].slice(0,30);
     if(eco.kind==="despertar" && state.cloudSoulsCount!=null) state.cloudSoulsCount++;
-    if(state.view==="comunidad") renderView();
+    if(state.view==="comunidad"||state.view==="mundo") renderView();
   });
 }
 async function sendPost(){
@@ -3778,14 +3783,14 @@ function setupPullToRefresh(){
    navega entre las moradas del menú inferior; en los bordes rebota y NUNCA
    sale al HOME. */
 function swipeSectionViews(){
-  const list=["mialma","proyectos","comunidad"];
+  const list=["mialma","taller","mundo"];
   if(planAllows("clanpanel")) list.push("clanpanel");
   if(planAllows("santuario")) list.push("santuario");
   return list;
 }
 function swipeTargetView(dir){
   const views=swipeSectionViews();
-  const map={mialma:"mialma",taller:"proyectos",mundo:"comunidad",clan:"clanpanel",santuario:"santuario"};
+  const map={mialma:"mialma",taller:"taller",mundo:"mundo",clan:"clanpanel",santuario:"santuario"};
   let idx=views.indexOf(map[sectionOfView(state.view)]);
   if(idx<0) idx=0;
   const ni=idx+dir;
@@ -3991,7 +3996,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
    RENDER + EVENTOS
    =========================================================== */
 function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); renderWhisperBell(); if(typeof hideBootLoader==="function") hideBootLoader(); }
-function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad"){ loadPosts(); loadCommunityExtras(); loadNotices(); } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
+function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad"||view==="mundo"){ loadPosts(); loadCommunityExtras(); loadNotices(); loadChangelog(); } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 /* LUMBRE aún no despierta: el chat permanece desactivado. Al tocarla, en vez de
@@ -4250,7 +4255,7 @@ const TOUR=[
   {sel:"#nav", selMobile:".botnav", title:"Tu menú", text:"Aquí cambias de morada. En el celular vive abajo (como Instagram): Mi Alma, Taller y Mundo. Cada una guarda sus pestañas dentro."},
   {sel:".tabbar", title:"Tu Alma", text:"Mi Alma tiene pestañas: Resumen, Identidad (tu foto y datos), Vista pública (qué muestras) y Ajustes."},
   {sel:".camino-card", title:"Tu camino", text:"Subes de nivel creando. Cada nivel desbloquea nuevas ventanas. Toca la ⓘ para ver el mapa de niveles."},
-  {sel:'[data-view="comunidad"]', selMobile:'.botnav [data-view="comunidad"]', title:"El mundo", text:"En Mundo vive el Árbol de Almas: el mapa de quienes habitan ANIMA, los Ecos en vivo, el Ritual del día y el conteo por país. Toca una Alma para visitarla."},
+  {sel:'[data-view="mundo"]', selMobile:'.botnav [data-view="mundo"]', title:"El mundo", text:"En Mundo vive el Árbol de Almas: el mapa de quienes habitan ANIMA, los Ecos en vivo, y un vistazo al Muro y a la Crónica. Toca una Alma para visitarla."},
   {sel:"#lumbreFab", selMobile:"#botLumbre", title:"LUMBRE ✦", text:"Tu chispa compañera. Aún está despertando: reunirá voz cuando el mundo y tu Alma junten más Esencia. ¡Bienvenida a ANIMA!"}
 ];
 function startTour(){ closeLumbre(); closeSide(); state.view="mialma"; state.almaTab="resumen"; renderAll(); setTimeout(()=>tourStep(0),360); }
