@@ -1475,14 +1475,64 @@ async function consolaSave(almaId){
 }
 
 /* --- Clientes --- */
+const vinIsColab=c=>String(c.kind||"").toLowerCase()==="colaborador";
+// Proyectos y cotizaciones enlazados a un vínculo (por nombre / id).
+function vinLinks(a,c){
+  const nm=(c.name||"").toLowerCase();
+  const projs=(a.projects||[]).map((p,i)=>({p,i})).filter(o=>(o.p.client||"").toLowerCase()===nm);
+  const quotes=a.live?(state.cloudQuotes||[]).filter(q=>(c._id&&q.client_id===c._id)||((q.client_name||"").toLowerCase()===nm))
+    :(typeof loadQuotes==="function"?loadQuotes(a):[]).filter(q=>(q.client||"").toLowerCase()===nm);
+  const billed=projs.reduce((t,o)=>t+(+o.p.budget||0),0);
+  return {projs,quotes,billed};
+}
 function vClientes(a){
   const list=a.clients||[];
-  return `<div class="grid"><div class="card s12">
-    <div class="section-title"><h2>Vínculos</h2><div class="spacer"></div><button class="btn sm" data-add="cliente">+ Nuevo vínculo</button></div>
-    ${list.length?list.map((c,i)=>`<div class="row"><span class="avatar sm" style="background:linear-gradient(145deg,${a.color},${shade(a.color,-22)})">${initials(c.name)}</span>
-        <div class="grow"><b>${esc(c.name)}</b><br><small>${esc(c.email||"")}${c.email&&c.phone?" · ":""}${esc(c.phone||"")}</small>${c.notes?`<br><small class="muted">${esc(c.notes)}</small>`:""}</div>${acts("cliente",i)}</div>`).join("")
-      :`<p class="muted">Aún no tienes vínculos. Se crean solos al guardar una cotización, o agrégalos aquí.</p>`}
-  </div></div>`;
+  if(state.vinOpen!=null && list[state.vinOpen]) return vVinculoDetalle(a, state.vinOpen);
+  const view=state.vinView||"todos";
+  const filtered=list.map((c,i)=>({c,i})).filter(o=>view==="todos"||(view==="colab"?vinIsColab(o.c):!vinIsColab(o.c)));
+  const nClient=list.filter(c=>!vinIsColab(c)).length, nColab=list.filter(vinIsColab).length;
+  const seg=(k,t,n)=>`<button class="seg-b ${view===k?'on':''}" data-vinview="${k}">${t}${n!=null?` <span class="seg-n">${n}</span>`:""}</button>`;
+  const fab=`<button class="fab" data-add="cliente" title="Nuevo vínculo">＋<span>Nuevo Vínculo</span></button>`;
+  const head=`<div class="card s12"><div class="section-title"><h2>Vínculos</h2><div class="spacer"></div>
+      <div class="seg">${seg("todos","Todos",list.length)}${seg("client","Clientes",nClient)}${seg("colab","Colaboradores",nColab)}</div></div></div>`;
+  if(!list.length) return `<div class="grid">${head}<div class="card s12"><p class="muted">Aún no tienes vínculos. Se crean solos al guardar una cotización, o agrégalos con ＋.</p></div></div>${fab}`;
+  const cards=filtered.map(({c,i})=>{ const L=vinLinks(a,c); const colab=vinIsColab(c);
+    return `<button class="vin-card" data-vinopen="${i}">
+      <span class="avatar sm vin-av ${colab?'is-colab':''}" style="${colab?'':`background:linear-gradient(145deg,${a.color},${shade(a.color,-22)})`}">${initials(c.name)}</span>
+      <div class="vin-main"><div class="vin-top"><b>${esc(c.name)}</b><span class="vin-badge ${colab?'vb-colab':'vb-client'}">${colab?"Colaborador":"Cliente"}</span></div>
+        <small class="muted">${esc(c.role||c.email||c.phone||"Sin contacto")}</small>
+        <small class="vin-stat">${L.projs.length} proyecto${L.projs.length===1?"":"s"}${L.billed?" · "+esc(money(L.billed)):""}${L.quotes.length?" · "+L.quotes.length+" cot.":""}</small>
+      </div></button>`; }).join("")||`<div class="card s12"><p class="muted">Sin vínculos en este filtro.</p></div>`;
+  return `<div class="grid">${head}<div class="vin-grid">${cards}</div></div>${fab}`;
+}
+function vVinculoDetalle(a, i){
+  const c=a.clients[i]; const colab=vinIsColab(c); const L=vinLinks(a,c);
+  const contact=[c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:"",c.phone?esc(c.phone):""].filter(Boolean).join(" · ")||"Sin datos de contacto";
+  const projRows=L.projs.length?L.projs.map(({p,i})=>`<div class="tk-row proj-litem" data-projgo="${i}">
+      <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
+      <div class="grow"><b>${esc(p.t)}</b></div><b>${p.budget?esc(money(p.budget)):""}</b></div>`).join(""):`<p class="muted" style="font-size:13px">Sin proyectos enlazados.</p>`;
+  const qRows=L.quotes.length?L.quotes.map(q=>`<div class="row"><div class="grow"><b>${esc(q.title||"Documento")}</b><br><small class="muted">${esc((q.created_at||q.date||"").slice(0,10))}</small></div>${q.total!=null?`<b>${esc(money(q.total))}</b>`:""}</div>`).join(""):`<p class="muted" style="font-size:13px">Sin cotizaciones.</p>`;
+  return `<div class="grid">
+    <div class="card s12 pd-head">
+      <button class="btn ghost sm" data-vinback>← Vínculos</button>
+      <span class="avatar sm vin-av ${colab?'is-colab':''}" style="${colab?'':`background:linear-gradient(145deg,${a.color},${shade(a.color,-22)})`}">${initials(c.name)}</span>
+      <h2 style="font-size:22px;letter-spacing:-.03em;margin:0;flex:1">${esc(c.name)}</h2>
+      <span class="vin-badge ${colab?'vb-colab':'vb-client'}">${colab?"Colaborador":"Cliente"}</span>
+    </div>
+    <div class="card s5 proj-info">
+      ${c.role?`<div class="pd-block"><span class="pd-k">Rol / oficio</span><b>${esc(c.role)}</b></div>`:""}
+      <div class="pd-block"><span class="pd-k">Contacto</span><b style="font-size:14px">${contact}</b></div>
+      <div class="pd-grid3"><div><span class="pd-k">Proyectos</span><b>${L.projs.length}</b></div><div><span class="pd-k">Facturado</span><b>${esc(money(L.billed))}</b></div><div><span class="pd-k">Cotizaciones</span><b>${L.quotes.length}</b></div></div>
+      ${c.notes?`<div class="pd-block" style="margin-top:6px"><span class="pd-k">Notas</span><p style="margin:4px 0 0;font-size:14px">${esc(c.notes)}</p></div>`:""}
+      <div style="display:flex;gap:8px;margin-top:16px"><button class="btn secondary sm" data-edit="cliente:${i}">✎ Editar</button><button class="btn ghost sm" data-del="cliente:${i}">✕ Eliminar</button></div>
+    </div>
+    <div class="card s7">
+      <div class="section-title"><h2 style="font-size:15px">Proyectos</h2><div class="spacer"></div><button class="btn ghost sm" data-add="proyecto">＋</button></div>
+      ${projRows}
+      <div class="section-title" style="margin-top:18px"><h2 style="font-size:15px">Cotizaciones</h2></div>
+      ${qRows}
+    </div>
+  </div>`;
 }
 
 /* ===========================================================
@@ -3757,7 +3807,8 @@ const EDITORS = {
   doc:{ title:"Documento", table:"library", get:a=>a.library, push:"push", xp:0,
     fields:[{k:"t",l:"Nombre"},{k:"k",l:"Tipo (Contrato, Brief…)"},{k:"url",l:"Enlace / URL"},{k:"notes",l:"Notas",ta:true}], toRow:v=>({title:v.t,kind:v.k,url:v.url,notes:v.notes}) },
   cliente:{ title:"Vínculo", table:"clients", get:a=>(a.clients||(a.clients=[])), push:"unshift", xp:0,
-    fields:[{k:"name",l:"Nombre"},{k:"email",l:"Correo"},{k:"phone",l:"Teléfono"},{k:"notes",l:"Notas",ta:true}], toRow:v=>({name:v.name,email:v.email,phone:v.phone,notes:v.notes}) }
+    fields:[{k:"name",l:"Nombre"},{k:"kind",l:"Tipo",sel:["Cliente","Colaborador"]},{k:"role",l:"Rol / oficio (opcional)"},{k:"email",l:"Correo"},{k:"phone",l:"Teléfono"},{k:"notes",l:"Notas",ta:true}],
+    toRow:v=>({name:v.name,kind:(v.kind||"Cliente").toLowerCase(),role:v.role,email:v.email,phone:v.phone,notes:v.notes}) }
 };
 let recordCtx=null;
 function openRecord(kind, idx=null){
@@ -3971,7 +4022,7 @@ async function loadMyAlma(){
      explícitamente false → sin bucles (el rito lo deja en true antes de volver). */
   if(row.awakening_completed === false){ location.replace("despertar.html"); return; }
   const mods=await Cloud.loadModules(row.id); const a=dbAlmaToState(row,mods);
-  try{ a.clients=(await Cloud.clients(row.id)).map(c=>({_id:c.id,name:c.name,email:c.email,phone:c.phone,notes:c.notes})); }catch(e){ a.clients=[]; }
+  try{ a.clients=(await Cloud.clients(row.id)).map(c=>({_id:c.id,name:c.name,email:c.email,phone:c.phone,notes:c.notes,kind:((c.kind||"cliente").toLowerCase()==="colaborador"?"Colaborador":"Cliente"),role:c.role||""})); }catch(e){ a.clients=[]; }
   try{ state.cloudQuotes=await Cloud.quotes(row.id); }catch(e){ state.cloudQuotes=[]; }
   try{ const p=await Cloud.getPrefs(row.id); if(p) localStorage.setItem("anima_cfg_"+row.id, JSON.stringify(p)); }catch(e){}
   state.almas=[a];   // tu Alma viva, limpia (las de muestra no se mezclan)
@@ -4401,7 +4452,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
    RENDER + EVENTOS
    =========================================================== */
 function renderAll(){ try{ setAnimaCurrency(getCfg(me()).currency); }catch(e){} renderNav(); renderWho(); renderTop(); renderView(); renderWhisperBell(); if(typeof hideBootLoader==="function") hideBootLoader(); }
-function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; state.projOpen=null; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad"||view==="mundo"){ loadPosts(); loadCommunityExtras(); loadNotices(); loadChangelog(); } if(view==="world_wandering_traces"){ if(state.wtPool==null) loadWanderingTraces(); else { wtPickOne(); wtPickConstel(); renderView(); } } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
+function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; state.projOpen=null; state.vinOpen=null; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad"||view==="mundo"){ loadPosts(); loadCommunityExtras(); loadNotices(); loadChangelog(); } if(view==="world_wandering_traces"){ if(state.wtPool==null) loadWanderingTraces(); else { wtPickOne(); wtPickConstel(); renderView(); } } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 /* LUMBRE aún no despierta: el chat permanece desactivado. Al tocarla, en vez de
@@ -4536,6 +4587,10 @@ document.addEventListener("click", e=>{
   if(e.target.closest("[data-finclear]")){ state.finPeriod="all"; state.finCat="all"; renderView(); return; }
   const po=e.target.closest("[data-projopen]"); if(po && !e.target.closest("select,option")){ state.projOpen=+po.dataset.projopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
   if(e.target.closest("[data-projback]")){ state.projOpen=null; renderView(); return; }
+  const vv=e.target.closest("[data-vinview]"); if(vv){ state.vinView=vv.dataset.vinview; renderView(); return; }
+  const vo=e.target.closest("[data-vinopen]"); if(vo){ state.vinOpen=+vo.dataset.vinopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
+  if(e.target.closest("[data-vinback]")){ state.vinOpen=null; renderView(); return; }
+  const pg=e.target.closest("[data-projgo]"); if(pg){ const idx=+pg.dataset.projgo; go("proyectos"); state.projOpen=idx; renderView(); return; }
   const tv=e.target.closest("[data-tareaview]"); if(tv){ state.tareaView=tv.dataset.tareaview; renderView(); return; }
   const td=e.target.closest("[data-tdone]"); if(td){ toggleTaskDone(+td.dataset.tdone); return; }
   if(e.target.closest("[data-wtnext]")){ wtPickOne(); wtPickConstel(); renderView(); wtScrollTop(); return; }
