@@ -904,7 +904,8 @@ function availBadge(v){ if(!v) return ""; const dot=v.startsWith("No")?"⚪":v.s
 function pfLinks(a){ const L=[]; if(a.website)L.push(["Sitio web",a.website]);
   if(a.instagram)L.push(["Instagram",a.instagram.startsWith("http")?a.instagram:"https://instagram.com/"+a.instagram.replace("@","")]);
   if(a.portfolio_url)L.push(["Portafolio",a.portfolio_url]); if(a.shop_url)L.push(["Tienda",a.shop_url]); return L; }
-function isPublicPf(a){ return !!(a.visibility && a.visibility.public===true); }
+/* Portafolio público POR DEFECTO: solo es privado si el Alma lo apaga. */
+function isPublicPf(a){ return !(a.visibility && a.visibility.public===false); }
 
 function pfHero(a){
   const banner = (a.banner && isImgUrl(a.banner))
@@ -1744,7 +1745,7 @@ async function loadWanderingTraces(){
       const imgs = Array.isArray(r.images) ? r.images.filter(isImgUrl) : [];
       const img = imgs[0] || (isImgUrl(r.link)? r.link : null);
       return { id:r.id, title:r.title||"", kind:r.kind||"", year:r.year||"", desc:r.description||"", img, alma:al };
-    }).filter(t=> t.img && t.alma && t.alma.visibility && t.alma.visibility.public===true );
+    }).filter(t=> t.img && t.alma && !(t.alma.visibility && t.alma.visibility.public===false) );
     state.wtPool = pool;
     wtPickOne(); wtPickConstel();
   }catch(e){ state.wtPool=[]; }
@@ -2406,7 +2407,7 @@ function vinculosPanel(a){
    Se abre en HUELLA. Centraliza el portafolio público y qué
    secciones se muestran a las demás Almas (almas.visibility).
    =========================================================== */
-function visOn(a,k,def){ const v=a.visibility||{}; return (k==="public")?(v.public===true):(v[k]!==false&&(def!==false)); }
+function visOn(a,k,def){ const v=a.visibility||{}; return (k==="public")?(v.public!==false):(v[k]!==false&&(def!==false)); }
 function vVisibilidad(a){
   if(!a.live) return `<div class="grid"><div class="card s12"><span class="pill gold">Visibilidad</span><h2 style="margin:8px 0;letter-spacing:-.03em">Entra a tu Alma</h2><p class="muted" style="max-width:600px">Para decidir qué muestra tu Alma al mundo, entra a tu Alma en la nube.</p></div></div>`;
   const pub=visOn(a,"public");
@@ -2419,9 +2420,9 @@ function vVisibilidad(a){
     <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
       <span class="pill gold">👁 Visibilidad</span>
       <h2 style="font-size:24px;letter-spacing:-.04em;margin:10px 0 4px">Tú decides qué ve el mundo</h2>
-      <p class="muted" style="max-width:640px">Tu espacio es privado por defecto. Aquí eliges qué parte de tu Alma es pública. Tu Raíz, memorias, proyectos y agenda <b>nunca</b> se muestran.</p></div>
+      <p class="muted" style="max-width:640px">Tu portafolio es <b>público por defecto</b> para que el mundo descubra tus obras (y aparezcan en Huellas Errantes). Puedes hacerlo privado cuando quieras. Tu Raíz, memorias, proyectos y agenda <b>nunca</b> se muestran.</p></div>
     <div class="card s12"><div class="section-title"><h2>Portafolio público</h2></div>
-      ${sw("public","Portafolio público","Si está activo, otras Almas y visitantes pueden ver tu portafolio.")}
+      ${sw("public","Portafolio público","Público por defecto: otras Almas y visitantes pueden ver tus obras. Apágalo para mantenerlo privado.")}
       ${link}</div>
     <div class="card s12"><div class="section-title"><h2>¿Qué se muestra en tu cara pública?</h2></div>
       ${sw("bio","Sobre mí","Tu biografía.")}
@@ -2435,7 +2436,7 @@ function vVisibilidad(a){
 async function toggleVisibility(key){
   const a=me(); if(!a.live) return;
   a.visibility=a.visibility||{};
-  if(key==="public") a.visibility.public=!(a.visibility.public===true);
+  if(key==="public") a.visibility.public=!isPublicPf(a);
   else a.visibility[key]=(a.visibility[key]===false); // por defecto visible → al togglear, oculta/restaura
   try{ await Cloud.updateAlma(a.almaId,{visibility:a.visibility}); Cloud.log("visibilidad",{key}); }
   catch(e){ alert("No se pudo guardar: "+(e.message||e)); }

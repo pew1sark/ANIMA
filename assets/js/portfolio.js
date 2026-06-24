@@ -19,7 +19,7 @@ async function main(){
   let qy=sb.from("almas").select("*"); qy = almaId ? qy.eq("id",almaId) : qy.eq("slug",slug);
   const { data:a } = await qy.maybeSingle();
   if(!a){ $("#app").innerHTML="<div class='empty'><h2>Esta Alma aún no es pública</h2><p>Puede que el enlace sea incorrecto.</p></div>"; return; }
-  if(!(a.visibility && a.visibility.public===true)){
+  if(a.visibility && a.visibility.public===false){
     document.title=`${a.name} · ANIMA`;
     $("#app").innerHTML=`<div class='empty'><h2>Portafolio privado</h2><p>${esc(a.name)} mantiene su portafolio en privado por ahora.</p><a class='btn' href='studio.html' style='margin-top:14px;display:inline-block'>Crear mi Alma →</a></div>`;
     return;
