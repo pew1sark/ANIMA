@@ -43,7 +43,7 @@ const Cloud = {
   async allAlmas(){
     if(!_sb) return [];
     const { data } = await _sb.from("almas")
-      .select("id,slug,name,role,crew_role,avatar_url,city,country,bio,color,level,xp,clan,santuario,plan,team_role,sparks,tags,is_founding,council,world_access,created_at")
+      .select("id,slug,name,role,crew_role,avatar_url,city,country,bio,color,level,xp,clan,santuario,plan,team_role,sparks,tags,is_founding,council,world_access,visibility,created_at")
       .eq("is_founding", false)
       .order("created_at", { ascending:false });
     return data || [];
@@ -88,6 +88,9 @@ const Cloud = {
   addFinance(almaId, kind, title, amount){ return _sb.from("finance_entries").insert({ alma_id:almaId, kind, title, amount, period:new Date().toISOString().slice(0,7) }); },
   addTrajectory(almaId, year, title, detail){ return _sb.from("trajectory").insert({ alma_id:almaId, year, title, detail }); },
   addPortfolio(almaId, title, kind, color){ return _sb.from("portfolio").insert({ alma_id:almaId, title, kind, color }); },
+  /* Huellas Errantes: obras de TODAS las Almas (lectura pública). El cliente
+     filtra por visibilidad pública y por las que tienen imagen. */
+  async allPortfolio(){ if(!_sb) return []; const { data } = await _sb.from("portfolio").select("id,title,kind,color,year,link,description,images,alma_id").limit(600); return data||[]; },
   addAgenda(almaId, at_time, title){ return _sb.from("agenda").insert({ alma_id:almaId, at_time, title }); },
   addLibrary(almaId, title, kind){ return _sb.from("library").insert({ alma_id:almaId, title, kind }); },
   setXP(almaId, xp){ return _sb.from("almas").update({ xp }).eq("id", almaId); },
