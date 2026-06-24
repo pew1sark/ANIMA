@@ -1146,19 +1146,41 @@ function projStageClass(st){ const s=flowOf(st);
 function vProyectos(a){
   // Vista de detalle (panel dividido) cuando hay un proyecto abierto.
   if(state.projOpen!=null && a.projects[state.projOpen]) return vProyectoDetalle(a, state.projOpen);
-  const grid = a.projects.length
-    ? `<div class="proj-grid">${a.projects.map((p,i)=>{ const pct=Math.max(0,Math.min(100,+p.pct||0));
-        return `<button class="proj-card" data-projopen="${i}">
-          <div class="proj-top"><b>${esc(p.t)}</b><span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span></div>
-          <div class="proj-client">${esc(p.client||"Sin cliente")}</div>
-          <div class="proj-bar"><span style="width:${pct}%"></span></div>
-          <div class="proj-foot"><span class="muted">${p.due?("⌛ "+esc(tallerDate(p.due))):"Sin fecha"} · ${pct}%</span><b>${p.budget?esc(money(p.budget)):""}</b></div>
-        </button>`; }).join("")}</div>`
-    : `<div class="card s12"><p class="muted">Aún no tienes proyectos. Crea el primero con el botón ＋.</p></div>`;
-  return `<div class="grid"><div class="card s12">
-      <div class="section-title"><h2>Proyectos</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px">${a.projects.length} ${a.projects.length===1?"trabajo":"trabajos"}</span></div>
-    </div>${grid}</div>
-    <button class="fab" data-add="proyecto" title="Nuevo Proyecto">＋<span>Nuevo Proyecto</span></button>`;
+  const view=state.projView||"tarjetas"; const ps=a.projects;
+  const fab=`<button class="fab" data-add="proyecto" title="Nuevo Proyecto">＋<span>Nuevo Proyecto</span></button>`;
+  const segBtn=(k,t)=>`<button class="seg-b ${view===k?'on':''}" data-projview="${k}">${t}</button>`;
+  const head=`<div class="card s12"><div class="section-title"><h2>Proyectos</h2><div class="spacer"></div>
+      <div class="seg">${segBtn("tarjetas","Tarjetas")}${segBtn("lista","Lista")}${segBtn("kanban","Kanban")}</div>
+      <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}</span></div></div>`;
+  if(!ps.length) return `<div class="grid">${head}<div class="card s12"><p class="muted">Aún no tienes proyectos. Crea el primero con el botón ＋.</p></div></div>${fab}`;
+  const pct=p=>Math.max(0,Math.min(100,+p.pct||0));
+  let body;
+  if(view==="lista"){
+    body=`<div class="card s12">${ps.map((p,i)=>`<div class="tk-row proj-litem" data-projopen="${i}">
+        <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
+        <div class="grow"><b>${esc(p.t)}</b><br><small class="muted">${esc(p.client||"Sin cliente")} · ${pct(p)}%${p.due?" · ⌛ "+esc(tallerDate(p.due)):""}</small></div>
+        <div class="proj-bar" style="width:110px"><span style="width:${pct(p)}%"></span></div>
+        <b style="min-width:70px;text-align:right">${p.budget?esc(money(p.budget)):""}</b>
+      </div>`).join("")}</div>`;
+  } else if(view==="kanban"){
+    const cols=FLOW.map(s=>({s,items:[]}));
+    ps.forEach((p,i)=>{ const col=cols.find(c=>c.s===flowOf(p.st)); (col||cols[0]).items.push({p,i}); });
+    body=`<div class="card s12"><div class="kanban">${cols.map(c=>`<div class="kcol"><div class="kcol-h">${c.s.toUpperCase()}<span>${c.items.length||""}</span></div>
+        ${c.items.map(({p,i})=>`<div class="kcard" data-projopen="${i}" style="cursor:pointer">
+          <b>${esc(p.t)}</b>${p.client?`<small>${esc(p.client)}</small>`:""}
+          <div class="proj-bar" style="margin-top:9px"><span style="width:${pct(p)}%"></span></div>
+          <select class="kstatus" data-pstatus="${i}">${FLOW.map(s=>`<option ${s===flowOf(p.st)?'selected':''}>${s}</option>`).join("")}</select>
+        </div>`).join("")||`<div class="kempty">—</div>`}
+      </div>`).join("")}</div></div>`;
+  } else {
+    body=`<div class="proj-grid">${ps.map((p,i)=>`<button class="proj-card" data-projopen="${i}">
+        <div class="proj-top"><b>${esc(p.t)}</b><span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span></div>
+        <div class="proj-client">${esc(p.client||"Sin cliente")}</div>
+        <div class="proj-bar"><span style="width:${pct(p)}%"></span></div>
+        <div class="proj-foot"><span class="muted">${p.due?("⌛ "+esc(tallerDate(p.due))):"Sin fecha"} · ${pct(p)}%</span><b>${p.budget?esc(money(p.budget)):""}</b></div>
+      </button>`).join("")}</div>`;
+  }
+  return `<div class="grid">${head}${body}</div>${fab}`;
 }
 function vProyectoDetalle(a, i){
   const p=a.projects[i]; const pct=Math.max(0,Math.min(100,+p.pct||0));
@@ -4473,7 +4495,8 @@ document.addEventListener("click", e=>{
   const mz=e.target.closest("[data-mapsize]"); if(mz){ setMapSize(mz.dataset.mapsize); return; }
   const rit=e.target.closest("[data-ritual]"); if(rit){ doRitual(rit.dataset.ritual); return; }
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
-  const po=e.target.closest("[data-projopen]"); if(po){ state.projOpen=+po.dataset.projopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
+  const pv=e.target.closest("[data-projview]"); if(pv){ state.projView=pv.dataset.projview; renderView(); return; }
+  const po=e.target.closest("[data-projopen]"); if(po && !e.target.closest("select,option")){ state.projOpen=+po.dataset.projopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
   if(e.target.closest("[data-projback]")){ state.projOpen=null; renderView(); return; }
   const tv=e.target.closest("[data-tareaview]"); if(tv){ state.tareaView=tv.dataset.tareaview; renderView(); return; }
   const td=e.target.closest("[data-tdone]"); if(td){ toggleTaskDone(+td.dataset.tdone); return; }
