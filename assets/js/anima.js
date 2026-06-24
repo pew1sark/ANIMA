@@ -1085,21 +1085,61 @@ function vTaller(a){
   return `<div class="grid">${hero}${proy}${vinc}${raiz}${agenda}${activity}</div>`;
 }
 function tallerDate(d){ try{ const x=new Date(d); if(isNaN(x)) return String(d); return x.toLocaleDateString("es-CL",{day:"numeric",month:"short"}); }catch(e){ return String(d); } }
+/* Etapa → clase de color del badge. */
+function projStageClass(st){ const s=flowOf(st);
+  return ({"Cotizando":"st-cot","Aprobado":"st-apr","En producción":"st-pro","Revisión":"st-rev","Entregado":"st-ent","Cerrado":"st-cer"})[s]||"st-cot"; }
 function vProyectos(a){
-  const cols=FLOW.map(s=>({s,items:[]}));
-  a.projects.forEach((p,i)=>{ const col=cols.find(c=>c.s===flowOf(p.st)); (col||cols[0]).items.push({p,i}); });
+  // Vista de detalle (panel dividido) cuando hay un proyecto abierto.
+  if(state.projOpen!=null && a.projects[state.projOpen]) return vProyectoDetalle(a, state.projOpen);
+  const grid = a.projects.length
+    ? `<div class="proj-grid">${a.projects.map((p,i)=>{ const pct=Math.max(0,Math.min(100,+p.pct||0));
+        return `<button class="proj-card" data-projopen="${i}">
+          <div class="proj-top"><b>${esc(p.t)}</b><span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span></div>
+          <div class="proj-client">${esc(p.client||"Sin cliente")}</div>
+          <div class="proj-bar"><span style="width:${pct}%"></span></div>
+          <div class="proj-foot"><span class="muted">${p.due?("⌛ "+esc(tallerDate(p.due))):"Sin fecha"} · ${pct}%</span><b>${p.budget?esc(money(p.budget)):""}</b></div>
+        </button>`; }).join("")}</div>`
+    : `<div class="card s12"><p class="muted">Aún no tienes proyectos. Crea el primero con el botón ＋.</p></div>`;
   return `<div class="grid"><div class="card s12">
-    <div class="section-title"><h2>Flujo de trabajo</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px;margin-right:10px">${a.projects.length} trabajos</span><button class="btn sm" data-add="proyecto">+ Nuevo trabajo</button></div>
-    <div class="kanban">
-      ${cols.map(c=>`<div class="kcol"><div class="kcol-h">${c.s.toUpperCase()}<span>${c.items.length||""}</span></div>
-        ${c.items.map(({p,i})=>{ const bal=(p.budget||0)-(p.paid||0);
-          const meta=[p.client,p.budget?money(p.budget):"",p.budget?("saldo "+money(bal)):""].filter(Boolean).join(" · ");
-          return `<div class="kcard"><b>${esc(p.t)}</b><small>${esc(meta)}</small>${p.due?`<small class="muted">Entrega ${esc(p.due)}</small>`:""}${p.desc?`<p>${esc(p.desc)}</p>`:""}
-            <select class="kstatus" data-pstatus="${i}">${FLOW.map(s=>`<option ${s===flowOf(p.st)?'selected':''}>${s}</option>`).join("")}</select>
-            <div class="kacts">${acts("proyecto",i)}</div></div>`; }).join("")||`<div class="kempty">Sin trabajos.</div>`}
-      </div>`).join("")}
+      <div class="section-title"><h2>Proyectos</h2><div class="spacer"></div><span class="muted" style="font-size:12.5px">${a.projects.length} ${a.projects.length===1?"trabajo":"trabajos"}</span></div>
+    </div>${grid}</div>
+    <button class="fab" data-add="proyecto" title="Nuevo Proyecto">＋<span>Nuevo Proyecto</span></button>`;
+}
+function vProyectoDetalle(a, i){
+  const p=a.projects[i]; const pct=Math.max(0,Math.min(100,+p.pct||0));
+  const bal=(p.budget||0)-(p.paid||0);
+  const info=`<div class="card s5 proj-info">
+      <div class="pd-block"><span class="pd-k">Cliente</span><b>${esc(p.client||"—")}</b></div>
+      <div class="pd-block"><span class="pd-k">Estado</span>
+        <select class="pd-select" data-pstatus="${i}">${FLOW.map(s=>`<option ${s===flowOf(p.st)?'selected':''}>${s}</option>`).join("")}</select></div>
+      <div class="pd-grid3">
+        <div><span class="pd-k">Presupuesto</span><b>${p.budget?esc(money(p.budget)):"—"}</b></div>
+        <div><span class="pd-k">Pagado</span><b>${p.paid?esc(money(p.paid)):"—"}</b></div>
+        <div><span class="pd-k">Saldo</span><b>${p.budget?esc(money(bal)):"—"}</b></div>
+      </div>
+      <div class="pd-grid3">
+        <div><span class="pd-k">Inicio</span><b>${p.start?esc(tallerDate(p.start)):"—"}</b></div>
+        <div><span class="pd-k">Entrega</span><b>${p.due?esc(tallerDate(p.due)):"—"}</b></div>
+        <div><span class="pd-k">Avance</span><b>${pct}%</b></div>
+      </div>
+      <div class="proj-bar" style="margin-top:6px"><span style="width:${pct}%"></span></div>
+      ${p.desc?`<div class="pd-block" style="margin-top:14px"><span class="pd-k">Entregables / notas</span><p style="margin:4px 0 0;font-size:14px">${esc(p.desc)}</p></div>`:""}
+      <div style="display:flex;gap:8px;margin-top:16px"><button class="btn secondary sm" data-edit="proyecto:${i}">✎ Editar</button><button class="btn ghost sm" data-del="proyecto:${i}">✕ Eliminar</button></div>
+    </div>`;
+  const files=`<div class="card s7 proj-files">
+      <div class="section-title"><h2 style="font-size:15px">Archivos & Comentarios</h2></div>
+      <div class="pd-soon"><span class="pd-soon-ico">❏</span>
+        <p>Aquí vivirán las <b>imágenes, PDFs, videos y comentarios</b> del proyecto.<br>Se conectará con <b>Biblioteca</b> en la siguiente fase del Taller.</p>
+        <button class="btn ghost sm" data-go="biblioteca">Ir a Biblioteca →</button></div>
+    </div>`;
+  return `<div class="grid">
+    <div class="card s12 pd-head">
+      <button class="btn ghost sm" data-projback>← Proyectos</button>
+      <h2 style="font-size:22px;letter-spacing:-.03em;margin:0;flex:1">${esc(p.t)}</h2>
+      <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
     </div>
-  </div></div>`;
+    ${info}${files}
+  </div>`;
 }
 async function setProjectStatus(i,st){
   const a=me(); const p=a.projects[i]; if(!p) return; p.st=st;
@@ -4202,7 +4242,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
    RENDER + EVENTOS
    =========================================================== */
 function renderAll(){ try{ setAnimaCurrency(getCfg(me()).currency); }catch(e){} renderNav(); renderWho(); renderTop(); renderView(); renderWhisperBell(); if(typeof hideBootLoader==="function") hideBootLoader(); }
-function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad"||view==="mundo"){ loadPosts(); loadCommunityExtras(); loadNotices(); loadChangelog(); } if(view==="world_wandering_traces"){ if(state.wtPool==null) loadWanderingTraces(); else { wtPickOne(); wtPickConstel(); renderView(); } } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
+function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; state.projOpen=null; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad"||view==="mundo"){ loadPosts(); loadCommunityExtras(); loadNotices(); loadChangelog(); } if(view==="world_wandering_traces"){ if(state.wtPool==null) loadWanderingTraces(); else { wtPickOne(); wtPickConstel(); renderView(); } } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 /* LUMBRE aún no despierta: el chat permanece desactivado. Al tocarla, en vez de
@@ -4333,6 +4373,8 @@ document.addEventListener("click", e=>{
   const mz=e.target.closest("[data-mapsize]"); if(mz){ setMapSize(mz.dataset.mapsize); return; }
   const rit=e.target.closest("[data-ritual]"); if(rit){ doRitual(rit.dataset.ritual); return; }
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
+  const po=e.target.closest("[data-projopen]"); if(po){ state.projOpen=+po.dataset.projopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
+  if(e.target.closest("[data-projback]")){ state.projOpen=null; renderView(); return; }
   if(e.target.closest("[data-wtnext]")){ wtPickOne(); wtPickConstel(); renderView(); wtScrollTop(); return; }
   if(e.target.closest("[data-wtmore]")){ wtPickConstel(); renderView(); return; }
   const wto=e.target.closest("[data-wtopen]"); if(wto){ const t=(state.wtPool||[]).find(x=>x.id===wto.dataset.wtopen); if(t){ state.wtCurrent=t; wtPickConstel(); renderView(); wtScrollTop(); } return; }
