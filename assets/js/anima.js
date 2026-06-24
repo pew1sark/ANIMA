@@ -1794,15 +1794,18 @@ function wtHuellaHTML(a){
   return `<div class="card s12 wt-stage" data-wtcard="${esc(cur.id)}">
       <div class="wt-figure"><div class="wt-figure-img" style="background-image:url('${esc(cur.img)}')"></div><span class="wt-figure-mark">✦</span></div>
       <div class="wt-meta">
+        <span class="wt-eyebrow">Una señal del mundo</span>
         <h3 class="wt-author">${esc(al.name||"Alma")}</h3>
-        <div class="wt-sub">${[esc(disc),esc(place)].filter(Boolean).join("&nbsp;·&nbsp;")||"&nbsp;"}</div>
-        ${cur.title?`<div class="wt-work">“${esc(cur.title)}”${cur.year?` · ${esc(cur.year)}`:""}</div>`:""}
-        ${phrase?`<p class="wt-phrase">${esc(phrase.slice(0,160))}${phrase.length>160?"…":""}</p>`:""}
+        <div class="wt-sub">${disc?`<b>${esc(disc)}</b>`:""}${disc&&place?`<span class="wt-dot">·</span>`:""}${place?esc(place):""}</div>
+        ${cur.title?`<div class="wt-work">“${esc(cur.title)}”${cur.year?`<span class="wt-year"> · ${esc(cur.year)}</span>`:""}</div>`:""}
+        ${phrase?`<p class="wt-phrase">${esc(phrase.slice(0,180))}${phrase.length>180?"…":""}</p>`:""}
         <div class="wt-actions">
-          <button class="btn sm" data-pub="${esc(al.id)}">Ver Alma</button>
-          <button class="btn sm secondary" data-wtnext>Otra Huella</button>
-          <button class="btn ghost sm ${saved?'wt-on':''}" data-wtsave="${esc(cur.id)}">${saved?"✓ Guardada":"Guardar Huella"}</button>
-          <button class="btn ghost sm wt-chispa ${sparked?'wt-on':''}" data-wtchispa="${esc(cur.id)}">✦ ${sparked?"Chispa enviada":"Enviar Chispa"}</button>
+          <button class="btn" data-wtnext>↻ Otra Huella</button>
+          <button class="btn secondary" data-pub="${esc(al.id)}">Ver Alma</button>
+        </div>
+        <div class="wt-actions-sub">
+          <button class="btn secondary sm ${saved?'wt-on':''}" data-wtsave="${esc(cur.id)}">${saved?"✓ Guardada":"⤓ Guardar Huella"}</button>
+          <button class="btn gold sm wt-chispa ${sparked?'wt-sent':''}" data-wtchispa="${esc(cur.id)}">✦ ${sparked?"Chispa enviada":"Enviar Chispa"}</button>
         </div>
       </div>
     </div>`;
@@ -1840,7 +1843,7 @@ function wtSendChispa(id){
   try{ const a=me(); if(a.live && t){ Cloud.emitEcho("senal","✦ Una Chispa viajó hacia una Huella de "+(al.name||"un Alma")).catch(()=>{}); } }catch(e){}
   toast("✦ Chispa enviada");
   const card=document.querySelector('[data-wtcard]'); if(card){ card.classList.add("wt-pulse"); setTimeout(()=>card.classList.remove("wt-pulse"),700); }
-  document.querySelectorAll('[data-wtchispa]').forEach(b=>{ if(b.dataset.wtchispa===id){ b.classList.add("wt-on"); b.innerHTML="✦ Chispa enviada"; } });
+  document.querySelectorAll('[data-wtchispa]').forEach(b=>{ if(b.dataset.wtchispa===id){ b.classList.add("wt-sent"); b.innerHTML="✦ Chispa enviada"; } });
 }
 /* La Voz del Mundo — avisos fijados por el Creador (desplegables, con link opcional). */
 function voiceOfWorldCard(){
