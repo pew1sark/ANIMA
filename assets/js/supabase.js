@@ -79,7 +79,8 @@ const Cloud = {
       portfolio:  await get("portfolio"),
       memories:   await get("memories"),
       library:    await get("library"),
-      agenda:     await get("agenda")
+      agenda:     await get("agenda"),
+      tasks:      await get("tasks")
     };
   },
 
@@ -370,6 +371,7 @@ function dbAlmaToState(row, m){
     portfolio:  (m.portfolio  || []).map(x => ({ _id:x.id, t:x.title, k:x.kind, c:x.color, year:x.year, link:x.link, desc:x.description })),
     memories:   (m.memories   || []).map(x => ({ _id:x.id, t:x.title, d:x.detail })),
     library:    (m.library    || []).map(x => ({ _id:x.id, t:x.title, k:x.kind, url:x.url, notes:x.notes })),
-    agenda:     (m.agenda     || []).map(x => ({ _id:x.id, h:x.at_time, t:x.title, date:x.on_date, notes:x.notes }))
+    agenda:     (m.agenda     || []).map(x => ({ _id:x.id, h:x.at_time, t:x.title, date:x.on_date, notes:x.notes })),
+    tasks:      (m.tasks      || []).map(x => ({ _id:x.id, t:x.title, pr:x.priority, st:x.status, due:x.due_at, project:x.project, notes:x.notes }))
   };
 }

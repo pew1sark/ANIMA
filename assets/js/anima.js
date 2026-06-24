@@ -254,6 +254,7 @@ const NAV_TREE = [
   // 2 · TALLER — lo que creo.
   { type:"reino", key:"taller", ico:"₵", ic:"taller", t:"Taller", children:[
       {v:"proyectos",  ico:"◷",ic:"proceso",t:"Proyectos"},
+      {v:"tareas",     ico:"✓",ic:"obra",t:"Tareas"},
       {v:"clientes",   ico:"☺",ic:"constelacion",t:"Vínculos"},
       {v:"cotizador",  ico:"₵",ic:"documento",t:"Cotizador"},
       {v:"finanzas",   ico:"🌱",ic:"raiz",t:"Raíz"},
@@ -314,7 +315,7 @@ function sectionOfView(v){
   // Mi Plan vive DENTRO de Mi Alma. Clan y Santuario son moradas propias del menú,
   // visibles SOLO si el Alma tiene acceso a esa Forma. No viven dentro de Mundo.
   if(["mialma","trayectoria","portafolio","cronologia","insignias","estadisticas","visibilidad","memoria","biblioteca","miplan"].includes(v)) return "mialma";
-  if(["taller","proyectos","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
+  if(["taller","proyectos","tareas","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
   if(["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "clan";
   if(SANT_VIEWS.includes(v)) return "santuario";
   if(["mundo","comunidad","consejo","cronica","world_wandering_traces"].includes(v)) return "mundo";
@@ -602,7 +603,7 @@ function renderView(){
   // Gating por nivel: la ventana está realmente BLOQUEADA hasta alcanzar su nivel.
   if(!levelAllows(state.view)){ document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + animaWrap(vLocked(state.view)); return; }
   const fn = { mialma:vMiAlma, taller:vTaller, mundo:vMundo, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
-    finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, memoria:vMemoria, biblioteca:vBiblioteca,
+    finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, tareas:vTareas, memoria:vMemoria, biblioteca:vBiblioteca,
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, world_wandering_traces:vWanderingTraces, santuario:vSantuario,
@@ -1082,9 +1083,63 @@ function vTaller(a){
   const activity=`<div class="card s6 tl-card"><div class="section-title"><h2 style="font-size:15px">Actividad</h2></div>
       ${acts.length?`<div class="tl-act">${acts.map(x=>`<div class="tl-act-row"><span class="tl-act-ico">${x[0]}</span><div class="grow"><b>${esc(x[1])}</b><br><small class="muted">${esc(x[2])}</small></div>${x[3]?`<span class="amt ${x[3][0]==="+"?"in":""}">${esc(x[3])}</span>`:""}</div>`).join("")}</div>`:`<p class="muted" style="font-size:13px">Tu actividad aparecerá aquí cuando empieces a crear.</p>`}</div>`;
 
-  return `<div class="grid">${hero}${proy}${vinc}${raiz}${agenda}${activity}</div>`;
+  // TAREAS
+  const tasks=a.tasks||[];
+  const tPend=tasks.filter(t=>["Pendiente","En proceso","Bloqueada"].includes(t.st||"Pendiente")).length;
+  const tUrg=tasks.filter(t=>(t.pr==="Urgente"||t.pr==="Alta") && t.st!=="Finalizada" && t.st!=="Archivada").length;
+  const tDone=tasks.filter(t=>t.st==="Finalizada").length;
+  const tareas=`<div class="card s6 tl-card"><div class="section-title"><h2 style="font-size:15px">Tareas</h2><div class="spacer"></div><button class="btn ghost sm" data-go="tareas">Ver →</button></div>
+      <div class="tl-stat tl-stat-3"><div><b class="num">${tPend}</b><span class="lbl">Pendientes</span></div><div><b class="num" style="color:var(--danger)">${tUrg}</b><span class="lbl">Urgentes</span></div><div><b class="num" style="color:var(--ok)">${tDone}</b><span class="lbl">Completadas</span></div></div>
+      <button class="btn sm" data-add="tarea" style="margin-top:6px">＋ Nueva tarea</button></div>`;
+
+  return `<div class="grid">${hero}${proy}${vinc}${raiz}${agenda}${tareas}${activity}</div>`;
 }
 function tallerDate(d){ try{ const x=new Date(d); if(isNaN(x)) return String(d); return x.toLocaleDateString("es-CL",{day:"numeric",month:"short"}); }catch(e){ return String(d); } }
+
+/* ===========================================================
+   TAREAS — Lista / Kanban. Conectadas al Alma (privadas).
+   =========================================================== */
+const TASK_STATES=["Pendiente","En proceso","Bloqueada","Finalizada","Archivada"];
+const TASK_PRIOS=["Baja","Media","Alta","Urgente"];
+function taskPrioClass(pr){ return ({"Baja":"pr-baja","Media":"pr-media","Alta":"pr-alta","Urgente":"pr-urg"})[pr||"Media"]||"pr-media"; }
+function taskStateClass(st){ return ({"Pendiente":"ts-pend","En proceso":"ts-proc","Bloqueada":"ts-block","Finalizada":"ts-fin","Archivada":"ts-arch"})[st||"Pendiente"]||"ts-pend"; }
+async function setTaskStatus(i, st){ const a=me(); const t=(a.tasks||[])[i]; if(!t) return; t.st=st;
+  if(a.live && t._id){ try{ await Cloud.updateRow("tasks",t._id,{status:st}); }catch(e){ alert("No se pudo actualizar: "+(e.message||e)); } }
+  save(); renderView(); }
+function vTareas(a){
+  const tasks=a.tasks||[]; const view=state.tareaView==="kanban"?"kanban":"lista";
+  const head=`<div class="card s12"><div class="section-title"><h2>Tareas</h2><div class="spacer"></div>
+      <div class="seg"><button class="seg-b ${view==='lista'?'on':''}" data-tareaview="lista">Lista</button><button class="seg-b ${view==='kanban'?'on':''}" data-tareaview="kanban">Kanban</button></div>
+      <span class="muted" style="font-size:12.5px;margin:0 6px">${tasks.length}</span></div></div>`;
+  if(!tasks.length){
+    return `<div class="grid">${head}<div class="card s12"><p class="muted">Sin tareas todavía. Crea la primera con el botón ＋.</p></div></div>
+      <button class="fab" data-add="tarea" title="Nueva Tarea">＋<span>Nueva Tarea</span></button>`;
+  }
+  let body;
+  if(view==="kanban"){
+    const cols=TASK_STATES.slice(0,4);
+    body=`<div class="card s12"><div class="kanban tk-kanban">${cols.map(st=>{ const items=tasks.map((t,i)=>({t,i})).filter(o=>(o.t.st||"Pendiente")===st);
+      return `<div class="kcol"><div class="kcol-h">${st.toUpperCase()}<span>${items.length||""}</span></div>
+        ${items.map(({t,i})=>`<div class="tk-card"><div class="tk-top"><span class="tk-prio ${taskPrioClass(t.pr)}"></span><b>${esc(t.t)}</b></div>
+          ${(t.project||t.due)?`<small class="muted">${[t.project?esc(t.project):"",t.due?("⌛ "+esc(tallerDate(t.due))):""].filter(Boolean).join(" · ")}</small>`:""}
+          <select class="tk-status" data-tstatus="${i}">${TASK_STATES.map(s=>`<option ${s===(t.st||"Pendiente")?'selected':''}>${s}</option>`).join("")}</select>
+          <div class="kacts">${acts("tarea",i)}</div></div>`).join("")||`<div class="kempty">—</div>`}
+      </div>`; }).join("")}</div></div>`;
+  } else {
+    const order={"Urgente":0,"Alta":1,"Media":2,"Baja":3};
+    const sorted=tasks.map((t,i)=>({t,i})).sort((x,y)=>{ const fx=x.t.st==="Finalizada"||x.t.st==="Archivada"?1:0, fy=y.t.st==="Finalizada"||y.t.st==="Archivada"?1:0; if(fx!==fy) return fx-fy; return (order[x.t.pr]??2)-(order[y.t.pr]??2); });
+    body=`<div class="card s12">${sorted.map(({t,i})=>`<div class="tk-row">
+        <button class="tk-check ${t.st==="Finalizada"?'on':''}" data-tdone="${i}" title="Marcar finalizada">${t.st==="Finalizada"?"✓":""}</button>
+        <span class="tk-prio ${taskPrioClass(t.pr)}" title="${esc(t.pr||"Media")}"></span>
+        <div class="grow"><b style="${t.st==="Finalizada"?'text-decoration:line-through;opacity:.6':''}">${esc(t.t)}</b>${(t.project||t.due)?`<br><small class="muted">${[t.project?esc(t.project):"",t.due?("⌛ "+esc(tallerDate(t.due))):""].filter(Boolean).join(" · ")}</small>`:""}</div>
+        <span class="tk-badge ${taskStateClass(t.st)}">${esc(t.st||"Pendiente")}</span>
+        ${acts("tarea",i)}
+      </div>`).join("")}</div>`;
+  }
+  return `<div class="grid">${head}${body}</div><button class="fab" data-add="tarea" title="Nueva Tarea">＋<span>Nueva Tarea</span></button>`;
+}
+/* Marcar finalizada / reabrir desde la lista. */
+function toggleTaskDone(i){ const a=me(); const t=(a.tasks||[])[i]; if(!t) return; setTaskStatus(i, t.st==="Finalizada"?"Pendiente":"Finalizada"); }
 /* Etapa → clase de color del badge. */
 function projStageClass(st){ const s=flowOf(st);
   return ({"Cotizando":"st-cot","Aprobado":"st-apr","En producción":"st-pro","Revisión":"st-rev","Entregado":"st-ent","Cerrado":"st-cer"})[s]||"st-cot"; }
@@ -3593,6 +3648,9 @@ const EDITORS = {
   obra:{ title:"Obra", table:"portfolio", get:a=>a.portfolio, push:"push", xp:40,
     fields:[{k:"t",l:"Título"},{k:"k",l:"Tipo / técnica"},{k:"year",l:"Año"},{k:"c",l:"Color de respaldo",color:true},{k:"link",l:"Imagen de la obra (alta calidad)",img:true,folder:"obra"},{k:"desc",l:"Descripción",ta:true}],
     toRow:v=>({title:v.t,kind:v.k,color:v.c,year:v.year,link:v.link,description:v.desc}) },
+  tarea:{ title:"Tarea", table:"tasks", get:a=>(a.tasks||(a.tasks=[])), push:"unshift", xp:10,
+    fields:[{k:"t",l:"Tarea"},{k:"pr",l:"Prioridad",sel:["Baja","Media","Alta","Urgente"]},{k:"st",l:"Estado",sel:["Pendiente","En proceso","Bloqueada","Finalizada","Archivada"]},{k:"due",l:"Fecha",date:true},{k:"project",l:"Proyecto (opcional)"},{k:"notes",l:"Notas",ta:true}],
+    toRow:v=>({title:v.t,priority:v.pr||"Media",status:v.st||"Pendiente",due_at:v.due||null,project:v.project||null,notes:v.notes}) },
   cita:{ title:"Cita", table:"agenda", get:a=>a.agenda, push:"push", xp:0,
     fields:[{k:"h",l:"Hora (ej: 15:00)"},{k:"t",l:"Actividad"},{k:"date",l:"Fecha",date:true},{k:"notes",l:"Notas",ta:true}], toRow:v=>({at_time:v.h,title:v.t,on_date:v.date||null,notes:v.notes}) },
   doc:{ title:"Documento", table:"library", get:a=>a.library, push:"push", xp:0,
@@ -4375,6 +4433,8 @@ document.addEventListener("click", e=>{
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
   const po=e.target.closest("[data-projopen]"); if(po){ state.projOpen=+po.dataset.projopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
   if(e.target.closest("[data-projback]")){ state.projOpen=null; renderView(); return; }
+  const tv=e.target.closest("[data-tareaview]"); if(tv){ state.tareaView=tv.dataset.tareaview; renderView(); return; }
+  const td=e.target.closest("[data-tdone]"); if(td){ toggleTaskDone(+td.dataset.tdone); return; }
   if(e.target.closest("[data-wtnext]")){ wtPickOne(); wtPickConstel(); renderView(); wtScrollTop(); return; }
   if(e.target.closest("[data-wtmore]")){ wtPickConstel(); renderView(); return; }
   const wto=e.target.closest("[data-wtopen]"); if(wto){ const t=(state.wtPool||[]).find(x=>x.id===wto.dataset.wtopen); if(t){ state.wtCurrent=t; wtPickConstel(); renderView(); wtScrollTop(); } return; }
@@ -4470,6 +4530,7 @@ document.addEventListener("change", e=>{
   const cur=e.target.closest("[data-cursel]"); if(cur){ setAlmaCurrency(cur.value); return; }
   if(e.target.id==="convCur"){ updateConvOut(); return; }
   const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); return; }
+  const tks=e.target.closest(".tk-status"); if(tks){ setTaskStatus(+tks.dataset.tstatus, tks.value); return; }
   const qf=e.target.closest("#q_fmt"); if(qf){ readQuoteForm(); renderView(); return; }
   const fu=e.target.closest("input[type=file][data-imgfield]"); if(fu){ uploadImgField(fu); return; }
   const rs=e.target.closest("[data-roleset]"); if(rs){ setMemberRole(rs.dataset.roleset, rs.value); return; }

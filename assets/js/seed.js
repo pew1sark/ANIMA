@@ -90,7 +90,7 @@ const SEED_ALMAS = [{
   role:"", city:"", country:"", bio:"Entra o crea tu Alma para empezar a construir tu mundo.",
   tags:[], clan:null, plan:"SANTUARIO", team_role:null,
   finance:{ income:[], expense:[] }, projects:[], portfolio:[], trajectory:[],
-  memories:[], library:[], agenda:[], clients:[]
+  memories:[], library:[], agenda:[], clients:[], tasks:[]
 }];
 
 /* --- Clanes (Nivel 2) --- */

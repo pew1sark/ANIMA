@@ -958,6 +958,33 @@ a.nav-item{text-decoration:none;color:inherit}
   .fab>span{display:none}
 }
 
+/* ===========================================================
+   TAREAS — Lista / Kanban.
+   =========================================================== */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--card-solid,#fff)}
+.seg-b{border:0;background:none;font:inherit;font-size:12.5px;font-weight:700;color:var(--muted);padding:6px 14px;border-radius:999px;cursor:pointer;transition:.16s}
+.seg-b.on{background:#111;color:#fff}
+.tk-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line-2,rgba(0,0,0,.05))}
+.tk-row:first-child{border-top:0}
+.tk-row b{font-size:14px;color:#15151a}
+.tk-check{flex:none;width:22px;height:22px;border-radius:7px;border:1.6px solid var(--line-strong,rgba(0,0,0,.2));background:#fff;cursor:pointer;color:#fff;font-size:13px;font-weight:900;display:grid;place-items:center;transition:.16s}
+.tk-check.on{background:var(--ok,#3a8a5f);border-color:var(--ok,#3a8a5f)}
+.tk-prio{flex:none;width:9px;height:9px;border-radius:50%;background:#bbb}
+.pr-baja{background:#9aa0a6}.pr-media{background:#d0aa63}.pr-alta{background:#e08a3c}.pr-urg{background:#d2493f}
+.tk-badge{flex:none;font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:999px}
+.ts-pend{background:rgba(110,110,115,.14);color:#5a5a5e}
+.ts-proc{background:rgba(208,170,99,.2);color:#7b5920}
+.ts-block{background:rgba(210,73,63,.14);color:#b23b3b}
+.ts-fin{background:rgba(58,138,95,.16);color:#2e7d52}
+.ts-arch{background:rgba(20,20,25,.08);color:#666}
+.tk-kanban .kcol{min-width:200px}
+.tk-card{background:var(--card-solid,#fff);border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:9px;box-shadow:0 4px 14px rgba(0,0,0,.04)}
+.tk-top{display:flex;align-items:center;gap:8px}
+.tk-top b{font-size:13.5px;color:#15151a}
+.tk-card small{display:block;margin-top:5px}
+.tk-status{width:100%;margin-top:9px;font:inherit;font-size:12px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.tk-card .kacts{margin-top:8px}
+
 /* Moneda del Flujo de valores + conversor. */
 .cur-pick{display:inline-flex;align-items:center;gap:8px}
 .cur-pick select,.conv-controls select,.conv-controls input{font:inherit;padding:8px 11px;
