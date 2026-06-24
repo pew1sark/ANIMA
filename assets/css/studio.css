@@ -996,6 +996,8 @@ a.nav-item{text-decoration:none;color:inherit}
 .proj-bar>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--gold,#d0aa63),#b8862f)}
 .proj-foot{display:flex;align-items:center;justify-content:space-between;font-size:12.5px}
 .proj-foot b{color:#15151a}
+.proj-litem{cursor:pointer;transition:background .14s ease;border-radius:10px;padding-left:8px;padding-right:8px;margin:0 -8px}
+.proj-litem:hover{background:rgba(208,170,99,.07)}
 .pd-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .pd-block{display:flex;flex-direction:column;gap:2px;margin-bottom:14px}
 .pd-k{font-family:ui-monospace,"DejaVu Sans Mono",monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
