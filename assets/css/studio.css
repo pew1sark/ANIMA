@@ -1019,6 +1019,25 @@ a.nav-item{text-decoration:none;color:inherit}
 }
 
 /* ===========================================================
+   VÍNCULOS — Clientes / Colaboradores.
+   =========================================================== */
+.seg-n{display:inline-block;background:rgba(0,0,0,.1);border-radius:999px;padding:0 6px;font-size:10.5px;margin-left:3px}
+.seg-b.on .seg-n{background:rgba(255,255,255,.25)}
+.vin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:13px}
+.vin-card{display:flex;align-items:center;gap:13px;text-align:left;border:1px solid var(--line);background:var(--card-solid,#fff);border-radius:15px;padding:14px;cursor:pointer;font:inherit;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.vin-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-soft);border-color:rgba(208,170,99,.45)}
+.vin-av{flex:none;color:#fff;font-weight:800}
+.vin-av.is-colab{background:linear-gradient(145deg,#3a6e8a,#2b5468)}
+.vin-main{min-width:0;flex:1}
+.vin-top{display:flex;align-items:center;gap:8px}
+.vin-top b{font-size:15px;letter-spacing:-.02em;color:#15151a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vin-main small{display:block}
+.vin-stat{font-size:11.5px;color:var(--muted);margin-top:3px}
+.vin-badge{flex:none;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.vb-client{background:rgba(208,170,99,.2);color:#7b5920}
+.vb-colab{background:rgba(58,110,138,.16);color:#37607e}
+
+/* ===========================================================
    RAÍZ — filtros + rentabilidad.
    =========================================================== */
 .fin-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
