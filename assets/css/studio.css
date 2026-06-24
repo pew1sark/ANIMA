@@ -906,59 +906,70 @@ a.nav-item{text-decoration:none;color:inherit}
    HUELLAS ERRANTES — galería contemplativa de portafolios.
    Blanca, silenciosa, mucho aire. Pixel solo como detalle.
    =========================================================== */
-/* Tarjetas sólidas (blanco) para separarse del fondo gris del Mundo. */
-.wt-head-card,.wt-stage,.wt-more-card{background:#fff;border:1px solid var(--line);box-shadow:0 14px 44px rgba(20,18,14,.06)}
-.wt-headsub{color:#55555a;font-size:13px;margin-top:6px;max-width:680px}
-.wt-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:66px 24px;text-align:center;background:#fff}
-.wt-pixel{font-size:26px;color:var(--gold,#d0aa63);image-rendering:pixelated;animation:wtBreath 4.5s ease-in-out infinite}
-@keyframes wtBreath{0%,100%{opacity:.35}50%{opacity:.95}}
+/* Prefijo he- (Huellas Errantes) para NO chocar con wt- (World Tree). */
+.he-head,.he-stage,.he-more,.he-empty{background:var(--card-solid,#fff);border:1px solid var(--line);box-shadow:0 14px 44px rgba(20,18,14,.06)}
+.he-headsub{color:#55555a;font-size:13px;margin-top:6px;max-width:680px}
+.he-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:66px 24px;text-align:center}
+.he-pixel{font-size:26px;color:var(--gold,#d0aa63);image-rendering:pixelated;animation:heBreath 4.5s ease-in-out infinite}
+@keyframes heBreath{0%,100%{opacity:.35}50%{opacity:.95}}
 /* Huella destacada — escritorio: dos columnas con imagen GRANDE; móvil: apilada. */
-.wt-stage{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:40px;align-items:center;padding:34px 36px}
-.wt-figure{position:relative;width:100%}
-.wt-figure-img{width:100%;height:min(66vh,660px);background-size:cover;background-position:center;
-  border-radius:16px;border:1px solid var(--line);box-shadow:0 34px 90px rgba(0,0,0,.16)}
-.wt-figure-mark{position:absolute;bottom:12px;right:14px;font-size:10px;color:#fff;opacity:.55;
+.he-stage{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:40px;align-items:center;padding:34px 36px}
+.he-figure{position:relative;width:100%}
+.he-figure-img{width:100%;height:min(64vh,640px);background-size:cover;background-position:center;background-color:#ece9e3;
+  border-radius:16px;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.16)}
+.he-mark{position:absolute;bottom:12px;right:14px;font-size:10px;color:#fff;opacity:.5;
   text-shadow:0 1px 6px rgba(0,0,0,.6);font-family:ui-monospace,monospace}
-.wt-meta{text-align:left}
-.wt-eyebrow{display:inline-block;font-family:ui-monospace,"DejaVu Sans Mono",monospace;font-size:9.5px;
-  letter-spacing:.26em;text-transform:uppercase;color:#7b5920;margin-bottom:10px}
-.wt-author{font-size:30px;letter-spacing:-.035em;margin:0;color:#0a0a0b;line-height:1.08}
-.wt-sub{font-size:14px;margin-top:9px;color:#3a3a3e}
-.wt-sub b{color:#0a0a0b;font-weight:760}
-.wt-sub .wt-dot{margin:0 7px;color:var(--gold,#d0aa63)}
-.wt-phrase{color:#454549;font-size:14.5px;line-height:1.65;margin:14px 0 0;max-width:46ch}
-.wt-phrase.wt-faint{color:var(--muted);font-style:italic}
-.wt-actions{display:flex;gap:11px;flex-wrap:wrap;margin-top:26px}
-.wt-actions-sub{display:flex;gap:10px;flex-wrap:wrap;margin-top:11px}
-.btn.wt-on{color:#0a0a0b;border-color:rgba(208,170,99,.6);background:rgba(208,170,99,.14)}
-.btn.gold.wt-sent{background:linear-gradient(135deg,#caa258,#a87b2c);opacity:.92}
-.wt-stage.wt-pulse{animation:wtPulse .7s ease}
-@keyframes wtPulse{0%{box-shadow:0 0 0 0 rgba(208,170,99,.45)}100%{box-shadow:0 0 0 34px rgba(208,170,99,0)}}
+.he-meta{text-align:left}
+.he-eyebrow{display:inline-block;font-family:ui-monospace,"DejaVu Sans Mono",monospace;font-size:9.5px;
+  letter-spacing:.26em;text-transform:uppercase;color:#7b5920;margin-bottom:11px}
+.he-title{font-size:30px;letter-spacing:-.035em;margin:0;color:#15151a;line-height:1.08}
+.he-tech{font-size:14px;margin-top:9px;color:#4a4a50}
+.he-tech b{color:#15151a;font-weight:760}
+.he-tech .he-dot{margin:0 7px;color:var(--gold,#d0aa63)}
+.he-desc{color:#3f3f45;font-size:14.5px;line-height:1.65;margin:14px 0 0;max-width:48ch}
+.he-desc.he-faint{color:#86868c;font-style:italic}
+/* Tarjeta compacta del Alma (clicable → perfil). */
+.he-alma{display:flex;align-items:center;gap:12px;width:100%;max-width:380px;margin:22px 0 0;
+  border:1px solid var(--line);border-radius:14px;background:#faf9f6;padding:11px 13px;cursor:pointer;
+  text-align:left;font:inherit;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+.he-alma:hover{border-color:rgba(208,170,99,.55);box-shadow:0 12px 30px rgba(0,0,0,.07);transform:translateY(-2px)}
+.he-av{width:42px;height:42px;border-radius:12px;background-size:cover;background-position:center;flex:none;border:1px solid var(--line)}
+.he-av-i{display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px}
+.he-alma-txt{display:flex;flex-direction:column;min-width:0;flex:1}
+.he-alma-txt b{font-size:14.5px;color:#15151a;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.he-alma-txt small{font-size:12px;color:#6e6e73;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.he-alma-go{font-size:12px;font-weight:800;color:#7b5920;flex:none}
+.he-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.btn.he-on{color:#15151a;border-color:rgba(208,170,99,.6);background:rgba(208,170,99,.14)}
+.btn.gold.he-sent{background:linear-gradient(135deg,#caa258,#a87b2c);opacity:.92}
+.he-stage.he-pulse{animation:hePulse .7s ease}
+@keyframes hePulse{0%{box-shadow:0 0 0 0 rgba(208,170,99,.45)}100%{box-shadow:0 0 0 32px rgba(208,170,99,0)}}
 @media(max-width:880px){
-  .wt-stage{grid-template-columns:1fr;gap:22px;padding:22px;text-align:center}
-  .wt-figure-img{height:auto;aspect-ratio:4/3}
-  .wt-meta{text-align:center}
-  .wt-author{font-size:25px}
-  .wt-phrase{margin-left:auto;margin-right:auto}
-  .wt-actions,.wt-actions-sub{justify-content:center}
+  .he-stage{grid-template-columns:1fr;gap:22px;padding:22px;text-align:center}
+  .he-figure-img{height:auto;aspect-ratio:4/3}
+  .he-meta{text-align:center}
+  .he-title{font-size:25px}
+  .he-desc{margin-left:auto;margin-right:auto}
+  .he-alma{margin-left:auto;margin-right:auto}
+  .he-actions{justify-content:center}
 }
 /* "Otras Huellas" — rejilla para explorar más obras del mundo. */
-.wt-more-card{padding:24px 26px}
-.wt-more-sub{color:#55555a;font-size:12.5px;margin:-4px 0 16px}
-.wt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.wt-cell{position:relative;aspect-ratio:4/3;border:1px solid var(--line);border-radius:14px;overflow:hidden;
-  background-size:cover;background-position:center;cursor:pointer;padding:0;background-color:#eceae4;
+.he-more{padding:24px 26px}
+.he-more-sub{color:#55555a;font-size:12.5px;margin:-4px 0 16px}
+.he-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.he-cell{position:relative;aspect-ratio:4/3;border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  background-size:cover;background-position:center;cursor:pointer;padding:0;background-color:#ece9e3;
   transition:transform .2s ease,box-shadow .2s ease}
-.wt-cell:hover{transform:translateY(-4px);box-shadow:0 20px 56px rgba(0,0,0,.18)}
-.wt-cell-info{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:1px;
+.he-cell:hover{transform:translateY(-4px);box-shadow:0 20px 56px rgba(0,0,0,.18)}
+.he-cell-info{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:1px;
   padding:11px 13px;text-align:left;color:#fff;background:linear-gradient(180deg,transparent,rgba(0,0,0,.82));
   opacity:0;transition:opacity .2s ease}
-.wt-cell:hover .wt-cell-info{opacity:1}
-.wt-cell-info b{font-size:13px;letter-spacing:-.01em;text-shadow:0 1px 4px rgba(0,0,0,.5)}
-.wt-cell-info small{font-size:10.5px;opacity:.92}
-@media(hover:none){ .wt-cell-info{opacity:1} }
-@media(max-width:980px){ .wt-grid{grid-template-columns:repeat(2,1fr)} }
-@media(max-width:560px){ .wt-grid{grid-template-columns:1fr} }
+.he-cell:hover .he-cell-info{opacity:1}
+.he-cell-info b{font-size:13px;letter-spacing:-.01em;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.he-cell-info small{font-size:10.5px;opacity:.92}
+@media(hover:none){ .he-cell-info{opacity:1} }
+@media(max-width:980px){ .he-grid{grid-template-columns:repeat(2,1fr)} }
+@media(max-width:560px){ .he-grid{grid-template-columns:1fr} }
 
 /* ===========================================================
    TRANSICIONES SUAVES — "ANIMA cerró los ojos un instante y volvió a abrirlos"
