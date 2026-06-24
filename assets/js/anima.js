@@ -1225,22 +1225,59 @@ async function setProjectStatus(i,st){
 }
 
 /* --- Finanzas --- */
+// Mes (AAAA-MM) de una entrada: usa la fecha, o el periodo si está bien formado.
+function finMonthKey(x){ if(x.on&&/^\d{4}-\d{2}/.test(x.on)) return x.on.slice(0,7); if(x.d&&/^\d{4}-\d{2}/.test(x.d)) return x.d.slice(0,7); return ""; }
+function finFmtMonth(k){ try{ return new Date(k+"-01T00:00").toLocaleDateString("es-CL",{month:"short",year:"numeric"}); }catch(e){ return k; } }
 function vFinanzas(a){
-  const inc=sum(a.finance.income), exp=sum(a.finance.expense);
   const cfg=getCfg(a); const cur=cfg.currency||"CLP"; const curName=(CURRENCY_CATALOG[cur]||{}).name||cur;
+  const allInc=a.finance.income, allExp=a.finance.expense, allEntries=allInc.concat(allExp);
+  // Filtros
+  const fp=state.finPeriod||"all", fc=state.finCat||"all";
+  const months=[...new Set(allEntries.map(finMonthKey).filter(Boolean))].sort().reverse();
+  const cats=[...new Set(allEntries.map(x=>x.cat||"").filter(Boolean))].sort();
+  const match=x=>(fp==="all"||finMonthKey(x)===fp)&&(fc==="all"||(x.cat||"")===fc);
+  const inc=allInc.filter(match), exp=allExp.filter(match);
+  const sumI=sum(inc), sumE=sum(exp), neta=sumI-sumE;
+  const margen=sumI>0?Math.round(neta/sumI*100):0;
+  const filtered=fp!=="all"||fc!=="all";
+  // Tendencia mensual (respeta filtro de categoría, ignora el de periodo) — hasta 6 meses.
+  const trendMonths=months.slice(0,6).reverse();
+  const byMonth=k=>({i:sum(allInc.filter(x=>finMonthKey(x)===k&&(fc==="all"||(x.cat||"")===fc))),e:sum(allExp.filter(x=>finMonthKey(x)===k&&(fc==="all"||(x.cat||"")===fc)))});
+  const trendData=trendMonths.map(k=>({k,...byMonth(k)}));
+  const tMax=Math.max(1,...trendData.map(d=>Math.max(d.i,d.e)));
+  const trend=trendData.length?`<div class="fin-trend">${trendData.map(d=>`<div class="ft-col"><div class="ft-bars"><span class="ft-i" style="height:${Math.round(d.i/tMax*100)}%" title="Ingresos ${money(d.i)}"></span><span class="ft-e" style="height:${Math.round(d.e/tMax*100)}%" title="Egresos ${money(d.e)}"></span></div><small>${esc(finFmtMonth(d.k).replace(".",""))}</small></div>`).join("")}</div>`:`<p class="muted" style="font-size:12.5px">Agrega fechas a tus movimientos para ver la tendencia mensual.</p>`;
+  // Desglose de egresos por categoría (sobre el filtro actual).
+  const catMap={}; exp.forEach(x=>{ const c=x.cat||"Sin categoría"; catMap[c]=(catMap[c]||0)+(+x.a||0); });
+  const catRows=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const catBreak=catRows.length?catRows.map(([c,v])=>`<div class="fin-cat"><div class="fin-cat-h"><span>${esc(c)}</span><b>${money(v)}</b></div><div class="proj-bar"><span style="width:${sumE>0?Math.round(v/sumE*100):0}%;background:linear-gradient(90deg,#e08a3c,#d2493f)"></span></div></div>`).join(""):`<p class="muted" style="font-size:12.5px">Sin egresos en este filtro.</p>`;
+  const list=(arr,kind,cls,sign)=>arr.map(x=>{ const i=kind==="ingreso"?allInc.indexOf(x):allExp.indexOf(x);
+      return `<div class="row"><div class="grow"><b>${esc(x.t)}</b><br><small>${[x.cat,finMonthKey(x)?finFmtMonth(finMonthKey(x)):x.d].filter(Boolean).map(esc).join(" · ")||"—"}</small></div><span class="amt ${cls}">${sign}${money(x.a)}</span>${acts(kind,i)}</div>`; }).join("");
   return `<div class="grid">
     <div class="card s12 cur-bar"><div class="section-title"><h2 style="font-size:16px">Flujo de valores</h2><div class="spacer"></div>
       <label class="cur-pick"><span class="muted" style="font-size:12px">Moneda</span>
         <select data-cursel id="almaCur">${curOptions(cur)}</select></label></div>
       <div class="muted" style="font-size:12px;margin-top:4px">Tus montos se muestran en <b>${esc(cur)} · ${esc(curName)}</b>. Cámbiala cuando quieras; abajo puedes ver la conversión a otra moneda.</div>
     </div>
-    <div class="card s4"><div class="stat"><span class="num" style="color:var(--ok)">${money(inc)}</span><span class="lbl">Ingresos totales</span></div></div>
-    <div class="card s4"><div class="stat"><span class="num" style="color:var(--danger)">${money(exp)}</span><span class="lbl">Egresos totales</span></div></div>
-    <div class="card s4"><div class="stat"><span class="num">${money(inc-exp)}</span><span class="lbl">Ganancia neta</span></div></div>
+    <div class="card s12 fin-filters"><span class="fin-flabel">Filtrar</span>
+      <select data-finperiod><option value="all" ${fp==="all"?"selected":""}>Todo el tiempo</option>${months.map(m=>`<option value="${m}" ${fp===m?"selected":""}>${esc(finFmtMonth(m))}</option>`).join("")}</select>
+      <select data-fincat><option value="all" ${fc==="all"?"selected":""}>Todas las categorías</option>${cats.map(c=>`<option value="${esc(c)}" ${fc===c?"selected":""}>${esc(c)}</option>`).join("")}</select>
+      ${filtered?`<button class="btn ghost sm" data-finclear>✕ Limpiar</button>`:""}
+      <div class="spacer"></div><span class="muted" style="font-size:12px">${inc.length+exp.length} movimiento${inc.length+exp.length===1?"":"s"}</span>
+    </div>
+    <div class="card s3"><div class="stat"><span class="num" style="color:var(--ok)">${money(sumI)}</span><span class="lbl">Ingresos${filtered?" (filtro)":""}</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num" style="color:var(--danger)">${money(sumE)}</span><span class="lbl">Egresos${filtered?" (filtro)":""}</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num">${money(neta)}</span><span class="lbl">Ganancia neta</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num" style="color:${margen>=0?'var(--ok)':'var(--danger)'}">${margen}%</span><span class="lbl">Margen / rentabilidad</span></div></div>
+    <div class="card s7"><div class="section-title"><h2 style="font-size:15px">Rentabilidad</h2><div class="spacer"></div><span class="pill ${margen>=40?'gold':''}">${margen>=40?"Saludable":margen>=15?"Estable":margen>=0?"Ajustado":"En rojo"}</span></div>
+      <div class="proj-bar" style="height:10px;margin:4px 0 12px"><span style="width:${Math.max(0,Math.min(100,margen))}%;background:linear-gradient(90deg,#3a8a5f,#2e7d52)"></span></div>
+      <h3 style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px">Tendencia mensual</h3>
+      ${trend}
+    </div>
+    <div class="card s5"><div class="section-title"><h2 style="font-size:15px">Egresos por categoría</h2></div>${catBreak}</div>
     <div class="card s6"><div class="section-title"><h2>Ingresos</h2><div class="spacer"></div><button class="btn sm" data-add="ingreso">+ Ingreso</button></div>
-      ${a.finance.income.map((x,i)=>`<div class="row"><div class="grow"><b>${esc(x.t)}</b><br><small>${esc(x.d)}</small></div><span class="amt in">+${money(x.a)}</span>${acts("ingreso",i)}</div>`).join("")||`<p class="muted">Sin ingresos.</p>`}</div>
+      ${list(inc,"ingreso","in","+")||`<p class="muted">${filtered?"Sin ingresos en este filtro.":"Sin ingresos."}</p>`}</div>
     <div class="card s6"><div class="section-title"><h2>Egresos</h2><div class="spacer"></div><button class="btn sm secondary" data-add="egreso">+ Egreso</button></div>
-      ${a.finance.expense.map((x,i)=>`<div class="row"><div class="grow"><b>${esc(x.t)}</b><br><small>${esc(x.d)}</small></div><span class="amt out">−${money(x.a)}</span>${acts("egreso",i)}</div>`).join("")||`<p class="muted">Sin egresos.</p>`}</div>
+      ${list(exp,"egreso","out","−")||`<p class="muted">${filtered?"Sin egresos en este filtro.":"Sin egresos."}</p>`}</div>
     <div class="card s12 conv-card"><div class="section-title"><h2 style="font-size:15px">Conversor de moneda</h2><div class="spacer"></div><span class="pill">Solo lectura</span></div>
       <div class="conv-controls">
         <label>Convertir a <select id="convCur">${curOptions(cur==="USD"?"EUR":"USD")}</select></label>
@@ -4496,6 +4533,7 @@ document.addEventListener("click", e=>{
   const rit=e.target.closest("[data-ritual]"); if(rit){ doRitual(rit.dataset.ritual); return; }
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
   const pv=e.target.closest("[data-projview]"); if(pv){ state.projView=pv.dataset.projview; renderView(); return; }
+  if(e.target.closest("[data-finclear]")){ state.finPeriod="all"; state.finCat="all"; renderView(); return; }
   const po=e.target.closest("[data-projopen]"); if(po && !e.target.closest("select,option")){ state.projOpen=+po.dataset.projopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
   if(e.target.closest("[data-projback]")){ state.projOpen=null; renderView(); return; }
   const tv=e.target.closest("[data-tareaview]"); if(tv){ state.tareaView=tv.dataset.tareaview; renderView(); return; }
@@ -4599,6 +4637,8 @@ document.addEventListener("change", e=>{
   if(e.target.id==="convCur"){ updateConvOut(); return; }
   const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); return; }
   const tks=e.target.closest(".tk-status"); if(tks){ setTaskStatus(+tks.dataset.tstatus, tks.value); return; }
+  const fpr=e.target.closest("[data-finperiod]"); if(fpr){ state.finPeriod=fpr.value; renderView(); return; }
+  const fca=e.target.closest("[data-fincat]"); if(fca){ state.finCat=fca.value; renderView(); return; }
   const qf=e.target.closest("#q_fmt"); if(qf){ readQuoteForm(); renderView(); return; }
   if(e.target.closest(".cot-inspector")){ qLive(); return; }
   const fu=e.target.closest("input[type=file][data-imgfield]"); if(fu){ uploadImgField(fu); return; }

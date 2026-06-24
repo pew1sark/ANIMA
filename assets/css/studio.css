@@ -1019,6 +1019,23 @@ a.nav-item{text-decoration:none;color:inherit}
 }
 
 /* ===========================================================
+   RAÍZ — filtros + rentabilidad.
+   =========================================================== */
+.fin-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fin-flabel{font-family:ui-monospace,"DejaVu Sans Mono",monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.fin-filters select{font:inherit;font-size:13px;padding:8px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--text)}
+.fin-trend{display:flex;align-items:flex-end;gap:10px;height:120px}
+.ft-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%}
+.ft-bars{flex:1;display:flex;align-items:flex-end;justify-content:center;gap:4px;width:100%}
+.ft-bars span{width:38%;max-width:18px;border-radius:5px 5px 0 0;min-height:2px;transition:height .3s ease}
+.ft-i{background:linear-gradient(180deg,#4caa78,#2e7d52)}
+.ft-e{background:linear-gradient(180deg,#e08a3c,#d2493f)}
+.ft-col small{font-size:10px;color:var(--muted);white-space:nowrap}
+.fin-cat{margin-bottom:11px}
+.fin-cat-h{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.fin-cat-h b{color:#15151a}
+
+/* ===========================================================
    TAREAS — Lista / Kanban.
    =========================================================== */
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--card-solid,#fff)}
