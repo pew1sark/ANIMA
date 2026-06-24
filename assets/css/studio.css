@@ -894,6 +894,28 @@ a.nav-item{text-decoration:none;color:inherit}
 .tl-list .row:first-child{border-top:0}
 .taller-intro h2{font-size:20px;letter-spacing:-.02em}
 
+/* Resumen del Taller — dashboard (saludo + "Hoy tienes" + tarjetas). */
+.tl-hero{background:linear-gradient(135deg,rgba(208,170,99,.12),rgba(255,255,255,.55))}
+.tl-greet{font-size:clamp(22px,3.4vw,30px);letter-spacing:-.035em;margin:0;color:#15151a}
+.tl-today{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:14px}
+.tl-today-lbl{font-size:12px;color:var(--muted);font-weight:700}
+.tl-chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#3f3f45;
+  border:1px solid var(--line);background:var(--card-solid,#fff);border-radius:999px;padding:6px 13px}
+.tl-chip b{color:#15151a;font-weight:850;font-size:14px}
+.tl-chip-gain b{color:var(--ok)}
+.tl-card{display:flex;flex-direction:column}
+.tl-stat-3{gap:14px}
+.tl-stat-3 .num{font-size:19px}
+.tl-mini{margin-top:auto;padding-top:12px;border-top:1px solid var(--line-2,rgba(0,0,0,.05));display:flex;flex-direction:column;gap:1px}
+.tl-mini-k{font-family:ui-monospace,"DejaVu Sans Mono",monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.tl-mini b{font-size:14px;letter-spacing:-.01em;color:#15151a}
+.tl-chart{margin-top:10px}
+.tl-act{display:flex;flex-direction:column}
+.tl-act-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-top:1px solid var(--line-2,rgba(0,0,0,.05))}
+.tl-act-row:first-child{border-top:0}
+.tl-act-ico{width:30px;height:30px;flex:none;display:grid;place-items:center;border-radius:9px;background:rgba(208,170,99,.14);color:#7b5920;font-size:14px}
+.tl-act-row b{font-size:13.5px;color:#15151a}
+
 /* Moneda del Flujo de valores + conversor. */
 .cur-pick{display:inline-flex;align-items:center;gap:8px}
 .cur-pick select,.conv-controls select,.conv-controls input{font:inherit;padding:8px 11px;
