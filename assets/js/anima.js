@@ -117,9 +117,27 @@ function closeEsencia(){ document.getElementById("esenciaModal").classList.remov
 const cfgKey = a => "anima_cfg_"+(a.almaId||a.id);
 function getCfg(a){
   const def={ modules:{trayectoria:true,portafolio:true,proyectos:true,finanzas:true,clientes:true,cotizador:true,agenda:true,memoria:true,biblioteca:true},
-              cards:{constelacion:true,kpis:true,camino:true,graficos:true,hoy:true,memoria:true}, mapSize:"md" };
-  try{ const c=JSON.parse(localStorage.getItem(cfgKey(a))); if(c){ return { modules:{...def.modules,...c.modules}, cards:{...def.cards,...c.cards}, mapSize:c.mapSize||def.mapSize }; } }catch(e){}
+              cards:{constelacion:true,kpis:true,camino:true,graficos:true,hoy:true,memoria:true}, mapSize:"md", currency:"CLP" };
+  try{ const c=JSON.parse(localStorage.getItem(cfgKey(a))); if(c){ return { modules:{...def.modules,...c.modules}, cards:{...def.cards,...c.cards}, mapSize:c.mapSize||def.mapSize, currency:c.currency||def.currency }; } }catch(e){}
   return def;
+}
+/* El Alma elige su moneda del Flujo de valores. Se guarda en su config (local
+   + nube) y money() pasa a formatear con esa moneda en toda ANIMA. */
+function setAlmaCurrency(code){ const a=me(); const c=getCfg(a); c.currency=code; setCfg(a,c); setAnimaCurrency(code); renderAll(); }
+function curOptions(sel){ return Object.entries(CURRENCY_CATALOG).map(([k,c])=>`<option value="${k}" ${k===sel?'selected':''}>${k} · ${esc(c.name)}</option>`).join(""); }
+/* Conversor (solo lectura): muestra los totales en otra moneda a la tasa que el
+   Alma indique. No altera los montos guardados. */
+function moneyIn(code,n){ const c=CURRENCY_CATALOG[code]||animaCur(); return c.sym+Number(n||0).toLocaleString(c.loc,{minimumFractionDigits:c.dec,maximumFractionDigits:c.dec}); }
+function updateConvOut(){
+  const curEl=document.getElementById("convCur"), rEl=document.getElementById("convRate"), out=document.getElementById("convOut");
+  if(!out||!curEl) return;
+  const a=me(), inc=sum(a.finance.income), exp=sum(a.finance.expense);
+  const rate=parseFloat(String((rEl&&rEl.value)||"").replace(",",".")), code=curEl.value;
+  if(!rate||rate<=0){ out.innerHTML='<span class="muted" style="font-size:12.5px">Escribe la tasa (1 '+ANIMA_CUR+' = ? '+esc(code)+') para ver tus totales convertidos.</span>'; return; }
+  out.innerHTML='<div class="tl-stat" style="margin:8px 0 0">'+
+    '<div><b class="num" style="color:var(--ok)">'+moneyIn(code,inc*rate)+'</b><span class="lbl">Ingresos</span></div>'+
+    '<div><b class="num" style="color:var(--danger)">'+moneyIn(code,exp*rate)+'</b><span class="lbl">Egresos</span></div>'+
+    '<div><b class="num">'+moneyIn(code,(inc-exp)*rate)+'</b><span class="lbl">Ganancia</span></div></div>';
 }
 function setCfg(a,c){ localStorage.setItem(cfgKey(a), JSON.stringify(c)); if(a.live){ Cloud.savePrefs(a.almaId,c).catch(()=>{}); } }
 function toggleCfg(path){ const a=me(); const c=getCfg(a); const [g,k]=path.split(":"); c[g][k]=(c[g][k]===false); setCfg(a,c); renderAll(); }
@@ -597,6 +615,7 @@ function renderView(){
   }
   document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + bodyHTML;
   if(state.view==="mundo" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
+  if(state.view==="finanzas"){ requestAnimationFrame(updateConvOut); }
   if(state.view==="consola"){ requestAnimationFrame(loadWorldMonitor); requestAnimationFrame(loadRewardPanel); }
   // Desliza la pestaña activa al centro (sensación suave en móvil).
   requestAnimationFrame(()=>{ const on=document.querySelector(".morada-tab.on"); if(on && on.scrollIntoView){ try{ on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){} } });
@@ -1054,7 +1073,13 @@ async function setProjectStatus(i,st){
 /* --- Finanzas --- */
 function vFinanzas(a){
   const inc=sum(a.finance.income), exp=sum(a.finance.expense);
+  const cfg=getCfg(a); const cur=cfg.currency||"CLP"; const curName=(CURRENCY_CATALOG[cur]||{}).name||cur;
   return `<div class="grid">
+    <div class="card s12 cur-bar"><div class="section-title"><h2 style="font-size:16px">Flujo de valores</h2><div class="spacer"></div>
+      <label class="cur-pick"><span class="muted" style="font-size:12px">Moneda</span>
+        <select data-cursel id="almaCur">${curOptions(cur)}</select></label></div>
+      <div class="muted" style="font-size:12px;margin-top:4px">Tus montos se muestran en <b>${esc(cur)} · ${esc(curName)}</b>. Cámbiala cuando quieras; abajo puedes ver la conversión a otra moneda.</div>
+    </div>
     <div class="card s4"><div class="stat"><span class="num" style="color:var(--ok)">${money(inc)}</span><span class="lbl">Ingresos totales</span></div></div>
     <div class="card s4"><div class="stat"><span class="num" style="color:var(--danger)">${money(exp)}</span><span class="lbl">Egresos totales</span></div></div>
     <div class="card s4"><div class="stat"><span class="num">${money(inc-exp)}</span><span class="lbl">Ganancia neta</span></div></div>
@@ -1062,6 +1087,14 @@ function vFinanzas(a){
       ${a.finance.income.map((x,i)=>`<div class="row"><div class="grow"><b>${esc(x.t)}</b><br><small>${esc(x.d)}</small></div><span class="amt in">+${money(x.a)}</span>${acts("ingreso",i)}</div>`).join("")||`<p class="muted">Sin ingresos.</p>`}</div>
     <div class="card s6"><div class="section-title"><h2>Egresos</h2><div class="spacer"></div><button class="btn sm secondary" data-add="egreso">+ Egreso</button></div>
       ${a.finance.expense.map((x,i)=>`<div class="row"><div class="grow"><b>${esc(x.t)}</b><br><small>${esc(x.d)}</small></div><span class="amt out">−${money(x.a)}</span>${acts("egreso",i)}</div>`).join("")||`<p class="muted">Sin egresos.</p>`}</div>
+    <div class="card s12 conv-card"><div class="section-title"><h2 style="font-size:15px">Conversor de moneda</h2><div class="spacer"></div><span class="pill">Solo lectura</span></div>
+      <div class="conv-controls">
+        <label>Convertir a <select id="convCur">${curOptions(cur==="USD"?"EUR":"USD")}</select></label>
+        <label>Tasa · 1 ${esc(cur)} = <input id="convRate" type="text" inputmode="decimal" placeholder="0.00" style="width:110px"></label>
+      </div>
+      <div id="convOut"></div>
+      <div class="muted" style="font-size:11.5px;margin-top:8px">La conversión es solo una vista. Tus montos guardados no cambian.</div>
+    </div>
     <div class="card s12 muted" style="font-size:12.5px">🔒 Tu Raíz es privada. Mi Alma ≠ Mi Clan. Nada se comparte automáticamente.</div>
   </div>`;
 }
@@ -3995,7 +4028,7 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
 /* ===========================================================
    RENDER + EVENTOS
    =========================================================== */
-function renderAll(){ renderNav(); renderWho(); renderTop(); renderView(); renderWhisperBell(); if(typeof hideBootLoader==="function") hideBootLoader(); }
+function renderAll(){ try{ setAnimaCurrency(getCfg(me()).currency); }catch(e){} renderNav(); renderWho(); renderTop(); renderView(); renderWhisperBell(); if(typeof hideBootLoader==="function") hideBootLoader(); }
 function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad"||view==="mundo"){ loadPosts(); loadCommunityExtras(); loadNotices(); loadChangelog(); } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
@@ -4214,6 +4247,8 @@ document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target.id==="commentInput"){ const b=document.getElementById("commentSend"); if(b) sendComment(b.dataset.post); }
 });
 document.addEventListener("change", e=>{
+  const cur=e.target.closest("[data-cursel]"); if(cur){ setAlmaCurrency(cur.value); return; }
+  if(e.target.id==="convCur"){ updateConvOut(); return; }
   const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); return; }
   const qf=e.target.closest("#q_fmt"); if(qf){ readQuoteForm(); renderView(); return; }
   const fu=e.target.closest("input[type=file][data-imgfield]"); if(fu){ uploadImgField(fu); return; }
@@ -4221,6 +4256,7 @@ document.addEventListener("change", e=>{
   const srs=e.target.closest("[data-santroleset]"); if(srs){ santSetRole(srs.dataset.santroleset, srs.value); return; }
 });
 document.addEventListener("input", e=>{
+  if(e.target.id==="convRate"){ updateConvOut(); return; }
   // Búsqueda en vivo del Panel de Almas / picker (sin re-render, conserva foco).
   if(e.target.id==="clanSearch" || e.target.id==="clanAddSearch"){
     const q=(e.target.value||"").toLowerCase();
