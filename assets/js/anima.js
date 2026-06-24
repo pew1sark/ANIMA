@@ -1761,28 +1761,28 @@ function wtPickOne(){
   const cap=Math.max(1, Math.min(6, wtDistinctAlmas(pool)-1));
   state.wtRecent=[pick.alma.id, ...recent.filter(id=>id!==pick.alma.id)].slice(0,cap);
 }
-/* Elige 6–9 Huellas, una por Alma cuando se pueda (diversidad de disciplinas/países). */
+/* Rejilla "Otras Huellas": 6–9 obras (sin la destacada), una por Alma cuando
+   se pueda, para explorar diversidad de disciplinas/países. */
 function wtPickConstel(){
-  const pool=state.wtPool||[]; const target=Math.max(6, Math.min(9, pool.length||0));
+  const curId = state.wtCurrent && state.wtCurrent.id;
+  const pool=(state.wtPool||[]).filter(t=>t.id!==curId);
+  const target=Math.max(6, Math.min(9, pool.length||0));
   const shuffled=wtShuffle(pool); const byAlma=new Set(); const out=[];
   for(const t of shuffled){ if(out.length>=target) break; if(byAlma.has(t.alma.id)) continue; byAlma.add(t.alma.id); out.push(t); }
   if(out.length<target){ for(const t of shuffled){ if(out.length>=target) break; if(out.indexOf(t)<0) out.push(t); } }
   state.wtConstel=out;
 }
 function vWanderingTraces(a){
-  const mode = state.wtMode==="constelacion" ? "constelacion" : "huella";
   const head = `<div class="card s12 wt-head-card">
-      <div class="section-title"><h2 style="font-size:18px">Huellas Errantes</h2><div class="spacer"></div>
-        <div class="wt-modes-pick">
-          <button class="wt-mp ${mode!=='constelacion'?'on':''}" data-wtmode="huella">Huella</button>
-          <button class="wt-mp ${mode==='constelacion'?'on':''}" data-wtmode="constelacion">Constelación</button>
-        </div></div>
-      <div class="muted" style="font-size:12.5px">Señales creativas del mundo, tomadas al azar de los portafolios públicos. No es un feed: es una forma de descubrir.</div>
+      <div class="section-title"><h2 style="font-size:18px">Huellas Errantes</h2></div>
+      <div class="wt-headsub">Señales creativas del mundo, tomadas al azar de los portafolios públicos. No es un feed: es una forma de descubrir.</div>
     </div>`;
   const pool=state.wtPool;
   if(pool==null) return `<div class="grid">${head}<div class="card s12 wt-empty"><div class="wt-pixel">✦</div><p class="muted">Buscando señales en el mundo…</p></div></div>`;
   if(!pool.length) return `<div class="grid">${head}<div class="card s12 wt-empty"><div class="wt-pixel">✦</div><p class="muted">Aún no hay Huellas visibles en el Mundo.<br>Cuando un Alma haga público su portafolio, sus obras se volverán señales aquí.</p></div></div>`;
-  return `<div class="grid">${head}${mode==="constelacion"?wtConstelHTML():wtHuellaHTML(a)}</div>`;
+  // Todo en una sola página: la Huella destacada arriba y, debajo, una rejilla
+  // para buscar otras obras del mundo.
+  return `<div class="grid">${head}${wtHuellaHTML(a)}${wtGridHTML()}</div>`;
 }
 function wtHuellaHTML(a){
   const t=state.wtCurrent; if(!t){ wtPickOne(); }
@@ -1813,14 +1813,16 @@ function wtHuellaHTML(a){
       </div>
     </div>`;
 }
-function wtConstelHTML(){
-  const items=state.wtConstel||[]; if(!items.length){ wtPickConstel(); }
+function wtGridHTML(){
+  if(!(state.wtConstel||[]).length) wtPickConstel();
   const list=state.wtConstel||[];
-  return `<div class="card s12 wt-constel-card">
-      <div class="wt-constel" data-count="${list.length}">${list.map(t=>{ const ti=(t.title||"").trim()||"Obra sin título"; const tk=(t.kind||"").trim();
+  if(!list.length) return "";
+  return `<div class="card s12 wt-more-card">
+      <div class="section-title"><h2 style="font-size:15px">Otras Huellas</h2><div class="spacer"></div><button class="btn secondary sm" data-wtmore>↻ Renovar</button></div>
+      <div class="wt-more-sub">Otras obras del mundo. Toca una para contemplarla.</div>
+      <div class="wt-grid" data-count="${list.length}">${list.map(t=>{ const ti=(t.title||"").trim()||"Obra sin título"; const tk=(t.kind||"").trim();
         return `<button class="wt-cell" data-wtopen="${esc(t.id)}" style="background-image:url('${esc(t.img)}')" title="${esc(ti)}"><span class="wt-cell-info"><b>${esc(ti)}</b>${tk?`<small>${esc(tk)}</small>`:""}</span></button>`;
       }).join("")}</div>
-      <div style="text-align:center;margin-top:18px"><button class="btn sm secondary" data-wtnext>Otra Constelación</button></div>
     </div>`;
 }
 async function wtSaveHuella(id){
@@ -1848,6 +1850,7 @@ function wtSendChispa(id){
   const card=document.querySelector('[data-wtcard]'); if(card){ card.classList.add("wt-pulse"); setTimeout(()=>card.classList.remove("wt-pulse"),700); }
   document.querySelectorAll('[data-wtchispa]').forEach(b=>{ if(b.dataset.wtchispa===id){ b.classList.add("wt-sent"); b.innerHTML="✦ Chispa enviada"; } });
 }
+function wtScrollTop(){ try{ const el=document.querySelector(".wt-stage"); if(el&&el.scrollIntoView){ el.scrollIntoView({behavior:"smooth",block:"start"}); } else { window.scrollTo({top:0,behavior:"smooth"}); } }catch(e){} }
 /* La Voz del Mundo — avisos fijados por el Creador (desplegables, con link opcional). */
 function voiceOfWorldCard(){
   const creator=isCreator && !state.viewAs;
@@ -4287,9 +4290,9 @@ document.addEventListener("click", e=>{
   const mz=e.target.closest("[data-mapsize]"); if(mz){ setMapSize(mz.dataset.mapsize); return; }
   const rit=e.target.closest("[data-ritual]"); if(rit){ doRitual(rit.dataset.ritual); return; }
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
-  const wtm=e.target.closest("[data-wtmode]"); if(wtm){ state.wtMode=wtm.dataset.wtmode; if(state.wtMode==="constelacion") wtPickConstel(); else if(!state.wtCurrent) wtPickOne(); renderView(); return; }
-  if(e.target.closest("[data-wtnext]")){ if(state.wtMode==="constelacion") wtPickConstel(); else wtPickOne(); renderView(); return; }
-  const wto=e.target.closest("[data-wtopen]"); if(wto){ const t=(state.wtPool||[]).find(x=>x.id===wto.dataset.wtopen); if(t){ state.wtCurrent=t; state.wtMode="huella"; renderView(); } return; }
+  if(e.target.closest("[data-wtnext]")){ wtPickOne(); wtPickConstel(); renderView(); wtScrollTop(); return; }
+  if(e.target.closest("[data-wtmore]")){ wtPickConstel(); renderView(); return; }
+  const wto=e.target.closest("[data-wtopen]"); if(wto){ const t=(state.wtPool||[]).find(x=>x.id===wto.dataset.wtopen); if(t){ state.wtCurrent=t; wtPickConstel(); renderView(); wtScrollTop(); } return; }
   const wsv=e.target.closest("[data-wtsave]"); if(wsv){ wtSaveHuella(wsv.dataset.wtsave); return; }
   const wch=e.target.closest("[data-wtchispa]"); if(wch){ wtSendChispa(wch.dataset.wtchispa); return; }
   if(e.target.closest("[data-pfedit]")){ portfolioEdit(); return; }
