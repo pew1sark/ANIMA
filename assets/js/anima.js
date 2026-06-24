@@ -1773,42 +1773,50 @@ function wtPickConstel(){
   state.wtConstel=out;
 }
 function vWanderingTraces(a){
-  const head = `<div class="card s12 wt-head-card">
+  const head = `<div class="card s12 he-head">
       <div class="section-title"><h2 style="font-size:18px">Huellas Errantes</h2></div>
-      <div class="wt-headsub">Señales creativas del mundo, tomadas al azar de los portafolios públicos. No es un feed: es una forma de descubrir.</div>
+      <div class="he-headsub">Señales creativas del mundo, tomadas al azar de los portafolios públicos. No es un feed: es una forma de descubrir.</div>
     </div>`;
   const pool=state.wtPool;
-  if(pool==null) return `<div class="grid">${head}<div class="card s12 wt-empty"><div class="wt-pixel">✦</div><p class="muted">Buscando señales en el mundo…</p></div></div>`;
-  if(!pool.length) return `<div class="grid">${head}<div class="card s12 wt-empty"><div class="wt-pixel">✦</div><p class="muted">Aún no hay Huellas visibles en el Mundo.<br>Cuando un Alma haga público su portafolio, sus obras se volverán señales aquí.</p></div></div>`;
+  if(pool==null) return `<div class="grid">${head}<div class="card s12 he-empty"><div class="he-pixel">✦</div><p class="muted">Buscando señales en el mundo…</p></div></div>`;
+  if(!pool.length) return `<div class="grid">${head}<div class="card s12 he-empty"><div class="he-pixel">✦</div><p class="muted">Aún no hay Huellas visibles en el Mundo.<br>Cuando un Alma haga público su portafolio, sus obras se volverán señales aquí.</p></div></div>`;
   // Todo en una sola página: la Huella destacada arriba y, debajo, una rejilla
   // para buscar otras obras del mundo.
   return `<div class="grid">${head}${wtHuellaHTML(a)}${wtGridHTML()}</div>`;
 }
 function wtHuellaHTML(a){
   const t=state.wtCurrent; if(!t){ wtPickOne(); }
-  const cur=state.wtCurrent; if(!cur) return `<div class="card s12 wt-empty"><p class="muted">Sin señal.</p></div>`;
+  const cur=state.wtCurrent; if(!cur) return `<div class="card s12 he-empty"><p class="muted">Sin señal.</p></div>`;
   const al=cur.alma||{};
-  // Junto a la foto va la OBRA (título · técnica · año · descripción). La
-  // identidad del Alma vive en su tarjeta/perfil (botón Ver Alma).
+  // Junto a la foto va la OBRA (título · técnica · descripción). La identidad
+  // del Alma vive en una tarjeta compacta y clicable (abre su perfil).
   const title=(cur.title||"").trim()||"Obra sin título";
   const tech=(cur.kind||"").trim();
   const desc=(cur.desc||"").trim();
+  const disc=al.role||al.crew_role||"";
+  const place=al.country?countryLabel(al.country):(al.city||"");
+  const col=al.color||"#caa258";
+  const av=(al.avatar_url && isImgUrl(al.avatar_url))
+    ? `<span class="he-av" style="background-image:url('${esc(al.avatar_url)}')"></span>`
+    : `<span class="he-av he-av-i" style="background:linear-gradient(145deg,${esc(col)},${esc(shade(col,-24))})">${esc(initials(al.name||"A"))}</span>`;
   const saved=state.wtSaved&&state.wtSaved.has(cur.id);
   const sparked=state.wtSparked&&state.wtSparked.has(cur.id);
-  return `<div class="card s12 wt-stage" data-wtcard="${esc(cur.id)}">
-      <div class="wt-figure"><div class="wt-figure-img" style="background-image:url('${esc(cur.img)}')"></div><span class="wt-figure-mark">✦</span></div>
-      <div class="wt-meta">
-        <span class="wt-eyebrow">Una huella del mundo</span>
-        <h3 class="wt-author">${esc(title)}</h3>
-        <div class="wt-sub">${tech?`<b>${esc(tech)}</b>`:""}${tech&&cur.year?`<span class="wt-dot">·</span>`:""}${cur.year?esc(cur.year):""}</div>
-        ${desc?`<p class="wt-phrase">${esc(desc.slice(0,220))}${desc.length>220?"…":""}</p>`:`<p class="wt-phrase wt-faint">Una pieza del portafolio de un Alma. Descubre quién la creó.</p>`}
-        <div class="wt-actions">
+  return `<div class="card s12 he-stage" data-wtcard="${esc(cur.id)}">
+      <div class="he-figure"><div class="he-figure-img" style="background-image:url('${esc(cur.img)}')"></div><span class="he-mark">✦</span></div>
+      <div class="he-meta">
+        <span class="he-eyebrow">Una huella del mundo</span>
+        <h3 class="he-title">${esc(title)}</h3>
+        <div class="he-tech">${tech?`<b>${esc(tech)}</b>`:""}${tech&&cur.year?`<span class="he-dot">·</span>`:""}${cur.year?esc(cur.year):""}</div>
+        ${desc?`<p class="he-desc">${esc(desc.slice(0,260))}${desc.length>260?"…":""}</p>`:`<p class="he-desc he-faint">Una pieza del portafolio de un Alma.</p>`}
+        <button class="he-alma" data-pub="${esc(al.id)}">
+          ${av}
+          <span class="he-alma-txt"><b>${esc(al.name||"Alma")}</b><small>${[esc(disc),esc(place)].filter(Boolean).join(" · ")||"Ver perfil"}</small></span>
+          <span class="he-alma-go">Ver Alma →</span>
+        </button>
+        <div class="he-actions">
           <button class="btn" data-wtnext>↻ Otra Huella</button>
-          <button class="btn secondary" data-pub="${esc(al.id)}">Ver Alma</button>
-        </div>
-        <div class="wt-actions-sub">
-          <button class="btn secondary sm ${saved?'wt-on':''}" data-wtsave="${esc(cur.id)}">${saved?"✓ Guardada":"⤓ Guardar Huella"}</button>
-          <button class="btn gold sm wt-chispa ${sparked?'wt-sent':''}" data-wtchispa="${esc(cur.id)}">✦ ${sparked?"Chispa enviada":"Enviar Chispa"}</button>
+          <button class="btn secondary ${saved?'he-on':''}" data-wtsave="${esc(cur.id)}">${saved?"✓ Guardada":"⤓ Guardar"}</button>
+          <button class="btn gold he-chispa ${sparked?'he-sent':''}" data-wtchispa="${esc(cur.id)}">✦ ${sparked?"Enviada":"Chispa"}</button>
         </div>
       </div>
     </div>`;
@@ -1817,11 +1825,11 @@ function wtGridHTML(){
   if(!(state.wtConstel||[]).length) wtPickConstel();
   const list=state.wtConstel||[];
   if(!list.length) return "";
-  return `<div class="card s12 wt-more-card">
+  return `<div class="card s12 he-more">
       <div class="section-title"><h2 style="font-size:15px">Otras Huellas</h2><div class="spacer"></div><button class="btn secondary sm" data-wtmore>↻ Renovar</button></div>
-      <div class="wt-more-sub">Otras obras del mundo. Toca una para contemplarla.</div>
-      <div class="wt-grid" data-count="${list.length}">${list.map(t=>{ const ti=(t.title||"").trim()||"Obra sin título"; const tk=(t.kind||"").trim();
-        return `<button class="wt-cell" data-wtopen="${esc(t.id)}" style="background-image:url('${esc(t.img)}')" title="${esc(ti)}"><span class="wt-cell-info"><b>${esc(ti)}</b>${tk?`<small>${esc(tk)}</small>`:""}</span></button>`;
+      <div class="he-more-sub">Otras obras del mundo. Toca una para contemplarla.</div>
+      <div class="he-grid" data-count="${list.length}">${list.map(t=>{ const ti=(t.title||"").trim()||"Obra sin título"; const tk=(t.kind||"").trim();
+        return `<button class="he-cell" data-wtopen="${esc(t.id)}" style="background-image:url('${esc(t.img)}')" title="${esc(ti)}"><span class="he-cell-info"><b>${esc(ti)}</b>${tk?`<small>${esc(tk)}</small>`:""}</span></button>`;
       }).join("")}</div>
     </div>`;
 }
@@ -1847,10 +1855,10 @@ function wtSendChispa(id){
   const t=(state.wtPool||[]).find(x=>x.id===id), al=t&&t.alma||{};
   try{ const a=me(); if(a.live && t){ Cloud.emitEcho("senal","✦ Una Chispa viajó hacia una Huella de "+(al.name||"un Alma")).catch(()=>{}); } }catch(e){}
   toast("✦ Chispa enviada");
-  const card=document.querySelector('[data-wtcard]'); if(card){ card.classList.add("wt-pulse"); setTimeout(()=>card.classList.remove("wt-pulse"),700); }
+  const card=document.querySelector('[data-wtcard]'); if(card){ card.classList.add("he-pulse"); setTimeout(()=>card.classList.remove("he-pulse"),700); }
   document.querySelectorAll('[data-wtchispa]').forEach(b=>{ if(b.dataset.wtchispa===id){ b.classList.add("wt-sent"); b.innerHTML="✦ Chispa enviada"; } });
 }
-function wtScrollTop(){ try{ const el=document.querySelector(".wt-stage"); if(el&&el.scrollIntoView){ el.scrollIntoView({behavior:"smooth",block:"start"}); } else { window.scrollTo({top:0,behavior:"smooth"}); } }catch(e){} }
+function wtScrollTop(){ try{ const el=document.querySelector(".he-stage"); if(el&&el.scrollIntoView){ el.scrollIntoView({behavior:"smooth",block:"start"}); } else { window.scrollTo({top:0,behavior:"smooth"}); } }catch(e){} }
 /* La Voz del Mundo — avisos fijados por el Creador (desplegables, con link opcional). */
 function voiceOfWorldCard(){
   const creator=isCreator && !state.viewAs;
