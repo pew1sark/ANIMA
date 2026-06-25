@@ -1032,6 +1032,59 @@ async function savePortfolioProfile(){
 /* --- Proyectos: Flujo de trabajo (kanban) --- */
 const FLOW=["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"];
 function flowOf(st){ if(FLOW.includes(st)) return st; if(st==="En curso") return "En producción"; if(st==="Terminado"||st==="Cerrado") return "Cerrado"; return "Cotizando"; }
+const PROJECT_CONTEXTS=["Personal","Clan","Santuario"];
+const PROJECT_TEMPLATES={
+  Creatividad:["Mural","Diseño","Fotografía","Video","Música","Ilustración","Escultura","Branding"],
+  Empresa:["Cliente","Cotización","Campaña","Consultoría","Proyecto interno"],
+  Educación:["Planificación","Clase","Taller","Informe","Investigación"],
+  Administración:["Documento","Acta","Licitación","Expediente","Reunión"],
+  Tecnología:["Desarrollo Web","Aplicación","Sprint","Feature","Bug"],
+  Vacío:["Proyecto sin plantilla"]
+};
+const PROJECT_TEMPLATE_OPTIONS=Object.entries(PROJECT_TEMPLATES).flatMap(([group,items])=>items.map(x=>`${group} · ${x}`));
+function projectContext(p){ return PROJECT_CONTEXTS.includes(p.context) ? p.context : (p.owner_type==="Clan"?"Clan":"Personal"); }
+function projectOwner(a,p){ const ctx=projectContext(p); return p.owner || (ctx==="Clan" ? (a.clan||"Clan") : ctx==="Santuario" ? (a.santuario||"Santuario") : "Mi Taller"); }
+function projectArchived(p){ return ["Archivado","Cerrado"].includes(p.archive||"") || flowOf(p.st)==="Cerrado"; }
+function projectContextBadge(a,p){
+  const ctx=projectContext(p), owner=projectOwner(a,p);
+  const label=ctx==="Personal"?"Mi Taller":ctx==="Clan"?owner:"Santuario";
+  return `<span class="pill ${ctx==="Clan"?'gold':''}" style="font-size:10.5px;padding:4px 8px">${esc(label)}</span>`;
+}
+function projectVisibleForFilter(a,p){
+  const f=state.projFilter||"todos", ctx=projectContext(p), archived=projectArchived(p);
+  if(f==="personal") return ctx==="Personal" && !archived;
+  if(f==="clan") return ctx==="Clan" && !archived;
+  if(f==="archivados") return archived;
+  return !archived;
+}
+function projectSelectFilters(ps){
+  const opt=(label,arr,cur)=>`<option value="" ${cur?'':'selected'}>${label}</option>`+arr.map(x=>`<option value="${esc(x)}" ${cur===x?'selected':''}>${esc(x)}</option>`).join("");
+  const templates=[...new Set(ps.map(p=>p.template||"").filter(Boolean))].sort();
+  const cats=[...new Set(ps.map(p=>p.category||"").filter(Boolean))].sort();
+  const owners=[...new Set(ps.map(p=>p.responsible||p.owner||"").filter(Boolean))].sort();
+  const d=state.projDetailFilter||{};
+  return `<div class="proj-filters">
+    <select data-projfilter2="template">${opt("Plantilla",templates,d.template||"")}</select>
+    <select data-projfilter2="category">${opt("Categoría",cats,d.category||"")}</select>
+    <select data-projfilter2="responsible">${opt("Responsable",owners,d.responsible||"")}</select>
+    <select data-projfilter2="status">${opt("Estado",FLOW,d.status||"")}</select>
+  </div>`;
+}
+function projectMatchesDetail(p){
+  const f=state.projDetailFilter||{};
+  if(f.template && p.template!==f.template) return false;
+  if(f.category && p.category!==f.category) return false;
+  if(f.responsible && (p.responsible||p.owner||"")!==f.responsible) return false;
+  if(f.status && flowOf(p.st)!==f.status) return false;
+  return true;
+}
+function projectMetaLine(a,p){
+  return [p.template, p.category, p.responsible].filter(Boolean).map(esc).join(" · ");
+}
+function openProjectRecord(context){
+  state.projectContext=context||null;
+  openRecord("proyecto");
+}
 /* TALLER — portada/resumen de la morada: un panel por sub-pestaña
    (Proyectos, Vínculos, Cotizador, Raíz) con acceso directo a cada una. */
 function tallerSaludo(){ const h=new Date().getHours(); return h<6?"Buenas noches":h<13?"Buenos días":h<20?"Buenas tardes":"Buenas noches"; }
@@ -1154,36 +1207,41 @@ function projStageClass(st){ const s=flowOf(st);
 function vProyectos(a){
   // Vista de detalle (panel dividido) cuando hay un proyecto abierto.
   if(state.projOpen!=null && a.projects[state.projOpen]) return vProyectoDetalle(a, state.projOpen);
-  const view=state.projView||"tarjetas"; const ps=a.projects;
-  const fab=`<button class="fab" data-add="proyecto" title="Nuevo Proyecto">＋<span>Nuevo Proyecto</span></button>`;
+  const view=state.projView||"tarjetas"; const all=a.projects||[];
+  const entries=all.map((p,i)=>({p,i})).filter(x=>projectVisibleForFilter(a,x.p)).filter(x=>projectMatchesDetail(x.p));
+  const ps=entries.map(x=>x.p);
+  const fab=`<button class="fab" data-addproject="Personal" title="Nuevo Proyecto">＋<span>Nueva Unidad</span></button>`;
   const segBtn=(k,t)=>`<button class="seg-b ${view===k?'on':''}" data-projview="${k}">${t}</button>`;
-  const head=`<div class="card s12"><div class="section-title"><h2>Proyectos</h2><div class="spacer"></div>
+  const filterBtn=(k,t)=>`<button class="seg-b ${(state.projFilter||"todos")===k?'on':''}" data-projfilter="${k}">${t}</button>`;
+  const head=`<div class="card s12"><div class="section-title"><h2>Unidades de Trabajo</h2><div class="spacer"></div>
       <div class="seg">${segBtn("tarjetas","Tarjetas")}${segBtn("lista","Lista")}${segBtn("kanban","Kanban")}</div>
-      <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}</span></div></div>`;
-  if(!ps.length) return `<div class="grid">${head}<div class="card s12"><p class="muted">Aún no tienes proyectos. Crea el primero con el botón ＋.</p></div></div>${fab}`;
+      <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}</span></div>
+      <div class="seg" style="margin-top:12px;flex-wrap:wrap">${filterBtn("todos","Todos")}${filterBtn("personal","Mi Taller")}${filterBtn("clan","Clanes")}${filterBtn("archivados","Archivados")}</div>
+      ${projectSelectFilters(all)}</div>`;
+  if(!ps.length) return `<div class="grid">${head}<div class="card s12"><p class="muted">No hay unidades en este filtro. Crea una nueva desde el botón ＋.</p></div></div>${fab}`;
   const pct=p=>Math.max(0,Math.min(100,+p.pct||0));
   let body;
   if(view==="lista"){
-    body=`<div class="card s12">${ps.map((p,i)=>`<div class="tk-row proj-litem" data-projopen="${i}">
+    body=`<div class="card s12">${entries.map(({p,i})=>`<div class="tk-row proj-litem" data-projopen="${i}">
         <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
-        <div class="grow"><b>${esc(p.t)}</b><br><small class="muted">${esc(p.client||"Sin cliente")} · ${pct(p)}%${p.due?" · ⌛ "+esc(tallerDate(p.due)):""}</small></div>
+        <div class="grow"><b>${esc(p.t)}</b> ${projectContextBadge(a,p)}<br><small class="muted">${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")} · ${pct(p)}%${p.due?" · ⌛ "+esc(tallerDate(p.due)):""}</small></div>
         <div class="proj-bar" style="width:110px"><span style="width:${pct(p)}%"></span></div>
         <b style="min-width:70px;text-align:right">${p.budget?esc(money(p.budget)):""}</b>
       </div>`).join("")}</div>`;
   } else if(view==="kanban"){
     const cols=FLOW.map(s=>({s,items:[]}));
-    ps.forEach((p,i)=>{ const col=cols.find(c=>c.s===flowOf(p.st)); (col||cols[0]).items.push({p,i}); });
+    entries.forEach(({p,i})=>{ const col=cols.find(c=>c.s===flowOf(p.st)); (col||cols[0]).items.push({p,i}); });
     body=`<div class="card s12"><div class="kanban">${cols.map(c=>`<div class="kcol"><div class="kcol-h">${c.s.toUpperCase()}<span>${c.items.length||""}</span></div>
         ${c.items.map(({p,i})=>`<div class="kcard" data-projopen="${i}" style="cursor:pointer">
-          <b>${esc(p.t)}</b>${p.client?`<small>${esc(p.client)}</small>`:""}
+          <b>${esc(p.t)}</b><small>${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")}</small>
           <div class="proj-bar" style="margin-top:9px"><span style="width:${pct(p)}%"></span></div>
           <select class="kstatus" data-pstatus="${i}">${FLOW.map(s=>`<option ${s===flowOf(p.st)?'selected':''}>${s}</option>`).join("")}</select>
         </div>`).join("")||`<div class="kempty">—</div>`}
       </div>`).join("")}</div></div>`;
   } else {
-    body=`<div class="proj-grid">${ps.map((p,i)=>`<button class="proj-card" data-projopen="${i}">
+    body=`<div class="proj-grid">${entries.map(({p,i})=>`<button class="proj-card" data-projopen="${i}">
         <div class="proj-top"><b>${esc(p.t)}</b><span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span></div>
-        <div class="proj-client">${esc(p.client||"Sin cliente")}</div>
+        <div class="proj-client">${projectContextBadge(a,p)} ${esc(projectMetaLine(a,p)||p.client||"Sin vínculo")}</div>
         <div class="proj-bar"><span style="width:${pct(p)}%"></span></div>
         <div class="proj-foot"><span class="muted">${p.due?("⌛ "+esc(tallerDate(p.due))):"Sin fecha"} · ${pct(p)}%</span><b>${p.budget?esc(money(p.budget)):""}</b></div>
       </button>`).join("")}</div>`;
@@ -1194,6 +1252,12 @@ function vProyectoDetalle(a, i){
   const p=a.projects[i]; const pct=Math.max(0,Math.min(100,+p.pct||0));
   const bal=(p.budget||0)-(p.paid||0);
   const info=`<div class="card s5 proj-info">
+      <div class="pd-block"><span class="pd-k">Contexto</span><b>${projectContextBadge(a,p)} ${esc(projectOwner(a,p))}</b></div>
+      <div class="pd-grid3">
+        <div><span class="pd-k">Plantilla</span><b>${esc(p.template||"Proyecto sin plantilla")}</b></div>
+        <div><span class="pd-k">Categoría</span><b>${esc(p.category||"—")}</b></div>
+        <div><span class="pd-k">Responsable</span><b>${esc(p.responsible||"—")}</b></div>
+      </div>
       <div class="pd-block"><span class="pd-k">Cliente</span><b>${esc(p.client||"—")}</b></div>
       <div class="pd-block"><span class="pd-k">Estado</span>
         <select class="pd-select" data-pstatus="${i}">${FLOW.map(s=>`<option ${s===flowOf(p.st)?'selected':''}>${s}</option>`).join("")}</select></div>
@@ -3181,13 +3245,15 @@ function calDayList(items,iso,can){
 }
 function vProyectosClan(a){
   const clan=a.clan; if(!clan) return clanEmpty("Proyectos del Clan","Los encargos compartidos son del Clan.");
-  const d=teamCache(clan); const can=canCollaborate(); const FLOWP=["Pendiente","En curso","Revisión","Hecho"];
-  const card=p=>`<div class="kcard"><b>${esc(p.title)}</b><small>${esc(p.assignee||'Sin asignar')}${p.due?' · '+fmtDay(p.due):''}</small>${p.notes?`<p>${esc(p.notes)}</p>`:""}
-      <div class="kacts">${can?`<button class="ia" data-cprojcycle="${p.id}" title="Avanzar">→</button>`:''}${canLead()?`<button class="ia danger" data-cprojdel="${p.id}">✕</button>`:''}</div></div>`;
+  const can=canCollaborate();
+  const list=(a.projects||[]).map((p,i)=>({p,i})).filter(x=>projectContext(x.p)==="Clan" && projectOwner(a,x.p)===clan && !projectArchived(x.p));
+  const card=({p,i})=>`<div class="kcard" data-projgo="${i}" style="cursor:pointer"><b>${esc(p.t)}</b><small>${esc(p.responsible||'Sin responsable')}${p.due?' · '+fmtDay(p.due):''}</small>${p.desc?`<p>${esc(p.desc)}</p>`:""}
+      <div class="proj-bar" style="margin-top:9px"><span style="width:${Math.max(0,Math.min(100,+p.pct||0))}%"></span></div>
+      <div class="kacts">${can?`<button class="ia" data-cprojcycle="${i}" title="Avanzar">→</button>`:''}${canLead()?`<button class="ia danger" data-cprojdel="${i}">✕</button>`:''}</div></div>`;
   return `<div class="grid">
-    ${clanHeader(a,clan,"Proyectos",can?"Encargos compartidos del Clan y su avance.":"Proyectos del Clan (solo lectura).")}
-    <div class="card s12"><div class="section-title"><h2>Encargos</h2><div class="spacer"></div>${can?`<button class="btn sm gold" data-cprojadd="1">+ Proyecto</button>`:`<span class="pill">Solo lectura</span>`}</div>
-      <div class="kanban">${FLOWP.map(s=>`<div class="kcol"><div class="kcol-h">${s.toUpperCase()}<span>${d.projects.filter(p=>(p.status||'Pendiente')===s).length||""}</span></div>${d.projects.filter(p=>(p.status||'Pendiente')===s).map(card).join("")||`<div class="kempty">—</div>`}</div>`).join("")}</div></div>
+    ${clanHeader(a,clan,"Proyectos",can?"Unidades compartidas del mismo Taller. Se ven aquí y también en Taller > Proyectos > Clanes.":"Proyectos del Clan (solo lectura).")}
+    <div class="card s12"><div class="section-title"><h2>Unidades de Trabajo</h2><div class="spacer"></div>${can?`<button class="btn sm gold" data-cprojadd="1">+ Proyecto</button>`:`<span class="pill">Solo lectura</span>`}</div>
+      <div class="kanban">${FLOW.map(s=>`<div class="kcol"><div class="kcol-h">${s.toUpperCase()}<span>${list.filter(x=>flowOf(x.p.st)===s).length||""}</span></div>${list.filter(x=>flowOf(x.p.st)===s).map(card).join("")||`<div class="kempty">—</div>`}</div>`).join("")}</div></div>
   </div>`;
 }
 const PLAN_PICK_FEATURES={
@@ -3750,26 +3816,18 @@ async function delClanEvent(id){
 }
 async function addClanProject(){
   if(!canCollaborate()){ alert("Tu rol es de solo lectura. Pide a tu Líder el rol de Colaborador."); return; }
-  const clan=me().clan; if(!clan) return;
-  const title=(prompt("Proyecto / encargo del Clan:")||"").trim(); if(!title) return;
-  const assignee=(prompt("Responsable (opcional):","")||"").trim()||null;
-  const due_at=(prompt("Entrega (AAAA-MM-DD, opcional):","")||"").trim()||null;
-  const row={title,assignee,due_at,status:"Pendiente",pct:0};
-  if(Cloud.enabled&&me().live){ try{ await Cloud.addClanProject(clan,row); await syncTeam(clan); return; }catch(e){ alert("No se pudo guardar: "+(e.message||e)); return; } }
-  const d=teamCache(clan); d.projects.unshift({id:"l"+Date.now(),title,assignee,due:due_at,status:"Pendiente",pct:0}); teamSaveLocal(clan,d); renderView();
+  if(!me().clan) return;
+  openProjectRecord("Clan");
 }
 async function cycleClanProject(id){
   if(!canCollaborate()){ alert("Solo Colaboradores o Líderes avanzan proyectos."); return; }
-  const clan=me().clan; const d=teamCache(clan); const p=d.projects.find(x=>x.id===id); if(!p) return;
-  const order=["Pendiente","En curso","Revisión","Hecho"]; p.status=order[(order.indexOf(p.status)+1)%order.length];
-  if(p._cloud&&Cloud.enabled){ try{ await Cloud.updateClanProject(id,{status:p.status}); }catch(e){} }
-  teamSaveLocal(clan,d); renderView();
+  const a=me(); const p=(a.projects||[])[+id]; if(!p) return;
+  const order=FLOW; const next=order[(order.indexOf(flowOf(p.st))+1)%order.length];
+  await setProjectStatus(+id,next);
 }
 async function delClanProject(id){
   if(!canLead()){ alert("Solo el Líder elimina proyectos."); return; }
-  const clan=me().clan; const d=teamCache(clan); const p=d.projects.find(x=>x.id===id); d.projects=d.projects.filter(x=>x.id!==id);
-  if(p&&p._cloud&&Cloud.enabled){ try{ await Cloud.deleteClanProject(id); }catch(err){} }
-  teamSaveLocal(clan,d); renderView();
+  await deleteRecord("proyecto",+id);
 }
 function vRecordatorios(a){
   const clan=a.clan;
@@ -3792,7 +3850,7 @@ function vRecordatorios(a){
    =========================================================== */
 const EDITORS = {
   proyecto:{ title:"Trabajo", table:"projects", get:a=>a.projects, push:"unshift", xp:60,
-    fields:[{k:"t",l:"Trabajo"},{k:"client",l:"Vínculo (elige o crea uno)",clients:true},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
+    fields:[{k:"context",l:"Contexto",sel:["Personal","Clan","Santuario"]},{k:"template",l:"Plantilla",sel:PROJECT_TEMPLATE_OPTIONS},{k:"t",l:"Nombre"},{k:"category",l:"Categoría"},{k:"client",l:"Cliente / Vínculo opcional",clients:true},{k:"responsible",l:"Responsable"},{k:"link",l:"Vínculo externo opcional"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
     toRow:v=>({title:v.t,client:v.client,status:v.st,pct:+v.pct||0,budget:v.budget?+v.budget:null,started_at:v.start||null,due_at:v.due||null,description:v.desc}) },
   memoria:{ title:"Memoria", table:"memories", get:a=>a.memories, push:"unshift", xp:40,
     fields:[{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({title:v.t,detail:v.d}) },
@@ -3822,6 +3880,14 @@ let recordCtx=null;
 function openRecord(kind, idx=null){
   const cfg=EDITORS[kind]; if(!cfg) return; recordCtx={kind,idx};
   const a=me(); const item=(idx!=null)?cfg.get(a)[idx]:{};
+  if(kind==="proyecto" && idx==null){
+    item.context=state.projectContext || "Personal";
+    item.owner=item.context==="Clan" ? (a.clan||"") : item.context==="Santuario" ? (a.santuario||"") : "Mi Taller";
+    item.template=PROJECT_TEMPLATE_OPTIONS[PROJECT_TEMPLATE_OPTIONS.length-1];
+    item.st="Cotizando";
+    item.pct=0;
+    item.responsible=a.name||"";
+  }
   document.getElementById("recTitle").textContent=(idx!=null?"Editar ":"Nuevo/a ")+cfg.title;
   document.getElementById("recFields").innerHTML=cfg.fields.map(f=>{
     const val=(item[f.k]!=null)?item[f.k]:"";
@@ -3842,7 +3908,15 @@ function closeRecord(){ document.getElementById("recordModal").classList.remove(
 async function saveRecord(){
   if(!recordCtx) return; const {kind,idx}=recordCtx; const cfg=EDITORS[kind]; const a=me();
   const v={}; cfg.fields.forEach(f=>{ const el=document.getElementById("rec_"+f.k); v[f.k]=f.num?(+el.value||0):el.value; });
-  const first=cfg.fields[0];
+  if(kind==="proyecto"){
+    v.context=PROJECT_CONTEXTS.includes(v.context) ? v.context : "Personal";
+    if(v.context==="Clan" && !a.clan){ document.getElementById("recMsg").textContent="Únete o crea un Clan antes de usar ese contexto."; return; }
+    if(v.context==="Santuario" && !a.santuario){ document.getElementById("recMsg").textContent="Únete o crea un Santuario antes de usar ese contexto."; return; }
+    v.owner_type=v.context;
+    v.owner=v.context==="Clan" ? (a.clan||"Clan") : v.context==="Santuario" ? (a.santuario||"Santuario") : "Mi Taller";
+    v.template=v.template||"Vacío · Proyecto sin plantilla";
+  }
+  const first=kind==="proyecto" ? cfg.fields.find(f=>f.k==="t") : cfg.fields[0];
   if(first && !String(v[first.k]).trim()){ document.getElementById("recMsg").textContent="Completa: "+first.l; return; }
   const arr=cfg.get(a);
   // Límite de obras por nivel (Alpha 2026): la nueva huella no excede el umbral.
@@ -4592,6 +4666,8 @@ document.addEventListener("click", e=>{
   const rit=e.target.closest("[data-ritual]"); if(rit){ doRitual(rit.dataset.ritual); return; }
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
   const pv=e.target.closest("[data-projview]"); if(pv){ state.projView=pv.dataset.projview; renderView(); return; }
+  const pf=e.target.closest("[data-projfilter]"); if(pf){ state.projFilter=pf.dataset.projfilter; state.projOpen=null; renderView(); return; }
+  const pa=e.target.closest("[data-addproject]"); if(pa){ openProjectRecord(pa.dataset.addproject); return; }
   if(e.target.closest("[data-finclear]")){ state.finPeriod="all"; state.finCat="all"; renderView(); return; }
   const po=e.target.closest("[data-projopen]"); if(po && !e.target.closest("select,option")){ state.projOpen=+po.dataset.projopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
   if(e.target.closest("[data-projback]")){ state.projOpen=null; renderView(); return; }
@@ -4626,7 +4702,7 @@ document.addEventListener("click", e=>{
     else if(t.dataset.go) go(t.dataset.go);
     else if(t.dataset.alma) switchAlma(t.dataset.alma);
     else if(t.dataset.pub) openPublic(t.dataset.pub);
-    else if(t.dataset.add) openRecord(t.dataset.add,null);
+    else if(t.dataset.add) t.dataset.add==="proyecto" ? openProjectRecord(null) : openRecord(t.dataset.add,null);
     else if(t.dataset.mode){ state.lumbreMode=t.dataset.mode; save(); renderLumbre(); }
     return; }
   if(e.target.closest("#q_new")) qNew();
@@ -4700,6 +4776,7 @@ document.addEventListener("change", e=>{
   if(e.target.id==="convCur"){ updateConvOut(); return; }
   const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); return; }
   const tks=e.target.closest(".tk-status"); if(tks){ setTaskStatus(+tks.dataset.tstatus, tks.value); return; }
+  const pf2=e.target.closest("[data-projfilter2]"); if(pf2){ state.projDetailFilter=state.projDetailFilter||{}; state.projDetailFilter[pf2.dataset.projfilter2]=pf2.value; state.projOpen=null; renderView(); return; }
   const fpr=e.target.closest("[data-finperiod]"); if(fpr){ state.finPeriod=fpr.value; renderView(); return; }
   const fca=e.target.closest("[data-fincat]"); if(fca){ state.finCat=fca.value; renderView(); return; }
   const qf=e.target.closest("#q_fmt"); if(qf){ readQuoteForm(); renderView(); return; }
