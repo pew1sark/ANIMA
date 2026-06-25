@@ -626,7 +626,7 @@ function renderView(){
   document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + bodyHTML;
   if(state.view==="mundo" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
   if(state.view==="finanzas"){ requestAnimationFrame(updateConvOut); }
-  if(state.view==="consola"){ requestAnimationFrame(loadWorldMonitor); requestAnimationFrame(loadRewardPanel); }
+  if(state.view==="consola"){ if(state.creatorClans==null && state.creatorSantuarios==null) requestAnimationFrame(loadCreatorGroups); requestAnimationFrame(loadWorldMonitor); requestAnimationFrame(loadRewardPanel); }
   // Desliza la pestaña activa al centro (sensación suave en móvil).
   if(window.innerWidth>720) requestAnimationFrame(()=>{ const on=document.querySelector(".morada-tab.on"); if(on && on.scrollIntoView){ try{ on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){} } });
 }
@@ -1453,6 +1453,7 @@ function vConsola(a){
       </div>`;
   }).join("") : `<div class="card s12"><p class="muted">Aún no hay Almas reales. Cuando alguien cruce el umbral aparecerá aquí.</p></div>`;
 
+  const groups=creatorGroupsPanel(almas);
   const monitor=`<div class="card s12" id="worldMonitor">
       <div class="section-title"><h2>Monitor del Mundo</h2><div class="spacer"></div><button class="btn ghost sm" id="monitorReload">↻ Actualizar</button></div>
       <p class="muted" style="font-size:12.5px;margin:-4px 0 12px">Monitoreo total del Mundo, en tiempo real. Para ver en qué seguir mejorando.</p>
@@ -1462,7 +1463,107 @@ function vConsola(a){
       <div class="section-title"><h2>Experiencia · Esencia</h2><div class="spacer"></div><button class="btn ghost sm" id="expReload">↻ Actualizar</button></div>
       <p class="muted" style="font-size:12.5px;margin:-4px 0 12px">Controla la Esencia que reciben las Almas por cada hito. Los cambios aplican a <b>todo el Mundo</b> al instante. Cada recompensa se cobra <b>una sola vez por Alma</b> (en cualquier dispositivo, sin repetir).</p>
       <div id="expBody" class="muted" style="font-size:13px">Cargando experiencia…</div></div>`;
-  return `<div class="grid">${omni}${monitor}${exp}${note}${rows}</div>`;
+  return `<div class="grid">${omni}${groups}${monitor}${exp}${note}${rows}</div>`;
+}
+function creatorGroupsPanel(almas){
+  const sort=state.creatorGroupSort||"name";
+  const q=(state.creatorGroupSearch||"").toLowerCase();
+  const byName=(a,b)=>String(a.name||"").localeCompare(String(b.name||""),"es");
+  const countFor=(kind,name)=>almas.filter(a=>kind==="clan" ? a.clan===name : a.santuario===name).length;
+  const sortRows=(rows,kind)=>rows.filter(x=>!q || [x.name,x.description,x.emoji].some(v=>String(v||"").toLowerCase().includes(q)))
+    .sort((a,b)=>sort==="members" ? countFor(kind,b.name)-countFor(kind,a.name) || byName(a,b) : byName(a,b));
+  const clans=sortRows(state.creatorClans||[],"clan");
+  const sants=sortRows(state.creatorSantuarios||[],"santuario");
+  const row=(x,kind)=>{
+    const id=String(x.name||"").replace(/[^a-z0-9_-]/gi,"_");
+    const n=countFor(kind,x.name);
+    const prefix=kind==="clan"?"cg_clan":"cg_sant";
+    const del=kind==="clan" ? "data-cgdelclan" : "data-cgdelsant";
+    const save=kind==="clan" ? "data-cgsaveclan" : "data-cgsavesant";
+    return `<div class="row cg-row" style="align-items:flex-end;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding:12px 0">
+      <label class="fld" style="width:64px"><span>Símbolo</span><input id="${prefix}_emoji_${id}" maxlength="3" value="${esc(x.emoji|| (kind==="clan"?"❂":"🜁"))}"></label>
+      <label class="fld" style="min-width:210px;flex:1"><span>Nombre</span><input id="${prefix}_name_${id}" value="${esc(x.name||"")}"></label>
+      <label class="fld" style="min-width:260px;flex:2"><span>Descripción</span><input id="${prefix}_desc_${id}" value="${esc(x.description||"")}"></label>
+      <span class="pill">${n} Alma(s)</span>
+      <button class="btn sm gold" ${save}="${esc(x.name||"")}" data-cgid="${esc(id)}">Guardar</button>
+      <button class="btn ghost sm" ${del}="${esc(x.name||"")}" style="color:var(--danger);border-color:var(--danger)">Eliminar</button>
+    </div>`;
+  };
+  return `<div class="card s12" id="creatorGroups">
+    <div class="section-title"><h2>Grupos · Clanes y Santuarios</h2><div class="spacer"></div><button class="btn ghost sm" id="cgReload">↻ Actualizar</button></div>
+    <p class="muted" style="font-size:12.5px;margin:-4px 0 12px">Control del Creador sobre las estructuras colectivas. Crear, editar, eliminar y ordenar sin salir de la Consola.</p>
+    <div class="cs-fields" style="margin-bottom:14px">
+      <label class="fld"><span>Buscar</span><input id="cgSearch" value="${esc(state.creatorGroupSearch||"")}" placeholder="Clan, Santuario, descripción…"></label>
+      <label class="fld"><span>Orden</span><select id="cgSort"><option value="name" ${sort==="name"?"selected":""}>Nombre</option><option value="members" ${sort==="members"?"selected":""}>Almas</option></select></label>
+      <button class="btn sm" id="cgNewClan">+ Clan</button>
+      <button class="btn sm gold" id="cgNewSantuario">+ Santuario</button>
+    </div>
+    <div class="grid" style="gap:12px">
+      <div class="card s6"><div class="section-title"><h2 style="font-size:15px">Clanes</h2><span class="pill">${clans.length}</span></div>${clans.length?clans.map(x=>row(x,"clan")).join(""):`<p class="muted">No hay Clanes para este filtro.</p>`}</div>
+      <div class="card s6"><div class="section-title"><h2 style="font-size:15px">Santuarios</h2><span class="pill">${sants.length}</span></div>${sants.length?sants.map(x=>row(x,"santuario")).join(""):`<p class="muted">No hay Santuarios para este filtro.</p>`}</div>
+    </div>
+    <div id="cgMsg" class="muted" style="font-size:12.5px;margin-top:10px;min-height:16px"></div>
+  </div>`;
+}
+async function loadCreatorGroups(){
+  if(!isCreator || !Cloud.enabled) return;
+  try{
+    const [clans,sants]=await Promise.all([Cloud.clans().catch(()=>[]), Cloud.santuarios().catch(()=>[])]);
+    state.creatorClans=clans||[];
+    state.creatorSantuarios=sants||[];
+    if(state.view==="consola") renderView();
+  }catch(e){ const m=document.getElementById("cgMsg"); if(m) m.textContent="No se pudieron cargar grupos: "+(e.message||e); }
+}
+function cgMsg(t){ const m=document.getElementById("cgMsg"); if(m) m.textContent=t||""; }
+function cgInput(prefix, key, id){ const el=document.getElementById(`${prefix}_${key}_${id}`); return (el&&el.value||"").trim(); }
+async function creatorNewClan(){
+  if(!isCreator || !Cloud.enabled) return;
+  const name=(prompt("Nombre del nuevo Clan:")||"").trim(); if(!name) return;
+  const emoji=(prompt("Símbolo:", "❂")||"❂").trim();
+  const desc=(prompt("Descripción:", "")||"").trim();
+  try{ await Cloud.clanCreate(name, emoji, desc); cgMsg("Clan creado."); await loadCreatorGroups(); }
+  catch(e){ alert("No se pudo crear el Clan: "+(e.message||e)); }
+}
+async function creatorNewSantuario(){
+  if(!isCreator || !Cloud.enabled) return;
+  const name=(prompt("Nombre del nuevo Santuario:")||"").trim(); if(!name) return;
+  const emoji=(prompt("Símbolo:", "🜁")||"🜁").trim();
+  const desc=(prompt("Descripción:", "")||"").trim();
+  try{ await Cloud.santuarioCreate(name, emoji, desc); cgMsg("Santuario creado."); await loadCreatorGroups(); }
+  catch(e){ alert("No se pudo crear el Santuario: "+(e.message||e)); }
+}
+async function creatorSaveClan(oldName,id){
+  if(!isCreator || !Cloud.enabled) return;
+  const name=cgInput("cg_clan","name",id), emoji=cgInput("cg_clan","emoji",id), desc=cgInput("cg_clan","desc",id);
+  if(!name){ alert("El Clan necesita nombre."); return; }
+  try{ await Cloud.clanUpdate(oldName, emoji, desc); if(name!==oldName) await Cloud.clanRename(oldName, name); cgMsg("Clan guardado."); await loadCreatorGroups(); try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){} }
+  catch(e){ alert("No se pudo guardar el Clan: "+(e.message||e)); }
+}
+async function creatorDeleteClan(name){
+  if(!isCreator || !Cloud.enabled) return;
+  if(!confirm("¿Eliminar el Clan «"+name+"»? Sus Almas quedarán sin Clan.")) return;
+  try{ await Cloud.clanDelete(name); cgMsg("Clan eliminado."); await loadCreatorGroups(); try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){} }
+  catch(e){ alert("No se pudo eliminar el Clan: "+(e.message||e)); }
+}
+async function creatorSaveSantuario(oldName,id){
+  if(!isCreator || !Cloud.enabled) return;
+  const name=cgInput("cg_sant","name",id), emoji=cgInput("cg_sant","emoji",id), desc=cgInput("cg_sant","desc",id);
+  if(!name){ alert("El Santuario necesita nombre."); return; }
+  try{
+    if(name!==oldName){
+      const { error:e1 } = await Cloud.client.from("almas").update({ santuario:name }).eq("santuario", oldName);
+      if(e1) throw e1;
+      const { error:e2 } = await Cloud.client.from("santuarios").update({ name, emoji:emoji||null, description:desc||null }).eq("name", oldName);
+      if(e2) throw e2;
+    }else await Cloud.santuarioUpdate(oldName, emoji, desc);
+    cgMsg("Santuario guardado."); await loadCreatorGroups(); try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){}
+  }catch(e){ alert("No se pudo guardar el Santuario: "+(e.message||e)); }
+}
+async function creatorDeleteSantuario(name){
+  if(!isCreator || !Cloud.enabled) return;
+  if(!confirm("¿Eliminar el Santuario «"+name+"»? Sus Almas quedarán sin Santuario.")) return;
+  try{ await Cloud.santuarioDelete(name); cgMsg("Santuario eliminado."); await loadCreatorGroups(); try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){} }
+  catch(e){ alert("No se pudo eliminar el Santuario: "+(e.message||e)); }
 }
 /* Panel de Experiencia (Creador): edita montos de Esencia y ve cuántas Almas
    cobraron cada recompensa. Aplica a todo el Mundo vía reward_config. */
@@ -4599,6 +4700,13 @@ document.addEventListener("click", e=>{
   const ntg=e.target.closest("[data-noticetoggle]"); if(ntg){ const id=ntg.dataset.noticetoggle; state.noticeOpen=state.noticeOpen||{}; state.noticeOpen[id]=!state.noticeOpen[id]; renderView(); return; }
   const chd=e.target.closest("[data-chdel]"); if(chd){ deleteChangelogEntry(chd.dataset.chdel); return; }
   const cs=e.target.closest("[data-cssave]"); if(cs){ consolaSave(cs.dataset.cssave); return; }
+  if(e.target.closest("#cgReload")){ loadCreatorGroups(); return; }
+  if(e.target.closest("#cgNewClan")){ creatorNewClan(); return; }
+  if(e.target.closest("#cgNewSantuario")){ creatorNewSantuario(); return; }
+  const cgsC=e.target.closest("[data-cgsaveclan]"); if(cgsC){ creatorSaveClan(cgsC.dataset.cgsaveclan, cgsC.dataset.cgid); return; }
+  const cgdC=e.target.closest("[data-cgdelclan]"); if(cgdC){ creatorDeleteClan(cgdC.dataset.cgdelclan); return; }
+  const cgsS=e.target.closest("[data-cgsavesant]"); if(cgsS){ creatorSaveSantuario(cgsS.dataset.cgsavesant, cgsS.dataset.cgid); return; }
+  const cgdS=e.target.closest("[data-cgdelsant]"); if(cgdS){ creatorDeleteSantuario(cgdS.dataset.cgdelsant); return; }
   if(e.target.closest("[data-teamadd]")){ addTeamTask(); return; }
   const tcy=e.target.closest("[data-taskcycle]"); if(tcy){ cycleTask(tcy.dataset.taskcycle); return; }
   const tdl=e.target.closest("[data-taskdel]"); if(tdl){ delTeamTask(tdl.dataset.taskdel); return; }
@@ -4774,6 +4882,7 @@ document.addEventListener("keydown", e=>{
 document.addEventListener("change", e=>{
   const cur=e.target.closest("[data-cursel]"); if(cur){ setAlmaCurrency(cur.value); return; }
   if(e.target.id==="convCur"){ updateConvOut(); return; }
+  if(e.target.id==="cgSort"){ state.creatorGroupSort=e.target.value; renderView(); return; }
   const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); return; }
   const tks=e.target.closest(".tk-status"); if(tks){ setTaskStatus(+tks.dataset.tstatus, tks.value); return; }
   const pf2=e.target.closest("[data-projfilter2]"); if(pf2){ state.projDetailFilter=state.projDetailFilter||{}; state.projDetailFilter[pf2.dataset.projfilter2]=pf2.value; state.projOpen=null; renderView(); return; }
@@ -4787,6 +4896,7 @@ document.addEventListener("change", e=>{
 });
 document.addEventListener("input", e=>{
   if(e.target.id==="convRate"){ updateConvOut(); return; }
+  if(e.target.id==="cgSearch"){ state.creatorGroupSearch=e.target.value; renderView(); return; }
   if(e.target.closest(".cot-inspector")){ qLive(); return; }
   // Búsqueda en vivo del Panel de Almas / picker (sin re-render, conserva foco).
   if(e.target.id==="clanSearch" || e.target.id==="clanAddSearch"){

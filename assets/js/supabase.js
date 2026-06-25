@@ -239,8 +239,15 @@ const Cloud = {
 
   /* Santuario PRO (migración 0031): entidad, membresía, informes e invitaciones. */
   async santuario(name){ if(!_sb||!name) return null; const { data } = await _sb.from("santuarios").select("*").eq("name", name).maybeSingle(); return data; },
+  async santuarios(){ if(!_sb) return []; const { data } = await _sb.from("santuarios").select("*").order("created_at",{ascending:true}); return data||[]; },
   async santuarioCreate(name, emoji, desc){ const { data, error } = await _sb.rpc("santuario_create", { p_name:name, p_emoji:emoji||null, p_desc:desc||null }); if(error) throw error; return data; },
   async santuarioUpdate(name, emoji, desc){ const { error } = await _sb.rpc("santuario_update", { p_name:name, p_emoji:emoji||null, p_desc:desc||null }); if(error) throw error; },
+  async santuarioDelete(name){
+    const { error:e1 } = await _sb.from("almas").update({ santuario:null }).eq("santuario", name);
+    if(e1) throw e1;
+    const { error:e2 } = await _sb.from("santuarios").delete().eq("name", name);
+    if(e2) throw e2;
+  },
   async santuarioSetRole(alma, role){ const { error } = await _sb.rpc("santuario_set_role", { p_alma:alma, p_role:role }); if(error) throw error; },
   async santuarioAddMember(alma, s){ const { error } = await _sb.rpc("santuario_add_member", { p_alma:alma, p_santuario:s }); if(error) throw error; },
   async santuarioRemoveMember(alma){ const { error } = await _sb.rpc("santuario_remove_member", { p_alma:alma }); if(error) throw error; },
