@@ -18,18 +18,26 @@ function reset(){ if(confirm("¿Restaurar ANIMA a las 10 Almas fundadoras? Se bo
 const me = () => state.almas.find(a => a.id === state.currentId) || state.almas[0];
 const sum = arr => arr.reduce((t,x)=>t+x.a,0);
 const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const MEDIA_URL_CACHE = new Map();
+function mediaUrl(url){
+  const key = String(url||"").trim();
+  if(!key) return "";
+  if(MEDIA_URL_CACHE.has(key)) return MEDIA_URL_CACHE.get(key);
+  MEDIA_URL_CACHE.set(key, key);
+  return key;
+}
 
 /* ---------- Avatar ---------- */
 function initials(name){ return (name||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
 function avatarHTML(a, cls=""){
-  const url = a && (a.photo || a.avatar_url);
+  const url = mediaUrl(a && (a.photo || a.avatar_url));
   if(url) return `<span class="avatar ${cls}" style="background-image:url('${esc(url)}');background-size:cover;background-position:center"></span>`;
   return `<span class="avatar ${cls}" style="background:linear-gradient(145deg,${a.color},${shade(a.color,-22)})">${initials(a.name)}</span>`;
 }
 /* Avatar de una Alma de la comunidad (foto real si la tiene). Opcionalmente
    enlazable para visitar su Alma pública (data-pub). */
 function cAvatar(au, cls, visitId){
-  const url = au && (au.photo || au.avatar_url);
+  const url = mediaUrl(au && (au.photo || au.avatar_url));
   const link = visitId ? `data-pub="${visitId}" title="Visitar Alma"` : "";
   const klass = `avatar ${cls||"sm"} ${visitId?"pub-link":""}`;
   if(url) return `<span class="${klass}" ${link} style="background-image:url('${esc(url)}');background-size:cover;background-position:center"></span>`;
@@ -526,7 +534,7 @@ function soulMapWorld(sz){
     const act=(liveMode()&&!m.live)?`data-pub="${m.id}"`:`data-alma="${m.id}"`;
     return `<button class="wn ${isNew?'new':''}" ${act} style="left:${x}%;top:${y}%;--c:${m.color}" title="${esc(m.name)} · ${esc(m.city||m.country||"")} · ${m.level}">${initials(m.name)}</button>`;
   }).join("");
-  return `<div class="worldmap ${sz}"><img src="${WORLD_IMG}" alt="" loading="lazy" onerror="this.style.display='none'">${nodes}</div>`;
+  return `<div class="worldmap ${sz}"><img src="${WORLD_IMG}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">${nodes}</div>`;
 }
 function constelacionHTML(){
   const list=roster();
@@ -648,7 +656,8 @@ function vMiAlma(a){
   const lp=levelProgress(a.xp), lv=levelByKey(a.level);
   let tab=state.almaTab||"resumen"; if(tab==="ajustes"&&!isCreator) tab="resumen";
   const idline=[a.discipline||a.role, a.specialty].filter(Boolean).join(" · ");
-  const bannerHTML=(a.banner && isImgUrl(a.banner))?`<div class="alma-hero-banner" style="background-image:url('${esc(a.banner)}')"></div>`:"";
+  const bannerUrl=mediaUrl(a.banner);
+  const bannerHTML=(bannerUrl && isImgUrl(bannerUrl))?`<div class="alma-hero-banner" style="background-image:url('${esc(bannerUrl)}')"></div>`:"";
   const header=`<div class="card s12 ${bannerHTML?'has-banner':''}">
     ${bannerHTML}
     <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
@@ -844,14 +853,15 @@ function isImgUrl(u){ return u && (/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i.test(
    Reutilizable: portada de obra, foto de perfil y banner. Permite subir archivo
    o pegar un enlace; muestra vista previa en vivo. */
 function imgUpField(inputId, label, val, folder){
-  const has = val && isImgUrl(val);
+  const u = mediaUrl(val);
+  const has = u && isImgUrl(u);
   return `<div class="field"><label>${label}</label>
     <div class="img-up">
-      <div class="img-prev ${has?'has':''}" id="prev_${inputId}" style="${has?`background-image:url('${esc(val)}')`:''}">${has?'':'Sin imagen'}</div>
+      <div class="img-prev ${has?'has':''}" id="prev_${inputId}" style="${has?`background-image:url('${esc(u)}')`:''}">${has?'':'Sin imagen'}</div>
       <label class="btn sm secondary img-pick">⤒ Subir foto<input type="file" accept="image/*" hidden data-imgfield="1" data-imgfolder="${folder||'obra'}" data-imgtarget="${inputId}" data-imgprev="prev_${inputId}" data-imgstatus="up_${inputId}"></label>
-      <input id="${inputId}" data-imgurl="prev_${inputId}" type="text" placeholder="o pega el enlace de una imagen" value="${esc(val||'')}">
+      <input id="${inputId}" data-imgurl="prev_${inputId}" type="text" placeholder="o pega el enlace de una imagen" value="${esc(u||'')}">
     </div>
-    <small class="muted img-hint" id="up_${inputId}">JPG · PNG · WebP — hasta 15 MB, en alta calidad.</small></div>`;
+    <small class="muted img-hint" id="up_${inputId}">JPG · PNG · WebP — avatar 1 MB · imagen visible 2 MB.</small></div>`;
 }
 /* Adjuntar compacto: un botón "📎" que vive DENTRO de la caja (sin cuadro grande).
    La miniatura aparece sólo después de adjuntar. Ideal para Huellas y Ritual. */
@@ -863,14 +873,45 @@ function attachField(inputId, folder, label){
     <small class="muted attach-hint" id="up_${inputId}"></small>
   </span>`;
 }
-/* Buckets separados (Alpha 2026): cada tipo de archivo en su sitio,
-   con su propio límite. avatars ≤ 2 MB · portfolio ≤ 10 MB. */
+/* Buckets separados (Alpha 2026): cada tipo de archivo en su sitio.
+   Solo limita nuevas subidas; no toca archivos existentes ni rutas actuales. */
 const UPLOAD_BUCKETS = {
-  perfil:{ bucket:"avatars",   maxMB:2,  folder:"avatar" },
-  obra:  { bucket:"portfolio", maxMB:10, folder:"obra" },
-  banner:{ bucket:"media",     maxMB:10, folder:"banner" },
-  huella:{ bucket:"media",     maxMB:10, folder:"huella" }   // fotos de Huellas/Ritual (no cuentan al límite del portafolio)
+  perfil:{ bucket:"avatars",   maxMB:1, folder:"avatar", edge:900 },
+  obra:  { bucket:"portfolio", maxMB:2, folder:"obra", edge:1600 },
+  banner:{ bucket:"media",     maxMB:2, folder:"banner", edge:1800 },
+  huella:{ bucket:"media",     maxMB:2, folder:"huella", edge:1400 }   // fotos de Huellas/Ritual (no cuentan al límite del portafolio)
 };
+function fileFromBlob(blob, file){
+  try{ return new File([blob], file.name, { type:blob.type||file.type, lastModified:Date.now() }); }
+  catch(e){ blob.name=file.name; return blob; }
+}
+function optimizeImageForUpload(file, dest){
+  return new Promise(resolve=>{
+    if(!file || !/^image\/(jpeg|jpg|png|webp)$/i.test(file.type||"") || file.size<280*1024) return resolve(file);
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      try{
+        const max=dest.edge||1600;
+        let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+        if(!w || !h){ URL.revokeObjectURL(url); return resolve(file); }
+        const scale=Math.min(1, max/Math.max(w,h));
+        w=Math.max(1, Math.round(w*scale)); h=Math.max(1, Math.round(h*scale));
+        const canvas=document.createElement("canvas"); canvas.width=w; canvas.height=h;
+        const ctx=canvas.getContext("2d"); if(!ctx){ URL.revokeObjectURL(url); return resolve(file); }
+        ctx.drawImage(img,0,0,w,h);
+        const type=/png/i.test(file.type) ? "image/png" : (file.type||"image/jpeg");
+        canvas.toBlob(blob=>{
+          URL.revokeObjectURL(url);
+          if(!blob || blob.size>=file.size) return resolve(file);
+          resolve(fileFromBlob(blob, file));
+        }, type, /png/i.test(type)?undefined:0.82);
+      }catch(e){ URL.revokeObjectURL(url); resolve(file); }
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); resolve(file); };
+    img.src=url;
+  });
+}
 async function uploadImgField(fileInput){
   const file = fileInput.files && fileInput.files[0]; if(!file) return;
   const a = me();
@@ -880,7 +921,12 @@ async function uploadImgField(fileInput){
   if(!a.live || !Cloud.enabled){ setS("Para subir fotos en alta calidad entra a tu Alma en la nube. También puedes pegar un enlace."); return done(); }
   if(!/^image\//.test(file.type||"")){ setS("Elige un archivo de imagen."); return done(); }
   const dest = UPLOAD_BUCKETS[fileInput.dataset.imgfolder] || UPLOAD_BUCKETS.banner;
-  if(file.size > dest.maxMB*1024*1024){ setS(`La imagen supera ${dest.maxMB} MB. Sube una versión más liviana.`); return done(); }
+  let uploadFile = file;
+  if(file.size > dest.maxMB*1024*1024){
+    setS("Optimizando imagen antes de subir…");
+    uploadFile = await optimizeImageForUpload(file, dest);
+  }
+  if(uploadFile.size > dest.maxMB*1024*1024){ setS(`La imagen supera ${dest.maxMB} MB. Sube una versión más liviana.`); return done(); }
   // Límite de obras por nivel: una nueva huella no debe exceder el umbral del Alma.
   if(fileInput.dataset.imgfolder==="obra"){
     const lim = storageLimit(a.level).images;
@@ -890,11 +936,12 @@ async function uploadImgField(fileInput){
       return done();
     }
   }
-  setS("Subiendo en alta calidad…");
+  setS(uploadFile!==file?"Subiendo versión optimizada…":"Subiendo en alta calidad…");
   try{
     const url = dest.bucket==="media"
-      ? await Cloud.uploadMedia(file, dest.folder)
-      : await Cloud.uploadTo(dest.bucket, file, dest.folder);
+      ? await Cloud.uploadMedia(uploadFile, dest.folder)
+      : await Cloud.uploadTo(dest.bucket, uploadFile, dest.folder);
+    MEDIA_URL_CACHE.set(url, url);
     const inp = document.getElementById(fileInput.dataset.imgtarget); if(inp) inp.value = url;
     const prev = document.getElementById(fileInput.dataset.imgprev); if(prev){ prev.style.backgroundImage = `url('${url}')`; prev.textContent = ""; prev.classList.add("has"); prev.hidden = false; }
     setS("Listo ✓ Imagen en alta calidad.");
@@ -917,8 +964,9 @@ function pfLinks(a){ const L=[]; if(a.website)L.push(["Sitio web",a.website]);
 function isPublicPf(a){ return !(a.visibility && a.visibility.public===false); }
 
 function pfHero(a){
-  const banner = (a.banner && isImgUrl(a.banner))
-    ? `background-image:url('${esc(a.banner)}')`
+  const bannerUrl = mediaUrl(a.banner);
+  const banner = (bannerUrl && isImgUrl(bannerUrl))
+    ? `background-image:url('${esc(bannerUrl)}')`
     : `background:linear-gradient(135deg,${a.color||'#b8a892'},${shade(a.color||'#b8a892',-40)})`;
   const pub=isPublicPf(a);
   return `<div class="card s12 pf-hero">
@@ -971,7 +1019,7 @@ function pfEditor(a){
       <button class="toggle ${isPublicPf(a)?'on':''}" data-pfpublic></button></div>
     <div style="display:flex;gap:16px;flex-wrap:wrap">
       <div style="flex:2;min-width:240px">${imgUpField("pf_banner","Banner / portada", a.banner, "banner")}
-        <small class="muted">Medidas recomendadas: <b>1600 × 400 px</b> (proporción 4:1). JPG o PNG, hasta 15 MB. Deja el centro despejado: en móvil se recorta a los lados.</small></div>
+        <small class="muted">Medidas recomendadas: <b>1600 × 400 px</b> (proporción 4:1). JPG o PNG, máximo recomendado 2 MB. Deja el centro despejado: en móvil se recorta a los lados.</small></div>
       <div style="flex:1;min-width:180px">${imgUpField("pf_photo","Foto del Alma", a.photo, "perfil")}
         <small class="muted">Recomendado: <b>400 × 400 px</b>, cuadrada.</small></div>
     </div>
@@ -986,16 +1034,23 @@ function pfEditor(a){
   </div>`;
 }
 function pfWorks(a){
-  return a.portfolio.length
-    ? `<div class="card s8"><div class="section-title"><h2 style="font-size:18px">Obras</h2><div class="spacer"></div><button class="btn sm" data-add="obra">＋ Subir obra</button></div>
-        <div class="pf-grid">${a.portfolio.map((p,i)=>{
-          const cover=isImgUrl(p.link)?`background-image:url('${esc(p.link)}');background-size:cover;background-position:center`
+  const total=(a.portfolio||[]).length;
+  const limit=Math.max(6, state.pfLimit||6);
+  const visible=(a.portfolio||[]).slice(0, limit);
+  if(a.portfolio.length){
+    const more = total>visible.length ? `<div class="card s8" style="text-align:center"><button class="btn secondary sm" data-pfmore>Mostrar ${Math.min(6,total-visible.length)} obra${Math.min(6,total-visible.length)===1?"":"s"} más</button><div class="muted" style="font-size:12px;margin-top:8px">${visible.length} de ${total}</div></div>` : "";
+    return `<div class="card s8"><div class="section-title"><h2 style="font-size:18px">Obras</h2><div class="spacer"></div><button class="btn sm" data-add="obra">＋ Subir obra</button></div>
+        <div class="pf-grid">${visible.map((p,i)=>{
+          const link=mediaUrl(p.link);
+          const cover=isImgUrl(link)?`background-image:url('${esc(link)}');background-size:cover;background-position:center`
             :`background:linear-gradient(145deg,${p.c},${shade(p.c,-28)})`;
           return `<div class="pf-card">
-            <div class="pf-cover" style="${cover}">${isImgUrl(p.link)?"":`<span>${initials(p.t)}</span>`}<div class="pf-acts">${acts("obra",i)}</div></div>
-            <div class="pf-cap"><b>${esc(p.t)}</b><small>${esc([p.k,p.year].filter(Boolean).join(" · "))}</small>${p.desc?`<p>${esc(p.desc)}</p>`:""}${p.link&&!isImgUrl(p.link)?`<a href="${esc(p.link)}" target="_blank" rel="noopener" class="pf-link">Ver →</a>`:""}</div>
+            <div class="pf-cover" style="${cover}">${isImgUrl(link)?"":`<span>${initials(p.t)}</span>`}<div class="pf-acts">${acts("obra",i)}</div></div>
+            <div class="pf-cap"><b>${esc(p.t)}</b><small>${esc([p.k,p.year].filter(Boolean).join(" · "))}</small>${p.desc?`<p>${esc(p.desc)}</p>`:""}${link&&!isImgUrl(link)?`<a href="${esc(link)}" target="_blank" rel="noopener" class="pf-link">Ver →</a>`:""}</div>
           </div>`; }).join("")}</div></div>`
-    : `<div class="card s8 pf-empty">
+        + more;
+  }
+  return `<div class="card s8 pf-empty">
         <span class="pf-empty-ico">▦</span>
         <h2 style="margin:10px 0 4px;letter-spacing:-.03em">Tu portafolio empieza aquí</h2>
         <p class="muted" style="max-width:440px;margin:0 auto 18px">Sube tus obras en <b>alta calidad</b> — se verán en tu Alma pública, profesional como en Behance. Cada obra suma Esencia.</p>
@@ -2164,7 +2219,7 @@ function vComunidad(a){
           <div class="grow">
             <div data-openpost="${p.id}" style="cursor:pointer"><div class="post-top"><b>${esc(p.title||au.name)}</b>${catBadge(p)}</div><small class="muted">${esc(au.name)} · ${esc(postDate(p.created_at))}</small>
             ${p.body?`<p style="margin:6px 0 0">${esc((p.body||"").slice(0,160))}${(p.body||"").length>160?"…":""}</p>`:""}
-            ${p.image_url?`<div class="post-img" style="background-image:url('${esc(p.image_url)}')"></div>`:""}</div>
+            ${p.image_url?`<div class="post-img" style="background-image:url('${esc(mediaUrl(p.image_url))}')"></div>`:""}</div>
             <div class="post-foot">
               <button class="spark-btn ${sparked?'on':''}" data-spark="${p.id}" title="${sparked?'Quitar tu Chispa':'Dar una Chispa'}">✦ <b>${sc}</b></button>
               <button class="eco-link" data-openpost="${p.id}">◎ <b>${ec}</b> ${ec===1?'Eco':'Ecos'}</button>
@@ -2197,7 +2252,7 @@ async function loadWanderingTraces(){
     const pool = (rows||[]).map(r=>{
       const al = byId[r.alma_id] || null;
       const imgs = Array.isArray(r.images) ? r.images.filter(isImgUrl) : [];
-      const img = imgs[0] || (isImgUrl(r.link)? r.link : null);
+      const img = mediaUrl(imgs[0] || (isImgUrl(r.link)? r.link : null));
       return { id:r.id, title:r.title||"", kind:r.kind||"", year:r.year||"", desc:r.description||"", img, alma:al };
     }).filter(t=> t.img && t.alma && !(t.alma.visibility && t.alma.visibility.public===false) );
     state.wtPool = pool;
@@ -2250,13 +2305,14 @@ function wtHuellaHTML(a){
   const disc=al.role||al.crew_role||"";
   const place=al.country?countryLabel(al.country):(al.city||"");
   const col=al.color||"#caa258";
-  const av=(al.avatar_url && isImgUrl(al.avatar_url))
-    ? `<span class="he-av" style="background-image:url('${esc(al.avatar_url)}')"></span>`
+  const avUrl=mediaUrl(al.avatar_url);
+  const av=(avUrl && isImgUrl(avUrl))
+    ? `<span class="he-av" style="background-image:url('${esc(avUrl)}')"></span>`
     : `<span class="he-av he-av-i" style="background:linear-gradient(145deg,${esc(col)},${esc(shade(col,-24))})">${esc(initials(al.name||"A"))}</span>`;
   const saved=state.wtSaved&&state.wtSaved.has(cur.id);
   const sparked=state.wtSparked&&state.wtSparked.has(cur.id);
   return `<div class="card s12 he-stage" data-wtcard="${esc(cur.id)}">
-      <div class="he-figure"><div class="he-figure-img" style="background-image:url('${esc(cur.img)}')"></div><span class="he-mark">✦</span></div>
+      <div class="he-figure"><div class="he-figure-img" style="background-image:url('${esc(mediaUrl(cur.img))}')"></div><span class="he-mark">✦</span></div>
       <div class="he-meta">
         <span class="he-eyebrow">Una huella del mundo</span>
         <h3 class="he-title">${esc(title)}</h3>
@@ -2283,7 +2339,7 @@ function wtGridHTML(){
       <div class="section-title"><h2 style="font-size:15px">Otras Huellas</h2><div class="spacer"></div><button class="btn secondary sm" data-wtmore>↻ Renovar</button></div>
       <div class="he-more-sub">Otras obras del mundo. Toca una para contemplarla.</div>
       <div class="he-grid" data-count="${list.length}">${list.map(t=>{ const ti=(t.title||"").trim()||"Obra sin título"; const tk=(t.kind||"").trim();
-        return `<button class="he-cell" data-wtopen="${esc(t.id)}" style="background-image:url('${esc(t.img)}')" title="${esc(ti)}"><span class="he-cell-info"><b>${esc(ti)}</b>${tk?`<small>${esc(tk)}</small>`:""}</span></button>`;
+        return `<button class="he-cell" data-wtopen="${esc(t.id)}" style="background-image:url('${esc(mediaUrl(t.img))}')" title="${esc(ti)}"><span class="he-cell-info"><b>${esc(ti)}</b>${tk?`<small>${esc(tk)}</small>`:""}</span></button>`;
       }).join("")}</div>
     </div>`;
 }
@@ -2723,7 +2779,7 @@ function openPost(id){
     <div style="margin-top:10px">${catBadge(p)}</div>
     ${p.title?`<h2 style="margin:10px 0 4px;letter-spacing:-.03em">${esc(p.title)}</h2>`:""}
     ${p.body?`<p style="white-space:pre-wrap">${esc(p.body||"")}</p>`:""}
-    ${p.image_url?`<img class="post-modal-img" src="${esc(p.image_url)}" alt="" loading="lazy">`:""}
+    ${p.image_url?`<img class="post-modal-img" src="${esc(mediaUrl(p.image_url))}" alt="" loading="lazy" decoding="async">`:""}
     <div class="section-title" style="margin-top:14px"><h3 style="font-size:14px;margin:0">Ecos</h3></div>
     <div id="postComments" class="muted">Cargando…</div>
     <div class="lum-input" style="margin-top:10px"><input id="commentInput" placeholder="Escribe un Eco…"><button class="btn" id="commentSend" data-post="${id}">↑</button></div>`;
@@ -4611,7 +4667,7 @@ async function openPublic(id){
       <div class="signal-form"><textarea id="signalText" rows="2" placeholder="Un mensaje privado para ${esc((row.name||"").split(" ")[0])}…"></textarea>
       <div style="display:flex;align-items:center;gap:10px"><button class="btn sm" data-signal="${id}">Enviar señal</button><span id="signalMsg" class="muted" style="font-size:12px"></span></div></div></details>`:""}
     <div id="pubExtra" class="muted" style="font-size:12.5px;margin-top:12px">Cargando…</div>`;
-  try{ const m=await Cloud.loadModules(id);
+  try{ const m=Cloud.publicProfileModules ? await Cloud.publicProfileModules(id) : await Cloud.loadModules(id);
     const tj=show("trajectory")?(m.trajectory||[]).map(x=>`<div class="node"><div class="yr">${esc(x.year)}</div><b>${esc(x.title)}</b><p class="muted" style="margin:2px 0 0">${esc(x.detail||"")}</p></div>`).join(""):"";
     const pf=show("portfolio")?(m.portfolio||[]).map(x=>`<span class="chip">${esc(x.title)} · ${esc(x.kind)}</span>`).join(""):"";
     document.getElementById("pubExtra").innerHTML=(tj?`<h3 style="font-size:15px;margin:8px 0 4px">Trayectoria</h3><div class="tl">${tj}</div>`:"")+(pf?`<h3 style="font-size:15px;margin:14px 0 6px">Portafolio</h3><div>${pf}</div>`:"")||"Esta Alma aún no ha hecho público su portafolio.";
@@ -4682,6 +4738,7 @@ document.addEventListener("click", e=>{
   const cpk=e.target.closest("[data-postcat]"); if(cpk){ state.postCat=cpk.dataset.postcat; document.querySelectorAll(".cat-pick").forEach(b=>b.classList.toggle("on", b===cpk)); return; }
   // Filtro del muro (muestra/oculta sin re-render).
   const wf=e.target.closest("[data-wallfilter]"); if(wf){ applyWallFilter(wf.dataset.wallfilter); return; }
+  if(e.target.closest("[data-pfmore]")){ state.pfLimit=(state.pfLimit||6)+6; renderView(); return; }
   // Susurros (notificaciones)
   if(e.target.closest("#whisperBtn")){ toggleWhisperPanel(); return; }
   const wpu=e.target.closest("[data-wpub]"); if(wpu){ closeWhisperPanel(); openPublic(wpu.dataset.wpub); return; }

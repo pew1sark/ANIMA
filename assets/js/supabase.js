@@ -9,6 +9,17 @@ const SB_URL = "https://jwxeowowuxmijuexdrua.supabase.co";
 const SB_KEY = "sb_publishable_vrVyAVt19nSsedXoCzYr-g_QFQc9w_R";
 
 let _sb = null;
+const ALMA_FIELDS = "id,user_id,slug,name,role,city,country,bio,color,level,xp,clan,santuario,tags,plan,team_role,crew_role,avatar_url,banner_url,discipline,specialty,handle,territory,website,instagram,portfolio_url,shop_url,headline,availability,sparks,created_at,council,world_access,essence,affinity,visibility,is_founding,origin_soul,origin_number,era,awakening_completed";
+const MODULE_FIELDS = {
+  projects:"id,title,client,status,pct,description,started_at,due_at,budget,paid,deliverables,tags,client_id,owner_type,owner,context,template,category,responsible,archive",
+  finance_entries:"id,title,amount,period,category,occurred_at,method,notes,kind",
+  trajectory:"id,year,title,detail",
+  portfolio:"id,title,kind,color,year,link,description,images,category",
+  memories:"id,title,detail,tags",
+  library:"id,title,kind,url,notes",
+  agenda:"id,at_time,title,on_date,notes",
+  tasks:"id,title,priority,status,due_at,project,notes,sort"
+};
 try{
   if(window.supabase && window.supabase.createClient){
     /* Sesión recordada en el dispositivo: persiste y se renueva sola. El Alma
@@ -43,7 +54,7 @@ const Cloud = {
   async allAlmas(){
     if(!_sb) return [];
     const { data } = await _sb.from("almas")
-      .select("id,slug,name,role,crew_role,avatar_url,city,country,bio,color,level,xp,clan,santuario,plan,team_role,sparks,tags,is_founding,council,world_access,visibility,created_at")
+      .select("id,slug,name,role,crew_role,discipline,specialty,avatar_url,city,country,territory,bio,color,level,xp,clan,santuario,plan,team_role,sparks,tags,is_founding,council,world_access,visibility,created_at")
       .eq("is_founding", false)
       .order("created_at", { ascending:false });
     return data || [];
@@ -61,13 +72,13 @@ const Cloud = {
   /* El Alma del usuario autenticado */
   async myAlma(){
     const u = await this.user(); if(!u) return null;
-    const { data } = await _sb.from("almas").select("*").eq("user_id", u.id).maybeSingle();
+    const { data } = await _sb.from("almas").select(ALMA_FIELDS).eq("user_id", u.id).maybeSingle();
     return data;
   },
 
   async loadModules(almaId){
     const get = async (t, extra) => {
-      let q = _sb.from(t).select("*").eq("alma_id", almaId);
+      let q = _sb.from(t).select(MODULE_FIELDS[t]||"*").eq("alma_id", almaId);
       if(extra) q = q.eq("kind", extra);
       const { data } = await q; return data || [];
     };
@@ -83,6 +94,13 @@ const Cloud = {
       tasks:      await get("tasks")
     };
   },
+  async publicProfileModules(almaId){
+    const [{ data:trajectory }, { data:portfolio }] = await Promise.all([
+      _sb.from("trajectory").select("id,year,title,detail").eq("alma_id", almaId),
+      _sb.from("portfolio").select("id,title,kind").eq("alma_id", almaId).limit(24)
+    ]);
+    return { trajectory:trajectory||[], portfolio:portfolio||[] };
+  },
 
   addMemory(almaId, title, detail){ return _sb.from("memories").insert({ alma_id:almaId, title, detail }); },
   addProject(almaId, title, client){ return _sb.from("projects").insert({ alma_id:almaId, title, client, status:"Planificado", pct:0 }); },
@@ -91,7 +109,7 @@ const Cloud = {
   addPortfolio(almaId, title, kind, color){ return _sb.from("portfolio").insert({ alma_id:almaId, title, kind, color }); },
   /* Huellas Errantes: obras de TODAS las Almas (lectura pública). El cliente
      filtra por visibilidad pública y por las que tienen imagen. */
-  async allPortfolio(){ if(!_sb) return []; const { data } = await _sb.from("portfolio").select("id,title,kind,color,year,link,description,images,alma_id").limit(600); return data||[]; },
+  async allPortfolio(limit){ if(!_sb) return []; const { data } = await _sb.from("portfolio").select("id,title,kind,color,year,link,description,images,alma_id").limit(limit||120); return data||[]; },
   addAgenda(almaId, at_time, title){ return _sb.from("agenda").insert({ alma_id:almaId, at_time, title }); },
   addLibrary(almaId, title, kind){ return _sb.from("library").insert({ alma_id:almaId, title, kind }); },
   setXP(almaId, xp){ return _sb.from("almas").update({ xp }).eq("id", almaId); },
@@ -144,15 +162,15 @@ const Cloud = {
   async deleteRow(table, id){ const { error } = await _sb.from(table).delete().eq("id", id); if(error) throw error; },
 
   /* Clientes y cotizaciones */
-  async clients(almaId){ const { data } = await _sb.from("clients").select("*").eq("alma_id", almaId).order("created_at",{ascending:false}); return data||[]; },
-  async quotes(almaId){ const { data } = await _sb.from("quotes").select("*").eq("alma_id", almaId).order("created_at",{ascending:false}); return data||[]; },
+  async clients(almaId){ const { data } = await _sb.from("clients").select("id,name,kind,role,email,phone,notes,created_at").eq("alma_id", almaId).order("created_at",{ascending:false}); return data||[]; },
+  async quotes(almaId){ const { data } = await _sb.from("quotes").select("id,client_id,project_id,doc_type,title,client_name,discipline,currency,tax_pct,total,status,items,notes,created_at,updated_at").eq("alma_id", almaId).order("created_at",{ascending:false}); return data||[]; },
 
   /* Preferencias (personalización sincronizada) */
   async getPrefs(almaId){ const { data } = await _sb.from("preferences").select("data").eq("alma_id", almaId).maybeSingle(); return data?data.data:null; },
   async savePrefs(almaId, data){ const { error } = await _sb.from("preferences").upsert({ alma_id:almaId, data, updated_at:new Date().toISOString() }); if(error) throw error; },
 
   /* Comunidad */
-  async posts(){ const { data } = await _sb.from("posts").select("*").order("created_at",{ascending:false}).limit(100); return data||[]; },
+  async posts(limit){ const { data } = await _sb.from("posts").select("id,author_alma_id,kind,title,body,image_url,category,created_at").order("created_at",{ascending:false}).limit(limit||40); return data||[]; },
   async comments(postId){ const { data } = await _sb.from("comments").select("*").eq("post_id", postId).order("created_at",{ascending:true}); return data||[]; },
   async allCommentCounts(){ if(!_sb) return []; const { data } = await _sb.from("comments").select("post_id"); return data||[]; },
 
