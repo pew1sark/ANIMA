@@ -1,0 +1,27 @@
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*secret*
+*token*
+*askpass*
+
+# Local tooling noise
+.DS_Store
+node_modules/
+.cache/
+.tmp/
+tmp/
+dist/
+build/
+coverage/
+
+# Supabase local development
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+supabase/.env.*
