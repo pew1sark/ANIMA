@@ -139,11 +139,11 @@ function moneyIn(code,n){ const c=CURRENCY_CATALOG[code]||animaCur(); return c.s
 function updateConvOut(){
   const curEl=document.getElementById("convCur"), rEl=document.getElementById("convRate"), out=document.getElementById("convOut");
   if(!out||!curEl) return;
-  const a=me(), inc=sum(a.finance.income), exp=sum(a.finance.expense);
+  const a=me(), inc=sum(rootIncome(a)), exp=sum(a.finance.expense);
   const rate=parseFloat(String((rEl&&rEl.value)||"").replace(",",".")), code=curEl.value;
   if(!rate||rate<=0){ out.innerHTML='<span class="muted" style="font-size:12.5px">Escribe la tasa (1 '+ANIMA_CUR+' = ? '+esc(code)+') para ver tus totales convertidos.</span>'; return; }
   out.innerHTML='<div class="tl-stat" style="margin:8px 0 0">'+
-    '<div><b class="num" style="color:var(--ok)">'+moneyIn(code,inc*rate)+'</b><span class="lbl">Ingresos</span></div>'+
+    '<div><b class="num" style="color:var(--ok)">'+moneyIn(code,inc*rate)+'</b><span class="lbl">Abonos / pagos</span></div>'+
     '<div><b class="num" style="color:var(--danger)">'+moneyIn(code,exp*rate)+'</b><span class="lbl">Egresos</span></div>'+
     '<div><b class="num">'+moneyIn(code,(inc-exp)*rate)+'</b><span class="lbl">Ganancia</span></div></div>';
 }
@@ -434,7 +434,7 @@ const TITLES = {
   trayectoria:["Trayectoria","La historia de tu Alma, hito a hito."],
   portafolio:["Portafolio","Las obras que te representan."],
   proyectos:["Proyectos","Lo que está vivo ahora mismo."],
-  finanzas:["Raíz","Ingresos, egresos y ganancia — privado. El sustento del Alma."],
+  finanzas:["Raíz","Abonos, pagos realizados, egresos y ganancia — privado. El sustento del Alma."],
   clientes:["Vínculos","Tu cartera de vínculos y contactos."],
   cotizador:["Centro documental","Cotizaciones, propuestas y documentos profesionales · exporta en PDF."],
   agenda:["Agenda","Tu día, ordenado."],
@@ -704,7 +704,7 @@ function linksHTML(a){
   return L.map(([t,u])=>`<a class="chip" href="${esc(u)}" target="_blank" rel="noopener">${t} ↗</a>`).join("");
 }
 function vAlmaResumen(a,lp){
-  const cfg=getCfg(a); const inc=sum(a.finance.income), exp=sum(a.finance.expense);
+  const cfg=getCfg(a); const inc=sum(rootIncome(a)), exp=sum(a.finance.expense);
   const active=a.projects.filter(p=>!["Entregado","Cerrado","Terminado"].includes(p.st)).length;
   const createCTA=(!a.live && Cloud.enabled)?`<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
       <span class="pill gold">Estás viendo una Alma de muestra</span>
@@ -719,7 +719,7 @@ function vAlmaResumen(a,lp){
   return `${createCTA}${onboarding}
     ${cfg.cards.kpis!==false?`
     <div class="card s3"><div class="stat"><span class="num">${active}</span><span class="lbl">Trabajos activos</span></div></div>
-    <div class="card s3"><div class="stat"><span class="num" style="color:var(--ok)">${money(inc)}</span><span class="lbl">Ingresos</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num" style="color:var(--ok)">${money(inc)}</span><span class="lbl">Abonos / pagos</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${money(inc-exp)}</span><span class="lbl">Ganancia</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${a.clan?esc(a.clan):"—"}</span><span class="lbl">${a.clan?"Tu Clan":"Sin Clan aún"}</span></div></div>`:``}
     ${cfg.cards.camino!==false?`<div class="card s12 camino-card">${caminoPixelHTML(lp)}</div>`:``}
@@ -766,13 +766,13 @@ function vAlmaPublica(a){
 /* Gráficos simples */
 function chartFinance(a){
   const map={};
-  a.finance.income.forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k){(map[k]=map[k]||{i:0,e:0}).i+=x.a;}});
+  rootIncome(a).forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k){(map[k]=map[k]||{i:0,e:0}).i+=x.a;}});
   a.finance.expense.forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k){(map[k]=map[k]||{i:0,e:0}).e+=x.a;}});
   const keys=Object.keys(map).sort().slice(-6);
   if(!keys.length) return `<p class="muted">Aún no hay datos de Raíz.</p>`;
   const max=Math.max(1,...keys.map(k=>Math.max(map[k].i,map[k].e)));
-  return `<div class="chart">${keys.map(k=>`<div class="cbar"><div class="cbars"><span class="ci" style="height:${Math.round(map[k].i/max*100)}%" title="Ingresos ${money(map[k].i)}"></span><span class="ce" style="height:${Math.round(map[k].e/max*100)}%" title="Egresos ${money(map[k].e)}"></span></div><small>${k.slice(2)}</small></div>`).join("")}</div>
-    <div class="muted" style="font-size:11px;margin-top:8px"><b style="color:var(--ok)">■</b> Ingresos &nbsp; <b style="color:var(--danger)">■</b> Egresos</div>`;
+  return `<div class="chart">${keys.map(k=>`<div class="cbar"><div class="cbars"><span class="ci" style="height:${Math.round(map[k].i/max*100)}%" title="Abonos / pagos ${money(map[k].i)}"></span><span class="ce" style="height:${Math.round(map[k].e/max*100)}%" title="Egresos ${money(map[k].e)}"></span></div><small>${k.slice(2)}</small></div>`).join("")}</div>
+    <div class="muted" style="font-size:11px;margin-top:8px"><b style="color:var(--ok)">■</b> Abonos / pagos &nbsp; <b style="color:var(--danger)">■</b> Egresos</div>`;
 }
 function chartProjects(a){
   const counts=FLOW.map(s=>({s,n:a.projects.filter(p=>flowOf(p.st)===s).length}));
@@ -783,7 +783,7 @@ function chartProjects(a){
 const MON_ABBR=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 function raizStats(a){
   const map={};
-  a.finance.income.forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k)(map[k]=map[k]||{i:0,e:0}).i+=x.a;});
+  rootIncome(a).forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k)(map[k]=map[k]||{i:0,e:0}).i+=x.a;});
   a.finance.expense.forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k)(map[k]=map[k]||{i:0,e:0}).e+=x.a;});
   const keys=Object.keys(map).sort(); if(!keys.length) return "";
   const profits=keys.map(k=>map[k].i-map[k].e);
@@ -1166,7 +1166,7 @@ function vTaller(a){
   const active=a.projects.filter(p=>!TERM.includes(p.st));
   const clients=a.clients||[];
   const quotes = a.live ? (state.cloudQuotes||[]) : (typeof loadQuotes==="function"?loadQuotes(a):[]);
-  const inc=sum(a.finance.income), exp=sum(a.finance.expense), gan=inc-exp;
+  const inc=sum(rootIncome(a)), exp=sum(a.finance.expense), gan=inc-exp;
   const now=Date.now(), soon=now+14*864e5;
   const upcoming=active.filter(p=>p.due && !isNaN(new Date(p.due)) && new Date(p.due).getTime()>=now-864e5 && new Date(p.due).getTime()<=soon)
                        .sort((x,y)=>new Date(x.due)-new Date(y.due));
@@ -1199,7 +1199,7 @@ function vTaller(a){
 
   // RAÍZ + mini gráfico
   const raiz=`<div class="card s4 tl-card"><div class="section-title"><h2 style="font-size:15px">Raíz</h2><div class="spacer"></div><button class="btn ghost sm" data-go="finanzas">Ver →</button></div>
-      <div class="tl-stat tl-stat-3"><div><b class="num" style="color:var(--ok)">${money(inc)}</b><span class="lbl">Ingresos</span></div><div><b class="num" style="color:var(--danger)">${money(exp)}</b><span class="lbl">Egresos</span></div><div><b class="num">${money(gan)}</b><span class="lbl">Ganancia</span></div></div>
+      <div class="tl-stat tl-stat-3"><div><b class="num" style="color:var(--ok)">${money(inc)}</b><span class="lbl">Abonos / pagos</span></div><div><b class="num" style="color:var(--danger)">${money(exp)}</b><span class="lbl">Egresos</span></div><div><b class="num">${money(gan)}</b><span class="lbl">Ganancia</span></div></div>
       <div class="tl-chart">${chartFinance(a)}</div></div>`;
 
   // AGENDA
@@ -1209,7 +1209,8 @@ function vTaller(a){
 
   // ACTIVIDAD — señales recientes (sintetizadas de tus datos).
   const acts=[];
-  if(a.finance.income[0]) acts.push(["✦","Pago recibido",a.finance.income[0].t,"+"+money(a.finance.income[0].a)]);
+  const recentIncome=rootIncome(a)[0];
+  if(recentIncome) acts.push(["✦","Pago recibido",recentIncome.t,"+"+money(recentIncome.a)]);
   if(a.projects[0]) acts.push(["◷","Proyecto",a.projects[0].t,flowOf(a.projects[0].st)]);
   if(clients[0]) acts.push(["☺","Vínculo agregado",clients[0].name,""]);
   if((a.portfolio||[])[0]) acts.push(["▦","Huella creada",a.portfolio[0].t,""]);
@@ -1409,9 +1410,24 @@ function previewProjectField(i,field,value){
 // Mes (AAAA-MM) de una entrada: usa la fecha, o el periodo si está bien formado.
 function finMonthKey(x){ if(x.on&&/^\d{4}-\d{2}/.test(x.on)) return x.on.slice(0,7); if(x.d&&/^\d{4}-\d{2}/.test(x.d)) return x.d.slice(0,7); return ""; }
 function finFmtMonth(k){ try{ return new Date(k+"-01T00:00").toLocaleDateString("es-CL",{month:"short",year:"numeric"}); }catch(e){ return k; } }
+function isEstimatedProjectIncome(x){
+  return String(x.t||"").startsWith("Proyecto: ") && String(x.cat||"").startsWith("Proyecto");
+}
+function projectPaidIncome(a){
+  const period=new Date().toISOString().slice(0,7);
+  return (a.projects||[]).map((p,i)=>{
+    const paid=projectMoney(p).paid;
+    if(paid<=0) return null;
+    return { _projectPaid:true, _projectIndex:i, t:"Abono: "+(p.t||"Proyecto"), a:paid, d:period, cat:"Abonos de proyectos", notes:p.client||"" };
+  }).filter(Boolean);
+}
+function rootIncome(a){
+  const manual=(a.finance.income||[]).filter(x=>!isEstimatedProjectIncome(x));
+  return manual.concat(projectPaidIncome(a));
+}
 function vFinanzas(a){
   const cfg=getCfg(a); const cur=cfg.currency||"CLP"; const curName=(CURRENCY_CATALOG[cur]||{}).name||cur;
-  const allInc=a.finance.income, allExp=a.finance.expense, allEntries=allInc.concat(allExp);
+  const allInc=rootIncome(a), allExp=a.finance.expense, allEntries=allInc.concat(allExp);
   // Filtros
   const fp=state.finPeriod||"all", fc=state.finCat||"all";
   const months=[...new Set(allEntries.map(finMonthKey).filter(Boolean))].sort().reverse();
@@ -1426,13 +1442,16 @@ function vFinanzas(a){
   const byMonth=k=>({i:sum(allInc.filter(x=>finMonthKey(x)===k&&(fc==="all"||(x.cat||"")===fc))),e:sum(allExp.filter(x=>finMonthKey(x)===k&&(fc==="all"||(x.cat||"")===fc)))});
   const trendData=trendMonths.map(k=>({k,...byMonth(k)}));
   const tMax=Math.max(1,...trendData.map(d=>Math.max(d.i,d.e)));
-  const trend=trendData.length?`<div class="fin-trend">${trendData.map(d=>`<div class="ft-col"><div class="ft-bars"><span class="ft-i" style="height:${Math.round(d.i/tMax*100)}%" title="Ingresos ${money(d.i)}"></span><span class="ft-e" style="height:${Math.round(d.e/tMax*100)}%" title="Egresos ${money(d.e)}"></span></div><small>${esc(finFmtMonth(d.k).replace(".",""))}</small></div>`).join("")}</div>`:`<p class="muted" style="font-size:12.5px">Agrega fechas a tus movimientos para ver la tendencia mensual.</p>`;
+  const trend=trendData.length?`<div class="fin-trend">${trendData.map(d=>`<div class="ft-col"><div class="ft-bars"><span class="ft-i" style="height:${Math.round(d.i/tMax*100)}%" title="Abonos / pagos ${money(d.i)}"></span><span class="ft-e" style="height:${Math.round(d.e/tMax*100)}%" title="Egresos ${money(d.e)}"></span></div><small>${esc(finFmtMonth(d.k).replace(".",""))}</small></div>`).join("")}</div>`:`<p class="muted" style="font-size:12.5px">Agrega fechas a tus movimientos para ver la tendencia mensual.</p>`;
   // Desglose de egresos por categoría (sobre el filtro actual).
   const catMap={}; exp.forEach(x=>{ const c=x.cat||"Sin categoría"; catMap[c]=(catMap[c]||0)+(+x.a||0); });
   const catRows=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const catBreak=catRows.length?catRows.map(([c,v])=>`<div class="fin-cat"><div class="fin-cat-h"><span>${esc(c)}</span><b>${money(v)}</b></div><div class="proj-bar"><span style="width:${sumE>0?Math.round(v/sumE*100):0}%;background:linear-gradient(90deg,#e08a3c,#d2493f)"></span></div></div>`).join(""):`<p class="muted" style="font-size:12.5px">Sin egresos en este filtro.</p>`;
-  const list=(arr,kind,cls,sign)=>arr.map(x=>{ const i=kind==="ingreso"?allInc.indexOf(x):allExp.indexOf(x);
-      return `<div class="row"><div class="grow"><b>${esc(x.t)}</b><br><small>${[x.cat,finMonthKey(x)?finFmtMonth(finMonthKey(x)):x.d].filter(Boolean).map(esc).join(" · ")||"—"}</small></div><span class="amt ${cls}">${sign}${money(x.a)}</span>${acts(kind,i)}</div>`; }).join("");
+  const list=(arr,kind,cls,sign)=>arr.map(x=>{
+      const sourceArr=kind==="ingreso"?(a.finance.income||[]):allExp;
+      const i=sourceArr.indexOf(x);
+      const controls=x._projectPaid?`<button class="ia" data-projgo="${x._projectIndex}" title="Ver proyecto">↗</button>`:acts(kind,i);
+      return `<div class="row"><div class="grow"><b>${esc(x.t)}</b><br><small>${[x.cat,finMonthKey(x)?finFmtMonth(finMonthKey(x)):x.d,x.notes].filter(Boolean).map(esc).join(" · ")||"—"}</small></div><span class="amt ${cls}">${sign}${money(x.a)}</span>${controls}</div>`; }).join("");
   return `<div class="grid">
     <div class="card s12 cur-bar"><div class="section-title"><h2 style="font-size:16px">Flujo de valores</h2><div class="spacer"></div>
       <label class="cur-pick"><span class="muted" style="font-size:12px">Moneda</span>
@@ -1445,7 +1464,7 @@ function vFinanzas(a){
       ${filtered?`<button class="btn ghost sm" data-finclear>✕ Limpiar</button>`:""}
       <div class="spacer"></div><span class="muted" style="font-size:12px">${inc.length+exp.length} movimiento${inc.length+exp.length===1?"":"s"}</span>
     </div>
-    <div class="card s3"><div class="stat"><span class="num" style="color:var(--ok)">${money(sumI)}</span><span class="lbl">Ingresos${filtered?" (filtro)":""}</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num" style="color:var(--ok)">${money(sumI)}</span><span class="lbl">Abonos / pagos${filtered?" (filtro)":""}</span></div></div>
     <div class="card s3"><div class="stat"><span class="num" style="color:var(--danger)">${money(sumE)}</span><span class="lbl">Egresos${filtered?" (filtro)":""}</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${money(neta)}</span><span class="lbl">Ganancia neta</span></div></div>
     <div class="card s3"><div class="stat"><span class="num" style="color:${margen>=0?'var(--ok)':'var(--danger)'}">${margen}%</span><span class="lbl">Margen / rentabilidad</span></div></div>
@@ -1455,8 +1474,8 @@ function vFinanzas(a){
       ${trend}
     </div>
     <div class="card s5"><div class="section-title"><h2 style="font-size:15px">Egresos por categoría</h2></div>${catBreak}</div>
-    <div class="card s6"><div class="section-title"><h2>Ingresos</h2><div class="spacer"></div><button class="btn sm" data-add="ingreso">+ Ingreso</button></div>
-      ${list(inc,"ingreso","in","+")||`<p class="muted">${filtered?"Sin ingresos en este filtro.":"Sin ingresos."}</p>`}</div>
+    <div class="card s6"><div class="section-title"><h2>Abonos y pagos realizados</h2><div class="spacer"></div><button class="btn sm" data-add="ingreso">+ Pago manual</button></div>
+      ${list(inc,"ingreso","in","+")||`<p class="muted">${filtered?"Sin pagos en este filtro.":"Sin abonos o pagos realizados."}</p>`}</div>
     <div class="card s6"><div class="section-title"><h2>Egresos</h2><div class="spacer"></div><button class="btn sm secondary" data-add="egreso">+ Egreso</button></div>
       ${list(exp,"egreso","out","−")||`<p class="muted">${filtered?"Sin egresos en este filtro.":"Sin egresos."}</p>`}</div>
     <div class="card s12 conv-card"><div class="section-title"><h2 style="font-size:15px">Conversor de moneda</h2><div class="spacer"></div><span class="pill">Solo lectura</span></div>
@@ -3085,7 +3104,7 @@ function vSantuario(a){
   if(a.live && !a.santuario) return vSantCreate(a); // fundar o unirse
   const S=SEED_SANCTUARY, list=roster(), live=liveMode();
   const full=state.almas.filter(x=>x.finance);
-  const totalInc=full.reduce((t,x)=>t+sum(x.finance.income),0), totalExp=full.reduce((t,x)=>t+sum(x.finance.expense),0);
+  const totalInc=full.reduce((t,x)=>t+sum(rootIncome(x)),0), totalExp=full.reduce((t,x)=>t+sum(x.finance.expense),0);
   const totalProj=full.reduce((t,x)=>t+x.projects.length,0), activeProj=full.reduce((t,x)=>t+x.projects.filter(p=>p.st==="En curso").length,0);
   const dist=LEVELS.map(l=>({l,n:list.filter(x=>x.level===l.key).length})).filter(d=>d.n>0);
   const top=[...list].sort((x,y)=>y.xp-x.xp).slice(0,5);
@@ -3105,7 +3124,7 @@ function vSantuario(a){
     <div class="card s7"><div class="section-title"><h2>Raíz general</h2><div class="spacer"></div><span class="pill">${live?'Privadas':'Agregado'}</span></div>
       ${live?`<p class="muted" style="font-size:13px">🔒 En el sistema vivo la Raíz de cada Alma es <b>privada</b>. Estos números corresponden sólo a tu Alma.</p>`:``}
       <div class="grid" style="gap:14px;margin-top:${live?'10px':'0'}">
-        <div class="s4"><div class="stat"><span class="num" style="color:var(--ok);font-size:22px">${money(totalInc)}</span><span class="lbl">Ingresos</span></div></div>
+        <div class="s4"><div class="stat"><span class="num" style="color:var(--ok);font-size:22px">${money(totalInc)}</span><span class="lbl">Abonos / pagos</span></div></div>
         <div class="s4"><div class="stat"><span class="num" style="color:var(--danger);font-size:22px">${money(totalExp)}</span><span class="lbl">Egresos</span></div></div>
         <div class="s4"><div class="stat"><span class="num" style="font-size:22px">${money(totalInc-totalExp)}</span><span class="lbl">Neto</span></div></div></div></div>
     <div class="card s5"><div class="section-title"><h2>Distribución por nivel</h2></div>
@@ -4188,7 +4207,7 @@ function recordAlphaEvents(kind, v, arr){
 /* ===========================================================
    INTERCONEXIÓN — al crear un Proyecto, ANIMA enlaza todo:
    · Vínculo (cliente): se crea si es nuevo, o se enlaza el existente.
-   · Raíz (finanzas): si hay Valor, nace un ingreso estimado del proyecto.
+   · Raíz (finanzas): sólo suma pagos reales desde abonos/pagos realizados.
    · Flujo de trabajo: el proyecto entra a tu kanban (su estado).
    Reusa tablas existentes (clients, finance_entries). Sin tocar esquema.
    =========================================================== */
@@ -4205,14 +4224,8 @@ async function interconnectProject(a, v){
       a.clients.unshift(item); notes.push("Vínculo creado");
     } else { notes.push("Vínculo enlazado"); }
   }
-  // 2 · Raíz (ingreso estimado del proyecto)
-  const budget=+v.budget||0;
-  if(budget>0){
-    const per=new Date().toISOString().slice(0,7);
-    const inc={ t:"Proyecto: "+(v.t||""), a:budget, d:per, cat:"Proyecto"+(cname?(" · "+cname):"") };
-    if(a.live){ try{ const row=await Cloud.insertRow("finance_entries",{ title:inc.t, amount:budget, period:per, kind:"income", category:inc.cat, alma_id:a.almaId }); inc._id=row.id; }catch(e){} }
-    a.finance.income.unshift(inc); notes.push("Ingreso estimado en tu Raíz");
-  }
+  // 2 · Raíz: no se crea ingreso estimado. El valor total no es pago recibido.
+  // Raíz se alimenta desde Abono realizado (paid) y pagos manuales reales.
   // 3 · Flujo de trabajo: ya entró a tu kanban.
   notes.push("En tu Flujo de trabajo");
   save();
@@ -4250,7 +4263,7 @@ async function syncLevel(a){
    EXPORTAR PDF — Dossier del Alma
    =========================================================== */
 function exportPDF(){
-  const a=me(), lv=levelByKey(a.level), inc=sum(a.finance.income), exp=sum(a.finance.expense);
+  const a=me(), lv=levelByKey(a.level), inc=sum(rootIncome(a)), exp=sum(a.finance.expense);
   document.getElementById("printArea").innerHTML=`
     <div class="p-head"><div class="brand"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>ANIMA TSC</div><small>Dossier de Alma · ${new Date().toLocaleDateString("es-CL")}</small></div>
     <h1 class="p-name">${esc(a.name)}</h1>
@@ -4260,7 +4273,7 @@ function exportPDF(){
     <h2>Trayectoria</h2>${a.trajectory.map(n=>`<p><b>${esc(n.y)} · ${esc(n.t)}</b> — ${esc(n.d)}</p>`).join("")||"<p>—</p>"}
     <h2>Proyectos</h2>${a.projects.map(p=>`<p><b>${esc(p.t)}</b> (${esc(p.st)}, ${p.pct}%) — ${esc(p.client)}</p>`).join("")||"<p>—</p>"}
     <h2>Portafolio</h2><p>${a.portfolio.map(p=>esc(p.t)+" ("+esc(p.k)+")").join(" · ")||"—"}</p>
-    <h2>Raíz</h2><p>Ingresos: ${money(inc)} · Egresos: ${money(exp)} · <b>Ganancia: ${money(inc-exp)}</b></p>
+    <h2>Raíz</h2><p>Abonos / pagos: ${money(inc)} · Egresos: ${money(exp)} · <b>Ganancia: ${money(inc-exp)}</b></p>
     <div class="p-foot">ANIMA TSC — The Soul of Creativity · The Founding Era</div>`;
   window.print();
 }
@@ -4281,8 +4294,8 @@ function lumbreAsk(q){ state.chat.push({role:"you",text:esc(q)}); state.chat.pus
 function lumbreThink(q){
   const a=me(), t=q.toLowerCase();
   if(state.lumbreMode==="OFF") return "Estoy en modo <b>OFF</b>: solo organización manual. Actívame en Básico, IA Local o IA Conectada.";
-  const inc=sum(a.finance.income), exp=sum(a.finance.expense), ai=(state.lumbreMode==="LOCAL"||state.lumbreMode==="CLOUD");
-  if(/finanz|ingreso|egreso|ganan|plata|dinero|gast|ra[ií]z/.test(t)){ const m=exp>inc*0.7?" Tus egresos son altos respecto a tus ingresos.":" Tu margen está sano."; return `Raíz: ingresos ${money(inc)}, egresos ${money(exp)}, <b>ganancia ${money(inc-exp)}</b>.${ai?m:""}`; }
+  const inc=sum(rootIncome(a)), exp=sum(a.finance.expense), ai=(state.lumbreMode==="LOCAL"||state.lumbreMode==="CLOUD");
+  if(/finanz|ingreso|egreso|ganan|plata|dinero|gast|ra[ií]z/.test(t)){ const m=exp>inc*0.7?" Tus egresos son altos respecto a tus pagos recibidos.":" Tu margen está sano."; return `Raíz: abonos/pagos ${money(inc)}, egresos ${money(exp)}, <b>ganancia ${money(inc-exp)}</b>.${ai?m:""}`; }
   if(/cotiz|presupuesto|precio/.test(t)) return `Abre el <b>Cotizador</b> para armar un presupuesto profesional y exportarlo en PDF. ${ai?"Puedo sugerir precios según tus proyectos anteriores.":""}`;
   if(/proyect|trabajo|encargo/.test(t)){ const act=a.projects.filter(p=>p.st==="En curso"); const s=ai&&act[0]?` Enfócate en "${esc(act[0].t)}" (${act[0].pct}%).`:""; return `Tienes ${act.length} proyecto(s) en curso de ${a.projects.length}.${s}`; }
   if(/trayectoria|historia|hito/.test(t)){ const l=a.trajectory[a.trajectory.length-1]; return l?`Tu último hito: <b>${esc(l.t)}</b> (${esc(l.y)}).`:"Aún no tienes hitos. Agrega el primero en Trayectoria."; }
