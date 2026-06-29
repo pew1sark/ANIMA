@@ -275,6 +275,14 @@
 .kcard .kstatus{width:100%;margin-top:9px;border:1px solid var(--line);border-radius:9px;padding:6px 8px;font-size:12px;font-family:inherit;background:#faf8f3}
 .kcard .kacts{margin-top:8px;display:flex;justify-content:flex-end}
 .kempty{color:var(--muted);font-size:12px;padding:10px 6px;text-align:center}
+.project-progress,.project-money{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+.project-progress div,.project-money div{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--muted)}
+.project-progress b,.project-money b{font-size:12px;color:#111;letter-spacing:-.01em}
+.project-progress input[type="range"]{width:100%;accent-color:var(--gold);margin-top:6px}
+.project-money{display:grid;gap:7px}
+.project-money input{width:100%;border:1px solid var(--line);border-radius:9px;padding:7px 8px;font-size:12px;font-family:inherit;background:#faf8f3;outline:none}
+.project-money input:focus{border-color:var(--gold)}
+.proj-money-line{font-size:11.5px;color:var(--muted);text-align:left;margin-top:8px;line-height:1.35}
 
 /* ---------- Portafolio (Behance) ---------- */
 .pf-grid{columns:3;column-gap:14px}

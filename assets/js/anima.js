@@ -1087,6 +1087,23 @@ async function savePortfolioProfile(){
 /* --- Proyectos: Flujo de trabajo (kanban) --- */
 const FLOW=["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"];
 function flowOf(st){ if(FLOW.includes(st)) return st; if(st==="En curso") return "En producción"; if(st==="Terminado"||st==="Cerrado") return "Cerrado"; return "Cotizando"; }
+function clampPct(v){ return Math.max(0, Math.min(100, Math.round(+v || 0))); }
+function projectMoney(p){
+  const budget=+p.budget || 0;
+  const paid=Math.max(0, +p.paid || 0);
+  return { budget, paid, balance:Math.max(0, budget-paid) };
+}
+function projectSummary(projects){
+  const totalBudget=projects.reduce((t,p)=>t+projectMoney(p).budget,0);
+  const totalPaid=projects.reduce((t,p)=>t+projectMoney(p).paid,0);
+  const avgPct=projects.length?Math.round(projects.reduce((t,p)=>t+clampPct(p.pct),0)/projects.length):0;
+  return { totalBudget, totalPaid, balance:Math.max(0,totalBudget-totalPaid), avgPct };
+}
+function projectFinanceLine(p){
+  const fin=projectMoney(p);
+  if(!fin.budget && !fin.paid) return "";
+  return `Total ${money(fin.budget)} · Abono ${money(fin.paid)} · Saldo ${money(fin.balance)}`;
+}
 const PROJECT_CONTEXTS=["Personal","Clan","Santuario"];
 const PROJECT_TEMPLATES={
   Creatividad:["Mural","Diseño","Fotografía","Video","Música","Ilustración","Escultura","Branding"],
@@ -1265,6 +1282,11 @@ function vProyectos(a){
   const view=state.projView||"tarjetas"; const all=a.projects||[];
   const entries=all.map((p,i)=>({p,i})).filter(x=>projectVisibleForFilter(a,x.p)).filter(x=>projectMatchesDetail(x.p));
   const ps=entries.map(x=>x.p);
+  const summary=projectSummary(ps);
+  const summaryCards=`<div class="card s3"><div class="stat"><span class="num">${summary.avgPct}%</span><span class="lbl">Avance visible</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num">${money(summary.totalBudget)}</span><span class="lbl">Total contratado</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num" style="color:var(--ok)">${money(summary.totalPaid)}</span><span class="lbl">Abono realizado</span></div></div>
+    <div class="card s3"><div class="stat"><span class="num" style="color:var(--danger)">${money(summary.balance)}</span><span class="lbl">Saldo pendiente</span></div></div>`;
   const fab=`<button class="fab" data-addproject="Personal" title="Nuevo Proyecto">＋<span>Nueva Unidad</span></button>`;
   const segBtn=(k,t)=>`<button class="seg-b ${view===k?'on':''}" data-projview="${k}">${t}</button>`;
   const filterBtn=(k,t)=>`<button class="seg-b ${(state.projFilter||"todos")===k?'on':''}" data-projfilter="${k}">${t}</button>`;
@@ -1273,13 +1295,13 @@ function vProyectos(a){
       <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}</span></div>
       <div class="seg" style="margin-top:12px;flex-wrap:wrap">${filterBtn("todos","Todos")}${filterBtn("personal","Mi Taller")}${filterBtn("clan","Clanes")}${filterBtn("archivados","Archivados")}</div>
       ${projectSelectFilters(all)}</div>`;
-  if(!ps.length) return `<div class="grid">${head}<div class="card s12"><p class="muted">No hay unidades en este filtro. Crea una nueva desde el botón ＋.</p></div></div>${fab}`;
-  const pct=p=>Math.max(0,Math.min(100,+p.pct||0));
+  if(!ps.length) return `<div class="grid">${summaryCards}${head}<div class="card s12"><p class="muted">No hay unidades en este filtro. Crea una nueva desde el botón ＋.</p></div></div>${fab}`;
+  const pct=p=>clampPct(p.pct);
   let body;
   if(view==="lista"){
     body=`<div class="card s12">${entries.map(({p,i})=>`<div class="tk-row proj-litem" data-projopen="${i}">
         <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
-        <div class="grow"><b>${esc(p.t)}</b> ${projectContextBadge(a,p)}<br><small class="muted">${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")} · ${pct(p)}%${p.due?" · ⌛ "+esc(tallerDate(p.due)):""}</small></div>
+        <div class="grow"><b>${esc(p.t)}</b> ${projectContextBadge(a,p)}<br><small class="muted">${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")} · ${pct(p)}%${p.due?" · ⌛ "+esc(tallerDate(p.due)):""}${projectFinanceLine(p)?" · "+esc(projectFinanceLine(p)):""}</small></div>
         <div class="proj-bar" style="width:110px"><span style="width:${pct(p)}%"></span></div>
         <b style="min-width:70px;text-align:right">${p.budget?esc(money(p.budget)):""}</b>
       </div>`).join("")}</div>`;
@@ -1288,7 +1310,7 @@ function vProyectos(a){
     entries.forEach(({p,i})=>{ const col=cols.find(c=>c.s===flowOf(p.st)); (col||cols[0]).items.push({p,i}); });
     body=`<div class="card s12"><div class="kanban">${cols.map(c=>`<div class="kcol"><div class="kcol-h">${c.s.toUpperCase()}<span>${c.items.length||""}</span></div>
         ${c.items.map(({p,i})=>`<div class="kcard" data-projopen="${i}" style="cursor:pointer">
-          <b>${esc(p.t)}</b><small>${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")}</small>
+          <b>${esc(p.t)}</b><small>${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")}</small>${projectFinanceLine(p)?`<small>${esc(projectFinanceLine(p))}</small>`:""}
           <div class="proj-bar" style="margin-top:9px"><span style="width:${pct(p)}%"></span></div>
           <select class="kstatus" data-pstatus="${i}">${FLOW.map(s=>`<option ${s===flowOf(p.st)?'selected':''}>${s}</option>`).join("")}</select>
         </div>`).join("")||`<div class="kempty">—</div>`}
@@ -1299,13 +1321,13 @@ function vProyectos(a){
         <div class="proj-client">${projectContextBadge(a,p)} ${esc(projectMetaLine(a,p)||p.client||"Sin vínculo")}</div>
         <div class="proj-bar"><span style="width:${pct(p)}%"></span></div>
         <div class="proj-foot"><span class="muted">${p.due?("⌛ "+esc(tallerDate(p.due))):"Sin fecha"} · ${pct(p)}%</span><b>${p.budget?esc(money(p.budget)):""}</b></div>
+        ${projectFinanceLine(p)?`<div class="proj-money-line">${esc(projectFinanceLine(p))}</div>`:""}
       </button>`).join("")}</div>`;
   }
-  return `<div class="grid">${head}${body}</div>${fab}`;
+  return `<div class="grid">${summaryCards}${head}${body}</div>${fab}`;
 }
 function vProyectoDetalle(a, i){
-  const p=a.projects[i]; const pct=Math.max(0,Math.min(100,+p.pct||0));
-  const bal=(p.budget||0)-(p.paid||0);
+  const p=a.projects[i]; const pct=clampPct(p.pct), fin=projectMoney(p);
   const info=`<div class="card s5 proj-info">
       <div class="pd-block"><span class="pd-k">Contexto</span><b>${projectContextBadge(a,p)} ${esc(projectOwner(a,p))}</b></div>
       <div class="pd-grid3">
@@ -1317,16 +1339,25 @@ function vProyectoDetalle(a, i){
       <div class="pd-block"><span class="pd-k">Estado</span>
         <select class="pd-select" data-pstatus="${i}">${FLOW.map(s=>`<option ${s===flowOf(p.st)?'selected':''}>${s}</option>`).join("")}</select></div>
       <div class="pd-grid3">
-        <div><span class="pd-k">Presupuesto</span><b>${p.budget?esc(money(p.budget)):"—"}</b></div>
-        <div><span class="pd-k">Pagado</span><b>${p.paid?esc(money(p.paid)):"—"}</b></div>
-        <div><span class="pd-k">Saldo</span><b>${p.budget?esc(money(bal)):"—"}</b></div>
+        <div><span class="pd-k">Presupuesto</span><b>${fin.budget?esc(money(fin.budget)):"—"}</b></div>
+        <div><span class="pd-k">Abono realizado</span><b data-paid-label="${i}">${esc(money(fin.paid))}</b></div>
+        <div><span class="pd-k">Saldo pendiente</span><b data-balance-label="${i}">${fin.budget?esc(money(fin.balance)):"—"}</b></div>
       </div>
       <div class="pd-grid3">
         <div><span class="pd-k">Inicio</span><b>${p.start?esc(tallerDate(p.start)):"—"}</b></div>
         <div><span class="pd-k">Entrega</span><b>${p.due?esc(tallerDate(p.due)):"—"}</b></div>
-        <div><span class="pd-k">Avance</span><b>${pct}%</b></div>
+        <div><span class="pd-k">Avance</span><b data-pct-label="${i}">${pct}%</b></div>
       </div>
       <div class="proj-bar" style="margin-top:6px"><span style="width:${pct}%"></span></div>
+      <div class="project-progress">
+        <div><span>Actualizar avance</span><b data-pct-label="${i}">${pct}%</b></div>
+        <input class="kpct" data-pct="${i}" type="range" min="0" max="100" step="5" value="${pct}">
+      </div>
+      <div class="project-money">
+        <div><span>Abono realizado</span><b data-paid-label="${i}">${money(fin.paid)}</b></div>
+        <input class="kpaid" data-paid="${i}" type="number" min="0" step="1000" value="${fin.paid}">
+        <div><span>Saldo pendiente por cobrar</span><b data-balance-label="${i}">${fin.budget?money(fin.balance):"—"}</b></div>
+      </div>
       ${p.desc?`<div class="pd-block" style="margin-top:14px"><span class="pd-k">Entregables / notas</span><p style="margin:4px 0 0;font-size:14px">${esc(p.desc)}</p></div>`:""}
       <div style="display:flex;gap:8px;margin-top:16px"><button class="btn secondary sm" data-edit="proyecto:${i}">✎ Editar</button><button class="btn ghost sm" data-del="proyecto:${i}">✕ Eliminar</button></div>
     </div>`;
@@ -1349,6 +1380,29 @@ async function setProjectStatus(i,st){
   const a=me(); const p=a.projects[i]; if(!p) return; p.st=st;
   if(a.live && p._id){ try{ await Cloud.updateRow("projects",p._id,{status:st}); }catch(e){ alert("No se pudo mover: "+(e.message||e)); } }
   save(); renderAll();
+}
+async function updateProjectField(i,field,value){
+  const a=me(); const p=a.projects[i]; if(!p) return;
+  if(field==="pct") value=clampPct(value);
+  if(field==="paid") value=Math.max(0, Math.round(+value || 0));
+  p[field]=value;
+  const patch=field==="pct"?{pct:value}:{paid:value};
+  if(a.live && p._id){ try{ await Cloud.updateRow("projects",p._id,patch); }catch(e){ alert("No se pudo actualizar el proyecto: "+(e.message||e)); } }
+  save(); renderAll();
+}
+function previewProjectField(i,field,value){
+  const a=me(); const p=a.projects[i]; if(!p) return;
+  if(field==="pct"){
+    const pct=clampPct(value);
+    p.pct=pct;
+    document.querySelectorAll(`[data-pct-label="${i}"]`).forEach(el=>{ el.textContent=pct+"%"; });
+  }else if(field==="paid"){
+    const paid=Math.max(0, Math.round(+value || 0));
+    p.paid=paid;
+    const fin=projectMoney(p);
+    document.querySelectorAll(`[data-paid-label="${i}"]`).forEach(el=>{ el.textContent=money(fin.paid); });
+    document.querySelectorAll(`[data-balance-label="${i}"]`).forEach(el=>{ el.textContent=fin.budget?money(fin.balance):"—"; });
+  }
 }
 
 /* --- Finanzas --- */
@@ -2012,8 +2066,9 @@ async function qSaveCloud(a){
     }
     let projectId=quoteDraft.project_id||null;
     if(!projectId && quoteDraft.title){
-      const prow=await Cloud.insertRow("projects",{alma_id:a.almaId,title:quoteDraft.title,client:quoteDraft.client||null,status:"Planificado",pct:0,client_id:clientId});
-      projectId=prow.id; a.projects.unshift({_id:prow.id,t:quoteDraft.title,st:"Planificado",pct:0,client:quoteDraft.client||""});
+      const total=Math.round(t.total);
+      const prow=await Cloud.insertRow("projects",{alma_id:a.almaId,title:quoteDraft.title,client:quoteDraft.client||null,status:"Planificado",pct:0,budget:total,paid:0,client_id:clientId});
+      projectId=prow.id; a.projects.unshift({_id:prow.id,t:quoteDraft.title,st:"Planificado",pct:0,budget:total,paid:0,client:quoteDraft.client||""});
     }
     const payload={ alma_id:a.almaId, client_id:clientId, project_id:projectId, title:quoteDraft.title, client_name:quoteDraft.client,
       discipline:quoteDraft.discipline, currency:quoteDraft.currency, tax_pct:quoteDraft.taxPct, notes:quoteDraft.notes,
@@ -4007,8 +4062,8 @@ function vRecordatorios(a){
    =========================================================== */
 const EDITORS = {
   proyecto:{ title:"Trabajo", table:"projects", get:a=>a.projects, push:"unshift", xp:60,
-    fields:[{k:"context",l:"Contexto",sel:["Personal","Clan","Santuario"]},{k:"template",l:"Plantilla",sel:PROJECT_TEMPLATE_OPTIONS},{k:"t",l:"Nombre"},{k:"category",l:"Categoría"},{k:"client",l:"Cliente / Vínculo opcional",clients:true},{k:"responsible",l:"Responsable"},{k:"link",l:"Vínculo externo opcional"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
-    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:+v.pct||0,budget:v.budget?+v.budget:null,started_at:v.start||null,due_at:v.due||null,description:v.desc}) },
+    fields:[{k:"context",l:"Contexto",sel:["Personal","Clan","Santuario"]},{k:"template",l:"Plantilla",sel:PROJECT_TEMPLATE_OPTIONS},{k:"t",l:"Nombre"},{k:"category",l:"Categoría"},{k:"client",l:"Cliente / Vínculo opcional",clients:true},{k:"responsible",l:"Responsable"},{k:"link",l:"Vínculo externo opcional"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor total",num:true},{k:"paid",l:"Abono realizado",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
+    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:clampPct(v.pct),budget:v.budget?+v.budget:null,paid:+v.paid||0,started_at:v.start||null,due_at:v.due||null,description:v.desc}) },
   memoria:{ title:"Memoria", table:"memories", get:a=>a.memories, push:"unshift", xp:40,
     fields:[{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({title:v.t,detail:v.d}) },
   ingreso:{ title:"Ingreso", table:"finance_entries", get:a=>a.finance.income, push:"unshift", xp:20,
@@ -4941,6 +4996,8 @@ document.addEventListener("change", e=>{
   if(e.target.id==="convCur"){ updateConvOut(); return; }
   if(e.target.id==="cgSort"){ state.creatorGroupSort=e.target.value; renderView(); return; }
   const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); return; }
+  const kp=e.target.closest(".kpct"); if(kp){ updateProjectField(+kp.dataset.pct, "pct", kp.value); return; }
+  const kpaid=e.target.closest(".kpaid"); if(kpaid){ updateProjectField(+kpaid.dataset.paid, "paid", kpaid.value); return; }
   const tks=e.target.closest(".tk-status"); if(tks){ setTaskStatus(+tks.dataset.tstatus, tks.value); return; }
   const pf2=e.target.closest("[data-projfilter2]"); if(pf2){ state.projDetailFilter=state.projDetailFilter||{}; state.projDetailFilter[pf2.dataset.projfilter2]=pf2.value; state.projOpen=null; renderView(); return; }
   const fpr=e.target.closest("[data-finperiod]"); if(fpr){ state.finPeriod=fpr.value; renderView(); return; }
@@ -4951,7 +5008,13 @@ document.addEventListener("change", e=>{
   const rs=e.target.closest("[data-roleset]"); if(rs){ setMemberRole(rs.dataset.roleset, rs.value); return; }
   const srs=e.target.closest("[data-santroleset]"); if(srs){ santSetRole(srs.dataset.santroleset, srs.value); return; }
 });
+document.addEventListener("focusout", e=>{
+  const kp=e.target.closest(".kpct"); if(kp){ updateProjectField(+kp.dataset.pct, "pct", kp.value); return; }
+  const kpaid=e.target.closest(".kpaid"); if(kpaid){ updateProjectField(+kpaid.dataset.paid, "paid", kpaid.value); return; }
+});
 document.addEventListener("input", e=>{
+  const kp=e.target.closest(".kpct"); if(kp){ previewProjectField(+kp.dataset.pct, "pct", kp.value); return; }
+  const kpaid=e.target.closest(".kpaid"); if(kpaid){ previewProjectField(+kpaid.dataset.paid, "paid", kpaid.value); return; }
   if(e.target.id==="convRate"){ updateConvOut(); return; }
   if(e.target.id==="cgSearch"){ state.creatorGroupSearch=e.target.value; renderView(); return; }
   if(e.target.closest(".cot-inspector")){ qLive(); return; }
