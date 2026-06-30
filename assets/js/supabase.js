@@ -20,6 +20,10 @@ const MODULE_FIELDS = {
   agenda:"id,at_time,title,on_date,notes",
   tasks:"id,title,priority,status,due_at,project,notes,sort"
 };
+const LEVEL_ALIASES_CLOUD = { FOUNDING:"ORIGEN", EMBER:"CHISPA", ROOT:"RAIZ", WILD:"PULSO", AETHER:"TOTEM", SPIRIT:"AURA" };
+const LEVEL_BACKEND_ALIASES = { ORIGEN:"FOUNDING", CHISPA:"EMBER", RAIZ:"ROOT", PULSO:"WILD", HUELLA:"TOTEM", TOTEM:"AETHER", AURA:"SPIRIT", ANIMA:"ANIMA" };
+function normalizeCloudLevel(key){ return LEVEL_ALIASES_CLOUD[String(key||"").toUpperCase()] || String(key||"CHISPA").toUpperCase(); }
+function backendLevelKey(key){ return LEVEL_BACKEND_ALIASES[normalizeCloudLevel(key)] || "FOUNDING"; }
 try{
   if(window.supabase && window.supabase.createClient){
     /* Sesión recordada en el dispositivo: persiste y se renueva sola. El Alma
@@ -317,7 +321,7 @@ const Cloud = {
   async log(action, meta){ if(!_sb) return; try{ await _sb.rpc("log_activity", { p_action:action, p_meta:meta||{} }); }catch(e){} },
 
   /* Límite de almacenamiento del nivel: {images, pdfs, mb}. */
-  async storageQuota(level){ if(!_sb) return null; const { data } = await _sb.rpc("storage_quota", { p_level:level||"FOUNDING" }); return data; },
+  async storageQuota(level){ if(!_sb) return null; const { data } = await _sb.rpc("storage_quota", { p_level:backendLevelKey(level) }); return data; },
 
   /* Subir un archivo a un bucket separado (avatars | portfolio | temp),
      siempre dentro de la carpeta /<uid>/… Devuelve la URL pública. */
@@ -382,7 +386,7 @@ window.Cloud = Cloud;
 function dbAlmaToState(row, m){
   return {
     id: "me-"+row.id, almaId: row.id, live: true,
-    name: row.name, color: row.color || "#111111", level: row.level || "EMBER", xp: row.xp || 0,
+    name: row.name, color: row.color || "#111111", level: normalizeCloudLevel(row.level || "CHISPA"), xp: row.xp || 0,
     role: row.role || "Creador", city: row.city || "", country: row.country || "",
     bio: row.bio || "", tags: row.tags || [], clan: row.clan || null, santuario: row.santuario || null,
     plan: row.plan || "ALMA", team_role: row.team_role || null,

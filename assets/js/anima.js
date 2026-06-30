@@ -50,24 +50,24 @@ function shade(hex,p){ hex=hex||"#111111"; const n=parseInt(hex.slice(1),16); le
 
 /* ---------- Pixel art (solo el Camino del Alma) ---------- */
 const LEVEL_SPRITES={
-  FOUNDING:["....a....","....X....","..x.X.x..","...xXx...","XXXXaXXXX","...xXx...","..x.X.x..","....X....","....a...."],
-  EMBER:["....X....","....X....","...xXx...","...xXx...","..xXaXx..","..xXaXx..","...xXx...","....X....","........."],
-  ROOT:["...XaX...","....X....","..X.X.X..","..X.X.X..","...XXX...","..d.X.d..",".d..X..d.","d...d...d","........."],
-  WILD:[".........",".X.....X.",".X.X.X.X.",".X.X.X.X.",".X.X.X.X.",".X.XaX.X.",".XXXXXXX.",".........","........."],
-  TOTEM:[".X.X.X...",".........","...XXX...","..XXXXX..","..XXXXX..","..XXXXX..","...XXX...",".........","........."],
-  AETHER:["..XXXXX..",".XdXXXdX.",".X.XaX.X.",".XdXXXdX.",".X.XaX.X.",".XdXXXdX.","..XXXXX..","...XXX...","........."],
-  SPIRIT:["....a....",".x..X..x.","..xXXXx..",".xXXXXXx.","aXXXaXXXa",".xXXXXXx.","..xXXXx..",".x..X..x.","....a...."],
+  ORIGEN:["....a....","....X....","..x.X.x..","...xXx...","XXXXaXXXX","...xXx...","..x.X.x..","....X....","....a...."],
+  CHISPA:["....X....","....X....","...xXx...","...xXx...","..xXaXx..","..xXaXx..","...xXx...","....X....","........."],
+  RAIZ:["...XaX...","....X....","..X.X.X..","..X.X.X..","...XXX...","..d.X.d..",".d..X..d.","d...d...d","........."],
+  PULSO:[".........",".X.....X.",".X.X.X.X.",".X.X.X.X.",".X.X.X.X.",".X.XaX.X.",".XXXXXXX.",".........","........."],
+  HUELLA:[".X.X.X...",".........","...XXX...","..XXXXX..","..XXXXX..","..XXXXX..","...XXX...",".........","........."],
+  TOTEM:["..XXXXX..",".XdXXXdX.",".X.XaX.X.",".XdXXXdX.",".X.XaX.X.",".XdXXXdX.","..XXXXX..","...XXX...","........."],
+  AURA:["....a....",".x..X..x.","..xXXXx..",".xXXXXXx.","aXXXaXXXa",".xXXXXXx.","..xXXXx..",".x..X..x.","....a...."],
   ANIMA:["....a....","...XaX...","..XxxxX..",".XxxxxxX.","XxxxxxxxX",".XxxxxxX.","..XxxxX..","...XaX...","....a...."]
 };
 function pixelSprite(l){
   const pal={ X:l.color, x:shade(l.color,46), d:shade(l.color,-48), a:"#f5ecd2" };
-  const g=LEVEL_SPRITES[l.key]||LEVEL_SPRITES.FOUNDING; let r="";
+  const g=LEVEL_SPRITES[normalizeLevelKey(l.key)]||LEVEL_SPRITES.ORIGEN; let r="";
   g.forEach((row,y)=>{ [...row].forEach((ch,x)=>{ const c=pal[ch]; if(c) r+=`<rect x="${x}" y="${y}" width="1.04" height="1.04" fill="${c}"/>`; }); });
   return `<svg class="pix" viewBox="0 0 9 9" shape-rendering="crispEdges">${r}</svg>`;
 }
-const UNLOCKS={ FOUNDING:"Tu Alma, portafolio y memoria", EMBER:"Cotizador y Raíz", ROOT:"Vínculos y flujo de trabajo",
-  WILD:"Publicar en la comunidad", TOTEM:"Crear o unirte a un Clan", AETHER:"Mentorías y Alma destacada",
-  SPIRIT:"Academia: enseñar y cursos", ANIMA:"Santuario e IA conectada (LUMBRE)" };
+const UNLOCKS={ ORIGEN:"Tu Alma, portafolio y memoria", CHISPA:"Cotizador y Raíz", RAIZ:"Vínculos y flujo de trabajo",
+  PULSO:"Publicar en la comunidad", HUELLA:"Crear o unirte a un Clan", TOTEM:"Mentorías y Alma destacada",
+  AURA:"Academia: enseñar y cursos", ANIMA:"Santuario e IA conectada (LUMBRE)" };
 function caminoPixelHTML(lp){
   const nx=lp.next; const falta=nx?Math.max(0,nx.xp-me().xp):0;
   return `<div class="camino">
@@ -81,13 +81,13 @@ function caminoPixelHTML(lp){
 }
 /* Qué REVELA cada nivel y a qué da acceso (coherente con la llegada progresiva). */
 const LEVEL_OPENS = {
-  FOUNDING:"Mi Alma — tu identidad y tu Esencia.",
-  EMBER:"Mi Alma completa: Senda (Sueño y Semillas), Trayectoria, Portafolio, Cronología e Insignias.",
-  ROOT:"Se revela el Taller: Proyectos, Vínculos y Agenda. Un proyecto enlaza su cliente, su plan de trabajo y tu Raíz (finanzas).",
-  WILD:"Se revela el Mundo: la Constelación de Almas, el Árbol vivo y los Ecos.",
-  TOTEM:"Se revela el Clan: crear junto a otras Almas — Panel, Plan de trabajo, Calendario y Proyectos compartidos.",
-  AETHER:"LUMBRE más presente y automatizaciones: el sistema empieza a trabajar contigo.",
-  SPIRIT:"Mentorías y legado: una Alma que guía a otras.",
+  ORIGEN:"Mi Alma — tu identidad y tu Esencia.",
+  CHISPA:"Mi Alma completa: Senda (Sueño y Semillas), Trayectoria, Portafolio, Cronología e Insignias.",
+  RAIZ:"Se revela el Taller: Proyectos, Vínculos y Agenda. Un proyecto enlaza su cliente, su plan de trabajo y tu Raíz (finanzas).",
+  PULSO:"Se revela el Mundo: la Constelación de Almas, el Árbol vivo y los Ecos.",
+  HUELLA:"Se revela el Clan: crear junto a otras Almas — Panel, Plan de trabajo, Calendario y Proyectos compartidos.",
+  TOTEM:"LUMBRE más presente y automatizaciones: el sistema empieza a trabajar contigo.",
+  AURA:"Mentorías y legado: una Alma que guía a otras.",
   ANIMA:"El ecosistema completo. El Santuario despierta para albergar más Almas."
 };
 function openLevels(){
@@ -207,14 +207,14 @@ function planAllows(view){
    "El menú no debe mostrar todo. Debe crecer con la persona."
    Cada vista pide un nivel mínimo; al subir de nivel, ANIMA
    revela nuevas ventanas. El Creador (sin previsualizar) ve todo.
-   Las Almas nacen en CHISPA (EMBER), así que el espacio base
+   Las Almas nacen en CHISPA, así que el espacio base
    (Mi Alma, Portafolio, Memorias, Trayectoria, Taller, Comunidad)
    nunca queda oculto; lo que llega después se abre con el camino. */
 const VIEW_MIN_LEVEL = {
   // RAÍZ — el Alma empieza a recordar y a ordenar su mundo.
-  cronologia:"ROOT", insignias:"ROOT", biblioteca:"ROOT", clientes:"ROOT", agenda:"ROOT",
+  cronologia:"RAIZ", insignias:"RAIZ", biblioteca:"RAIZ", clientes:"RAIZ", agenda:"RAIZ",
   // HUELLA — el Alma se vuelve reconocible: mide su huella y decide qué muestra.
-  estadisticas:"TOTEM", visibilidad:"TOTEM"
+  estadisticas:"HUELLA", visibilidad:"HUELLA"
 };
 function levelAllows(view){
   if(isCreator && !state.viewAs) return true;
@@ -224,7 +224,7 @@ function levelAllows(view){
 }
 /* Fundar un Clan o Santuario requiere que el Alma haya crecido en el Árbol
    hasta cierto nivel. Umbral único y fácil de ajustar. */
-const FOUND_MIN_LEVEL = "ROOT"; // RAÍZ
+const FOUND_MIN_LEVEL = "RAIZ";
 function foundLevelLabel(){ return levelByKey(FOUND_MIN_LEVEL).label; }
 function foundLevelEmoji(){ return levelByKey(FOUND_MIN_LEVEL).emoji; }
 function canFound(){ return (isCreator && !state.viewAs) || levelRank(me().level) >= levelRank(FOUND_MIN_LEVEL); }
@@ -425,7 +425,7 @@ function animaToast(msg){
 /* ---------- Sidebar identidad ---------- */
 function renderWho(){
   const a=me(); const lv=levelByKey(a.level);
-  document.getElementById("who").innerHTML = `${avatarHTML(a)}<div class="meta"><b>${esc(a.name)}</b><small>${lv.emoji} ${a.level} · ${esc(a.city||"")}</small></div>`;
+  document.getElementById("who").innerHTML = `${avatarHTML(a)}<div class="meta"><b>${esc(a.name)}</b><small>${lv.emoji} ${lv.label} · ${esc(a.city||"")}</small></div>`;
 }
 
 /* ---------- Topbar ---------- */
@@ -532,7 +532,8 @@ function soulMapWorld(sz){
     const y=Math.max(4,Math.min(96,(90-lat)/180*100+(((j>>4)%12)-6)*0.18));
     const isNew=liveMode()&&recent.indexOf(m)>-1;
     const act=(liveMode()&&!m.live)?`data-pub="${m.id}"`:`data-alma="${m.id}"`;
-    return `<button class="wn ${isNew?'new':''}" ${act} style="left:${x}%;top:${y}%;--c:${m.color}" title="${esc(m.name)} · ${esc(m.city||m.country||"")} · ${m.level}">${initials(m.name)}</button>`;
+    const lv=levelByKey(m.level);
+    return `<button class="wn ${isNew?'new':''}" ${act} style="left:${x}%;top:${y}%;--c:${m.color}" title="${esc(m.name)} · ${esc(m.city||m.country||"")} · ${esc(lv.label)}">${initials(m.name)}</button>`;
   }).join("");
   return `<div class="worldmap ${sz}"><img src="${WORLD_IMG}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">${nodes}</div>`;
 }
@@ -640,7 +641,7 @@ function renderView(){
 }
 /* Ventana bloqueada por nivel — explica qué la abre. */
 function vLocked(view){
-  const need=VIEW_MIN_LEVEL[view]||"EMBER", lv=levelByKey(need), cur=levelByKey(me().level), p=levelProgress(me().xp);
+  const need=VIEW_MIN_LEVEL[view]||"CHISPA", lv=levelByKey(need), cur=levelByKey(me().level), p=levelProgress(me().xp);
   const t=(TITLES[view]||["Esta ventana"])[0];
   return `<div class="grid"><div class="card s12 locked-view">
     <div class="locked-glyph">🔒</div>
@@ -1562,21 +1563,22 @@ function vConsola(a){
   const almas=state.cloudAlmas||[];
   const rows = almas.length ? almas.map(x=>{
     const lv=levelByKey(x.level);
-    const lopts=LEVELS.map(l=>`<option value="${l.key}" ${l.key===(x.level||'EMBER')?'selected':''}>${l.emoji} ${l.label} · ${esc(l.name)}</option>`).join("");
+    const xLevel=normalizeLevelKey(x.level||"CHISPA");
+    const lopts=LEVELS.map(l=>`<option value="${l.key}" ${l.key===xLevel?'selected':''}>${l.emoji} ${l.label} · ${esc(l.name)}</option>`).join("");
     const popts=PLAN_TIERS.map(([k,l])=>`<option value="${k}" ${k===(x.plan||'ALMA')?'selected':''}>${l}</option>`).join("");
     const ropts=ROLES.map(([k,l])=>`<option value="${k}" ${k===(x.team_role||'MIEMBRO')?'selected':''}>${l}</option>`).join("");
     const pm=PLAN_META[x.plan||'ALMA']||PLAN_META.ALMA;
     return `<div class="card s12 cs-row">
         <div class="row" style="align-items:flex-start;margin-bottom:10px">
           <span class="avatar sm" style="background:linear-gradient(145deg,${x.color||'#888'},${shade(x.color||'#888',-22)})">${initials(x.name)}</span>
-          <div class="grow"><b>${esc(x.name)}</b> ${planBadge(x.plan||'ALMA')} ${roleBadge(x.team_role||'MIEMBRO')}<br><small class="muted">${lv.emoji} ${esc(x.level||'EMBER')} · ${x.xp||0} Esencia${x.clan?` · ${esc(x.clan)}`:""}${x.crew_role?` · ${esc(x.crew_role)}`:""}</small></div>
+          <div class="grow"><b>${esc(x.name)}</b> ${planBadge(x.plan||'ALMA')} ${roleBadge(x.team_role||'MIEMBRO')}<br><small class="muted">${lv.emoji} ${esc(lv.label)} · ${x.xp||0} Esencia${x.clan?` · ${esc(x.clan)}`:""}${x.crew_role?` · ${esc(x.crew_role)}`:""}</small></div>
         </div>
         <div class="cs-fields">
           <label class="fld"><span>Plan</span><select id="cs_plan_${x.id}">${popts}</select></label>
           <label class="fld"><span>Rol</span><select id="cs_trole_${x.id}">${ropts}</select></label>
           <label class="fld"><span>Nivel</span><select id="cs_level_${x.id}">${lopts}</select></label>
           <label class="fld"><span>Esencia</span><input id="cs_xp_${x.id}" type="number" min="0" value="${x.xp||0}"></label>
-          <label class="fld"><span>Rol (crew)</span><input id="cs_role_${x.id}" type="text" value="${esc(x.crew_role||'')}" placeholder="FOUNDING / rol"></label>
+          <label class="fld"><span>Rol (crew)</span><input id="cs_role_${x.id}" type="text" value="${esc(x.crew_role||'')}" placeholder="rol interno"></label>
           <label class="fld"><span>Clan</span><input id="cs_clan_${x.id}" type="text" value="${esc(x.clan||'')}" placeholder="slug del clan"></label>
           <label class="fld"><span>Acceso al Mundo</span><select id="cs_world_${x.id}"><option value="no" ${!x.world_access?'selected':''}>No</option><option value="si" ${x.world_access?'selected':''}>Sí — ve el resumen general</option></select></label>
           <button class="btn sm gold cs-save" id="cs_save_${x.id}" data-cssave="${x.id}">Guardar</button>
@@ -2184,7 +2186,7 @@ function worldCompute(a){
   const paisesCount=countriesArr.filter(([c])=>c!=="✦ En tránsito").length;
   const weekAgo=Date.now()-7*864e5;
   const newWeek=list.filter(x=>x.created_at && new Date(x.created_at).getTime()>=weekAgo).length;
-  const nivelesCount=new Set(list.map(x=>x.level).filter(Boolean)).size;
+  const nivelesCount=new Set(list.map(x=>normalizeLevelKey(x.level)).filter(Boolean)).size;
   const tstage=treeStage(n);
   return {list,clan,members,feed,sz,n,counts,countriesArr,ecos,ecosToday,clanesCount,santuariosCount,paisesCount,newWeek,nivelesCount,tstage};
 }
@@ -2652,7 +2654,7 @@ async function rewardDaily(key, amount, reason){
 function worldSummaryCard(list){
   const clanes=[...new Set(list.map(x=>x.clan).filter(Boolean))];
   const santuarios=[...new Set(list.map(x=>x.santuario).filter(Boolean))];
-  const dist=LEVELS.map(l=>({l,n:list.filter(x=>x.level===l.key).length})).filter(d=>d.n>0);
+  const dist=LEVELS.map(l=>({l,n:list.filter(x=>normalizeLevelKey(x.level)===l.key).length})).filter(d=>d.n>0);
   const clanRows=clanes.length?clanes.map(c=>{ const mem=list.filter(x=>x.clan===c); const s=mem.find(x=>x.santuario)?mem.find(x=>x.santuario).santuario:null;
       return `<div class="country-row"><span>❂ ${esc(c)}${s?` <small class="muted">· 🜁 ${esc(s)}</small>`:""}</span><b>${mem.length}</b></div>`;}).join("")
     :`<p class="muted" style="font-size:13px">Aún no hay Clanes.</p>`;
@@ -2893,7 +2895,7 @@ function almaMini(m){
   const lv=levelByKey(m.level); const act=(liveMode()&&!m.live)?`data-pub="${m.id}"`:`data-alma="${m.id}"`;
   return `<div class="card alma-card" ${act}>${avatarHTML(m,"lg")}
     <b style="display:block;letter-spacing:-.02em">${esc(m.name)}</b><small class="muted">${esc(m.role||"")}</small><br>
-    <span class="level-badge" style="margin-top:8px;border-color:${lv.color}55;color:${lv.color};font-size:11px">${lv.emoji} ${m.level}</span>
+    <span class="level-badge" style="margin-top:8px;border-color:${lv.color}55;color:${lv.color};font-size:11px">${lv.emoji} ${lv.label}</span>
     <div class="muted" style="font-size:11px;margin-top:6px">${esc(m.country||"")}</div></div>`;
 }
 
@@ -3109,7 +3111,7 @@ function vSantuario(a){
   const full=state.almas.filter(x=>x.finance);
   const totalInc=full.reduce((t,x)=>t+sum(rootIncome(x)),0), totalExp=full.reduce((t,x)=>t+sum(x.finance.expense),0);
   const totalProj=full.reduce((t,x)=>t+x.projects.length,0), activeProj=full.reduce((t,x)=>t+x.projects.filter(p=>p.st==="En curso").length,0);
-  const dist=LEVELS.map(l=>({l,n:list.filter(x=>x.level===l.key).length})).filter(d=>d.n>0);
+  const dist=LEVELS.map(l=>({l,n:list.filter(x=>normalizeLevelKey(x.level)===l.key).length})).filter(d=>d.n>0);
   const top=[...list].sort((x,y)=>y.xp-x.xp).slice(0,5);
   return `<div class="grid">
     <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
@@ -3338,7 +3340,7 @@ function vClanPanel(a){
     return `<select class="role-sel" data-roleset="${m.id}">${ROLES.map(([k,l])=>`<option value="${k}" ${k===normRole(m.team_role)?'selected':''}>${l}</option>`).join("")}</select>`; };
   const roster=shown.length?shown.map(m=>{ const lv=levelByKey(m.level);
     return `<div class="row clan-member" data-mname="${esc((m.name||'').toLowerCase())}">${cAvatar(m,"sm",(liveMode()&&m.id!==a.almaId)?m.id:"")}
-      <div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${lv.emoji} ${esc(m.level)} · ${esc(m.role||m.country||'')}</small></div>
+      <div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${lv.emoji} ${esc(lv.label)} · ${esc(m.role||m.country||'')}</small></div>
       ${roleCtrl(m)}${(isAdmin && m.id!==a.almaId)?`<button class="ia danger" data-clanremove="${m.id}" title="Quitar del Clan">✕</button>`:""}</div>`; }).join(""):`<p class="muted" style="font-size:13px">Ninguna Alma coincide.</p>`;
   // Identidad del Clan (editable por el Admin).
   const identity=`<div class="card s12 clan-identity">
@@ -3621,7 +3623,7 @@ function vSantAlmas(a){
   const groupHTML=Object.keys(groups).sort().map(g=>{
     const rows=groups[g].map(m=>{ const lv=levelByKey(m.level);
       return `<div class="row clan-member" data-mname="${esc((m.name||'').toLowerCase())} ${esc((m.clan||'').toLowerCase())}">${cAvatar(m,"sm",(liveMode()&&m.id!==a.almaId)?m.id:"")}
-        <div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${lv.emoji} ${esc(m.level||'')} · ${esc(m.role||m.country||'')}</small></div>
+        <div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${lv.emoji} ${esc(lv.label)} · ${esc(m.role||m.country||'')}</small></div>
         ${roleCtrl(m)}${(admin && m.id!==a.almaId)?`<button class="ia danger" data-santremove="${m.id}" title="Quitar del Santuario">✕</button>`:""}</div>`; }).join("");
     return `<div class="sant-group"><div class="section-title" style="margin-top:6px"><h3 style="font-size:13.5px;margin:0">${g==='Sin Clan'?'◦ Sin Clan':'❂ '+esc(g)}</h3><div class="spacer"></div><span class="chip">${groups[g].length}</span></div>${rows}</div>`;
   }).join("");
@@ -3654,7 +3656,7 @@ function santAddPicker(s){
   const row=m=>{ const lv=levelByKey(m.level);
     const where=m.santuario?`<span class="chip">🜁 ${esc(m.santuario)}</span>`:(m.clan?`<span class="chip">❂ ${esc(m.clan)}</span>`:`<span class="chip ok">Libre</span>`);
     return `<div class="row" data-mname="${esc((m.name||'').toLowerCase())} ${esc((m.clan||'').toLowerCase())} ${esc((m.santuario||'').toLowerCase())}">${cAvatar(m,"sm")}
-      <div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${lv.emoji} ${esc(m.level||'')} · ${esc(m.role||m.country||'')}</small></div>
+      <div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${lv.emoji} ${esc(lv.label)} · ${esc(m.role||m.country||'')}</small></div>
       ${where}<button class="btn sm" data-santadd="${m.id}">${m.santuario?'Trasladar':'Sumar'}</button></div>`; };
   return `<div class="card s12" id="santAddCard"><div class="section-title"><h2 style="font-size:15px">Sumar un Alma a ${esc(s)}</h2><div class="spacer"></div><button class="ia" id="santAddClose">✕</button></div>
     <p class="muted" style="font-size:12.5px;margin:-2px 0 8px">Invita a <b>cualquier Alma del Mundo</b>. Si ya está en otro Santuario, se trasladará a <b>${esc(s)}</b>.</p>
@@ -4000,7 +4002,7 @@ function clanAddPicker(clan){
   const row=m=>{ const lv=levelByKey(m.level);
     const where=m.clan?`<span class="chip" title="Ya pertenece a otro Clan">${esc(meta_emoji(m.clan))} ${esc(m.clan)}</span>`:`<span class="chip ok">Libre</span>`;
     return `<div class="row" data-mname="${esc((m.name||'').toLowerCase())} ${esc((m.clan||'').toLowerCase())}">${cAvatar(m,"sm")}
-      <div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${lv.emoji} ${esc(m.level||'')} · ${esc(m.role||m.country||'')}</small></div>
+      <div class="grow"><b>${esc(m.name)}</b><br><small class="muted">${lv.emoji} ${esc(lv.label)} · ${esc(m.role||m.country||'')}</small></div>
       ${where}<button class="btn sm" data-clanadd="${m.id}"${m.clan?' data-moved="1"':''}>${m.clan?'Trasladar':'Añadir'}</button></div>`; };
   return `<div class="card s12" id="clanAddCard"><div class="section-title"><h2 style="font-size:15px">Sumar un Alma a ${esc(clan)}</h2><div class="spacer"></div><button class="ia" id="clanAddClose">✕</button></div>
     <p class="muted" style="font-size:12.5px;margin:-2px 0 8px">Puedes invitar a <b>cualquier Alma del Mundo</b>. Si ya pertenece a otro Clan, se trasladará a <b>${esc(clan)}</b>.</p>
@@ -4301,7 +4303,7 @@ function exportPDF(){
   document.getElementById("printArea").innerHTML=`
     <div class="p-head"><div class="brand"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M50 7 89 91H72L61 66H39L28 91H11L50 7Z" stroke="#111" stroke-width="6.5" stroke-linejoin="round"/><circle cx="50" cy="49" r="5.5" fill="#111"/></svg></span>ANIMA TSC</div><small>Dossier de Alma · ${new Date().toLocaleDateString("es-CL")}</small></div>
     <h1 class="p-name">${esc(a.name)}</h1>
-    <div class="p-sub">${lv.emoji} ${a.level} · ${lv.name} · ${a.xp.toLocaleString("es-CL")} Esencia — ${esc(a.role||"")} · ${esc(a.country||"")}</div>
+    <div class="p-sub">${lv.emoji} ${lv.label} · ${lv.name} · ${a.xp.toLocaleString("es-CL")} Esencia — ${esc(a.role||"")} · ${esc(a.country||"")}</div>
     <p>${esc(a.bio||"")}</p>
     <div class="p-tags">${(a.tags||[]).map(t=>`<span>${esc(t)}</span>`).join("")}</div>
     <h2>Trayectoria</h2>${a.trajectory.map(n=>`<p><b>${esc(n.y)} · ${esc(n.t)}</b> — ${esc(n.d)}</p>`).join("")||"<p>—</p>"}
@@ -4334,8 +4336,8 @@ function lumbreThink(q){
   if(/proyect|trabajo|encargo/.test(t)){ const act=a.projects.filter(p=>p.st==="En curso"); const s=ai&&act[0]?` Enfócate en "${esc(act[0].t)}" (${act[0].pct}%).`:""; return `Tienes ${act.length} proyecto(s) en curso de ${a.projects.length}.${s}`; }
   if(/trayectoria|historia|hito/.test(t)){ const l=a.trajectory[a.trajectory.length-1]; return l?`Tu último hito: <b>${esc(l.t)}</b> (${esc(l.y)}).`:"Aún no tienes hitos. Agrega el primero en Trayectoria."; }
   if(/portafolio|obra/.test(t)) return `Tu portafolio tiene ${a.portfolio.length} obras.`;
-  if(/nivel|xp|esencia|sube|progreso/.test(t)){ const lp=levelProgress(a.xp); return lp.next?`Estás en <b>${a.level}</b> con ${a.xp.toLocaleString("es-CL")} Esencia. Te faltan ${(lp.next.xp-a.xp).toLocaleString("es-CL")} para <b>${lp.next.key}</b>.`:`Eres <b>ANIMA</b>. Nivel máximo. ∞`; }
-  if(/resumen|reporte/.test(t)) return `Resumen: ${a.projects.filter(p=>p.st==="En curso").length} proyectos activos · ganancia ${money(inc-exp)} · nivel ${a.level} · ${a.memories.length} memorias.`;
+  if(/nivel|xp|esencia|sube|progreso/.test(t)){ const lp=levelProgress(a.xp), lv=levelByKey(a.level); return lp.next?`Estás en <b>${lv.label}</b> con ${a.xp.toLocaleString("es-CL")} Esencia. Te faltan ${(lp.next.xp-a.xp).toLocaleString("es-CL")} para <b>${lp.next.label}</b>.`:`Eres <b>ANIMA</b>. Nivel máximo. ∞`; }
+  if(/resumen|reporte/.test(t)){ const lv=levelByKey(a.level); return `Resumen: ${a.projects.filter(p=>p.st==="En curso").length} proyectos activos · ganancia ${money(inc-exp)} · nivel ${lv.label} · ${a.memories.length} memorias.`; }
   if(/hola|hey|buenas/.test(t)) return `Hola, ${esc(a.name.split(" ")[0])}. ¿Reviso tu Raíz, proyectos o tu siguiente nivel?`;
   return ai?`Puedo ayudarte con Raíz, cotizaciones, proyectos, trayectoria, niveles y reportes.`:"En modo Básico organizo Raíz, proyectos, documentos y portafolio.";
 }
