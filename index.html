@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cormorant+Garamond:wght@300;500&display=swap" rel="stylesheet" />
-  <script src="assets/js/anima-state.js"></script>
+  <script src="assets/js/anima-state.js?v=levels-5c5615f"></script>
   <style>
     :root{
       --black:#08080a; --ink:#0a0a0b; --veil:#101013;
@@ -401,7 +401,7 @@
     function lazyCount(){
       var s1=document.createElement("script"); s1.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
       s1.onload=function(){
-        var s2=document.createElement("script"); s2.src="assets/js/supabase.js";
+        var s2=document.createElement("script"); s2.src="assets/js/supabase.js?v=levels-5c5615f";
         s2.onload=function(){
           try{ if(window.Cloud && Cloud.enabled && Cloud.soulsCount){ Cloud.soulsCount().then(function(n){ if(n!=null) paintOrigin(n); }).catch(function(){}); } }catch(e){}
           try{
