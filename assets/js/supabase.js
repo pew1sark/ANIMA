@@ -80,7 +80,14 @@ const Cloud = {
     const get = async (t, extra) => {
       let q = _sb.from(t).select(MODULE_FIELDS[t]||"*").eq("alma_id", almaId);
       if(extra) q = q.eq("kind", extra);
-      const { data } = await q; return data || [];
+      const { data, error } = await q;
+      if(!error) return data || [];
+      console.warn("ANIMA: no se pudo cargar", t, "con campos explícitos; reintentando.", error);
+      let fallback = _sb.from(t).select("*").eq("alma_id", almaId);
+      if(extra) fallback = fallback.eq("kind", extra);
+      const { data:retry, error:retryError } = await fallback;
+      if(retryError){ console.warn("ANIMA: carga fallida", t, retryError); return []; }
+      return retry || [];
     };
     return {
       projects:   await get("projects"),
@@ -391,7 +398,7 @@ function dbAlmaToState(row, m){
       income:  (m.income  || []).map(x => ({ _id:x.id, t:x.title, a:Number(x.amount), d:x.period, cat:x.category, on:x.occurred_at, method:x.method, notes:x.notes })),
       expense: (m.expense || []).map(x => ({ _id:x.id, t:x.title, a:Number(x.amount), d:x.period, cat:x.category, on:x.occurred_at, method:x.method, notes:x.notes }))
     },
-    projects:   (m.projects   || []).map(x => ({ _id:x.id, t:x.title, st:x.status, pct:x.pct, client:x.client, desc:x.description, start:x.started_at, due:x.due_at, budget:x.budget, paid:x.paid })),
+    projects:   (m.projects   || []).map(x => ({ _id:x.id, t:x.title, st:x.status, pct:x.pct, client:x.client, desc:x.description, start:x.started_at, due:x.due_at, budget:x.budget, paid:x.paid, deliverables:x.deliverables, tags:x.tags, client_id:x.client_id, owner_type:x.owner_type, owner:x.owner, context:x.context, template:x.template, category:x.category, responsible:x.responsible, archive:x.archive })),
     trajectory: (m.trajectory || []).map(x => ({ _id:x.id, y:x.year, t:x.title, d:x.detail })),
     portfolio:  (m.portfolio  || []).map(x => ({ _id:x.id, t:x.title, k:x.kind, c:x.color, year:x.year, link:x.link, desc:x.description })),
     memories:   (m.memories   || []).map(x => ({ _id:x.id, t:x.title, d:x.detail })),

@@ -1296,7 +1296,10 @@ function vProyectos(a){
       <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}</span></div>
       <div class="seg" style="margin-top:12px;flex-wrap:wrap">${filterBtn("todos","Todos")}${filterBtn("personal","Mi Taller")}${filterBtn("clan","Clanes")}${filterBtn("archivados","Archivados")}</div>
       ${projectSelectFilters(all)}</div>`;
-  if(!ps.length) return `<div class="grid">${summaryCards}${head}<div class="card s12"><p class="muted">No hay unidades en este filtro. Crea una nueva desde el botón ＋.</p></div></div>${fab}`;
+  if(!ps.length){
+    const hasProjects=all.length>0;
+    return `<div class="grid">${summaryCards}${head}<div class="card s12"><p class="muted">${hasProjects?"Hay proyectos guardados, pero el filtro actual no los muestra. Limpia filtros o revisa Archivados.":"No hay unidades todavía. Crea una nueva desde el botón ＋."}</p>${hasProjects?`<button class="btn sm secondary" data-projclear>Limpiar filtros</button>`:""}</div></div>${fab}`;
+  }
   const pct=p=>clampPct(p.pct);
   let body;
   if(view==="lista"){
@@ -4082,7 +4085,7 @@ function vRecordatorios(a){
 const EDITORS = {
   proyecto:{ title:"Trabajo", table:"projects", get:a=>a.projects, push:"unshift", xp:60,
     fields:[{k:"context",l:"Contexto",sel:["Personal","Clan","Santuario"]},{k:"template",l:"Plantilla",sel:PROJECT_TEMPLATE_OPTIONS},{k:"t",l:"Nombre"},{k:"category",l:"Categoría"},{k:"client",l:"Cliente / Vínculo opcional",clients:true},{k:"responsible",l:"Responsable"},{k:"link",l:"Vínculo externo opcional"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor total",num:true},{k:"paid",l:"Abono realizado",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
-    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:clampPct(v.pct),budget:v.budget?+v.budget:null,paid:+v.paid||0,started_at:v.start||null,due_at:v.due||null,description:v.desc}) },
+    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:clampPct(v.pct),budget:v.budget?+v.budget:null,paid:+v.paid||0,started_at:v.start||null,due_at:v.due||null,description:v.desc,context:v.context,owner_type:v.owner_type,owner:v.owner,template:v.template,category:v.category,responsible:v.responsible,deliverables:v.desc,archive:v.archive||null}) },
   memoria:{ title:"Memoria", table:"memories", get:a=>a.memories, push:"unshift", xp:40,
     fields:[{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({title:v.t,detail:v.d}) },
   ingreso:{ title:"Ingreso", table:"finance_entries", get:a=>a.finance.income, push:"unshift", xp:20,
@@ -4108,6 +4111,37 @@ const EDITORS = {
     toRow:v=>({name:v.name,kind:(v.kind||"Cliente").toLowerCase(),role:v.role,email:v.email,phone:v.phone,notes:v.notes}) }
 };
 let recordCtx=null;
+function basicProjectRow(v){
+  return {
+    title:v.t,
+    client:v.client||null,
+    status:v.st||"Cotizando",
+    pct:clampPct(v.pct),
+    budget:v.budget?+v.budget:null,
+    paid:+v.paid||0,
+    started_at:v.start||null,
+    due_at:v.due||null,
+    description:v.desc||null
+  };
+}
+async function insertRecordRow(cfg, v, almaId){
+  try{
+    return await Cloud.insertRow(cfg.table, {...cfg.toRow(v), alma_id:almaId});
+  }catch(e){
+    if(cfg.table!=="projects") throw e;
+    console.warn("ANIMA: guardado completo de proyecto falló; usando campos básicos.", e);
+    return await Cloud.insertRow("projects", {...basicProjectRow(v), alma_id:almaId});
+  }
+}
+async function updateRecordRow(cfg, id, v){
+  try{
+    return await Cloud.updateRow(cfg.table, id, cfg.toRow(v));
+  }catch(e){
+    if(cfg.table!=="projects") throw e;
+    console.warn("ANIMA: actualización completa de proyecto falló; usando campos básicos.", e);
+    return await Cloud.updateRow("projects", id, basicProjectRow(v));
+  }
+}
 function openRecord(kind, idx=null){
   const cfg=EDITORS[kind]; if(!cfg) return; recordCtx={kind,idx};
   const a=me(); const item=(idx!=null)?cfg.get(a)[idx]:{};
@@ -4161,7 +4195,7 @@ async function saveRecord(){
   try{
     if(idx==null){
       const item={...v};
-      if(a.live){ const row=await Cloud.insertRow(cfg.table, {...cfg.toRow(v), alma_id:a.almaId}); item._id=row.id; }
+      if(a.live){ const row=await insertRecordRow(cfg, v, a.almaId); item._id=row.id; }
       arr[cfg.push==="push"?"push":"unshift"](item);
       // Esencia: la PRIMERA obra/proyecto otorga el bono grande (reemplaza la xp
       // normal de la acción); las siguientes suman la xp por acción de siempre.
@@ -4174,7 +4208,7 @@ async function saveRecord(){
       if(kind==="proyecto") await interconnectProject(a, v);   // Proyecto ↔ Cliente ↔ Raíz ↔ Flujo
     }else{
       const item=arr[idx]; Object.assign(item,v);
-      if(a.live && item._id){ await Cloud.updateRow(cfg.table,item._id,cfg.toRow(v)); }
+      if(a.live && item._id){ await updateRecordRow(cfg,item._id,v); }
     }
     save(); closeRecord(); renderAll();
   }catch(e){ document.getElementById("recMsg").textContent="No se pudo guardar: "+(e.message||e); }
@@ -4900,6 +4934,7 @@ document.addEventListener("click", e=>{
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
   const pv=e.target.closest("[data-projview]"); if(pv){ state.projView=pv.dataset.projview; renderView(); return; }
   const pf=e.target.closest("[data-projfilter]"); if(pf){ state.projFilter=pf.dataset.projfilter; state.projOpen=null; renderView(); return; }
+  if(e.target.closest("[data-projclear]")){ state.projFilter="todos"; state.projDetailFilter={}; state.projOpen=null; renderView(); return; }
   const pa=e.target.closest("[data-addproject]"); if(pa){ openProjectRecord(pa.dataset.addproject); return; }
   if(e.target.closest("[data-finclear]")){ state.finPeriod="all"; state.finCat="all"; renderView(); return; }
   const po=e.target.closest("[data-projopen]"); if(po && !e.target.closest("select,option")){ state.projOpen=+po.dataset.projopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
