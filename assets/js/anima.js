@@ -4745,7 +4745,10 @@ const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementB
    reúnan más Esencia. Cambiar a true para reactivar el chat. */
 const LUMBRE_AWAKE=false;
 function openLumbre(){
-  if(!LUMBRE_AWAKE){ toast("✦ LUMBRE aún no despierta. Junta más Esencia…"); return; }
+  // El Creador (LumbrePermissions.canUseRealLumbre) siempre puede abrir LUMBRE,
+  // sin esperar el despertar narrativo por Esencia — es quien la está probando.
+  const adminOverride=(typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre();
+  if(!LUMBRE_AWAKE && !adminOverride){ toast("✦ LUMBRE aún no despierta. Junta más Esencia…"); return; }
   drawer().classList.add("open"); dbg().classList.add("open"); renderLumbre();
 }
 function closeLumbre(){ drawer().classList.remove("open"); dbg().classList.remove("open"); }
