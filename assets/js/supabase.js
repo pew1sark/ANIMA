@@ -80,7 +80,17 @@ const Cloud = {
     const get = async (t, extra) => {
       let q = _sb.from(t).select(MODULE_FIELDS[t]||"*").eq("alma_id", almaId);
       if(extra) q = q.eq("kind", extra);
-      const { data } = await q; return data || [];
+      const { data, error } = await q;
+      if(!error) return data || [];
+      // Resiliencia ante desajuste de esquema: si el SELECT con columnas
+      // explícitas falla (p.ej. una columna aún no migrada), NO perdemos los
+      // registros — reintentamos con select("*") en vez de devolver vacío.
+      console.warn("ANIMA: no se pudo cargar", t, "con campos explícitos; reintentando con *.", error);
+      let fb = _sb.from(t).select("*").eq("alma_id", almaId);
+      if(extra) fb = fb.eq("kind", extra);
+      const { data:retry, error:retryError } = await fb;
+      if(retryError){ console.warn("ANIMA: carga fallida", t, retryError); return []; }
+      return retry || [];
     };
     return {
       projects:   await get("projects"),
