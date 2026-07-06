@@ -70,11 +70,12 @@
   <aside class="drawer" id="drawer">
     <div class="head">
       <span class="mark" style="background:radial-gradient(circle at 50% 40%,#fff7e1,#f0d89a)"><img src="assets/img/lumbre.svg" width="22" height="26" alt="" decoding="async" style="image-rendering:pixelated"></span>
-      <div style="flex:1"><b style="letter-spacing:-.02em">LUMBRE</b><br><small class="muted">Motor agente · 100% local por defecto</small></div>
+      <div style="flex:1"><b style="letter-spacing:-.02em">LUMBRE</b><br><small class="muted" id="lumbreSubtitle">Motor agente · 100% local por defecto</small></div>
       <button class="btn ghost sm" id="lumbreClose">✕</button>
     </div>
     <div class="body" id="lumbreChat"></div>
     <div class="foot">
+      <div id="lumbreAdminBar" style="display:none;margin-bottom:10px"></div>
       <div class="modes" id="lumbreMode" style="margin-bottom:12px"></div>
       <div class="lum-input">
         <input id="lumbreInput" placeholder="Pregúntale a LUMBRE…" autocomplete="off" />
@@ -293,6 +294,14 @@
   <script src="assets/js/seed.js"></script>
   <script src="assets/js/icons.js"></script>
   <script src="assets/js/world-tree.js"></script>
+  <script src="assets/js/services/ai.service.js"></script>
+  <script src="assets/js/services/obsidian.service.js"></script>
+  <script src="assets/js/lumbre/lumbre.permissions.js"></script>
+  <script src="assets/js/lumbre/lumbre.context.js"></script>
+  <script src="assets/js/lumbre/lumbre.tools.js"></script>
+  <script src="assets/js/lumbre/lumbre.providers.js"></script>
+  <script src="assets/js/lumbre/lumbre.memory.js"></script>
+  <script src="assets/js/lumbre/lumbre.agent.js"></script>
   <script src="assets/js/anima.js"></script>
   <script>if(window.WorldTree) WorldTree.init();</script>
 </body>

@@ -2003,6 +2003,7 @@ async function qSave(){
 }
 async function qSaveCloud(a){
   const t=quoteTotals();
+  const wasNew=!quoteDraft.id;
   try{
     let clientId=quoteDraft.client_id||null;
     if(quoteDraft.client){
@@ -2023,6 +2024,12 @@ async function qSaveCloud(a){
     else { const qrow=await Cloud.insertRow("quotes",payload); quoteDraft.id=qrow.id; }
     quoteDraft.client_id=clientId; quoteDraft.project_id=projectId;
     state.cloudQuotes=await Cloud.quotes(a.almaId);
+    // LUMBRE · Obsidian (Etapa 1): solo la primera vez que nace la cotización.
+    if(wasNew && (typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre()
+      && (typeof ObsidianService!=="undefined") && ObsidianService.isConnected()){
+      ObsidianService.saveQuote({ id:quoteDraft.id, title:quoteDraft.title, client_name:quoteDraft.client,
+        total:Math.round(t.total), currency:quoteDraft.currency, status:quoteDraft.status||"" }, a.name).catch(()=>{});
+    }
     renderAll(); alert("Cotización guardada en la nube ✓ Vínculo y proyecto enlazados.");
   }catch(e){ alert("No se pudo guardar la cotización: "+(e.message||e)); }
 }
@@ -4128,6 +4135,13 @@ function recordAlphaEvents(kind, v, arr){
     }
     // Invalida cachés para que Cronología e Insignias se refresquen al entrar.
     state.cloudTimeline=null; state.cloudBadges=null;
+    // LUMBRE · Obsidian (Etapa 1): solo eventos reales de creación, nunca sync
+    // constante — y solo si el Creador conectó su Vault en esta sesión.
+    if((typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre()
+      && (typeof ObsidianService!=="undefined") && ObsidianService.isConnected()){
+      if(kind==="proyecto" && arr[0]) ObsidianService.saveProject(arr[0], a.name).catch(()=>{});
+      else if(kind==="cliente" && arr[0]) ObsidianService.saveClient(arr[0], a.name).catch(()=>{});
+    }
   }catch(e){}
 }
 /* ===========================================================
@@ -4220,9 +4234,41 @@ function renderLumbre(){
   const intro=`<div class="msg lum"><b>LUMBRE</b><br>Soy el motor de ANIMA para <b>${esc(a.name)}</b>. Modo: <b>${modeName()}</b>. Pregúntame por Raíz, proyectos, trayectoria o pídeme sugerencias.</div>`;
   body.innerHTML=intro+state.chat.map(m=>`<div class="msg ${m.role==='you'?'you':'lum'}">${m.role==='lum'?'<b>LUMBRE</b><br>':''}${m.text}</div>`).join("");
   body.scrollTop=body.scrollHeight;
+  renderLumbreAdminBar();
+}
+/* LUMBRE · ADMIN (Etapa 1): indicador + conexión al Vault de Obsidian.
+   Solo se muestra si LumbrePermissions.canUseRealLumbre() — para cualquier
+   otra Alma el drawer queda exactamente igual que siempre. */
+function renderLumbreAdminBar(){
+  const sub=document.getElementById("lumbreSubtitle"), bar=document.getElementById("lumbreAdminBar");
+  if(!sub || !bar) return;
+  const admin = (typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre();
+  if(!admin){ sub.textContent="Motor agente · 100% local por defecto"; bar.style.display="none"; bar.innerHTML=""; return; }
+  sub.textContent="LUMBRE · ADMIN · Alpha";
+  const connected=(typeof ObsidianService!=="undefined") && ObsidianService.isConnected();
+  bar.style.display="block";
+  bar.innerHTML=`<button class="btn ghost sm" id="lumbreObsidianBtn">${connected?"✦ Vault conectado":"Conectar Vault de Obsidian"}</button>`;
+}
+async function connectObsidianVault(){
+  try{
+    await ObsidianService.connect();
+    renderLumbreAdminBar();
+  }catch(e){ alert(e.message||"No se pudo conectar el Vault."); }
 }
 const modeName=()=>(LUMBRE_MODES.find(m=>m.key===state.lumbreMode)||{}).name;
-function lumbreAsk(q){ state.chat.push({role:"you",text:esc(q)}); state.chat.push({role:"lum",text:lumbreThink(q)}); save(); renderLumbre(); }
+function lumbreAsk(q){
+  state.chat.push({role:"you",text:esc(q)});
+  const realLumbre=(typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre() && state.lumbreMode==="CLOUD";
+  if(!realLumbre){ state.chat.push({role:"lum",text:lumbreThink(q)}); save(); renderLumbre(); return; }
+  state.chat.push({role:"lum",text:"…"});
+  const slot=state.chat.length-1;
+  save(); renderLumbre();
+  LumbreAgent.ask(q).then(answer=>{
+    state.chat[slot]={role:"lum",text:answer}; save(); renderLumbre();
+  }).catch(()=>{
+    state.chat[slot]={role:"lum",text:lumbreThink(q)}; save(); renderLumbre();
+  });
+}
 function lumbreThink(q){
   const a=me(), t=q.toLowerCase();
   if(state.lumbreMode==="OFF") return "Estoy en modo <b>OFF</b>: solo organización manual. Actívame en Básico, IA Local o IA Conectada.";
@@ -4930,6 +4976,7 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#authSignUp")) doAuth("up");
   if(e.target.closest("#authForgot")) doForgot();
   if(e.target.closest("#lumbreSend")) sendLumbre();
+  if(e.target.closest("#lumbreObsidianBtn")) connectObsidianVault();
 });
 document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target.id==="joinCode") joinClanCode();
