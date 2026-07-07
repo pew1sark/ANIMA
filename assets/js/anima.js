@@ -1268,11 +1268,17 @@ function vProyectos(a){
   const fab=`<button class="fab" data-addproject="Personal" title="Nuevo Proyecto">＋<span>Nueva Unidad</span></button>`;
   const segBtn=(k,t)=>`<button class="seg-b ${view===k?'on':''}" data-projview="${k}">${t}</button>`;
   const filterBtn=(k,t)=>`<button class="seg-b ${(state.projFilter||"todos")===k?'on':''}" data-projfilter="${k}">${t}</button>`;
+  // Valor total en cotización (todas las unidades activas, sin importar el filtro).
+  const cotPs=all.filter(p=>!p.archive&&flowOf(p.st)==="Cotizando");
+  const cotMonto=cotPs.reduce((t,p)=>t+(+p.budget||0),0);
+  const cotInfo=cotPs.length?`<div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(110,110,115,.06)">
+        <span class="proj-badge st-cot">Cotizando</span><b style="font-size:16px">${money(cotMonto)}</b>
+        <small class="muted">valor total en cotización · ${cotPs.length} unidad${cotPs.length===1?"":"es"} esperando aprobación</small></div>`:"";
   const head=`<div class="card s12"><div class="section-title"><h2>Unidades de Trabajo</h2><div class="spacer"></div>
       <div class="seg">${segBtn("tarjetas","Tarjetas")}${segBtn("lista","Lista")}${segBtn("kanban","Kanban")}</div>
       <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}</span></div>
       <div class="seg" style="margin-top:12px;flex-wrap:wrap">${filterBtn("todos","Todos")}${filterBtn("personal","Mi Taller")}${filterBtn("clan","Clanes")}${filterBtn("archivados","Archivados")}</div>
-      ${projectSelectFilters(all)}</div>`;
+      ${projectSelectFilters(all)}${cotInfo}</div>`;
   if(!ps.length) return `<div class="grid">${head}<div class="card s12"><p class="muted">No hay unidades en este filtro. Crea una nueva desde el botón ＋.</p></div></div>${fab}`;
   const pct=p=>Math.max(0,Math.min(100,+p.pct||0));
   let body;
@@ -1365,6 +1371,9 @@ function vFinanzas(a){
   const match=x=>(fp==="all"||finMonthKey(x)===fp)&&(fc==="all"||(x.cat||"")===fc);
   const inc=allInc.filter(match), exp=allExp.filter(match);
   const sumI=sum(inc), sumE=sum(exp), neta=sumI-sumE;
+  // Valor en cotización (pipeline): unidades activas del Flujo de trabajo en "Cotizando".
+  const cotPs=(a.projects||[]).filter(p=>!p.archive&&flowOf(p.st)==="Cotizando");
+  const cotMonto=cotPs.reduce((t,p)=>t+(+p.budget||0),0);
   const margen=sumI>0?Math.round(neta/sumI*100):0;
   const filtered=fp!=="all"||fc!=="all";
   // Tendencia mensual (respeta filtro de categoría, ignora el de periodo) — hasta 6 meses.
@@ -1395,6 +1404,10 @@ function vFinanzas(a){
     <div class="card s3"><div class="stat"><span class="num" style="color:var(--danger)">${money(sumE)}</span><span class="lbl">Egresos${filtered?" (filtro)":""}</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${money(neta)}</span><span class="lbl">Ganancia neta</span></div></div>
     <div class="card s3"><div class="stat"><span class="num" style="color:${margen>=0?'var(--ok)':'var(--danger)'}">${margen}%</span><span class="lbl">Margen / rentabilidad</span></div></div>
+    <div class="card s12" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span class="proj-badge st-cot">Cotizando</span><b style="font-size:17px">${money(cotMonto)}</b>
+      <span class="muted" style="font-size:12.5px">valor total en cotización · ${cotPs.length} unidad${cotPs.length===1?"":"es"} del Flujo de trabajo — pasa a Ingresos cuando se apruebe y cobre</span>
+    </div>
     <div class="card s7"><div class="section-title"><h2 style="font-size:15px">Rentabilidad</h2><div class="spacer"></div><span class="pill ${margen>=40?'gold':''}">${margen>=40?"Saludable":margen>=15?"Estable":margen>=0?"Ajustado":"En rojo"}</span></div>
       <div class="proj-bar" style="height:10px;margin:4px 0 12px"><span style="width:${Math.max(0,Math.min(100,margen))}%;background:linear-gradient(90deg,#3a8a5f,#2e7d52)"></span></div>
       <h3 style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px">Tendencia mensual</h3>
