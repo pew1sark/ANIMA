@@ -1283,3 +1283,15 @@ a.nav-item{text-decoration:none;color:inherit}
 .codice summary:hover{color:var(--gold-deep,#7b5920)}
 .codice details p{margin:0 0 14px 24px;font-size:14px;line-height:1.6;color:var(--soft,#6b6b70)}
 .codice details p b{color:var(--ink,#0a0a0b);font-weight:600}
+
+/* --- Detalle de proyecto · Abonos & Control del proceso --- */
+.ab-form{display:grid;grid-template-columns:110px 130px 130px 1fr;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.ab-form .field{margin-bottom:0}
+.ab-form .field input,.ab-form .field select{padding:9px 10px;font-size:13px;border-radius:10px}
+@media(max-width:900px){.ab-form{grid-template-columns:1fr 1fr}}
+.ck-add{display:flex;gap:8px;margin-top:12px}
+.ck-add input{flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;font-family:inherit;background:#faf8f3;outline:none}
+.ck-add input:focus{border-color:var(--gold)}
+.ck-row .task-dot{cursor:pointer}
+.pd-hist{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.pd-hist-row{display:flex;align-items:center;gap:10px}

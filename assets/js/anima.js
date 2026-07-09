@@ -1089,9 +1089,24 @@ async function savePortfolioProfile(){
 const FLOW=["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"];
 function flowOf(st){ if(FLOW.includes(st)) return st; if(st==="En curso") return "En producción"; if(st==="Terminado"||st==="Cerrado") return "Cerrado"; return "Cotizando"; }
 function clampPct(v){ return Math.max(0, Math.min(100, Math.round(+v || 0))); }
+/* --- Abonos por trabajo: historial de pagos parciales (payments jsonb) --- */
+function projectAbonos(p){ return Array.isArray(p.abonos)?p.abonos:[]; }
+function projectPaidTotal(p){
+  const ab=projectAbonos(p);
+  if(ab.length) return ab.reduce((t,x)=>t+Math.max(0,+x.a||0),0);
+  return Math.max(0, +p.paid || 0);
+}
+/* El "Abono realizado" antiguo (número suelto) se convierte en el primer
+   abono del historial para no perderlo. */
+function migrateLegacyPaid(p){
+  if(!Array.isArray(p.abonos)) p.abonos=[];
+  const legacy=Math.max(0,+p.paid||0);
+  if(!p.abonos.length && legacy>0)
+    p.abonos.push({ a:legacy, on:p.start||new Date().toISOString().slice(0,10), method:"", note:"Abono registrado antes del historial" });
+}
 function projectMoney(p){
   const budget=+p.budget || 0;
-  const paid=Math.max(0, +p.paid || 0);
+  const paid=projectPaidTotal(p);
   return { budget, paid, balance:Math.max(0, budget-paid) };
 }
 function projectSummary(projects){
@@ -1333,6 +1348,9 @@ function vProyectos(a){
 }
 function vProyectoDetalle(a, i){
   const p=a.projects[i]; const pct=clampPct(p.pct), fin=projectMoney(p);
+  const hist=Array.isArray(p.hist)?p.hist:[];
+  const payPct=fin.budget>0?Math.min(100,Math.round(fin.paid/fin.budget*100)):0;
+  const hoy=new Date().toISOString().slice(0,10);
   const info=`<div class="card s5 proj-info">
       <div class="pd-block"><span class="pd-k">Contexto</span><b>${projectContextBadge(a,p)} ${esc(projectOwner(a,p))}</b></div>
       <div class="pd-grid3">
@@ -1358,15 +1376,60 @@ function vProyectoDetalle(a, i){
         <div><span>Actualizar avance</span><b data-pct-label="${i}">${pct}%</b></div>
         <input class="kpct" data-pct="${i}" type="range" min="0" max="100" step="5" value="${pct}">
       </div>
-      <div class="project-money">
-        <div><span>Abono realizado</span><b data-paid-label="${i}">${money(fin.paid)}</b></div>
-        <input class="kpaid" data-paid="${i}" type="number" min="0" step="1000" value="${fin.paid}">
-        <div><span>Saldo pendiente por cobrar</span><b data-balance-label="${i}">${fin.budget?money(fin.balance):"—"}</b></div>
-      </div>
+      ${hist.length?`<div class="pd-block" style="margin-top:12px"><span class="pd-k">Historial de estado</span>
+        <div class="pd-hist">${hist.slice(-5).reverse().map(h=>`<div class="pd-hist-row"><span class="proj-badge ${projStageClass(h.st)}">${esc(h.st)}</span><small class="muted">${h.at?esc(tallerDate(h.at)):""}</small></div>`).join("")}</div></div>`:""}
       ${p.desc?`<div class="pd-block" style="margin-top:14px"><span class="pd-k">Entregables / notas</span><p style="margin:4px 0 0;font-size:14px">${esc(p.desc)}</p></div>`:""}
       <div style="display:flex;gap:8px;margin-top:16px"><button class="btn secondary sm" data-edit="proyecto:${i}">✎ Editar</button><button class="btn ghost sm" data-del="proyecto:${i}">✕ Eliminar</button></div>
     </div>`;
-  const files=`<div class="card s7 proj-files">
+  // Abonos & Pagos — historial de pagos parciales del trabajo.
+  const ab=projectAbonos(p);
+  const half=Math.round(fin.balance/2);
+  const abonoRow=(x,j)=>`<div class="row"><span style="color:var(--ok);font-size:16px">✦</span>
+      <div class="grow"><b>${money(+x.a||0)}</b><br><small class="muted">${[x.on?tallerDate(x.on):"",x.method,x.note].filter(Boolean).map(esc).join(" · ")||"—"}</small></div>
+      ${j!=null?`<button class="ia" data-abdel="${i}:${j}" title="Eliminar abono">✕</button>`:""}</div>`;
+  const abonos=`<div class="card s7 proj-pay">
+      <div class="section-title"><h2 style="font-size:15px">Abonos & Pagos</h2><div class="spacer"></div>
+        <span class="pill ${fin.budget&&fin.balance===0?'gold':''}">${fin.budget?(fin.balance===0?"Pagado ✓":payPct+"% pagado"):"Sin valor total"}</span></div>
+      <div class="pd-grid3" style="margin-bottom:8px">
+        <div><span class="pd-k">Valor total</span><b>${fin.budget?esc(money(fin.budget)):"—"}</b></div>
+        <div><span class="pd-k">Abonado</span><b style="color:var(--ok)">${esc(money(fin.paid))}</b></div>
+        <div><span class="pd-k">Saldo pendiente</span><b style="color:${fin.balance>0?'var(--danger)':'var(--ok)'}">${fin.budget?esc(money(fin.balance)):"—"}</b></div>
+      </div>
+      <div class="proj-bar" style="height:9px;margin:0 0 14px"><span style="width:${payPct}%;background:linear-gradient(90deg,#3a8a5f,#2e7d52)"></span></div>
+      ${ab.length?ab.map((x,j)=>abonoRow(x,j)).join("")
+        :(+p.paid>0?abonoRow({a:+p.paid,note:"Abono registrado antes del historial"},null)
+        :`<p class="muted" style="font-size:13px">Aún no registras abonos para este trabajo.</p>`)}
+      <div class="ab-form">
+        <div class="field"><label>Monto</label><input id="ab_amount" type="number" min="0" step="1000" placeholder="0"></div>
+        <div class="field"><label>Fecha</label><input id="ab_date" type="date" value="${hoy}"></div>
+        <div class="field"><label>Método</label><select id="ab_method"><option value="">—</option><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option><option>Otro</option></select></div>
+        <div class="field"><label>Nota</label><input id="ab_note" placeholder="Opcional"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <button class="btn sm" data-abadd="${i}">＋ Registrar abono</button>
+        ${fin.budget&&fin.balance>0?`<button class="btn ghost sm" data-abfill="${fin.balance}">Saldo total (${money(fin.balance)})</button>${half>0?`<button class="btn ghost sm" data-abfill="${half}">50% (${money(half)})</button>`:""}`:""}
+      </div>
+      <p class="muted" style="font-size:11.5px;margin:10px 0 0">Cada abono se refleja solo en tu Raíz, en el mes de su fecha.</p>
+    </div>`;
+  // Control del proceso — etapas del trabajo (checklist).
+  const ck=projectChecklist(p); const ckDone=ck.filter(x=>x.done).length;
+  const ckGroup=String(p.template||"").split(" · ")[0]||"Vacío";
+  const proceso=`<div class="card s7 proj-process">
+      <div class="section-title"><h2 style="font-size:15px">Control del proceso</h2><div class="spacer"></div>
+        <span class="pill ${ck.length&&ckDone===ck.length?'gold':''}">${ck.length?ckDone+" / "+ck.length+" etapas":"Sin etapas"}</span></div>
+      ${ck.length?`<div class="proj-bar" style="height:8px;margin:0 0 12px"><span style="width:${Math.round(ckDone/ck.length*100)}%"></span></div>`:""}
+      ${ck.map((x,j)=>`<div class="row ck-row"><button class="task-dot" data-cktoggle="${i}:${j}" style="--tc:${x.done?'#3a8a5f':'#c0703a'}" title="Marcar etapa">${x.done?'✓':''}</button>
+          <div class="grow"><b style="${x.done?'text-decoration:line-through;opacity:.55':''}">${esc(x.t)}</b></div>
+          <button class="ia" data-ckdel="${i}:${j}" title="Eliminar etapa">✕</button></div>`).join("")
+        ||`<p class="muted" style="font-size:13px">Divide este trabajo en etapas para saber siempre dónde está.</p>`}
+      <div class="ck-add">
+        <input id="ck_new" placeholder="Nueva etapa (ej: Aprobación del boceto)">
+        <button class="btn sm" data-ckadd="${i}">＋ Etapa</button>
+      </div>
+      ${!ck.length?`<button class="btn secondary sm" data-ckseed="${i}" style="margin-top:10px">✦ Usar etapas sugeridas (${esc(ckGroup)})</button>`:""}
+      <p class="muted" style="font-size:11.5px;margin:10px 0 0">Al completar etapas, el avance % del trabajo se actualiza solo.</p>
+    </div>`;
+  const files=`<div class="card s5 proj-files">
       <div class="section-title"><h2 style="font-size:15px">Archivos & Comentarios</h2></div>
       <div class="pd-soon"><span class="pd-soon-ico">❏</span>
         <p>Aquí vivirán las <b>imágenes, PDFs, videos y comentarios</b> del proyecto.<br>Se conectará con <b>Biblioteca</b> en la siguiente fase del Taller.</p>
@@ -1378,21 +1441,31 @@ function vProyectoDetalle(a, i){
       <h2 style="font-size:22px;letter-spacing:-.03em;margin:0;flex:1">${esc(p.t)}</h2>
       <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
     </div>
-    ${info}${files}
+    ${info}${abonos}${proceso}${files}
   </div>`;
+}
+/* Parcha el proyecto en la nube con reintento a un parche mínimo si el
+   esquema no tiene aún las columnas nuevas. */
+async function patchProject(p, patch, fallback){
+  const a=me(); if(!(a.live && p._id)) return;
+  try{ await Cloud.updateRow("projects", p._id, patch); }
+  catch(e){
+    if(fallback){ try{ await Cloud.updateRow("projects", p._id, fallback); return; }catch(_){} }
+    alert("No se pudo sincronizar el proyecto: "+(e.message||e));
+  }
 }
 async function setProjectStatus(i,st){
   const a=me(); const p=a.projects[i]; if(!p) return; p.st=st;
-  if(a.live && p._id){ try{ await Cloud.updateRow("projects",p._id,{status:st}); }catch(e){ alert("No se pudo mover: "+(e.message||e)); } }
+  if(!Array.isArray(p.hist)) p.hist=[];
+  if(!p.hist.length || p.hist[p.hist.length-1].st!==st) p.hist.push({ st, at:new Date().toISOString().slice(0,10) });
+  await patchProject(p, {status:st, history:p.hist}, {status:st});
   save(); renderAll();
 }
 async function updateProjectField(i,field,value){
   const a=me(); const p=a.projects[i]; if(!p) return;
   if(field==="pct") value=clampPct(value);
-  if(field==="paid") value=Math.max(0, Math.round(+value || 0));
   p[field]=value;
-  const patch=field==="pct"?{pct:value}:{paid:value};
-  if(a.live && p._id){ try{ await Cloud.updateRow("projects",p._id,patch); }catch(e){ alert("No se pudo actualizar el proyecto: "+(e.message||e)); } }
+  await patchProject(p, {[field]:value});
   save(); renderAll();
 }
 function previewProjectField(i,field,value){
@@ -1401,13 +1474,72 @@ function previewProjectField(i,field,value){
     const pct=clampPct(value);
     p.pct=pct;
     document.querySelectorAll(`[data-pct-label="${i}"]`).forEach(el=>{ el.textContent=pct+"%"; });
-  }else if(field==="paid"){
-    const paid=Math.max(0, Math.round(+value || 0));
-    p.paid=paid;
-    const fin=projectMoney(p);
-    document.querySelectorAll(`[data-paid-label="${i}"]`).forEach(el=>{ el.textContent=money(fin.paid); });
-    document.querySelectorAll(`[data-balance-label="${i}"]`).forEach(el=>{ el.textContent=fin.budget?money(fin.balance):"—"; });
   }
+}
+/* --- Abonos: registrar / eliminar pagos parciales de un trabajo --- */
+async function addProjectAbono(i){
+  const a=me(); const p=a.projects[i]; if(!p) return;
+  const g=id=>document.getElementById(id);
+  const amt=Math.round(+(g("ab_amount")||{}).value||0);
+  if(amt<=0){ alert("Ingresa un monto mayor a 0."); return; }
+  const on=(g("ab_date")||{}).value||new Date().toISOString().slice(0,10);
+  const method=(g("ab_method")||{}).value||"";
+  const note=String((g("ab_note")||{}).value||"").trim();
+  migrateLegacyPaid(p);
+  p.abonos.push({ a:amt, on, method, note });
+  p.paid=projectPaidTotal(p);
+  await patchProject(p, {payments:p.abonos, paid:p.paid}, {paid:p.paid});
+  save(); renderAll();
+}
+async function delProjectAbono(i,j){
+  const a=me(); const p=a.projects[i]; if(!p||!Array.isArray(p.abonos)) return;
+  const x=p.abonos[j]; if(!x) return;
+  if(!confirm("¿Eliminar el abono de "+money(+x.a||0)+"?")) return;
+  p.abonos.splice(j,1);
+  p.paid=projectPaidTotal(p);
+  await patchProject(p, {payments:p.abonos, paid:p.paid}, {paid:p.paid});
+  save(); renderAll();
+}
+/* --- Control del proceso: etapas (checklist) por trabajo --- */
+const PROCESS_SUGGESTIONS={
+  Creatividad:["Boceto / diseño","Aprobación del cliente","Materiales listos","Producción","Detalles y acabado","Entrega"],
+  Empresa:["Brief","Propuesta enviada","Aprobación","Ejecución","Cierre"],
+  Educación:["Planificación","Preparación de material","Sesión / clase","Evaluación","Informe final"],
+  Administración:["Borrador","Revisión","Firmas / aprobación","Archivo"],
+  Tecnología:["Definición","Desarrollo","Pruebas","Revisión","Publicación"],
+  Vacío:["Inicio","En desarrollo","Revisión","Entrega"]
+};
+function projectChecklist(p){ return Array.isArray(p.checklist)?p.checklist:[]; }
+function checklistPct(p){ const c=projectChecklist(p); if(!c.length) return null; return Math.round(c.filter(x=>x.done).length/c.length*100); }
+async function saveChecklist(p, alsoPct){
+  const patch={checklist:p.checklist}; let fallback=null;
+  if(alsoPct){ const cp=checklistPct(p); if(cp!=null){ p.pct=cp; patch.pct=cp; fallback={pct:cp}; } }
+  await patchProject(p, patch, fallback);
+  save(); renderAll();
+}
+async function addChecklistStep(i){
+  const a=me(); const p=a.projects[i]; if(!p) return;
+  const el=document.getElementById("ck_new"); const t=String(el&&el.value||"").trim();
+  if(!t) return;
+  if(!Array.isArray(p.checklist)) p.checklist=[];
+  p.checklist.push({ t, done:false });
+  await saveChecklist(p, true);
+}
+async function toggleChecklistStep(i,j){
+  const a=me(); const p=a.projects[i]; const it=projectChecklist(p)[j]; if(!it) return;
+  it.done=!it.done;
+  await saveChecklist(p, true);
+}
+async function delChecklistStep(i,j){
+  const a=me(); const p=a.projects[i]; if(!p||!Array.isArray(p.checklist)||!p.checklist[j]) return;
+  p.checklist.splice(j,1);
+  await saveChecklist(p, true);
+}
+async function seedChecklist(i){
+  const a=me(); const p=a.projects[i]; if(!p) return;
+  const group=String(p.template||"").split(" · ")[0]||"Vacío";
+  p.checklist=(PROCESS_SUGGESTIONS[group]||PROCESS_SUGGESTIONS["Vacío"]).map(t=>({t,done:false}));
+  await saveChecklist(p, true);
 }
 
 /* --- Finanzas --- */
@@ -1419,11 +1551,22 @@ function isEstimatedProjectIncome(x){
 }
 function projectPaidIncome(a){
   const period=new Date().toISOString().slice(0,7);
-  return (a.projects||[]).map((p,i)=>{
-    const paid=projectMoney(p).paid;
-    if(paid<=0) return null;
-    return { _projectPaid:true, _projectIndex:i, t:"Abono: "+(p.t||"Proyecto"), a:paid, d:period, cat:"Abonos de proyectos", notes:p.client||"" };
-  }).filter(Boolean);
+  const out=[];
+  (a.projects||[]).forEach((p,i)=>{
+    const ab=projectAbonos(p);
+    if(ab.length){
+      ab.forEach(x=>{
+        const amt=Math.max(0,+x.a||0); if(amt<=0) return;
+        out.push({ _projectPaid:true, _projectIndex:i, t:"Abono: "+(p.t||"Proyecto"), a:amt,
+          on:x.on||"", d:(String(x.on||"").slice(0,7))||period, cat:"Abonos de proyectos",
+          method:x.method||"", notes:[p.client||"",x.note||""].filter(Boolean).join(" · ") });
+      });
+    } else {
+      const paid=Math.max(0,+p.paid||0);
+      if(paid>0) out.push({ _projectPaid:true, _projectIndex:i, t:"Abono: "+(p.t||"Proyecto"), a:paid, d:period, cat:"Abonos de proyectos", notes:p.client||"" });
+    }
+  });
+  return out;
 }
 function rootIncome(a){
   const manual=(a.finance.income||[]).filter(x=>!isEstimatedProjectIncome(x));
@@ -4086,8 +4229,8 @@ function vRecordatorios(a){
    =========================================================== */
 const EDITORS = {
   proyecto:{ title:"Trabajo", table:"projects", get:a=>a.projects, push:"unshift", xp:60,
-    fields:[{k:"context",l:"Contexto",sel:["Personal","Clan","Santuario"]},{k:"template",l:"Plantilla",sel:PROJECT_TEMPLATE_OPTIONS},{k:"t",l:"Nombre"},{k:"category",l:"Categoría"},{k:"client",l:"Cliente / Vínculo opcional",clients:true},{k:"responsible",l:"Responsable"},{k:"link",l:"Vínculo externo opcional"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor total",num:true},{k:"paid",l:"Abono realizado",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
-    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:clampPct(v.pct),budget:v.budget?+v.budget:null,paid:+v.paid||0,started_at:v.start||null,due_at:v.due||null,description:v.desc,context:v.context,owner_type:v.owner_type,owner:v.owner,template:v.template,category:v.category,responsible:v.responsible,deliverables:v.desc,archive:v.archive||null}) },
+    fields:[{k:"context",l:"Contexto",sel:["Personal","Clan","Santuario"]},{k:"template",l:"Plantilla",sel:PROJECT_TEMPLATE_OPTIONS},{k:"t",l:"Nombre"},{k:"category",l:"Categoría"},{k:"client",l:"Cliente / Vínculo opcional",clients:true},{k:"responsible",l:"Responsable"},{k:"link",l:"Vínculo externo opcional"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor total",num:true},{k:"paid",l:"Abono inicial (los siguientes se registran dentro del trabajo)",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
+    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:clampPct(v.pct),budget:v.budget?+v.budget:null,paid:+v.paid||0,payments:Array.isArray(v.abonos)?v.abonos:undefined,started_at:v.start||null,due_at:v.due||null,description:v.desc,context:v.context,owner_type:v.owner_type,owner:v.owner,template:v.template,category:v.category,responsible:v.responsible,deliverables:v.desc,archive:v.archive||null}) },
   memoria:{ title:"Memoria", table:"memories", get:a=>a.memories, push:"unshift", xp:40,
     fields:[{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({title:v.t,detail:v.d}) },
   ingreso:{ title:"Ingreso", table:"finance_entries", get:a=>a.finance.income, push:"unshift", xp:20,
@@ -4182,6 +4325,14 @@ async function saveRecord(){
     v.owner_type=v.context;
     v.owner=v.context==="Clan" ? (a.clan||"Clan") : v.context==="Santuario" ? (a.santuario||"Santuario") : "Mi Taller";
     v.template=v.template||"Vacío · Proyecto sin plantilla";
+    if(idx==null){
+      // Abono inicial → primer registro del historial de abonos.
+      if(+v.paid>0) v.abonos=[{ a:Math.round(+v.paid), on:v.start||new Date().toISOString().slice(0,10), method:"", note:"Abono inicial" }];
+    }else{
+      // Al editar, el historial de abonos manda: no se pisa desde el modal.
+      const existing=cfg.get(a)[idx];
+      if(existing && projectAbonos(existing).length){ v.paid=projectPaidTotal(existing); delete v.abonos; }
+    }
   }
   const first=kind==="proyecto" ? cfg.fields.find(f=>f.k==="t") : cfg.fields[0];
   if(first && !String(v[first.k]).trim()){ document.getElementById("recMsg").textContent="Completa: "+first.l; return; }
@@ -4941,6 +5092,13 @@ document.addEventListener("click", e=>{
   if(e.target.closest("[data-finclear]")){ state.finPeriod="all"; state.finCat="all"; renderView(); return; }
   const po=e.target.closest("[data-projopen]"); if(po && !e.target.closest("select,option")){ state.projOpen=+po.dataset.projopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
   if(e.target.closest("[data-projback]")){ state.projOpen=null; renderView(); return; }
+  const abAdd=e.target.closest("[data-abadd]"); if(abAdd){ addProjectAbono(+abAdd.dataset.abadd); return; }
+  const abDel=e.target.closest("[data-abdel]"); if(abDel){ const [pi,ai]=abDel.dataset.abdel.split(":").map(Number); delProjectAbono(pi,ai); return; }
+  const abFill=e.target.closest("[data-abfill]"); if(abFill){ const el=document.getElementById("ab_amount"); if(el){ el.value=+abFill.dataset.abfill||0; el.focus(); } return; }
+  const ckT=e.target.closest("[data-cktoggle]"); if(ckT){ const [pi,ci]=ckT.dataset.cktoggle.split(":").map(Number); toggleChecklistStep(pi,ci); return; }
+  const ckD=e.target.closest("[data-ckdel]"); if(ckD){ const [pi,ci]=ckD.dataset.ckdel.split(":").map(Number); delChecklistStep(pi,ci); return; }
+  const ckA=e.target.closest("[data-ckadd]"); if(ckA){ addChecklistStep(+ckA.dataset.ckadd); return; }
+  const ckS=e.target.closest("[data-ckseed]"); if(ckS){ seedChecklist(+ckS.dataset.ckseed); return; }
   const vv=e.target.closest("[data-vinview]"); if(vv){ state.vinView=vv.dataset.vinview; renderView(); return; }
   const vo=e.target.closest("[data-vinopen]"); if(vo){ state.vinOpen=+vo.dataset.vinopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
   if(e.target.closest("[data-vinback]")){ state.vinOpen=null; renderView(); return; }
@@ -5047,7 +5205,6 @@ document.addEventListener("change", e=>{
   if(e.target.id==="cgSort"){ state.creatorGroupSort=e.target.value; renderView(); return; }
   const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); return; }
   const kp=e.target.closest(".kpct"); if(kp){ updateProjectField(+kp.dataset.pct, "pct", kp.value); return; }
-  const kpaid=e.target.closest(".kpaid"); if(kpaid){ updateProjectField(+kpaid.dataset.paid, "paid", kpaid.value); return; }
   const tks=e.target.closest(".tk-status"); if(tks){ setTaskStatus(+tks.dataset.tstatus, tks.value); return; }
   const pf2=e.target.closest("[data-projfilter2]"); if(pf2){ state.projDetailFilter=state.projDetailFilter||{}; state.projDetailFilter[pf2.dataset.projfilter2]=pf2.value; state.projOpen=null; renderView(); return; }
   const fpr=e.target.closest("[data-finperiod]"); if(fpr){ state.finPeriod=fpr.value; renderView(); return; }
@@ -5060,11 +5217,13 @@ document.addEventListener("change", e=>{
 });
 document.addEventListener("focusout", e=>{
   const kp=e.target.closest(".kpct"); if(kp){ updateProjectField(+kp.dataset.pct, "pct", kp.value); return; }
-  const kpaid=e.target.closest(".kpaid"); if(kpaid){ updateProjectField(+kpaid.dataset.paid, "paid", kpaid.value); return; }
+});
+document.addEventListener("keydown", e=>{
+  if(e.key==="Enter" && e.target && e.target.id==="ck_new"){ e.preventDefault(); const b=document.querySelector("[data-ckadd]"); if(b) b.click(); return; }
+  if(e.key==="Enter" && e.target && e.target.id==="ab_amount"){ e.preventDefault(); const b=document.querySelector("[data-abadd]"); if(b) b.click(); return; }
 });
 document.addEventListener("input", e=>{
   const kp=e.target.closest(".kpct"); if(kp){ previewProjectField(+kp.dataset.pct, "pct", kp.value); return; }
-  const kpaid=e.target.closest(".kpaid"); if(kpaid){ previewProjectField(+kpaid.dataset.paid, "paid", kpaid.value); return; }
   if(e.target.id==="convRate"){ updateConvOut(); return; }
   if(e.target.id==="cgSearch"){ state.creatorGroupSearch=e.target.value; renderView(); return; }
   if(e.target.closest(".cot-inspector")){ qLive(); return; }
