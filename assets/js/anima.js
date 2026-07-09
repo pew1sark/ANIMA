@@ -1307,11 +1307,17 @@ function vProyectos(a){
   const fab=`<button class="fab" data-addproject="Personal" title="Nuevo Proyecto">＋<span>Nueva Unidad</span></button>`;
   const segBtn=(k,t)=>`<button class="seg-b ${view===k?'on':''}" data-projview="${k}">${t}</button>`;
   const filterBtn=(k,t)=>`<button class="seg-b ${(state.projFilter||"todos")===k?'on':''}" data-projfilter="${k}">${t}</button>`;
+  // Valor total en cotización (todas las unidades activas, sin importar el filtro).
+  const cotPs=all.filter(p=>!p.archive&&flowOf(p.st)==="Cotizando");
+  const cotMonto=cotPs.reduce((t,p)=>t+(+p.budget||0),0);
+  const cotInfo=cotPs.length?`<div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(110,110,115,.06)">
+        <span class="proj-badge st-cot">Cotizando</span><b style="font-size:16px">${money(cotMonto)}</b>
+        <small class="muted">valor total en cotización · ${cotPs.length} unidad${cotPs.length===1?"":"es"} esperando aprobación</small></div>`:"";
   const head=`<div class="card s12"><div class="section-title"><h2>Unidades de Trabajo</h2><div class="spacer"></div>
       <div class="seg">${segBtn("tarjetas","Tarjetas")}${segBtn("lista","Lista")}${segBtn("kanban","Kanban")}</div>
       <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}</span></div>
       <div class="seg" style="margin-top:12px;flex-wrap:wrap">${filterBtn("todos","Todos")}${filterBtn("personal","Mi Taller")}${filterBtn("clan","Clanes")}${filterBtn("archivados","Archivados")}</div>
-      ${projectSelectFilters(all)}</div>`;
+      ${projectSelectFilters(all)}${cotInfo}</div>`;
   if(!ps.length){
     const hasProjects=all.length>0;
     return `<div class="grid">${summaryCards}${head}<div class="card s12"><p class="muted">${hasProjects?"Hay proyectos guardados, pero el filtro actual no los muestra. Limpia filtros o revisa Archivados.":"No hay unidades todavía. Crea una nueva desde el botón ＋."}</p>${hasProjects?`<button class="btn sm secondary" data-projclear>Limpiar filtros</button>`:""}</div></div>${fab}`;
@@ -1582,6 +1588,9 @@ function vFinanzas(a){
   const match=x=>(fp==="all"||finMonthKey(x)===fp)&&(fc==="all"||(x.cat||"")===fc);
   const inc=allInc.filter(match), exp=allExp.filter(match);
   const sumI=sum(inc), sumE=sum(exp), neta=sumI-sumE;
+  // Valor en cotización (pipeline): unidades activas del Flujo de trabajo en "Cotizando".
+  const cotPs=(a.projects||[]).filter(p=>!p.archive&&flowOf(p.st)==="Cotizando");
+  const cotMonto=cotPs.reduce((t,p)=>t+(+p.budget||0),0);
   const margen=sumI>0?Math.round(neta/sumI*100):0;
   const filtered=fp!=="all"||fc!=="all";
   // Tendencia mensual (respeta filtro de categoría, ignora el de periodo) — hasta 6 meses.
@@ -1615,6 +1624,10 @@ function vFinanzas(a){
     <div class="card s3"><div class="stat"><span class="num" style="color:var(--danger)">${money(sumE)}</span><span class="lbl">Egresos${filtered?" (filtro)":""}</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${money(neta)}</span><span class="lbl">Ganancia neta</span></div></div>
     <div class="card s3"><div class="stat"><span class="num" style="color:${margen>=0?'var(--ok)':'var(--danger)'}">${margen}%</span><span class="lbl">Margen / rentabilidad</span></div></div>
+    <div class="card s12" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span class="proj-badge st-cot">Cotizando</span><b style="font-size:17px">${money(cotMonto)}</b>
+      <span class="muted" style="font-size:12.5px">valor total en cotización · ${cotPs.length} unidad${cotPs.length===1?"":"es"} del Flujo de trabajo — pasa a Ingresos cuando se apruebe y cobre</span>
+    </div>
     <div class="card s7"><div class="section-title"><h2 style="font-size:15px">Rentabilidad</h2><div class="spacer"></div><span class="pill ${margen>=40?'gold':''}">${margen>=40?"Saludable":margen>=15?"Estable":margen>=0?"Ajustado":"En rojo"}</span></div>
       <div class="proj-bar" style="height:10px;margin:4px 0 12px"><span style="width:${Math.max(0,Math.min(100,margen))}%;background:linear-gradient(90deg,#3a8a5f,#2e7d52)"></span></div>
       <h3 style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px">Tendencia mensual</h3>
@@ -2224,6 +2237,7 @@ async function qSave(){
 }
 async function qSaveCloud(a){
   const t=quoteTotals();
+  const wasNew=!quoteDraft.id;
   try{
     let clientId=quoteDraft.client_id||null;
     if(quoteDraft.client){
@@ -2245,6 +2259,12 @@ async function qSaveCloud(a){
     else { const qrow=await Cloud.insertRow("quotes",payload); quoteDraft.id=qrow.id; }
     quoteDraft.client_id=clientId; quoteDraft.project_id=projectId;
     state.cloudQuotes=await Cloud.quotes(a.almaId);
+    // LUMBRE · Obsidian (Etapa 1): solo la primera vez que nace la cotización.
+    if(wasNew && (typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre()
+      && (typeof ObsidianService!=="undefined") && ObsidianService.isConnected()){
+      ObsidianService.saveQuote({ id:quoteDraft.id, title:quoteDraft.title, client_name:quoteDraft.client,
+        total:Math.round(t.total), currency:quoteDraft.currency, status:quoteDraft.status||"" }, a.name).catch(()=>{});
+    }
     renderAll(); alert("Cotización guardada en la nube ✓ Vínculo y proyecto enlazados.");
   }catch(e){ alert("No se pudo guardar la cotización: "+(e.message||e)); }
 }
@@ -4389,6 +4409,13 @@ function recordAlphaEvents(kind, v, arr){
     }
     // Invalida cachés para que Cronología e Insignias se refresquen al entrar.
     state.cloudTimeline=null; state.cloudBadges=null;
+    // LUMBRE · Obsidian (Etapa 1): solo eventos reales de creación, nunca sync
+    // constante — y solo si el Creador conectó su Vault en esta sesión.
+    if((typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre()
+      && (typeof ObsidianService!=="undefined") && ObsidianService.isConnected()){
+      if(kind==="proyecto" && arr[0]) ObsidianService.saveProject(arr[0], a.name).catch(()=>{});
+      else if(kind==="cliente" && arr[0]) ObsidianService.saveClient(arr[0], a.name).catch(()=>{});
+    }
   }catch(e){}
 }
 /* ===========================================================
@@ -4475,9 +4502,41 @@ function renderLumbre(){
   const intro=`<div class="msg lum"><b>LUMBRE</b><br>Soy el motor de ANIMA para <b>${esc(a.name)}</b>. Modo: <b>${modeName()}</b>. Pregúntame por Raíz, proyectos, trayectoria o pídeme sugerencias.</div>`;
   body.innerHTML=intro+state.chat.map(m=>`<div class="msg ${m.role==='you'?'you':'lum'}">${m.role==='lum'?'<b>LUMBRE</b><br>':''}${m.text}</div>`).join("");
   body.scrollTop=body.scrollHeight;
+  renderLumbreAdminBar();
+}
+/* LUMBRE · ADMIN (Etapa 1): indicador + conexión al Vault de Obsidian.
+   Solo se muestra si LumbrePermissions.canUseRealLumbre() — para cualquier
+   otra Alma el drawer queda exactamente igual que siempre. */
+function renderLumbreAdminBar(){
+  const sub=document.getElementById("lumbreSubtitle"), bar=document.getElementById("lumbreAdminBar");
+  if(!sub || !bar) return;
+  const admin = (typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre();
+  if(!admin){ sub.textContent="Motor agente · 100% local por defecto"; bar.style.display="none"; bar.innerHTML=""; return; }
+  sub.textContent="LUMBRE · ADMIN · Alpha";
+  const connected=(typeof ObsidianService!=="undefined") && ObsidianService.isConnected();
+  bar.style.display="block";
+  bar.innerHTML=`<button class="btn ghost sm" id="lumbreObsidianBtn">${connected?"✦ Vault conectado":"Conectar Vault de Obsidian"}</button>`;
+}
+async function connectObsidianVault(){
+  try{
+    await ObsidianService.connect();
+    renderLumbreAdminBar();
+  }catch(e){ alert(e.message||"No se pudo conectar el Vault."); }
 }
 const modeName=()=>(LUMBRE_MODES.find(m=>m.key===state.lumbreMode)||{}).name;
-function lumbreAsk(q){ state.chat.push({role:"you",text:esc(q)}); state.chat.push({role:"lum",text:lumbreThink(q)}); save(); renderLumbre(); }
+function lumbreAsk(q){
+  state.chat.push({role:"you",text:esc(q)});
+  const realLumbre=(typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre() && state.lumbreMode==="CLOUD";
+  if(!realLumbre){ state.chat.push({role:"lum",text:lumbreThink(q)}); save(); renderLumbre(); return; }
+  state.chat.push({role:"lum",text:"…"});
+  const slot=state.chat.length-1;
+  save(); renderLumbre();
+  LumbreAgent.ask(q).then(answer=>{
+    state.chat[slot]={role:"lum",text:answer}; save(); renderLumbre();
+  }).catch(()=>{
+    state.chat[slot]={role:"lum",text:lumbreThink(q)}; save(); renderLumbre();
+  });
+}
 function lumbreThink(q){
   const a=me(), t=q.toLowerCase();
   if(state.lumbreMode==="OFF") return "Estoy en modo <b>OFF</b>: solo organización manual. Actívame en Básico, IA Local o IA Conectada.";
@@ -4954,7 +5013,10 @@ const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementB
    reúnan más Esencia. Cambiar a true para reactivar el chat. */
 const LUMBRE_AWAKE=false;
 function openLumbre(){
-  if(!LUMBRE_AWAKE){ toast("✦ LUMBRE aún no despierta. Junta más Esencia…"); return; }
+  // El Creador (LumbrePermissions.canUseRealLumbre) siempre puede abrir LUMBRE,
+  // sin esperar el despertar narrativo por Esencia — es quien la está probando.
+  const adminOverride=(typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre();
+  if(!LUMBRE_AWAKE && !adminOverride){ toast("✦ LUMBRE aún no despierta. Junta más Esencia…"); return; }
   drawer().classList.add("open"); dbg().classList.add("open"); renderLumbre();
 }
 function closeLumbre(){ drawer().classList.remove("open"); dbg().classList.remove("open"); }
@@ -5193,6 +5255,7 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#authSignUp")) doAuth("up");
   if(e.target.closest("#authForgot")) doForgot();
   if(e.target.closest("#lumbreSend")) sendLumbre();
+  if(e.target.closest("#lumbreObsidianBtn")) connectObsidianVault();
 });
 document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target.id==="joinCode") joinClanCode();

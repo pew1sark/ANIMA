@@ -86,10 +86,13 @@ const Cloud = {
       if(extra) q = q.eq("kind", extra);
       const { data, error } = await q;
       if(!error) return data || [];
-      console.warn("ANIMA: no se pudo cargar", t, "con campos explícitos; reintentando.", error);
-      let fallback = _sb.from(t).select("*").eq("alma_id", almaId);
-      if(extra) fallback = fallback.eq("kind", extra);
-      const { data:retry, error:retryError } = await fallback;
+      // Resiliencia ante desajuste de esquema: si el SELECT con columnas
+      // explícitas falla (p.ej. una columna aún no migrada), NO perdemos los
+      // registros — reintentamos con select("*") en vez de devolver vacío.
+      console.warn("ANIMA: no se pudo cargar", t, "con campos explícitos; reintentando con *.", error);
+      let fb = _sb.from(t).select("*").eq("alma_id", almaId);
+      if(extra) fb = fb.eq("kind", extra);
+      const { data:retry, error:retryError } = await fb;
       if(retryError){ console.warn("ANIMA: carga fallida", t, retryError); return []; }
       return retry || [];
     };
@@ -319,6 +322,39 @@ const Cloud = {
 
   /* Sistema de logs — registra una acción del Alma (silencioso si falla). */
   async log(action, meta){ if(!_sb) return; try{ await _sb.rpc("log_activity", { p_action:action, p_meta:meta||{} }); }catch(e){} },
+
+  /* LUMBRE (Etapa 1, solo Creador) — conversación, mensajes y memoria de hechos.
+     Único acceso a estas tablas: nunca se llama _sb directo desde otros módulos. */
+  async lumbreEnsureConversation(almaId){
+    if(!_sb || !almaId) return null;
+    const { data } = await _sb.from("lumbre_conversations").select("id")
+      .eq("alma_id", almaId).order("created_at",{ascending:false}).limit(1).maybeSingle();
+    if(data) return data.id;
+    const { data:created } = await _sb.from("lumbre_conversations").insert({ alma_id:almaId, title:"LUMBRE" }).select("id").single();
+    return created ? created.id : null;
+  },
+  async lumbreSaveMessage(conversationId, role, content){
+    if(!_sb || !conversationId) return;
+    await _sb.from("lumbre_messages").insert({ conversation_id:conversationId, role, content });
+  },
+  async lumbreMemorySet(almaId, key, value, source){
+    if(!_sb || !almaId || !key) return;
+    await _sb.from("lumbre_memory").upsert(
+      { alma_id:almaId, key, value, source:source||null, updated_at:new Date().toISOString() },
+      { onConflict:"alma_id,key" }
+    );
+  },
+  async lumbreMemoryList(almaId){
+    if(!_sb || !almaId) return [];
+    const { data } = await _sb.from("lumbre_memory").select("key,value,source,updated_at").eq("alma_id", almaId);
+    return data || [];
+  },
+
+  /* Traza un registro de ANIMA hacia su nota en el Vault de Obsidian. */
+  async obsidianLink(tableName, recordId, vaultPath){
+    if(!_sb || !recordId) return;
+    await _sb.from("obsidian_links").insert({ table_name:tableName, record_id:recordId, vault_path:vaultPath });
+  },
 
   /* Límite de almacenamiento del nivel: {images, pdfs, mb}. */
   async storageQuota(level){ if(!_sb) return null; const { data } = await _sb.rpc("storage_quota", { p_level:backendLevelKey(level) }); return data; },
