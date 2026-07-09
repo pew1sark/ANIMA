@@ -664,15 +664,14 @@ function vMiAlma(a){
     <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
       ${avatarHTML(a,"lg")}
       <div style="flex:1;min-width:200px">
-        <span class="level-badge" style="border-color:${lv.color}55;color:${lv.color}">${lv.emoji} ${lv.label} · ${lv.name}</span>
+        <span class="level-badge" data-openlevels title="Ver el camino del Alma" style="border-color:${lv.color}55;color:${lv.color};font-size:11px;padding:4px 10px;cursor:pointer">${lv.emoji} ${lv.label}</span>
         <h2 style="font-size:30px;letter-spacing:-.05em;margin:10px 0 2px">${esc(a.name)}${almaBadges(a)}</h2>
         <div class="muted">${esc(idline||"")}${(a.territory||a.country)?" · "+esc(a.territory||a.country):""}</div>
         ${a.handle?`<div class="muted" style="font-size:12.5px;margin-top:2px">${esc(a.handle)}</div>`:""}
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-        <span class="pixel-font" style="font-size:10px;color:#7b5920;display:inline-flex;align-items:center;gap:5px">${a.xp.toLocaleString("es-CL")} Esencia <button class="ia" id="esenciaInfo" title="¿Qué es la Esencia y cómo se gana?" style="font-size:11px">ⓘ</button></span>
-        <div class="bar" style="width:170px"><span style="width:${lp.pct}%"></span></div>
-        <small class="muted" style="font-size:11px">${lp.next?`hacia ${lp.next.label}`:"Alma Despierta ∞"}</small>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;opacity:.7">
+        <span class="pixel-font" style="font-size:8.5px;color:#7b5920;display:inline-flex;align-items:center;gap:5px">${a.xp.toLocaleString("es-CL")} Esencia <button class="ia" id="esenciaInfo" title="¿Qué es la Esencia y cómo se gana?" style="font-size:10px;width:24px;height:24px">ⓘ</button></span>
+        <div class="bar" style="width:100px;height:5px"><span style="width:${lp.pct}%"></span></div>
       </div>
     </div>
     ${a.bio?`<p style="margin:14px 0 0">${esc(a.bio)}</p>`:""}
@@ -706,7 +705,21 @@ function linksHTML(a){
 }
 function vAlmaResumen(a,lp){
   const cfg=getCfg(a); const inc=sum(rootIncome(a)), exp=sum(a.finance.expense);
-  const active=a.projects.filter(p=>!["Entregado","Cerrado","Terminado"].includes(p.st)).length;
+  const TERM=["Entregado","Cerrado","Terminado"];
+  const activeEntries=a.projects.map((p,i)=>({p,i})).filter(x=>!TERM.includes(x.p.st)&&!projectArchived(x.p));
+  const active=activeEntries.length;
+  const enProd=activeEntries.filter(x=>["En producción","Revisión"].includes(flowOf(x.p.st))).length;
+  const now=Date.now();
+  const dueMs=p=>{ if(!p.due) return Infinity; const t=new Date(p.due).getTime(); return isNaN(t)?Infinity:t; };
+  const upcoming=activeEntries.filter(x=>dueMs(x.p)<=now+14*864e5).length;
+  const saldoPend=activeEntries.reduce((t,x)=>{ const f=projectMoney(x.p); return t+(f.budget?f.balance:0); },0);
+  const mesKey=new Date().toISOString().slice(0,7);
+  const abonadoMes=sum(rootIncome(a).filter(x=>finMonthKey(x)===mesKey));
+  const pendTasks=(a.tasks||[]).map((t,i)=>({t,i})).filter(x=>!["Finalizada","Archivada"].includes(x.t.st||"Pendiente"));
+  const prOrder={"Urgente":0,"Alta":1,"Media":2,"Baja":3};
+  const topTasks=pendTasks.slice().sort((x,y)=>(prOrder[x.t.pr]??2)-(prOrder[y.t.pr]??2)).slice(0,4);
+  const todayKey=new Date().toISOString().slice(0,10);
+  const agToday=(a.agenda||[]).map((x,i)=>({x,i})).filter(o=>!o.x.date||o.x.date===todayKey);
   const createCTA=(!a.live && Cloud.enabled)?`<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
       <span class="pill gold">Estás viendo una Alma de muestra</span>
       <p style="margin:8px 0 0">Entra a tu Alma o crea una nueva para construir tu trayectoria real y aparecer en la constelación.</p>
@@ -717,21 +730,48 @@ function vAlmaResumen(a,lp){
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn sm" data-tab="identidad">✎ Completar identidad</button>
         <button class="btn secondary sm" data-add="proyecto">+ Primer trabajo</button></div></div>`:``;
-  return `${createCTA}${onboarding}
-    ${cfg.cards.kpis!==false?`
-    <div class="card s3"><div class="stat"><span class="num">${active}</span><span class="lbl">Trabajos activos</span></div></div>
-    <div class="card s3"><div class="stat"><span class="num" style="color:var(--ok)">${money(inc)}</span><span class="lbl">Abonos / pagos</span></div></div>
-    <div class="card s3"><div class="stat"><span class="num">${money(inc-exp)}</span><span class="lbl">Ganancia</span></div></div>
-    <div class="card s3"><div class="stat"><span class="num">${a.clan?esc(a.clan):"—"}</span><span class="lbl">${a.clan?"Tu Clan":"Sin Clan aún"}</span></div></div>`:``}
-    ${cfg.cards.camino!==false?`<div class="card s12 camino-card">${caminoPixelHTML(lp)}</div>`:``}
-    ${cfg.cards.graficos!==false?`
-    <div class="card s6 card-link" data-go="finanzas"><div class="section-title"><h2>Raíz por mes</h2><div class="spacer"></div><span class="card-link-go">Ver Raíz →</span></div>${chartFinance(a)}${raizStats(a)}</div>
-    <div class="card s6 card-link" data-go="proyectos"><div class="section-title"><h2>Flujo de trabajo</h2><div class="spacer"></div><span class="card-link-go">Ver Flujo →</span></div>${flowSummary(a)}</div>`:``}
-    ${cfg.cards.hoy!==false?`<div class="card s6"><div class="section-title"><h2>Hoy</h2><div class="spacer"></div><button class="btn sm" data-add="cita">+ Cita</button></div>
-      ${a.agenda.map((x,i)=>`<div class="row"><b style="color:var(--gold);width:60px">${esc(x.h)}</b><div class="grow">${esc(x.t)}</div>${acts("cita",i)}</div>`).join("")||`<p class="muted">Sin agenda hoy.</p>`}</div>`:``}
-    ${cfg.cards.memoria!==false?`<div class="card s6"><div class="section-title"><h2>Última memoria</h2><div class="spacer"></div><button class="btn sm" data-add="memoria">+ Memoria</button></div>
+  // KPIs operativos — el pulso del taller en una fila.
+  const kpi=(val,lbl,style,goTo,cls)=>`<div class="card s2 kpi-sm ${cls||""} card-link" data-go="${goTo||"proyectos"}"><div class="stat"><span class="num" ${style?`style="${style}"`:""}>${val}</span><span class="lbl">${lbl}</span></div></div>`;
+  const kpis=cfg.cards.kpis!==false?`
+    ${kpi(active,"Trabajos activos")}
+    ${kpi(enProd,"En producción")}
+    ${kpi(upcoming,"Entregas ≤ 14 días",upcoming?"color:var(--danger)":"")}
+    ${kpi(money(saldoPend),"Saldo por cobrar",saldoPend>0?"color:var(--danger)":"color:var(--ok)","finanzas","kpi-m")}
+    ${kpi(money(abonadoMes),"Abonado este mes","color:var(--ok)","finanzas","kpi-m")}
+    ${kpi(money(inc-exp),"Ganancia total","","finanzas","kpi-m")}`:``;
+  // Trabajos en curso — estados actuales, saldo y entregas, ordenados por urgencia.
+  const stRank={"En producción":0,"Revisión":1,"Aprobado":2,"Cotizando":3};
+  const cur=activeEntries.slice().sort((x,y)=>{ const dx=dueMs(x.p),dy=dueMs(y.p); if(dx!==dy) return dx-dy; return (stRank[flowOf(x.p.st)]??4)-(stRank[flowOf(y.p.st)]??4); }).slice(0,6);
+  const projRow=({p,i})=>{ const f=projectMoney(p); const pc=clampPct(p.pct); const late=p.due&&dueMs(p)<now-864e5;
+    return `<div class="row nc-proj" data-projgo="${i}" style="cursor:pointer">
+      <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
+      <div class="grow"><b>${esc(p.t)}</b><br><small class="muted">${esc(p.client||"Sin vínculo")}${f.budget?` · saldo <b style="color:${f.balance>0?'var(--danger)':'var(--ok)'}">${money(f.balance)}</b>`:""}</small></div>
+      <div class="nc-right"><div class="proj-bar"><span style="width:${pc}%"></span></div><small class="${late?'nc-late':'muted'}">${p.due?(late?"⚠ ":"⌛ ")+esc(tallerDate(p.due)):pc+"%"}</small></div>
+    </div>`; };
+  const proyectos=`<div class="card s7"><div class="section-title"><h2>Trabajos en curso</h2><div class="spacer"></div><button class="btn ghost sm" data-go="proyectos">Ver todos →</button></div>
+      ${cur.map(projRow).join("")||`<p class="muted">Sin trabajos activos. Crea el primero con ＋.</p>`}
+      <div style="margin-top:12px"><button class="btn sm" data-add="proyecto">＋ Nuevo trabajo</button></div></div>`;
+  const flujo=`<div class="card s5 card-link" data-go="proyectos"><div class="section-title"><h2>Flujo por estado</h2><div class="spacer"></div><span class="card-link-go">Ver →</span></div>${flowSummary(a)}</div>`;
+  const raiz=cfg.cards.graficos!==false?`<div class="card s6 card-link" data-go="finanzas"><div class="section-title"><h2>Raíz por mes</h2><div class="spacer"></div><span class="card-link-go">Ver Raíz →</span></div>${chartFinance(a)}${raizStats(a)}</div>`:``;
+  const hoy=cfg.cards.hoy!==false?`<div class="card s6"><div class="section-title"><h2>Hoy</h2><div class="spacer"></div><button class="btn sm" data-add="cita">+ Cita</button></div>
+      ${agToday.map(({x,i})=>`<div class="row"><b style="color:var(--gold);width:60px">${esc(x.h)}</b><div class="grow">${esc(x.t)}</div>${acts("cita",i)}</div>`).join("")||`<p class="muted">Sin agenda hoy.</p>`}</div>`:``;
+  const tareas=cfg.cards.hoy!==false?`<div class="card s6"><div class="section-title"><h2>Tareas pendientes</h2><div class="spacer"></div><span class="pill">${pendTasks.length}</span><button class="btn ghost sm" data-go="tareas">Ver →</button></div>
+      ${topTasks.map(({t,i})=>`<div class="tk-row"><button class="tk-check" data-tdone="${i}" title="Marcar finalizada"></button><span class="tk-prio ${taskPrioClass(t.pr)}" title="${esc(t.pr||"Media")}"></span><div class="grow"><b>${esc(t.t)}</b>${t.due?`<br><small class="muted">⌛ ${esc(tallerDate(t.due))}</small>`:""}</div></div>`).join("")||`<p class="muted">Nada pendiente. ✨</p>`}
+      <div style="margin-top:12px"><button class="btn sm" data-add="tarea">＋ Nueva tarea</button></div></div>`:``;
+  const memoria=cfg.cards.memoria!==false?`<div class="card s6"><div class="section-title"><h2>Última memoria</h2><div class="spacer"></div><button class="btn sm" data-add="memoria">+ Memoria</button></div>
       ${a.memories[0]?`<b>${esc(a.memories[0].t)}</b><p class="muted" style="margin:6px 0 0">${esc(a.memories[0].d)}</p>`:`<p class="muted">Aún no hay memorias.</p>`}
-      <div style="margin-top:16px"><button class="btn ghost sm" data-go="memoria">Ver memorias →</button></div></div>`:``}`;
+      <div style="margin-top:16px"><button class="btn ghost sm" data-go="memoria">Ver memorias →</button></div></div>`:``;
+  // Camino del Alma — discreto: una sola línea al final, con acceso al mapa completo.
+  const lvl=lp.cur||levelByKey(a.level);
+  const camino=cfg.cards.camino!==false?`<div class="card s12 camino-mini">
+      <span class="cm-pix">${pixelSprite(lvl)}</span>
+      <span class="pixel-font" style="font-size:9px;color:#7b5920">${lvl.label}</span>
+      <div class="bar cm-bar"><span style="width:${lp.pct}%"></span></div>
+      <small class="muted" style="font-size:11px">${lp.next?`${lp.pct}% hacia ${lp.next.label}`:"Alma Despierta ∞"}</small>
+      <div class="spacer"></div>
+      <button class="btn ghost sm" id="levelsInfo">Ver camino →</button>
+    </div>`:``;
+  return `${createCTA}${onboarding}${kpis}${proyectos}${flujo}${raiz}${hoy}${tareas}${memoria}${camino}`;
 }
 function vAlmaIdentidad(a){
   if(!a.live) return `<div class="card s12"><p class="muted">Entra o crea tu Alma para editar tu identidad. <button class="btn sm" id="createAlmaBtn" style="margin-left:8px">Crear mi Alma</button></p></div>`;
@@ -1679,7 +1719,7 @@ function vBiblioteca(a){
 function vConfigBody(a){
   const cfg=getCfg(a);
   const mod=[["trayectoria","Trayectoria"],["portafolio","Portafolio"],["proyectos","Flujo de trabajo"],["finanzas","Raíz"],["clientes","Vínculos"],["cotizador","Cotizador"],["agenda","Agenda"],["memoria","Memorias"],["biblioteca","Biblioteca"]];
-  const card=[["kpis","Indicadores rápidos"],["camino","Camino (pixel art)"],["graficos","Gráficos"],["hoy","Agenda de hoy"],["memoria","Última memoria"]];
+  const card=[["kpis","Indicadores rápidos"],["camino","Camino del Alma (línea discreta)"],["graficos","Gráficos"],["hoy","Agenda y tareas de hoy"],["memoria","Última memoria"]];
   const tg=(g,k,l,on)=>`<div class="row"><div class="grow"><b>${l}</b></div><button class="toggle ${on?'on':''}" data-cfg="${g}:${k}"><span></span></button></div>`;
   return `<div class="card s12"><span class="pill gold">Personalización</span>
       <p class="muted" style="max-width:640px">Configura tu espacio: qué módulos aparecen en tu menú y qué secciones se muestran en tu panel.</p></div>
@@ -5231,7 +5271,7 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#tourBtn")) startTour();
   if(e.target.closest("#tourNext")) tourNext();
   if(e.target.closest("#tourSkip")) endTour();
-  if(e.target.closest("#levelsInfo")) openLevels();
+  if(e.target.closest("#levelsInfo")||e.target.closest("[data-openlevels]")) openLevels();
   if(e.target.closest("#levelClose")||bdClose(e,"levelModal")) closeLevels();
   if(e.target.closest("#esenciaInfo")) openEsencia();
   if(e.target.closest("#esenciaClose")||bdClose(e,"esenciaModal")) closeEsencia();
