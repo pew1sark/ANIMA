@@ -1001,7 +1001,7 @@ a.nav-item{text-decoration:none;color:inherit}
    PROYECTOS — grid de tarjetas + detalle (panel dividido).
    =========================================================== */
 .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(244px,1fr));gap:14px}
-.proj-filters{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;margin-top:10px}
+.proj-filters{display:grid;grid-template-columns:repeat(5,minmax(108px,1fr));gap:8px;margin-top:10px}
 .proj-filters select{width:100%;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.72);padding:9px 10px;font:inherit;font-size:12px;color:var(--text)}
 .proj-card{display:flex;flex-direction:column;gap:9px;text-align:left;border:1px solid var(--line);
   background:var(--card-solid,#fff);border-radius:16px;padding:16px;cursor:pointer;font:inherit;
@@ -1010,6 +1010,7 @@ a.nav-item{text-decoration:none;color:inherit}
 .proj-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .proj-top b{font-size:15.5px;letter-spacing:-.02em;color:#15151a;line-height:1.2}
 .proj-client{font-size:13px;color:var(--muted)}
+.proj-loc{font-size:12px;color:#7b5920;font-weight:700;letter-spacing:-.01em}
 .proj-badge{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.01em;padding:4px 9px;border-radius:999px;white-space:nowrap}
 .st-cot{background:rgba(110,110,115,.14);color:#5a5a5e}
 .st-apr{background:rgba(58,138,95,.16);color:#2e7d52}
