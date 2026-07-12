@@ -1127,6 +1127,19 @@ async function savePortfolioProfile(){
 
 /* --- Proyectos: Flujo de trabajo (kanban) --- */
 const FLOW=["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"];
+/* Color personalizado de la tarjeta (p.color). Ayuda a encontrar cada
+   proyecto de un vistazo en tarjetas, lista y kanban. */
+const PROJECT_COLORS=["#d0aa63","#3a8a5f","#3a6e8a","#7b5a8a","#c96b8e","#d2493f","#e08a3c","#5a5a5e"];
+function projColorAttrs(p){ return p.color?` style="--pc:${esc(p.color)}"`:""; }
+function projColorDot(p){ return p.color?`<span class="pc-dot" style="background:${esc(p.color)}"></span>`:""; }
+/* Selector de color: puntos de la paleta + opción "sin color".
+   target = "i" (índice del proyecto, guarda al instante) */
+function projColorPicker(p,i){
+  return `<div class="pc-pick" title="Color de la tarjeta">
+    ${PROJECT_COLORS.map(c=>`<button type="button" class="pc-sw ${p.color===c?'on':''}" data-projcolor="${i}:${c}" style="--sw:${c}" title="Color de la tarjeta"></button>`).join("")}
+    <button type="button" class="pc-sw pc-none ${!p.color?'on':''}" data-projcolor="${i}:" title="Sin color">✕</button>
+  </div>`;
+}
 function flowOf(st){ if(FLOW.includes(st)) return st; if(st==="En curso") return "En producción"; if(st==="Terminado"||st==="Cerrado") return "Cerrado"; return "Cotizando"; }
 function clampPct(v){ return Math.max(0, Math.min(100, Math.round(+v || 0))); }
 /* --- Abonos por trabajo: historial de pagos parciales (payments jsonb) --- */
@@ -1365,7 +1378,7 @@ function vProyectos(a){
   const pct=p=>clampPct(p.pct);
   let body;
   if(view==="lista"){
-    body=`<div class="card s12">${entries.map(({p,i})=>`<div class="tk-row proj-litem" data-projopen="${i}">
+    body=`<div class="card s12">${entries.map(({p,i})=>`<div class="tk-row proj-litem ${p.color?'has-pc':''}"${projColorAttrs(p)} data-projopen="${i}">
         <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
         <div class="grow"><b>${esc(p.t)}</b> ${projectContextBadge(a,p)}<br><small class="muted">${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")} · ${pct(p)}%${p.due?" · ⌛ "+esc(tallerDate(p.due)):""}${projectFinanceLine(p)?" · "+esc(projectFinanceLine(p)):""}</small></div>
         <div class="proj-bar" style="width:110px"><span style="width:${pct(p)}%"></span></div>
@@ -1375,14 +1388,14 @@ function vProyectos(a){
     const cols=FLOW.map(s=>({s,items:[]}));
     entries.forEach(({p,i})=>{ const col=cols.find(c=>c.s===flowOf(p.st)); (col||cols[0]).items.push({p,i}); });
     body=`<div class="card s12"><div class="kanban">${cols.map(c=>`<div class="kcol"><div class="kcol-h">${c.s.toUpperCase()}<span>${c.items.length||""}</span></div>
-        ${c.items.map(({p,i})=>`<div class="kcard" data-projopen="${i}" style="cursor:pointer">
+        ${c.items.map(({p,i})=>`<div class="kcard ${p.color?'has-pc':''}" data-projopen="${i}" style="cursor:pointer${p.color?`;--pc:${esc(p.color)}`:''}">
           <b>${esc(p.t)}</b><small>${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")}</small>${projectFinanceLine(p)?`<small>${esc(projectFinanceLine(p))}</small>`:""}
           <div class="proj-bar" style="margin-top:9px"><span style="width:${pct(p)}%"></span></div>
           <select class="kstatus" data-pstatus="${i}">${FLOW.map(s=>`<option ${s===flowOf(p.st)?'selected':''}>${s}</option>`).join("")}</select>
         </div>`).join("")||`<div class="kempty">—</div>`}
       </div>`).join("")}</div></div>`;
   } else {
-    body=`<div class="proj-grid">${entries.map(({p,i})=>`<button class="proj-card" data-projopen="${i}">
+    body=`<div class="proj-grid">${entries.map(({p,i})=>`<button class="proj-card ${p.color?'has-pc':''}"${projColorAttrs(p)} data-projopen="${i}">
         <div class="proj-top"><b>${esc(p.t)}</b><span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span></div>
         <div class="proj-client">${projectContextBadge(a,p)} ${esc(projectMetaLine(a,p)||p.client||"Sin vínculo")}</div>
         <div class="proj-bar"><span style="width:${pct(p)}%"></span></div>
@@ -1397,35 +1410,38 @@ function vProyectoDetalle(a, i){
   const hist=Array.isArray(p.hist)?p.hist:[];
   const payPct=fin.budget>0?Math.min(100,Math.round(fin.paid/fin.budget*100)):0;
   const hoy=new Date().toISOString().slice(0,10);
+  const subLine=[p.client?"Cliente · "+p.client:"", p.template||"", projectOwner(a,p)].filter(Boolean).map(esc).join("  ·  ");
+  const link=String(p.link||"").trim();
+  const linkOk=/^https?:\/\//i.test(link);
   const info=`<div class="card s5 proj-info">
-      <div class="pd-block"><span class="pd-k">Contexto</span><b>${projectContextBadge(a,p)} ${esc(projectOwner(a,p))}</b></div>
-      <div class="pd-grid3">
-        <div><span class="pd-k">Plantilla</span><b>${esc(p.template||"Proyecto sin plantilla")}</b></div>
-        <div><span class="pd-k">Categoría</span><b>${esc(p.category||"—")}</b></div>
-        <div><span class="pd-k">Responsable</span><b>${esc(p.responsible||"—")}</b></div>
-      </div>
-      <div class="pd-block"><span class="pd-k">Cliente</span><b>${esc(p.client||"—")}</b></div>
-      <div class="pd-block"><span class="pd-k">Estado</span>
-        <select class="pd-select" data-pstatus="${i}">${FLOW.map(s=>`<option ${s===flowOf(p.st)?'selected':''}>${s}</option>`).join("")}</select></div>
-      <div class="pd-grid3">
-        <div><span class="pd-k">Presupuesto</span><b>${fin.budget?esc(money(fin.budget)):"—"}</b></div>
-        <div><span class="pd-k">Abono realizado</span><b data-paid-label="${i}">${esc(money(fin.paid))}</b></div>
-        <div><span class="pd-k">Saldo pendiente</span><b data-balance-label="${i}">${fin.budget?esc(money(fin.balance)):"—"}</b></div>
-      </div>
-      <div class="pd-grid3">
-        <div><span class="pd-k">Inicio</span><b>${p.start?esc(tallerDate(p.start)):"—"}</b></div>
-        <div><span class="pd-k">Entrega</span><b>${p.due?esc(tallerDate(p.due)):"—"}</b></div>
-        <div><span class="pd-k">Avance</span><b data-pct-label="${i}">${pct}%</b></div>
-      </div>
-      <div class="proj-bar" style="margin-top:6px"><span style="width:${pct}%"></span></div>
-      <div class="project-progress">
-        <div><span>Actualizar avance</span><b data-pct-label="${i}">${pct}%</b></div>
+      <div class="pd-sec">Estado &amp; avance</div>
+      <select class="pd-select" data-pstatus="${i}">${FLOW.map(s=>`<option ${s===flowOf(p.st)?'selected':''}>${s}</option>`).join("")}</select>
+      <div class="project-progress" style="margin-top:14px">
+        <div><span>Avance del trabajo</span><b data-pct-label="${i}">${pct}%</b></div>
         <input class="kpct" data-pct="${i}" type="range" min="0" max="100" step="5" value="${pct}">
       </div>
-      ${hist.length?`<div class="pd-block" style="margin-top:12px"><span class="pd-k">Historial de estado</span>
-        <div class="pd-hist">${hist.slice(-5).reverse().map(h=>`<div class="pd-hist-row"><span class="proj-badge ${projStageClass(h.st)}">${esc(h.st)}</span><small class="muted">${h.at?esc(tallerDate(h.at)):""}</small></div>`).join("")}</div></div>`:""}
-      ${p.desc?`<div class="pd-block" style="margin-top:14px"><span class="pd-k">Entregables / notas</span><p style="margin:4px 0 0;font-size:14px">${esc(p.desc)}</p></div>`:""}
-      <div style="display:flex;gap:8px;margin-top:16px"><button class="btn secondary sm" data-edit="proyecto:${i}">✎ Editar</button><button class="btn ghost sm" data-del="proyecto:${i}">✕ Eliminar</button></div>
+      <div class="proj-bar" style="margin-top:8px"><span data-pct-bar="${i}" style="width:${pct}%"></span></div>
+
+      <div class="pd-sec">Ficha</div>
+      <div class="pd-grid2">
+        <div><span class="pd-k">Contexto</span><b>${projectContextBadge(a,p)}</b></div>
+        <div><span class="pd-k">Cliente</span><b>${esc(p.client||"—")}</b></div>
+        <div><span class="pd-k">Plantilla</span><b>${esc(p.template||"Sin plantilla")}</b></div>
+        <div><span class="pd-k">Categoría</span><b>${esc(p.category||"—")}</b></div>
+        <div><span class="pd-k">Responsable</span><b>${esc(p.responsible||"—")}</b></div>
+        <div><span class="pd-k">Vínculo externo</span><b>${linkOk?`<a href="${esc(link)}" target="_blank" rel="noopener" style="color:inherit">Abrir ↗</a>`:"—"}</b></div>
+      </div>
+
+      <div class="pd-sec">Fechas</div>
+      <div class="pd-grid2">
+        <div><span class="pd-k">Inicio</span><b>${p.start?esc(tallerDate(p.start)):"—"}</b></div>
+        <div><span class="pd-k">Entrega</span><b>${p.due?esc(tallerDate(p.due)):"—"}</b></div>
+      </div>
+
+      ${hist.length?`<div class="pd-sec">Historial de estado</div>
+        <div class="pd-hist">${hist.slice(-5).reverse().map(h=>`<div class="pd-hist-row"><span class="proj-badge ${projStageClass(h.st)}">${esc(h.st)}</span><small class="muted">${h.at?esc(tallerDate(h.at)):""}</small></div>`).join("")}</div>`:""}
+      ${p.desc?`<div class="pd-sec">Entregables / notas</div><p style="margin:0;font-size:14px;line-height:1.55">${esc(p.desc)}</p>`:""}
+      <div style="display:flex;gap:8px;margin-top:20px"><button class="btn secondary sm" data-edit="proyecto:${i}">✎ Editar</button><button class="btn ghost sm" data-del="proyecto:${i}">✕ Eliminar</button></div>
     </div>`;
   // Abonos & Pagos — historial de pagos parciales del trabajo.
   const ab=projectAbonos(p);
@@ -1482,10 +1498,14 @@ function vProyectoDetalle(a, i){
         <button class="btn ghost sm" data-go="biblioteca">Ir a Biblioteca →</button></div>
     </div>`;
   return `<div class="grid">
-    <div class="card s12 pd-head">
+    <div class="card s12 pd-head ${p.color?'has-pc':''}"${projColorAttrs(p)}>
       <button class="btn ghost sm" data-projback>← Proyectos</button>
-      <h2 style="font-size:22px;letter-spacing:-.03em;margin:0;flex:1">${esc(p.t)}</h2>
+      <div class="pd-head-main">
+        <h2 class="pd-title">${esc(p.t)}</h2>
+        ${subLine?`<div class="pd-subline">${subLine}</div>`:""}
+      </div>
       <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
+      ${projColorPicker(p,i)}
     </div>
     ${info}${abonos}${proceso}${files}
   </div>`;
@@ -1520,6 +1540,7 @@ function previewProjectField(i,field,value){
     const pct=clampPct(value);
     p.pct=pct;
     document.querySelectorAll(`[data-pct-label="${i}"]`).forEach(el=>{ el.textContent=pct+"%"; });
+    document.querySelectorAll(`[data-pct-bar="${i}"]`).forEach(el=>{ el.style.width=pct+"%"; });
   }
 }
 /* --- Abonos: registrar / eliminar pagos parciales de un trabajo --- */
@@ -1618,6 +1639,19 @@ function rootIncome(a){
   const manual=(a.finance.income||[]).filter(x=>!isEstimatedProjectIncome(x));
   return manual.concat(projectPaidIncome(a));
 }
+/* --- Etiquetas de categoría (Raíz) ---
+   Guían y ordenan: primero las categorías que el Alma ya usa (sólidas),
+   luego sugerencias (punteadas). Elegir una etiqueta evita duplicados
+   tipo "materiales" / "Materiales" / "material". */
+const EXPENSE_CAT_SUGGESTIONS=["Materiales","Herramientas","Transporte","Arriendo / Taller","Servicios","Marketing","Comida","Impuestos","Otros"];
+const INCOME_CAT_SUGGESTIONS=["Abonos de proyectos","Venta de obra","Mural","Clases / talleres","Comisión","Otros"];
+function knownCats(a,kind){
+  const src=kind==="ingreso"?(a.finance.income||[]):(a.finance.expense||[]);
+  const used=[...new Set(src.map(x=>String(x.cat||"").trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,"es"));
+  const base=kind==="ingreso"?INCOME_CAT_SUGGESTIONS:EXPENSE_CAT_SUGGESTIONS;
+  const sugg=base.filter(c=>!used.some(u=>u.toLowerCase()===c.toLowerCase()));
+  return {used,sugg};
+}
 function vFinanzas(a){
   const cfg=getCfg(a); const cur=cfg.currency||"CLP"; const curName=(CURRENCY_CATALOG[cur]||{}).name||cur;
   const allInc=rootIncome(a), allExp=a.finance.expense, allEntries=allInc.concat(allExp);
@@ -1643,6 +1677,9 @@ function vFinanzas(a){
   const catMap={}; exp.forEach(x=>{ const c=x.cat||"Sin categoría"; catMap[c]=(catMap[c]||0)+(+x.a||0); });
   const catRows=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const catBreak=catRows.length?catRows.map(([c,v])=>`<div class="fin-cat"><div class="fin-cat-h"><span>${esc(c)}</span><b>${money(v)}</b></div><div class="proj-bar"><span style="width:${sumE>0?Math.round(v/sumE*100):0}%;background:linear-gradient(90deg,#e08a3c,#d2493f)"></span></div></div>`).join(""):`<p class="muted" style="font-size:12.5px">Sin egresos en este filtro.</p>`;
+  // Etiquetas de categoría de egresos: un toque filtra, otro toque limpia.
+  const tagCount={}; allExp.forEach(x=>{ const c=String(x.cat||"").trim(); if(c) tagCount[c]=(tagCount[c]||0)+1; });
+  const expTags=Object.entries(tagCount).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`<button type="button" class="cat-tag ${fc===c?'on':''}" data-fintag="${esc(c)}" title="Filtrar por ${esc(c)}">${esc(c)}<span>${n}</span></button>`).join("");
   const list=(arr,kind,cls,sign)=>arr.map(x=>{
       const sourceArr=kind==="ingreso"?(a.finance.income||[]):allExp;
       const i=sourceArr.indexOf(x);
@@ -1677,6 +1714,7 @@ function vFinanzas(a){
     <div class="card s6"><div class="section-title"><h2>Abonos y pagos realizados</h2><div class="spacer"></div><button class="btn sm" data-add="ingreso">+ Pago manual</button></div>
       ${list(inc,"ingreso","in","+")||`<p class="muted">${filtered?"Sin pagos en este filtro.":"Sin abonos o pagos realizados."}</p>`}</div>
     <div class="card s6"><div class="section-title"><h2>Egresos</h2><div class="spacer"></div><button class="btn sm secondary" data-add="egreso">+ Egreso</button></div>
+      ${expTags?`<div class="cat-tags" style="margin:-2px 0 12px">${expTags}</div>`:""}
       ${list(exp,"egreso","out","−")||`<p class="muted">${filtered?"Sin egresos en este filtro.":"Sin egresos."}</p>`}</div>
     <div class="card s12 conv-card"><div class="section-title"><h2 style="font-size:15px">Conversor de moneda</h2><div class="spacer"></div><span class="pill">Solo lectura</span></div>
       <div class="conv-controls">
@@ -4289,15 +4327,15 @@ function vRecordatorios(a){
    =========================================================== */
 const EDITORS = {
   proyecto:{ title:"Trabajo", table:"projects", get:a=>a.projects, push:"unshift", xp:60,
-    fields:[{k:"context",l:"Contexto",sel:["Personal","Clan","Santuario"]},{k:"template",l:"Plantilla",sel:PROJECT_TEMPLATE_OPTIONS},{k:"t",l:"Nombre"},{k:"category",l:"Categoría"},{k:"client",l:"Cliente / Vínculo opcional",clients:true},{k:"responsible",l:"Responsable"},{k:"link",l:"Vínculo externo opcional"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor total",num:true},{k:"paid",l:"Abono inicial (los siguientes se registran dentro del trabajo)",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
-    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:clampPct(v.pct),budget:v.budget?+v.budget:null,paid:+v.paid||0,payments:Array.isArray(v.abonos)?v.abonos:undefined,started_at:v.start||null,due_at:v.due||null,description:v.desc,context:v.context,owner_type:v.owner_type,owner:v.owner,template:v.template,category:v.category,responsible:v.responsible,deliverables:v.desc,archive:v.archive||null}) },
+    fields:[{k:"context",l:"Contexto",sel:["Personal","Clan","Santuario"]},{k:"template",l:"Plantilla",sel:PROJECT_TEMPLATE_OPTIONS},{k:"t",l:"Nombre"},{k:"category",l:"Categoría"},{k:"color",l:"Color de la tarjeta (para encontrarla rápido)",swatch:true},{k:"client",l:"Cliente / Vínculo opcional",clients:true},{k:"responsible",l:"Responsable"},{k:"link",l:"Vínculo externo opcional"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor total",num:true},{k:"paid",l:"Abono inicial (los siguientes se registran dentro del trabajo)",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
+    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:clampPct(v.pct),budget:v.budget?+v.budget:null,paid:+v.paid||0,payments:Array.isArray(v.abonos)?v.abonos:undefined,started_at:v.start||null,due_at:v.due||null,description:v.desc,context:v.context,owner_type:v.owner_type,owner:v.owner,template:v.template,category:v.category,responsible:v.responsible,deliverables:v.desc,archive:v.archive||null,color:v.color||null}) },
   memoria:{ title:"Memoria", table:"memories", get:a=>a.memories, push:"unshift", xp:40,
     fields:[{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({title:v.t,detail:v.d}) },
   ingreso:{ title:"Ingreso", table:"finance_entries", get:a=>a.finance.income, push:"unshift", xp:20,
-    fields:[{k:"t",l:"Concepto"},{k:"a",l:"Monto",num:true},{k:"cat",l:"Categoría"},{k:"on",l:"Fecha",date:true},{k:"method",l:"Método (efectivo, transferencia…)"},{k:"d",l:"Periodo (AAAA-MM)"},{k:"notes",l:"Notas",ta:true}],
+    fields:[{k:"t",l:"Concepto"},{k:"a",l:"Monto",num:true},{k:"cat",l:"Categoría (elige una etiqueta o crea una nueva)",cats:"ingreso"},{k:"on",l:"Fecha",date:true},{k:"method",l:"Método (efectivo, transferencia…)"},{k:"d",l:"Periodo (AAAA-MM)"},{k:"notes",l:"Notas",ta:true}],
     toRow:v=>({title:v.t,amount:+v.a||0,period:v.d,kind:"income",category:v.cat,occurred_at:v.on||null,method:v.method,notes:v.notes}) },
   egreso:{ title:"Egreso", table:"finance_entries", get:a=>a.finance.expense, push:"unshift", xp:0,
-    fields:[{k:"t",l:"Concepto"},{k:"a",l:"Monto",num:true},{k:"cat",l:"Categoría"},{k:"on",l:"Fecha",date:true},{k:"method",l:"Método (efectivo, transferencia…)"},{k:"d",l:"Periodo (AAAA-MM)"},{k:"notes",l:"Notas",ta:true}],
+    fields:[{k:"t",l:"Concepto"},{k:"a",l:"Monto",num:true},{k:"cat",l:"Categoría (elige una etiqueta o crea una nueva)",cats:"egreso"},{k:"on",l:"Fecha",date:true},{k:"method",l:"Método (efectivo, transferencia…)"},{k:"d",l:"Periodo (AAAA-MM)"},{k:"notes",l:"Notas",ta:true}],
     toRow:v=>({title:v.t,amount:+v.a||0,period:v.d,kind:"expense",category:v.cat,occurred_at:v.on||null,method:v.method,notes:v.notes}) },
   hito:{ title:"Hito", table:"trajectory", get:a=>a.trajectory, push:"push", xp:50,
     fields:[{k:"y",l:"Año"},{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({year:v.y,title:v.t,detail:v.d}) },
@@ -4364,6 +4402,14 @@ function openRecord(kind, idx=null){
     if(f.sel) return `<div class="field"><label>${f.l}</label><select id="rec_${f.k}">${f.sel.map(o=>`<option ${o==val?'selected':''}>${o}</option>`).join("")}</select></div>`;
     if(f.ta)  return `<div class="field"><label>${f.l}</label><textarea id="rec_${f.k}" rows="3">${esc(val)}</textarea></div>`;
     if(f.color) return `<div class="field"><label>${f.l}</label><input type="color" id="rec_${f.k}" value="${val||a.color||'#b8a892'}"></div>`;
+    if(f.swatch) return `<div class="field"><label>${f.l}</label><input type="hidden" id="rec_${f.k}" value="${esc(val)}">
+      <div class="pc-pick">${PROJECT_COLORS.map(c=>`<button type="button" class="pc-sw ${val===c?'on':''}" data-swatch="rec_${f.k}:${c}" style="--sw:${c}"></button>`).join("")}
+      <button type="button" class="pc-sw pc-none ${!val?'on':''}" data-swatch="rec_${f.k}:" title="Sin color">✕</button></div></div>`;
+    if(f.cats){ const kc=knownCats(a,f.cats);
+      const chip=(c,cls)=>`<button type="button" class="cat-tag ${cls} ${val===c?'on':''}" data-tagfill="rec_${f.k}" data-tagval="${esc(c)}">${esc(c)}</button>`;
+      return `<div class="field"><label>${f.l}</label><input id="rec_${f.k}" value="${esc(val)}" autocomplete="off" placeholder="Toca una etiqueta o escribe una nueva">
+        <div class="cat-tags">${kc.used.map(c=>chip(c,"")).join("")}${kc.sugg.map(c=>chip(c,"sugg")).join("")}</div>
+        ${kc.used.length?`<small class="muted" style="font-size:11px;display:block;margin-top:6px">Sólidas: etiquetas que ya usas · punteadas: sugerencias.</small>`:""}</div>`; }
     if(f.img) return imgUpField("rec_"+f.k, f.l, val, f.folder||"obra");
     if(f.clients){ const opts=(a.clients||[]).map(c=>`<option value="${esc(c.name)}"></option>`).join("");
       return `<div class="field"><label>${f.l}</label><input id="rec_${f.k}" list="rec_clientlist" value="${esc(val)}" autocomplete="off" placeholder="Escribe un nombre nuevo o elige uno"><datalist id="rec_clientlist">${opts}</datalist></div>`; }
@@ -5197,6 +5243,16 @@ document.addEventListener("click", e=>{
   const abAdd=e.target.closest("[data-abadd]"); if(abAdd){ addProjectAbono(+abAdd.dataset.abadd); return; }
   const abDel=e.target.closest("[data-abdel]"); if(abDel){ const [pi,ai]=abDel.dataset.abdel.split(":").map(Number); delProjectAbono(pi,ai); return; }
   const abFill=e.target.closest("[data-abfill]"); if(abFill){ const el=document.getElementById("ab_amount"); if(el){ el.value=+abFill.dataset.abfill||0; el.focus(); } return; }
+  // Color de la tarjeta del proyecto (desde el detalle): guarda al instante.
+  const pcx=e.target.closest("[data-projcolor]"); if(pcx){ const s=pcx.dataset.projcolor, k=s.indexOf(":"); updateProjectField(+s.slice(0,k), "color", s.slice(k+1)||null); return; }
+  // Selector de color dentro del modal de registro (campo oculto).
+  const sw=e.target.closest("[data-swatch]"); if(sw){ const s=sw.dataset.swatch, k=s.lastIndexOf(":"); const inp=document.getElementById(s.slice(0,k)); if(inp) inp.value=s.slice(k+1);
+    sw.closest(".pc-pick").querySelectorAll(".pc-sw").forEach(b=>b.classList.toggle("on",b===sw)); return; }
+  // Etiqueta de categoría dentro del modal: rellena el input.
+  const tf=e.target.closest("[data-tagfill]"); if(tf){ const inp=document.getElementById(tf.dataset.tagfill); if(inp) inp.value=tf.dataset.tagval||"";
+    tf.closest(".cat-tags").querySelectorAll(".cat-tag").forEach(b=>b.classList.toggle("on",b===tf)); return; }
+  // Etiqueta de categoría en Raíz: filtra egresos (toque de nuevo = limpiar).
+  const ftg=e.target.closest("[data-fintag]"); if(ftg){ state.finCat=state.finCat===ftg.dataset.fintag?"all":ftg.dataset.fintag; renderView(); return; }
   const ckT=e.target.closest("[data-cktoggle]"); if(ckT){ const [pi,ci]=ckT.dataset.cktoggle.split(":").map(Number); toggleChecklistStep(pi,ci); return; }
   const ckD=e.target.closest("[data-ckdel]"); if(ckD){ const [pi,ci]=ckD.dataset.ckdel.split(":").map(Number); delChecklistStep(pi,ci); return; }
   const ckA=e.target.closest("[data-ckadd]"); if(ckA){ addChecklistStep(+ckA.dataset.ckadd); return; }
