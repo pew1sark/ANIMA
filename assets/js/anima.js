@@ -1203,11 +1203,13 @@ function projectSelectFilters(ps){
   const templates=[...new Set(ps.map(p=>p.template||"").filter(Boolean))].sort();
   const cats=[...new Set(ps.map(p=>p.category||"").filter(Boolean))].sort();
   const owners=[...new Set(ps.map(p=>p.responsible||p.owner||"").filter(Boolean))].sort();
+  const comunas=[...new Set(ps.map(p=>String(p.comuna||"").trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,"es"));
   const d=state.projDetailFilter||{};
   return `<div class="proj-filters">
     <select data-projfilter2="template">${opt("Plantilla",templates,d.template||"")}</select>
     <select data-projfilter2="category">${opt("Categoría",cats,d.category||"")}</select>
     <select data-projfilter2="responsible">${opt("Responsable",owners,d.responsible||"")}</select>
+    <select data-projfilter2="comuna">${opt("Comuna",comunas,d.comuna||"")}</select>
     <select data-projfilter2="status">${opt("Estado",FLOW,d.status||"")}</select>
   </div>`;
 }
@@ -1216,11 +1218,17 @@ function projectMatchesDetail(p){
   if(f.template && p.template!==f.template) return false;
   if(f.category && p.category!==f.category) return false;
   if(f.responsible && (p.responsible||p.owner||"")!==f.responsible) return false;
+  if(f.comuna && String(p.comuna||"").trim()!==f.comuna) return false;
   if(f.status && flowOf(p.st)!==f.status) return false;
   return true;
 }
 function projectMetaLine(a,p){
   return [p.template, p.category, p.responsible].filter(Boolean).map(esc).join(" · ");
+}
+/* Ubicación del trabajo (Ciudad, Comuna) — para mapear dónde está cada
+   cotización y cada mural. */
+function projectLocation(p){
+  return [p.city,p.comuna].map(x=>String(x||"").trim()).filter(Boolean).join(", ");
 }
 function openProjectRecord(context){
   state.projectContext=context||null;
@@ -1380,7 +1388,7 @@ function vProyectos(a){
   if(view==="lista"){
     body=`<div class="card s12">${entries.map(({p,i})=>`<div class="tk-row proj-litem ${p.color?'has-pc':''}"${projColorAttrs(p)} data-projopen="${i}">
         <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
-        <div class="grow"><b>${esc(p.t)}</b> ${projectContextBadge(a,p)}<br><small class="muted">${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")} · ${pct(p)}%${p.due?" · ⌛ "+esc(tallerDate(p.due)):""}${projectFinanceLine(p)?" · "+esc(projectFinanceLine(p)):""}</small></div>
+        <div class="grow"><b>${esc(p.t)}</b> ${projectContextBadge(a,p)}<br><small class="muted">${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")}${projectLocation(p)?" · ⌖ "+esc(projectLocation(p)):""} · ${pct(p)}%${p.due?" · ⌛ "+esc(tallerDate(p.due)):""}${projectFinanceLine(p)?" · "+esc(projectFinanceLine(p)):""}</small></div>
         <div class="proj-bar" style="width:110px"><span style="width:${pct(p)}%"></span></div>
         <b style="min-width:70px;text-align:right">${p.budget?esc(money(p.budget)):""}</b>
       </div>`).join("")}</div>`;
@@ -1389,7 +1397,7 @@ function vProyectos(a){
     entries.forEach(({p,i})=>{ const col=cols.find(c=>c.s===flowOf(p.st)); (col||cols[0]).items.push({p,i}); });
     body=`<div class="card s12"><div class="kanban">${cols.map(c=>`<div class="kcol"><div class="kcol-h">${c.s.toUpperCase()}<span>${c.items.length||""}</span></div>
         ${c.items.map(({p,i})=>`<div class="kcard ${p.color?'has-pc':''}" data-projopen="${i}" style="cursor:pointer${p.color?`;--pc:${esc(p.color)}`:''}">
-          <b>${esc(p.t)}</b><small>${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")}</small>${projectFinanceLine(p)?`<small>${esc(projectFinanceLine(p))}</small>`:""}
+          <b>${esc(p.t)}</b><small>${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")}</small>${projectLocation(p)?`<small>⌖ ${esc(projectLocation(p))}</small>`:""}${projectFinanceLine(p)?`<small>${esc(projectFinanceLine(p))}</small>`:""}
           <div class="proj-bar" style="margin-top:9px"><span style="width:${pct(p)}%"></span></div>
           <select class="kstatus" data-pstatus="${i}">${FLOW.map(s=>`<option ${s===flowOf(p.st)?'selected':''}>${s}</option>`).join("")}</select>
         </div>`).join("")||`<div class="kempty">—</div>`}
@@ -1398,6 +1406,7 @@ function vProyectos(a){
     body=`<div class="proj-grid">${entries.map(({p,i})=>`<button class="proj-card ${p.color?'has-pc':''}"${projColorAttrs(p)} data-projopen="${i}">
         <div class="proj-top"><b>${esc(p.t)}</b><span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span></div>
         <div class="proj-client">${projectContextBadge(a,p)} ${esc(projectMetaLine(a,p)||p.client||"Sin vínculo")}</div>
+        ${projectLocation(p)?`<div class="proj-loc">⌖ ${esc(projectLocation(p))}</div>`:""}
         <div class="proj-bar"><span style="width:${pct(p)}%"></span></div>
         <div class="proj-foot"><span class="muted">${p.due?("⌛ "+esc(tallerDate(p.due))):"Sin fecha"} · ${pct(p)}%</span><b>${p.budget?esc(money(p.budget)):""}</b></div>
         ${projectFinanceLine(p)?`<div class="proj-money-line">${esc(projectFinanceLine(p))}</div>`:""}
@@ -1410,7 +1419,7 @@ function vProyectoDetalle(a, i){
   const hist=Array.isArray(p.hist)?p.hist:[];
   const payPct=fin.budget>0?Math.min(100,Math.round(fin.paid/fin.budget*100)):0;
   const hoy=new Date().toISOString().slice(0,10);
-  const subLine=[p.client?"Cliente · "+p.client:"", p.template||"", projectOwner(a,p)].filter(Boolean).map(esc).join("  ·  ");
+  const subLine=[p.client?"Cliente · "+p.client:"", p.template||"", projectLocation(p)?"⌖ "+projectLocation(p):"", projectOwner(a,p)].filter(Boolean).map(esc).join("  ·  ");
   const link=String(p.link||"").trim();
   const linkOk=/^https?:\/\//i.test(link);
   const info=`<div class="card s5 proj-info">
@@ -1430,6 +1439,8 @@ function vProyectoDetalle(a, i){
         <div><span class="pd-k">Categoría</span><b>${esc(p.category||"—")}</b></div>
         <div><span class="pd-k">Responsable</span><b>${esc(p.responsible||"—")}</b></div>
         <div><span class="pd-k">Vínculo externo</span><b>${linkOk?`<a href="${esc(link)}" target="_blank" rel="noopener" style="color:inherit">Abrir ↗</a>`:"—"}</b></div>
+        <div><span class="pd-k">Ciudad</span><b>${esc(p.city||"—")}</b></div>
+        <div><span class="pd-k">Comuna</span><b>${esc(p.comuna||"—")}</b></div>
       </div>
 
       <div class="pd-sec">Fechas</div>
@@ -4327,8 +4338,8 @@ function vRecordatorios(a){
    =========================================================== */
 const EDITORS = {
   proyecto:{ title:"Trabajo", table:"projects", get:a=>a.projects, push:"unshift", xp:60,
-    fields:[{k:"context",l:"Contexto",sel:["Personal","Clan","Santuario"]},{k:"template",l:"Plantilla",sel:PROJECT_TEMPLATE_OPTIONS},{k:"t",l:"Nombre"},{k:"category",l:"Categoría"},{k:"color",l:"Color de la tarjeta (para encontrarla rápido)",swatch:true},{k:"client",l:"Cliente / Vínculo opcional",clients:true},{k:"responsible",l:"Responsable"},{k:"link",l:"Vínculo externo opcional"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor total",num:true},{k:"paid",l:"Abono inicial (los siguientes se registran dentro del trabajo)",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
-    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:clampPct(v.pct),budget:v.budget?+v.budget:null,paid:+v.paid||0,payments:Array.isArray(v.abonos)?v.abonos:undefined,started_at:v.start||null,due_at:v.due||null,description:v.desc,context:v.context,owner_type:v.owner_type,owner:v.owner,template:v.template,category:v.category,responsible:v.responsible,deliverables:v.desc,archive:v.archive||null,color:v.color||null}) },
+    fields:[{k:"context",l:"Contexto",sel:["Personal","Clan","Santuario"]},{k:"template",l:"Plantilla",sel:PROJECT_TEMPLATE_OPTIONS},{k:"t",l:"Nombre"},{k:"category",l:"Categoría"},{k:"color",l:"Color de la tarjeta (para encontrarla rápido)",swatch:true},{k:"client",l:"Cliente / Vínculo opcional",clients:true},{k:"city",l:"Ciudad"},{k:"comuna",l:"Comuna"},{k:"responsible",l:"Responsable"},{k:"link",l:"Vínculo externo opcional"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor total",num:true},{k:"paid",l:"Abono inicial (los siguientes se registran dentro del trabajo)",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
+    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:clampPct(v.pct),budget:v.budget?+v.budget:null,paid:+v.paid||0,payments:Array.isArray(v.abonos)?v.abonos:undefined,started_at:v.start||null,due_at:v.due||null,description:v.desc,context:v.context,owner_type:v.owner_type,owner:v.owner,template:v.template,category:v.category,responsible:v.responsible,deliverables:v.desc,archive:v.archive||null,color:v.color||null,city:v.city||null,comuna:v.comuna||null}) },
   memoria:{ title:"Memoria", table:"memories", get:a=>a.memories, push:"unshift", xp:40,
     fields:[{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({title:v.t,detail:v.d}) },
   ingreso:{ title:"Ingreso", table:"finance_entries", get:a=>a.finance.income, push:"unshift", xp:20,
