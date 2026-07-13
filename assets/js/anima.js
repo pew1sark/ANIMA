@@ -634,7 +634,7 @@ function renderView(){
   }
   document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + bodyHTML;
   if(state.view==="mundo" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
-  if(state.view==="finanzas"){ requestAnimationFrame(updateConvOut); }
+  if(state.view==="finanzas"){ requestAnimationFrame(updateConvOut); if(isCreator && !state.viewAs && state.flowLiq===undefined) requestAnimationFrame(loadFlowLiq); }
   if(state.view==="consola"){ if(state.creatorClans==null && state.creatorSantuarios==null) requestAnimationFrame(loadCreatorGroups); requestAnimationFrame(loadWorldMonitor); requestAnimationFrame(loadRewardPanel); }
   // Desliza la pestaña activa al centro (sensación suave en móvil).
   if(window.innerWidth>720) requestAnimationFrame(()=>{ const on=document.querySelector(".morada-tab.on"); if(on && on.scrollIntoView){ try{ on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){} } });
@@ -1696,6 +1696,7 @@ function vFinanzas(a){
       const i=sourceArr.indexOf(x);
       const controls=x._projectPaid?`<button class="ia" data-projgo="${x._projectIndex}" title="Ver proyecto">↗</button>`:acts(kind,i);
       return `<div class="row"><div class="grow"><b>${esc(x.t)}</b><br><small>${[x.cat,finMonthKey(x)?finFmtMonth(finMonthKey(x)):x.d,x.notes].filter(Boolean).map(esc).join(" · ")||"—"}</small></div><span class="amt ${cls}">${sign}${money(x.a)}</span>${controls}</div>`; }).join("");
+  const flowCard=(isCreator&&!state.viewAs)?flowLiqCard():"";
   return `<div class="grid">
     <div class="card s12 cur-bar"><div class="section-title"><h2 style="font-size:16px">Flujo de valores</h2><div class="spacer"></div>
       <label class="cur-pick"><span class="muted" style="font-size:12px">Moneda</span>
@@ -1735,8 +1736,58 @@ function vFinanzas(a){
       <div id="convOut"></div>
       <div class="muted" style="font-size:11.5px;margin-top:8px">La conversión es solo una vista. Tus montos guardados no cambian.</div>
     </div>
+    ${flowCard}
     <div class="card s12 muted" style="font-size:12.5px">🔒 Tu Raíz es privada. Mi Alma ≠ Mi Clan. Nada se comparte automáticamente.</div>
   </div>`;
+}
+
+/* --- Ventas Flow (solo el Creador) ---
+   Registro histórico de liquidaciones de Flow.cl (links de pago de
+   murales y obras, 2021→hoy). Vive en la tabla flow_liquidaciones
+   (RLS: solo el Fundador). "detalle" se anota a mano desde aquí para
+   recordar qué obra o mural fue cada venta. */
+function flowLiqCard(){
+  const L=state.flowLiq;
+  const head=`<div class="section-title"><h2 style="font-size:15px">Ventas Flow · registro histórico</h2><div class="spacer"></div><span class="pill">Privado · Fundador</span></div>`;
+  if(L===undefined) return `<div class="card s12">${head}<p class="muted">Cargando historial…</p></div>`;
+  if(L===null) return `<div class="card s12">${head}<p class="muted">No se pudo cargar el historial. <button class="btn ghost sm" data-flowretry>Reintentar</button></p></div>`;
+  if(!L.length) return `<div class="card s12">${head}<p class="muted">Sin liquidaciones registradas.</p></div>`;
+  const dep=L.reduce((t,x)=>t+(+x.monto_depositado||0),0), com=L.reduce((t,x)=>t+(+x.monto_facturado||0),0), pag=L.reduce((t,x)=>t+(+x.pagos||0),0);
+  // Depositado por año (barras al estilo "Egresos por categoría").
+  const years={}; L.forEach(x=>{ const y=String(x.fecha_liquidacion||"").slice(0,4); years[y]=(years[y]||0)+(+x.monto_depositado||0); });
+  const yMax=Math.max(1,...Object.values(years));
+  const yRows=Object.entries(years).sort((a,b)=>b[0].localeCompare(a[0])).map(([y,v])=>`<div class="fin-cat"><div class="fin-cat-h"><span>${esc(y)}</span><b>${money(v)}</b></div><div class="proj-bar"><span style="width:${Math.round(v/yMax*100)}%;background:linear-gradient(90deg,#3a8a5f,#2e7d52)"></span></div></div>`).join("");
+  const fmtD=d=>{ try{ return new Date(d+"T00:00").toLocaleDateString("es-CL",{day:"2-digit",month:"short",year:"numeric"}); }catch(e){ return d; } };
+  const lim=state.flowLimit||8;
+  const rows=L.slice(0,lim).map(x=>{
+    const ajuste=!(+x.pagos);  // depósitos sin pagos = remanentes/ajustes de Flow
+    const meta=[`Liq. ${x.id}`, ajuste?"ajuste/remanente":`${x.pagos} pago${+x.pagos===1?"":"s"}`, (+x.monto_facturado?`comisión ${money(x.monto_facturado)}`:"")].filter(Boolean).join(" · ");
+    return `<div class="row"><div class="grow"><b>${esc(fmtD(x.fecha_liquidacion))}</b>${x.detalle?` — ${esc(x.detalle)}`:""}<br><small>${esc(meta)}</small></div><span class="amt in" ${ajuste?'style="opacity:.55"':''}>+${money(x.monto_depositado)}</span><button class="ia" data-flowdet="${x.id}" title="Anotar qué obra o mural fue">✎</button></div>`;
+  }).join("");
+  const more=L.length>lim?`<button class="btn ghost sm" data-flowmore style="margin-top:8px">Ver más (${L.length-lim} restantes)</button>`:"";
+  return `<div class="card s12">${head}
+    <div class="muted" style="font-size:12.5px;margin:-2px 0 10px">Liquidaciones de links de pago Flow.cl · ${L.length} depósitos · ${pag} pagos · comisión total ${money(com)} · <b style="color:var(--ok)">${money(dep)} depositado</b></div>
+    ${yRows?`<div style="margin-bottom:10px">${yRows}</div>`:""}
+    ${rows}${more}
+  </div>`;
+}
+async function loadFlowLiq(){
+  if(!isCreator || !Cloud.enabled || !Cloud.client) return;
+  try{
+    const { data, error } = await Cloud.client.from("flow_liquidaciones").select("*").order("fecha_liquidacion",{ascending:false});
+    if(error) throw error;
+    state.flowLiq=data||[];
+  }catch(e){ console.error("ANIMA · ventas Flow", e); state.flowLiq=null; }
+  if(state.view==="finanzas") renderView();
+}
+async function editFlowDetalle(id){
+  const row=(state.flowLiq||[]).find(x=>String(x.id)===String(id)); if(!row) return;
+  const det=prompt("¿Qué obra o mural fue esta venta?", row.detalle||""); if(det===null) return;
+  try{
+    const { error } = await Cloud.client.from("flow_liquidaciones").update({ detalle: det.trim()||null }).eq("id", row.id);
+    if(error) throw error;
+    row.detalle=det.trim()||null; renderView();
+  }catch(e){ alert("No se pudo guardar el detalle: "+(e.message||e)); }
 }
 
 /* --- Agenda --- */
@@ -5153,6 +5204,10 @@ document.addEventListener("click", e=>{
   // Filtro del muro (muestra/oculta sin re-render).
   const wf=e.target.closest("[data-wallfilter]"); if(wf){ applyWallFilter(wf.dataset.wallfilter); return; }
   if(e.target.closest("[data-pfmore]")){ state.pfLimit=(state.pfLimit||6)+6; renderView(); return; }
+  // Ventas Flow (Raíz del Creador): ver más, reintentar carga, anotar detalle.
+  if(e.target.closest("[data-flowmore]")){ state.flowLimit=(state.flowLimit||8)+12; renderView(); return; }
+  if(e.target.closest("[data-flowretry]")){ state.flowLiq=undefined; renderView(); return; }
+  const fld=e.target.closest("[data-flowdet]"); if(fld){ editFlowDetalle(fld.dataset.flowdet); return; }
   // Susurros (notificaciones)
   if(e.target.closest("#whisperBtn")){ toggleWhisperPanel(); return; }
   const wpu=e.target.closest("[data-wpub]"); if(wpu){ closeWhisperPanel(); openPublic(wpu.dataset.wpub); return; }
