@@ -1,0 +1,50 @@
+/* Tipos del núcleo de plataforma. Espejo de la migración 0040. */
+export type CompanyStatus = 'trial' | 'active' | 'suspended' | 'cancelled';
+export type MemberStatus  = 'invited' | 'active' | 'suspended';
+export type RoleScope     = 'platform' | 'company';
+
+/** Niveles de autoridad. Se comparan con >=, nunca por slug. */
+export const ROLE_LEVEL = {
+  owner: 100, admin: 80, manager: 60, employee: 40, viewer: 20
+} as const;
+export type RoleSlug = keyof typeof ROLE_LEVEL;
+
+export type ModuleSlug =
+  | 'core' | 'crm' | 'commerce' | 'operations' | 'delivery'
+  | 'food' | 'creator' | 'finance' | 'agenda' | 'support' | 'ai';
+
+export interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  status: CompanyStatus;
+  country: string;
+  currency: string;
+  timezone: string;
+  locale: string;
+  branding: Record<string, unknown>;
+  settings: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface Role { id: string; slug: RoleSlug | 'platform_admin'; name: string; scope: RoleScope; level: number; }
+
+export interface CompanyMember {
+  id: string;
+  company_id: string;
+  user_id: string;
+  role_id: string;
+  status: MemberStatus;
+  role?: Role;
+}
+
+export interface Membership { company: Company; role: Role; status: MemberStatus; }
+
+export interface AuditEntry {
+  company_id: string | null;
+  user_id: string | null;
+  action: string;
+  entity?: string | null;
+  entity_id?: string | null;
+  metadata?: Record<string, unknown>;
+}

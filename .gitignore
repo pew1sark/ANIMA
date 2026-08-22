@@ -26,3 +26,10 @@ supabase/.temp/
 supabase/.env
 supabase/.env.*
 .claude/
+
+# Reforzado 2026-08-22 (plataforma)
+logs/
+*.log
+.env.local
+*.bak
+backups/

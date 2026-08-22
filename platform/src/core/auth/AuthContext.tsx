@@ -1,0 +1,53 @@
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { Session, User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+
+interface AuthValue {
+  session: Session | null;
+  user: User | null;
+  loading: boolean;
+  isPlatformAdmin: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+const Ctx = createContext<AuthValue | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setLoading(false); });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  /* La condición de Super Admin la resuelve la base, no el frontend.
+     Aquí solo se usa para decidir qué mostrar. */
+  useEffect(() => {
+    if (!session) { setIsPlatformAdmin(false); return; }
+    supabase.rpc('is_platform_admin').then(({ data }) => setIsPlatformAdmin(data === true));
+  }, [session]);
+
+  const value = useMemo<AuthValue>(() => ({
+    session,
+    user: session?.user ?? null,
+    loading,
+    isPlatformAdmin,
+    async signIn(email, password) {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    },
+    async signOut() { await supabase.auth.signOut(); }
+  }), [session, loading, isPlatformAdmin]);
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export function useAuth() {
+  const v = useContext(Ctx);
+  if (!v) throw new Error('useAuth debe usarse dentro de <AuthProvider>');
+  return v;
+}
