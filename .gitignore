@@ -33,3 +33,6 @@ logs/
 .env.local
 *.bak
 backups/
+
+# Artefactos de compilación
+*.tsbuildinfo
