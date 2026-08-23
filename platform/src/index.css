@@ -1,1 +1,29 @@
 @import "tailwindcss";
+
+/* Identidad ANIMA. Un producto solo puede cambiar --accent. */
+@theme {
+  --color-bg: #f5f5f7;
+  --color-surface: #ffffff;
+  --color-sunk: #f0eeea;
+  --color-ink: #111111;
+  --color-ink-2: #3a3733;
+  --color-muted: #6e6e73;
+  --color-faint: #9b9791;
+  --color-line: #e6e3dd;
+  --color-accent: #d0aa63;
+  --color-accent-deep: #7b5920;
+  --color-ok: #3a8a5f;
+  --color-danger: #b23b3b;
+}
+
+html, body, #root { height: 100%; }
+body {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(208,170,99,.10), transparent 32%),
+    radial-gradient(circle at 96% 12%, rgba(184,168,146,.16), transparent 28%),
+    var(--color-bg);
+  background-attachment: fixed;
+  color: var(--color-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
