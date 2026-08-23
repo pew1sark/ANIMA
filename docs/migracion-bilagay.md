@@ -42,9 +42,34 @@ a usar las de la plataforma:
 | `audit_logs` (735) | `audit_logs` con `company_id` |
 | `tasks` (0) | `tasks`, que ya lleva `company_id` |
 
+## Datos copiados y verificados · 23-08-2026
+
+Los datos de Bilagay **ya están en la base de la plataforma**, etiquetados con su
+`company_id`. Copiados vía SQL entre proyectos y verificados con sumas de control
+que coinciden exactamente con el origen:
+
+| | Origen | Destino |
+|---|---|---|
+| Registro tributario (filas) | 607 | **607** |
+| Monto total | $200.274.805 | **$200.274.805** |
+| IVA | $31.748.177 | **$31.748.177** |
+| Neto | $167.095.544 | **$167.095.544** |
+| Exento | $1.206.741 | **$1.206.741** |
+| Notas de crédito | 4 | **4** |
+| Documentos sin proveedor | 0 | **0** |
+
+Además: 60 proveedores, 11 productos, 5 ubicaciones, 8 relaciones proveedor-producto,
+2 alias, 2 compras con sus ítems, 2 lotes, 2 movimientos de inventario, 1 categoría,
+1 registro de precio y los 2 contadores de numeración (COM y LOTE en 4, para que los
+correlativos continúen donde iban).
+
+**Nota sobre autoría:** las columnas `created_by`, `received_by`, `changed_by` y
+`driver_id` quedaron nulas: apuntaban a usuarios del proyecto viejo que aún no existen
+en la plataforma. Se completan cuando se den de alta los 3 usuarios de Bilagay.
+
 ## Lo que falta
 
-**1 · Copiar los datos.** Unas 705 filas en el bloque de compras:
+**1 · (hecho) Copiar los datos.** Unas 705 filas en el bloque de compras:
 
 ```
 purchase_history 607 · suppliers 60 · products 11 · supplier_products 8
