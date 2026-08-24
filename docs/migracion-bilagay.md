@@ -95,13 +95,53 @@ con su rol.
 `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`, y adaptar las consultas que usaban
 `profiles`/`role_permissions` propios.
 
-**4 · Portar el resto del dominio**: ventas (`customers`, `orders`, `order_items`,
-`deliveries`, `payments`, `routes`), procesos y aperturas. **Están todas vacías**, así que
-es trabajo de esquema, no de datos.
+**4 · Portar el motor operativo.** Aquí subestimé el alcance en el informe del 23 de
+agosto: dije que lo que faltaba era "esquema, no datos". Es bastante más que eso.
+
+Medido sobre el proyecto de origen:
+
+| Qué falta | Cantidad | Tamaño |
+|---|---|---|
+| Funciones de negocio (RPC) | **62** | 90.570 caracteres |
+| Vistas | **14** | 12.160 caracteres |
+| Tablas | **21** | mayormente vacías |
+
+La aplicación de JLIZ **invoca 36 de esas funciones** (`receive_purchase`, `dispatch_order`,
+`process_lot`, `dashboard_kpis`, `register_payment_out`, `finish_preparation`…) y **consulta
+las 14 vistas**. Ninguna existe todavía en la plataforma.
+
+Tablas pendientes: `customers`, `customer_addresses`, `customer_special_prices`, `orders`,
+`order_items`, `order_status_history`, `deliveries`, `routes`, `payments`,
+`opening_payables`, `opening_receivables`, `price_lists`, `price_list_items`,
+`processing_orders`, `processing_outputs`, `processing_yields`, `stock_reservations`,
+`losses`, `notifications`, `settings`, `user_invitations`.
+
+Además, la app usa `profiles.role` y una tabla `role_permissions` con forma distinta a la
+de la plataforma. Eso requiere tocar su código, no solo su configuración.
 
 **5 · Verificar unos días** con el cliente trabajando sobre la base nueva.
 
 **6 · Recién entonces** dar de baja el proyecto `owfvuusxfvzjgxfmllpt`.
+
+## Por qué el proyecto viejo NO se puede apagar todavía
+
+**Bilagay trabaja hoy contra `owfvuusxfvzjgxfmllpt`.** Su aplicación llama a 36 funciones
+y 14 vistas que solo existen ahí. Si ese proyecto se pausa o se elimina, el cliente se
+queda sin sistema el mismo día.
+
+Lo migrado hasta ahora es el **catálogo, los proveedores, las compras y el inventario**:
+la parte con datos reales. Lo que falta es el **motor operativo**: pedidos, preparación,
+despacho, cobranza y los cálculos.
+
+## Respaldo antes de cualquier baja
+
+Cuando llegue el momento, y **antes** de tocar nada, sacar una copia completa. La
+contraseña está en Supabase → Settings → Database:
+
+```bash
+pg_dump "postgresql://postgres:[CONTRASEÑA]@db.owfvuusxfvzjgxfmllpt.supabase.co:5432/postgres" \
+  --no-owner --no-privileges -f bilagay-respaldo-$(date +%F).sql
+```
 
 ## Regla
 
