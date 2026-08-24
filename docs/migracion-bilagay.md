@@ -156,7 +156,7 @@ y solo al final apagar.
 |---|---|---|
 | Tablas | **21 de 21** | — |
 | Vistas | **14 de 14** | — |
-| Funciones | **24 de 62** | 36 (67.141 caracteres) |
+| Funciones | **51 de 62** | 11 |
 
 ### Verificado de extremo a extremo
 
@@ -202,3 +202,49 @@ Levantamiento survey_get · survey_save · survey_submit · intake_get
              intake_save_row · intake_delete_row · import_intake
 Otros        mark_overdue_orders · audit_row · handle_new_user · purge_demo_data
 ```
+
+
+## Segunda tanda de funciones · 24 de agosto
+
+Portadas en las migraciones 0056 a 0060: compras y recepción, cobros y pagos,
+precios, vencimientos, paneles, márgenes, levantamiento por token, proceso de
+lotes, pesos de entrega y auditoría genérica.
+
+### Más fugas multiempresa encontradas al portar
+
+- **`dashboard_kpis`, `finance_kpis`, `sales_series`, `margin_by_*`** agregaban
+  **sin filtrar empresa** y eran `SECURITY DEFINER`. El panel de una empresa
+  habría sumado las ventas de la otra. Es la fuga más difícil de notar porque no
+  da error: da un número más grande. Ahora son `SECURITY INVOKER` y además
+  filtran por `current_company()`.
+- **`resolve_supplier`** buscaba alias y proveedores sin filtrar empresa: el
+  texto de una resolvía al proveedor de otra.
+- **`mark_overdue_orders`** marcaba vencidos los pedidos de todas las empresas
+  con el mismo criterio, leyendo una configuración global. Ahora recorre empresa
+  por empresa con la suya.
+- **`price_for`** leía el descuento por volumen de una configuración global.
+
+Verificado con una empresa intrusa que facturó $99.999.900: **Bilagay siguió
+viendo $0** en su panel.
+
+### El motor de transformación
+
+`process_lot` verificado con el caso real: 100 kg de pescado entero a $3.500/kg
+entran, salen 45 kg de filete a $7.777,78/kg y 55 kg de desecho. **El costo de
+entrada, $350.000, se conserva exacto** repartido según el valor de venta. El
+rendimiento del 45% queda guardado para la próxima vez.
+
+### Las 11 que faltan
+
+```
+Usuarios      invite_user · revoke_invitation · set_user_role · set_user_active
+              set_role_permission · audit_role_permission
+Levantamiento import_intake
+Utilidades    system_readiness · sync_suppliers_from_history · purge_demo_data
+              set_updated_at (equivale a touch_updated_at, ya existente)
+```
+
+Las de usuarios necesitan una decisión de diseño, no solo traducción: JLIZ mueve
+`profiles.role`, y en la plataforma un usuario tiene **nivel jerárquico** en
+`company_members.role_id` y **rol funcional** en `job_role`. Hay que decidir cuál
+mueve cada pantalla antes de portarlas.
