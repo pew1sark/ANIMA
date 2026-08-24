@@ -36,13 +36,16 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       .then(({ data }) => {
         const list = (data ?? []) as unknown as Membership[];
         setMemberships(list);
-        setCurrentId(prev => (prev && list.some(m => m.company.id === prev)) ? prev : (list[0]?.company.id ?? null));
+        // Con una sola organización se entra directo. Con varias, se elige.
+        setCurrentId(prev => (prev && list.some(m => m.company.id === prev))
+          ? prev
+          : (list.length === 1 ? list[0]!.company.id : null));
         setLoading(false);
       });
   }, [user]);
 
   useEffect(() => {
-    if (!currentId) { setModules(new Set()); return; }
+    if (!currentId) { setModules(new Set()); localStorage.removeItem(STORAGE_KEY); return; }
     localStorage.setItem(STORAGE_KEY, currentId);
     supabase
       .from('company_modules')
@@ -59,7 +62,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<TenantValue>(() => ({
     memberships, current, modules, loading,
-    select: setCurrentId,
+    select: (id: string) => setCurrentId(id || null),
     hasModule: (m) => modules.has(m),
     hasLevel: (min) => (current?.role.level ?? 0) >= min
   }), [memberships, current, modules, loading]);
