@@ -119,3 +119,47 @@ implica tocar funciones que hoy operan. Es el siguiente paso natural.
 
 El enum `app_role` (con *empaque* y *reparto*) también debería ser un catálogo
 por tenant: una agencia de diseño no tiene esos roles.
+
+---
+
+## Workflows configurables · migraciones 0064 y 0065
+
+Los estados dejaron de estar cableados. **Sin migrar de golpe**: se agregó una
+columna `workflow_state` (texto) junto al `status` (enum). Las funciones que hoy
+operan con Bilagay siguen intactas; los flujos nuevos se definen por empresa.
+
+```
+workflows              un flujo por empresa y entidad
+workflow_states        sus estados, con color, inicial, final y cancelación
+workflow_transitions   qué paso lleva a cuál, y qué nivel de rol hace falta
+```
+
+### Verificado
+
+A cada empresa se le sembró **su flujo actual, idéntico al enum**, así que nadie
+nota el cambio:
+
+```
+Nuevo → Confirmado → En preparación → Preparado → En reparto → Entregado
+```
+
+Y una segunda empresa definió uno completamente distinto con una sola llamada:
+
+```
+Cotización → Aprobación → Producción → Control de calidad → Despacho
+                                                    Rechazado
+```
+
+Las transiciones se encadenan solas en el orden dado, y desde cualquier estado no
+final se puede ir a los de cancelación. Saltarse pasos **se rechaza**:
+`No se puede pasar de "confirmado" a "entregado" en este flujo`.
+
+`workflow_next()` devuelve los pasos disponibles ahora mismo, para que la interfaz
+pinte solo los botones que corresponden.
+
+### Un fallo que encontró la prueba
+
+Los pedidos **nuevos** nacían sin estado: el sembrado rellenó los existentes pero
+faltaba el disparador. Corregido en la 0065. El nombre del disparador empieza con
+`z_` a propósito: los BEFORE corren en orden alfabético y tiene que ejecutarse
+después del que asigna la empresa.
