@@ -147,3 +147,58 @@ pg_dump "postgresql://postgres:[CONTRASEÑA]@db.owfvuusxfvzjgxfmllpt.supabase.co
 
 No se apaga nada hasta que el paso 5 esté cerrado. El orden es migrar, apuntar, verificar,
 y solo al final apagar.
+
+---
+
+## Avance del motor operativo · 24 de agosto de 2026
+
+| | Portado | Falta |
+|---|---|---|
+| Tablas | **21 de 21** | — |
+| Vistas | **14 de 14** | — |
+| Funciones | **24 de 62** | 36 (67.141 caracteres) |
+
+### Verificado de extremo a extremo
+
+Ciclo completo de un pedido sobre datos reales de Bilagay:
+
+```
+crear → confirm_order (reserva 10 kg del lote)
+      → start_preparation
+      → finish_preparation (prepara 9,4 kg, descuenta stock,
+        calcula costo real $3.500/kg, libera la reserva sobrante,
+        y avisa porque 6% supera la tolerancia del 5%)
+      → dispatch_order (crea ENT-2026-000001)
+      → start_delivery → complete_delivery (registra el cobro)
+
+historial: nuevo → confirmado → en_preparacion → preparado → en_reparto → entregado
+total facturado con el peso REAL: $87.420 (9,4 kg × $9.300)
+```
+
+### Fallos multiempresa encontrados al portar
+
+- **`reserve_order_stock`** buscaba lotes por `product_id` **sin filtrar empresa**.
+- **`check_low_stock`** deduplicaba avisos por `link` sin mirar la empresa: un aviso
+  de una empresa silenciaba el de otra.
+- **`fail_delivery`** no comprobaba **nada**: cualquiera con sesión podía marcar
+  fallida la entrega de cualquier empresa.
+- Todas las funciones son `SECURITY DEFINER` y **saltan el RLS**. Cada una lleva
+  ahora `assert_company()` sobre la fila que toca.
+
+### Funciones que faltan (36)
+
+```
+Paneles      dashboard_kpis · finance_kpis · sales_series · system_readiness
+Márgenes     margin_by_customer · margin_by_product
+Compras      receive_purchase · void_purchase · update_purchase_costs
+             register_supplier_payment · resolve_supplier · sync_suppliers_from_history
+Cobros       register_collection · register_payment_out · trg_apply_payment
+Precios      price_for
+Proceso      process_lot
+Reparto      update_delivery_weights
+Usuarios     invite_user · revoke_invitation · set_user_role · set_user_active
+             set_role_permission · audit_role_permission
+Levantamiento survey_get · survey_save · survey_submit · intake_get
+             intake_save_row · intake_delete_row · import_intake
+Otros        mark_overdue_orders · audit_row · handle_new_user · purge_demo_data
+```
