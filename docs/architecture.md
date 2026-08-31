@@ -90,7 +90,8 @@ distintas a propósito.
 - ✅ Las 67 migraciones versionadas en el repo, verificadas con md5 contra la base
 - ⏳ Falta portar de JLIZ: cobranza, conector Bsale y correo saliente
   (20 tablas, 56 funciones, 12 vistas, 9 Edge Functions, 2 cron)
-- ⏳ `tenant_type` operator/advisor, para el módulo de asesoría multi-cliente
+- ✅ **`tenant_type` operator/advisor** (migración 0068). Con esto el núcleo de la
+  Fase 2 queda completo. La capa de datos del asesor es la Fase 6.
 - ⏳ Consola de plataforma (todos los clientes, suscripciones, consumo)
 - 🔴 Deuda de seguridad: 47 funciones heredadas ejecutables por `anon`
 

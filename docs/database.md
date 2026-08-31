@@ -8,7 +8,7 @@ Proyecto Supabase: `jwxeowowuxmijuexdrua` · PostgreSQL 17.
 |---|---|
 | `profiles` | identidad de plataforma, 1:1 con `auth.users` |
 | `platform_admins` | Super Admins. Autoridad sobre toda la plataforma |
-| `companies` | **el tenant**: nombre, slug, estado, país, moneda, branding, settings |
+| `companies` | **el tenant**: nombre, slug, estado, país, moneda, branding, settings, `product_line_id` y `tenant_type` |
 | `roles` | catálogo de roles con `level` numérico |
 | `permissions` | catálogo de permisos por módulo |
 | `role_permissions` | qué permisos trae cada rol |
@@ -39,6 +39,23 @@ companies ─1:N─ audit_logs
 
 `industry` sigue en la tabla con `active = false`: se retiró, no se borró, para
 conservar el historial y poder revertir.
+
+## De quién son los datos: `tenant_type` (migración 0068)
+
+`companies.tenant_type` distingue dos formas de ser tenant:
+
+| Valor | Qué significa | Casos |
+|---|---|---|
+| `operator` | administra **su propia** data | ANIMA, Bilagay |
+| `advisor` | administra la de **terceros** | un contador o asesor con varios clientes |
+
+Es un **eje distinto al de la línea de producto**. La línea dice *qué hace* la
+organización; `tenant_type` dice *de quién son los datos*. Un asesor puede estar
+en COMPANY y ser `advisor` a la vez.
+
+`advisor` habilita la capa `clients → locations → transacciones` de la Fase 6.
+Mientras no exista esa capa, el valor no cambia el comportamiento de nada: solo
+está declarado, y `is_advisor()` permite preguntarlo.
 
 ## Herencia de ANIMA
 

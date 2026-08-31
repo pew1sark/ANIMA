@@ -17,6 +17,11 @@ export type ModuleSlug =
  *  Espejo de la tabla `product_lines` (migración 0067). */
 export type ProductLine = 'studio' | 'company';
 
+/** De quién son los datos que la organización administra (migración 0068).
+ *  `operator`: los suyos. `advisor`: los de sus clientes.
+ *  Es un eje distinto al de la línea: un asesor puede estar en COMPANY. */
+export type TenantType = 'operator' | 'advisor';
+
 export interface ProductLineInfo { slug: ProductLine; name: string; }
 
 export const PRODUCT_LINES: Record<ProductLine, ProductLineInfo> = {
@@ -29,6 +34,7 @@ export interface Company {
   name: string;
   slug: string;
   status: CompanyStatus;
+  tenant_type: TenantType;
   country: string;
   currency: string;
   timezone: string;
