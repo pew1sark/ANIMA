@@ -5,8 +5,17 @@ function required(name: string, value: string | undefined): string {
   return value;
 }
 
+/* El sitio de ANIMA vive un nivel arriba del build de la plataforma:
+   /ANIMA/app/ → /ANIMA/. Se deduce de `base`, así que no hay una ruta
+   escrita a mano que se pueda desincronizar. */
+const SITIO = import.meta.env.BASE_URL.replace(/app\/?$/, '');
+
 export const env = {
   supabaseUrl: required('VITE_SUPABASE_URL', import.meta.env.VITE_SUPABASE_URL),
   supabaseAnonKey: required('VITE_SUPABASE_ANON_KEY', import.meta.env.VITE_SUPABASE_ANON_KEY),
-  platformDomain: import.meta.env.VITE_PLATFORM_DOMAIN ?? 'localhost:5180'
+  platformDomain: import.meta.env.VITE_PLATFORM_DOMAIN ?? 'localhost:5180',
+  /** La portada pública. */
+  sitio: SITIO,
+  /** Donde SARK trabaja como artista: el ANIMA de siempre. */
+  studio: SITIO + 'home.html'
 } as const;

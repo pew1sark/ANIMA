@@ -24,22 +24,26 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [modules, setModules] = useState<Set<ModuleSlug>>(new Set());
   const [loading, setLoading] = useState(true);
 
-  /* Las empresas visibles las decide RLS: esta consulta no filtra por
-     usuario, no hace falta — la base solo devuelve lo que corresponde. */
+  /* Filtra por usuario a propósito. RLS deja ver a TODOS los miembros de tus
+     empresas —hace falta para el equipo—, así que sin este filtro la lista
+     traería también las membresías de otros: la organización aparecería
+     repetida y `current.role` podría ser el rol de otra persona. */
   useEffect(() => {
     if (!user) { setMemberships([]); setLoading(false); return; }
     setLoading(true);
     supabase
       .from('company_members')
-      .select('status, company:companies(*), role:roles(*)')
+      .select('status, company:companies(*, linea:product_lines(slug,name)), role:roles(*)')
+      .eq('user_id', user.id)
       .eq('status', 'active')
       .then(({ data }) => {
         const list = (data ?? []) as unknown as Membership[];
         setMemberships(list);
         // Con una sola organización se entra directo. Con varias, se elige.
-        setCurrentId(prev => (prev && list.some(m => m.company.id === prev))
-          ? prev
-          : (list.length === 1 ? list[0]!.company.id : null));
+        /* No se elige nada aquí. Con dos sub-plataformas, entrar directo a la
+           única organización se saltaría la puerta. Solo se conserva la que ya
+           estaba abierta, si sigue siendo válida. */
+        setCurrentId(prev => (prev && list.some(m => m.company.id === prev)) ? prev : null);
         setLoading(false);
       });
   }, [user]);

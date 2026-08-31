@@ -56,6 +56,33 @@ una organización STUDIO y a una COMPANY, con roles distintos en cada una, y ele
 al entrar. Es el caso de referencia: artista en Studio, operación de murales en
 Company.
 
+## Las dos puertas
+
+Después de entrar en `/ANIMA/app/` lo primero que aparece son dos puertas. No es
+decoración: son dos formas distintas de trabajar y conviene decidir antes, no ir
+descubriéndolo por el menú.
+
+| Puerta | Se abre si | Lleva a |
+|---|---|---|
+| **ANIMA STUDIO** | tienes un Alma, o una organización de línea `studio` | `/ANIMA/home.html` |
+| **ANIMA COMPANY** | tienes una organización de línea `company`, o eres platform_admin | la plataforma |
+
+**STUDIO no es una pantalla de esta app: es el ANIMA de siempre.** El Taller con
+sus 10.000 líneas ya existe y funciona; duplicarlo en React para mostrar
+"Falta construir esta pantalla" sería mentir. Se cruza sin volver a entrar
+porque las dos usan el mismo proyecto de Supabase en el mismo origen, así que
+comparten la sesión en `localStorage`. La ruta se deduce de `base` en
+`config/env.ts` (`/ANIMA/app/` → `/ANIMA/`); no hay una ruta escrita a mano.
+
+Con una sola puerta abierta no se pregunta. Un Alma de la Alpha reincorporada
+—sin organización ninguna— entra directo a STUDIO; un empleado de un cliente,
+directo a su espacio de COMPANY.
+
+**Ojo con `company_members`:** su política de lectura es `is_company_member`,
+o sea que ves a **todos** los miembros de tus empresas. La consulta que arma tus
+membresías tiene que filtrar por `user_id` a mano: sin eso la organización
+aparece repetida y `current.role` puede terminar siendo el rol de otra persona.
+
 ## Lo que se retiró
 
 `INDUSTRY` fue una tercera línea con un solo plan (`enterprise`) y una sola

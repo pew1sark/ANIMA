@@ -13,7 +13,8 @@ const num = (n = 0) => Math.round(n).toLocaleString('es-CL');
 /* El espacio de trabajo del cliente. La navegación NO está escrita a mano:
    sale de los módulos que su plan le permite. Dos empresas distintas ven
    menús distintos con el mismo código. */
-export function Espacio({ irAConsola }: { irAConsola?: () => void }) {
+export function Espacio({ irAConsola, volver }:
+  { irAConsola?: () => void; volver?: () => void }) {
   const { user, isPlatformAdmin, signOut } = useAuth();
   const { memberships, current, select } = useTenant();
   const cid = current?.company.id;
@@ -69,6 +70,11 @@ export function Espacio({ irAConsola }: { irAConsola?: () => void }) {
           {memberships.length > 1 && (
             <button onClick={() => select('')} className="text-[12px] text-muted hover:text-ink transition text-left px-3">
               Cambiar de organización
+            </button>
+          )}
+          {volver && (
+            <button onClick={volver} className="text-[12px] text-muted hover:text-ink transition text-left px-3">
+              Cambiar de puerta
             </button>
           )}
           {irAConsola && (

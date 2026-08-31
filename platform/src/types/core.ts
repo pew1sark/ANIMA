@@ -39,6 +39,9 @@ export interface Company {
   currency: string;
   timezone: string;
   locale: string;
+  /** La sub-plataforma a la que pertenece. Viene incrustada desde
+   *  `product_lines`; puede faltar si la organización aún no tiene línea. */
+  linea?: ProductLineInfo | null;
   branding: Record<string, unknown>;
   settings: Record<string, unknown>;
   created_at: string;

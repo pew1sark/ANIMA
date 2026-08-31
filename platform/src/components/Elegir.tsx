@@ -1,24 +1,34 @@
 import { useTenant } from '@/core/tenant/TenantContext';
 import { useAuth } from '@/core/auth/AuthContext';
 import { Marca } from '@/components/Marca';
+import type { Membership } from '@/types/core';
 
-/* Solo aparece si perteneces a más de una organización. Con una sola, el
+/* Las organizaciones de ANIMA COMPANY. La lista llega filtrada por línea: el
+   portal ya decidió por qué puerta se entró. Con una sola —y sin consola— el
    portal entra directo: nadie debería elegir cuando no hay elección. */
-export function Elegir({ irAConsola }: { irAConsola?: () => void }) {
-  const { memberships, select } = useTenant();
+export function Elegir({ organizaciones, irAConsola, volver }:
+  { organizaciones: Membership[]; irAConsola?: () => void; volver?: () => void }) {
+  const { select } = useTenant();
   const { user, signOut } = useAuth();
 
   return (
     <div className="min-h-full grid place-items-center p-6">
       <div className="w-full max-w-lg">
         <div className="flex items-center justify-between mb-7">
-          <Marca />
-          <button onClick={signOut} className="text-[13px] text-muted hover:text-ink transition">Salir</button>
+          <Marca sub="Company" />
+          <span className="flex items-center gap-4">
+            {volver && (
+              <button onClick={volver} className="text-[13px] text-muted hover:text-ink transition">
+                ← Cambiar de puerta
+              </button>
+            )}
+            <button onClick={signOut} className="text-[13px] text-muted hover:text-ink transition">Salir</button>
+          </span>
         </div>
         <h1 className="text-2xl font-extrabold tracking-tight">¿Dónde quieres entrar?</h1>
         <p className="text-[13px] text-muted mt-1 mb-6">{user?.email}</p>
         <div className="grid gap-2.5">
-          {memberships.map(m => (
+          {organizaciones.map(m => (
             <button key={m.company.id} onClick={() => select(m.company.id)}
               className="text-left p-4 rounded-2xl border border-line bg-surface hover:border-accent transition group">
               <div className="flex items-center gap-3">
