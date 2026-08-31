@@ -1,0 +1,45 @@
+# El sitio de ANIMA se publica desde la raíz de main, tal cual.
+#
+# Hasta el 14 de julio de 2026 lo hacía la build automática de Pages. Dejó de
+# dispararse sola y el sitio quedó congelado 30 commits atrás sin avisar. Este
+# workflow lo hace explícito: si algo falla, falla a la vista.
+name: Publicar el sitio
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un despliegue a la vez. No se cancela el que está en curso: preferimos que
+# termine de subir a dejar el sitio a medio camino.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.desplegar.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Armar lo que se publica
+        run: |
+          mkdir -p _sitio
+          rsync -a ./ _sitio/ --exclude .git --exclude .github --exclude _sitio
+          touch _sitio/.nojekyll
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _sitio
+
+      - id: desplegar
+        uses: actions/deploy-pages@v4
