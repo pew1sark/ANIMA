@@ -67,13 +67,13 @@
     var right = ctx.signedIn
       ? '<div class="alma-pill" id="almaPill"><span class="adot"></span>' + esc(nameFirst) +
           '<span class="acaret">⌄</span><div class="alma-pop" id="almaPop">' +
-            '<a class="apop-item" href="studio.html">✦ Entrar a Mi Alma</a>' +
+            '<a class="apop-item" href="app/">✦ Entrar a Mi Alma</a>' +
             (planAllows("CLAN") ? '<a class="apop-item" href="studio.html#go=clanpanel">❂ Mi Clan</a>' : '') +
             (planAllows("SANTUARIO") ? '<a class="apop-item" href="studio.html#go=santuario">🜁 Santuario</a>' : '') +
             '<div class="apop-sep"></div>' +
             '<button class="apop-item danger" id="logoutAlma">⏻ Cerrar sesión</button>' +
           '</div></div>'
-      : '<a class="cbtn" href="entrar.html" style="padding:10px 18px;font-size:13.5px">Entrar a mi Alma</a>';
+      : '<a class="cbtn" href="app/" style="padding:10px 18px;font-size:13.5px">Entrar a mi Alma</a>';
     return '<div class="home-top">' +
         '<div class="home-brand"><span class="m">' + PEAK + '</span>ANIMA</div>' +
         right +
@@ -106,7 +106,7 @@
       '</div>' +
 
       '<div class="home-cta">' +
-        '<a class="cbtn gold" href="entrar.html" style="padding:12px 22px">Entrar a mi Alma</a>' +
+        '<a class="cbtn gold" href="app/" style="padding:12px 22px">Entrar a mi Alma</a>' +
         '<a class="cbtn ghost" href="umbral.html" style="padding:12px 22px">✦ Despertar una nueva Alma</a>' +
       '</div>' +
 

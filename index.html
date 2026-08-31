@@ -352,10 +352,11 @@
            su HOME (studio.html), sin volver a pasar por el Umbral. La nube sigue
            siendo la verdad: el gate (despertar.html) revalida en otros equipos. --- */
     try{ if(localStorage.getItem("anima_awakened")==="1"){ location.replace("home.html"); return; } }catch(e){}
-    /* --- Toda entrada lleva al HOME PRINCIPAL. Allí el Alma ve el Resumen del
-           Mundo (si no ha iniciado sesión) o su propia Alma (si la inició), y
-           desde el HOME puede elegir cruzar el Umbral para despertar. --- */
-    function entryHref(){ return "home.html"; }
+    /* --- Toda entrada lleva a LA PLATAFORMA. Esta portada sigue siendo la cara
+           pública de ANIMA —el Umbral, el Árbol, el manifiesto—, pero entrar ya
+           no abre el Studio de la Alpha: abre ANIMA STUDIO y ANIMA COMPANY.
+           El ingreso se reabre de a poco, por invitación. --- */
+    function entryHref(){ return "app/"; }
     /* --- Portal inmersivo negro→blanco, luego navega --- */
     var navigating=false;
     function enter(e){
