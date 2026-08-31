@@ -2,8 +2,9 @@
 
 ## Cómo está publicado
 
-GitHub Pages sirve la rama `main` **tal cual**, desde la raíz. No hay workflow de
-Actions: lo que está en el repositorio es lo que se ve.
+GitHub Pages sirve la rama `main` **tal cual**, desde la raíz. Lo que está en el
+repositorio es lo que se ve; el despliegue lo hace
+`.github/workflows/publicar.yml` en cada push a `main`.
 
 ```
 pew1sark.github.io/ANIMA/          la portada pública  (index.html + assets/)
@@ -26,9 +27,9 @@ npm run build      # sale a ../app, con base /ANIMA/app/
 ```
 
 Después se versiona `app/` y se empuja a `main`. Sí: el build va al repositorio.
-No es lo ideal, pero es lo que permite la configuración actual de Pages. Cuando
-Pages pase a compilar por su cuenta (origen *GitHub Actions*), esto vuelve a
-`dist/`, se deja de versionar y `base` se ajusta.
+No es lo ideal, pero mantiene el despliegue en una sola pieza: el workflow sube
+la raíz y nada más. Si algún día compila en CI, esto vuelve a `dist/`, se deja
+de versionar y `base` se ajusta.
 
 `base` y `outDir` están en `platform/vite.config.ts` y van juntos: si cambia la
 ruta de publicación, cambian los dos.
@@ -53,6 +54,23 @@ mkdir -p /tmp/pages && cp -R . /tmp/pages/ANIMA
 cd /tmp/pages && python3 -m http.server 4180
 # → http://localhost:4180/ANIMA/app/
 ```
+
+## Si el sitio no cambia después de un push
+
+Ya pasó una vez, y en silencio: entre el **14 de julio y el 31 de agosto de
+2026** Pages dejó de construir solo. `main` avanzó 30 commits y el sitio siguió
+sirviendo `a5ab2b2` sin un solo error a la vista. Por eso el despliegue hoy es
+un workflow del repositorio: si falla, falla donde se ve.
+
+Para comprobar qué está publicado de verdad, sin creerle al navegador:
+
+```bash
+curl -sI https://pew1sark.github.io/ANIMA/ | grep -i last-modified
+curl -s  https://pew1sark.github.io/ANIMA/sw.js | grep -o 'anima-v[0-9]*'
+```
+
+Ese `anima-v…` es la versión del service worker en `sw.js`. Si no coincide con
+la del repositorio, el sitio quedó atrás.
 
 ## Quién puede entrar
 
