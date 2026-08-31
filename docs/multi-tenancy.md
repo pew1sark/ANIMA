@@ -23,7 +23,7 @@ al rol `anon`:
 | `current_company_ids()` | las empresas activas del usuario |
 | `is_company_member(company)` | si pertenece a esa empresa |
 | `company_role_level(company)` | su nivel de rol allí (0 si no pertenece) |
-| `has_company_level(company, min)` | si alcanza ese nivel — o es Super Admin |
+| `has_company_level(company, min)` | si alcanza ese nivel **en esa empresa**. Nada más |
 
 Son `SECURITY DEFINER` por una razón concreta: una política sobre `company_members` que
 consultara `company_members` entraría en recursión infinita.
@@ -50,6 +50,30 @@ create policy <tabla>_write on public.<tabla> for all to authenticated
 
 Usa `(select auth.uid())` y nunca `auth.uid()` suelto: la segunda forma reevalúa el JWT
 **en cada fila** y hunde el rendimiento a escala.
+
+## El Super Admin no es un empleado del cliente (migración 0073)
+
+Hasta la 0073, `has_company_level()` empezaba con `is_platform_admin() or …`. Eso
+significaba que **el Super Admin pasaba toda política que la usara** — es decir,
+las 39 tablas de negocio. Quitarle la membresía a alguien no le quitaba nada:
+seguía entrando por ahí. Y no se veía revisando el texto de las políticas, porque
+el permiso entraba de forma indirecta.
+
+Hoy la separación es explícita:
+
+| | Qué alcanza |
+|---|---|
+| **Operación del cliente** — productos, clientes, pedidos, facturas, compras, inventario, pagos, proyectos, cotizaciones | solo sus miembros |
+| **Configuración** — módulos, campos personalizados, flujos, levantamiento, invitaciones | sus administradores **y** el Super Admin |
+| **Relación comercial** — empresa, plan, suscripción, cobros, pagos a la plataforma | el Super Admin, y el cliente lo suyo |
+
+La regla, dicha corta: **el Super Admin administra el software; no opera la
+empresa.** Puede implementar un cliente sin poder mirarle las ventas.
+
+Al escribir una política nueva sobre una tabla de negocio, `has_company_level` es
+lo correcto y ya no abre nada de más. Si la tabla es de configuración o de la
+relación comercial, hay que agregar `or public.is_platform_admin()` a mano — y esa
+decisión debe ser deliberada.
 
 ## Niveles de rol
 
