@@ -13,6 +13,17 @@ export type ModuleSlug =
   | 'core' | 'crm' | 'commerce' | 'operations' | 'delivery'
   | 'food' | 'creator' | 'finance' | 'agenda' | 'support' | 'ai';
 
+/** Las dos sub-plataformas de ANIMA. Una organización pertenece a una.
+ *  Espejo de la tabla `product_lines` (migración 0067). */
+export type ProductLine = 'studio' | 'company';
+
+export interface ProductLineInfo { slug: ProductLine; name: string; }
+
+export const PRODUCT_LINES: Record<ProductLine, ProductLineInfo> = {
+  studio:  { slug: 'studio',  name: 'ANIMA STUDIO'  },
+  company: { slug: 'company', name: 'ANIMA COMPANY' }
+} as const;
+
 export interface Company {
   id: string;
   name: string;

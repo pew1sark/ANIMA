@@ -7,21 +7,31 @@ ni una base de datos por cliente. Hay un código y una base, y cada empresa es u
 `companies` con su configuración, sus módulos y sus datos.
 
 ```
-GITHUB · un repositorio
+GITHUB · un repositorio          github.com/pew1sark/ANIMA
         │
    ANIMA Plataforma
         │
-   SUPABASE · un proyecto
+   SUPABASE · un proyecto        jwxeowowuxmijuexdrua
         │
-   companies (el tenant)
+   product_lines · DOS sub-plataformas
         │
-  ┌─────┴─────┬───────────┐
-ANIMA      Bilagay    (siguientes)
-creator    commerce
-crm        crm
-finance    operations
-agenda     delivery
+  ┌─────┴──────────────┐
+ANIMA STUDIO      ANIMA COMPANY
+creadores         empresas
+        │                │
+   companies (el tenant) │
+        │                │
+     ANIMA           Bilagay
+  core · creator   core · crm
+  crm · finance    commerce
+  agenda           operations
+                   delivery · finance
 ```
+
+Una organización pertenece a **una** línea. Un mismo usuario puede pertenecer a
+varias organizaciones, en líneas distintas: es el caso de referencia —artista en
+STUDIO, operación de murales en COMPANY— y funciona sin nada especial, porque la
+línea es del tenant, no de la persona.
 
 ## Organización del repositorio
 
@@ -65,13 +75,24 @@ ningún permiso por sí sola: solo decide qué se pide.
 Ser dueño de una empresa **nunca** escala a administrar la plataforma. Son dos tablas
 distintas a propósito.
 
-## Estado actual
+## Estado actual · 31 de agosto de 2026
 
-- ✅ Núcleo multiempresa creado y con aislamiento verificado (migración 0040)
-- ✅ Empresas iniciales: ANIMA y Pescadería Bilagay (migración 0041)
-- ⏳ Retrofit de `company_id` sobre las tablas heredadas de ANIMA
-- ⏳ Migración de los datos de JLIZ BUSINESS a esta base
-- ⏳ Módulos verticales
+- ✅ Núcleo multiempresa con aislamiento verificado, 13/13 (migración 0040)
+- ✅ **Dos líneas de producto: STUDIO y COMPANY** (migración 0067). INDUSTRY se
+  fundió en COMPANY: era una tercera línea con un solo plan y una sola empresa.
+- ✅ ANIMA → STUDIO · Pescadería Bilagay → COMPANY
+- ✅ Planes: 3 tramos de Studio (Solo · Taller · Clan) y 4 de Company
+  (Starter · Pro · Business · Enterprise). **Los precios de Studio están en cero
+  a propósito**: falta definirlos.
+- ✅ `company_id` sobre las tablas de trabajo de ANIMA (migración 0043)
+- ✅ Motor operativo de Bilagay portado: 21 tablas, 14 vistas, 52 de 108 funciones
+- ✅ Extensibilidad por tenant: features, campos personalizados, workflows (0061-0065)
+- ✅ Las 67 migraciones versionadas en el repo, verificadas con md5 contra la base
+- ⏳ Falta portar de JLIZ: cobranza, conector Bsale y correo saliente
+  (20 tablas, 56 funciones, 12 vistas, 9 Edge Functions, 2 cron)
+- ⏳ `tenant_type` operator/advisor, para el módulo de asesoría multi-cliente
+- ⏳ Consola de plataforma (todos los clientes, suscripciones, consumo)
+- 🔴 Deuda de seguridad: 47 funciones heredadas ejecutables por `anon`
 
 ---
 

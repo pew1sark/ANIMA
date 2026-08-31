@@ -11,6 +11,26 @@ Este repositorio contiene la **primera Alpha** de ANIMA (The Founding Era), semb
 
 ---
 
+## Qué hay en este repositorio
+
+Dos cosas distintas, con un mismo Supabase (`jwxeowowuxmijuexdrua`) detrás:
+
+| | Qué es | Dónde |
+|---|---|---|
+| **El sitio** | ANIMA TSC: el Studio de las Almas, el Árbol, la comunidad. Estático, sin build. Es lo que sirve GitHub Pages desde la raíz. | raíz + `assets/` |
+| **La plataforma** | El SaaS multiempresa: **ANIMA STUDIO** y **ANIMA COMPANY**. React 19 + Vite. | `platform/` |
+| **La base** | Migraciones versionadas, funciones y semillas. | `supabase/` |
+| **La documentación** | Arquitectura, multi-tenancy, seguridad, líneas de producto. | `docs/` |
+
+**No mezclar los dos primeros.** La raíz está en producción para las Almas y la
+sirve Pages tal cual; mover un archivo de ahí rompe el sitio. La plataforma vive
+entera dentro de `platform/` y no se publica desde este repositorio.
+
+Para entender la plataforma, partir por [`docs/architecture.md`](docs/architecture.md)
+y [`docs/lineas-de-producto.md`](docs/lineas-de-producto.md).
+
+---
+
 ## 🌐 Páginas
 
 | Archivo | Qué es |

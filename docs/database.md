@@ -29,12 +29,33 @@ companies ─N:M─ modules  (via company_modules)
 companies ─1:N─ audit_logs
 ```
 
+## Líneas de producto (migración 0067)
+
+| Tabla | Qué guarda |
+|---|---|
+| `product_lines` | **STUDIO** y **COMPANY**. Una organización pertenece a una. |
+| `plans` | 3 tramos de Studio · 4 de Company. `plans.slug` es único global. |
+| `plan_modules` | qué módulos trae cada plan |
+
+`industry` sigue en la tabla con `active = false`: se retiró, no se borró, para
+conservar el historial y poder revertir.
+
 ## Herencia de ANIMA
 
-Las ~40 tablas de ANIMA (`almas`, `projects`, `clients`, `quotes`, `echoes`, …) siguen
-intactas y funcionando. Su aislamiento actual es **por usuario** (`alma_id`). El retrofit
-a `company_id` es la siguiente fase y se hará tabla por tabla, con backfill: cada Alma
-pasa a ser miembro de la empresa que corresponda.
+Las tablas de ANIMA siguen intactas y funcionando. Están en dos grupos:
+
+**Tablas de trabajo — ya con `company_id`** (migración 0043): `projects`, `clients`,
+`quotes`, `tasks`, `agenda`, `finance_entries`. Conviven con `alma_id` y tienen dos
+políticas: la vieja por alma y la nueva por empresa.
+
+> **Decisión pendiente.** Mientras las dos políticas convivan, una misma fila es
+> alcanzable por dos caminos con reglas distintas. Hay que definir cuál manda antes
+> de meter una segunda organización en estas tablas.
+
+**Comunidad y juego — aún por `alma_id`**: `almas`, `portfolio`, `trajectory`,
+`soul_timeline`, `echoes`, `posts`, `clans`, `santuarios`, `world_tree_*`, `badges`,
+`alma_rewards`, `proposals`/`votes`, `whispers`. Son del **sitio público**, no de la
+plataforma, y ahí se quedan: no pertenecen a un producto B2B multiempresa.
 
 ## Convenciones
 
