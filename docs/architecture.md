@@ -80,7 +80,16 @@ distintas a propósito.
 - ✅ Núcleo multiempresa con aislamiento verificado, 13/13 (migración 0040)
 - ✅ **Dos líneas de producto: STUDIO y COMPANY** (migración 0067). INDUSTRY se
   fundió en COMPANY: era una tercera línea con un solo plan y una sola empresa.
-- ✅ ANIMA → STUDIO · Pescadería Bilagay → COMPANY
+- ✅ **Tres organizaciones, un solo usuario** (migraciones 0069-0070):
+
+  | Organización | Línea | Plan | Encendidos |
+  |---|---|---|---:|
+  | ANIMA | STUDIO | Clan | 6 |
+  | PEW1 · Murales | COMPANY | Pro | 5 |
+  | Pescadería Bilagay | COMPANY | Business | 6 |
+
+  Las tres con SARK como Propietario. Es el caso que el prompt pedía validar:
+  el mismo usuario entra, elige, y cada espacio se comporta según su línea.
 - ✅ Planes: 3 tramos de Studio (Solo · Taller · Clan) y 4 de Company
   (Starter · Pro · Business · Enterprise). **Los precios de Studio están en cero
   a propósito**: falta definirlos.
