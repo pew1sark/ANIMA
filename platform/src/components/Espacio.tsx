@@ -13,7 +13,7 @@ const num = (n = 0) => Math.round(n).toLocaleString('es-CL');
 /* El espacio de trabajo del cliente. La navegación NO está escrita a mano:
    sale de los módulos que su plan le permite. Dos empresas distintas ven
    menús distintos con el mismo código. */
-export function Espacio() {
+export function Espacio({ irAConsola }: { irAConsola?: () => void }) {
   const { user, isPlatformAdmin, signOut } = useAuth();
   const { memberships, current, select } = useTenant();
   const cid = current?.company.id;
@@ -65,11 +65,18 @@ export function Espacio() {
           {esAdmin && <Item activo={vista==='config'} onClick={() => setVista('config')} label="Configuración" />}
         </nav>
 
-        {memberships.length > 1 && (
-          <button onClick={() => select('')} className="hidden md:block text-[12px] text-muted hover:text-ink transition text-left px-3">
-            Cambiar de organización
-          </button>
-        )}
+        <div className="hidden md:grid gap-1.5">
+          {memberships.length > 1 && (
+            <button onClick={() => select('')} className="text-[12px] text-muted hover:text-ink transition text-left px-3">
+              Cambiar de organización
+            </button>
+          )}
+          {irAConsola && (
+            <button onClick={irAConsola} className="text-[12px] text-muted hover:text-ink transition text-left px-3">
+              Consola de plataforma
+            </button>
+          )}
+        </div>
       </aside>
 
       {/* ---------- contenido ---------- */}

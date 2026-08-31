@@ -4,7 +4,7 @@ import { Marca } from '@/components/Marca';
 
 /* Solo aparece si perteneces a más de una organización. Con una sola, el
    portal entra directo: nadie debería elegir cuando no hay elección. */
-export function Elegir() {
+export function Elegir({ irAConsola }: { irAConsola?: () => void }) {
   const { memberships, select } = useTenant();
   const { user, signOut } = useAuth();
 
@@ -35,6 +35,27 @@ export function Elegir() {
             </button>
           ))}
         </div>
+
+        {irAConsola && (
+          <>
+            <div className="h-px bg-line my-6" />
+            <button onClick={irAConsola}
+              className="w-full text-left p-4 rounded-2xl border border-line bg-sunk hover:border-accent transition group">
+              <div className="flex items-center gap-3">
+                <span className="w-10 h-10 rounded-xl grid place-items-center bg-ink text-bg shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M3 6h18M3 12h18M3 18h11" />
+                  </svg>
+                </span>
+                <span className="min-w-0">
+                  <b className="block text-[15px] font-extrabold tracking-tight">Consola de plataforma</b>
+                  <span className="text-[12px] text-muted">Clientes, planes y pagos del software</span>
+                </span>
+                <span className="ml-auto text-faint group-hover:text-accent transition">→</span>
+              </div>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
