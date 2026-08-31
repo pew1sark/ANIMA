@@ -71,6 +71,20 @@
   var $=function(id){ return document.getElementById(id); };
   function setMsg(t, ok){ var m=$("msg"); m.textContent=t||""; m.className="auth-msg"+(t?(ok?" ok":" err"):""); }
 
+  /* Reemplaza la tarjeta de ingreso por la explicación. Se le dice lo único que
+     de verdad le importa: que no se borró nada suyo, y cuándo vuelve. */
+  function mostrarPausa(){
+    var card=document.querySelector(".auth-card");
+    if(!card) return;
+    card.innerHTML =
+      '<div class="auth-mark"><svg viewBox="23 27 54 48" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'
+    + '<h1 style="line-height:1.15">Tu Alma está guardada.<br>El ingreso, en pausa.</h1>'
+    + '<p class="sub" style="text-align:left;margin-top:14px">ANIMA está cambiando de piel: lo que empezó como la Alpha se está convirtiendo en la plataforma.</p>'
+    + '<p class="sub" style="text-align:left;margin-top:12px"><b>No se borró nada tuyo.</b> Tu trayectoria, tus insignias, tu portafolio y tus huellas en el Árbol siguen exactamente donde las dejaste. Cuando vuelvas a entrar, van a estar ahí.</p>'
+    + '<p class="sub" style="text-align:left;margin-top:12px">El acceso se está reabriendo de a poco, por invitación. Si quieres estar entre los primeros, escríbele a SARK.</p>'
+    + '<div style="margin-top:24px"><a class="cbtn block" href="index.html" style="text-decoration:none;display:block;text-align:center">Volver a ANIMA</a></div>';
+  }
+
   // Si ya hay sesión, no tiene sentido el login: al Home.
   (async function(){
     try{ if(typeof Cloud!=="undefined" && Cloud.enabled){ var s=await Cloud.session(); if(s) location.replace("home.html"); } }catch(e){}
@@ -92,6 +106,9 @@
     }catch(err){
       btn.disabled=false;
       var m=(err && err.message)||"No se pudo entrar.";
+      /* Un Alma de la Alpha en pausa no se equivocó de contraseña: ANIMA cambió.
+         Merece que se lo expliquen, no un error en rojo. */
+      if(/banned|pausa/i.test(m)){ mostrarPausa(); return; }
       if(/invalid login/i.test(m)) m="Correo o contraseña incorrectos.";
       else if(/email not confirmed/i.test(m)) m="Confirma tu correo antes de entrar (revisa tu bandeja).";
       setMsg(m);
