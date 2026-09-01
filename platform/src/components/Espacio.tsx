@@ -5,7 +5,9 @@ import { MODULES } from '@/core/modules/registry';
 import { cargarEspacio, cargarKpis, type Espacio as EspacioData } from '@/core/tenant/Espacio';
 import { Marca, MarcaCliente, PieAnima } from '@/components/Marca';
 import { MarcaDeLaEmpresa } from '@/components/company/MarcaEmpresa';
-import { Clientes } from '@/components/company/Clientes';
+import { CamposPropios } from '@/components/company/CamposPropios';
+import { Vista } from '@/components/datos/Vista';
+import { ESQUEMAS_POR_MODULO } from '@/core/datos/esquemas';
 import type { ModuleSlug } from '@/types/core';
 
 const money = (n = 0, m = 'CLP') =>
@@ -144,14 +146,11 @@ export function Espacio({ volver }: { volver?: () => void }) {
             </>
           )}
 
-          {/* Clientes es el primer módulo de COMPANY construido de verdad sobre la
-              arquitectura de Bilagay. Los demás siguen el mismo camino. */}
-          {!cargando && esp && cid && vista === 'crm' && (
-            <Clientes companyId={cid} puedeEditar={(esp.mi_rol?.nivel ?? 0) >= 40} />
-          )}
-
-          {!cargando && esp && vista !== 'inicio' && vista !== 'config' && vista !== 'crm' && (
-            <PorConstruir slug={vista as ModuleSlug} />
+          {/* Todos los módulos los dibuja el motor de datos a partir de los
+              esquemas declarados sobre las tablas de Bilagay. */}
+          {!cargando && esp && cid && vista !== 'inicio' && vista !== 'config' && (
+            <Modulo slug={vista as ModuleSlug} companyId={cid}
+                    puedeEditar={(esp.mi_rol?.nivel ?? 0) >= 40} />
           )}
 
           {!cargando && esp && cid && vista === 'config' && (
@@ -160,6 +159,36 @@ export function Espacio({ volver }: { volver?: () => void }) {
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+/* Un módulo del plan. Si tiene entidades declaradas, se dibujan con el motor
+   —una pestaña por entidad—; si no, se dice con honestidad qué falta. */
+function Modulo({ slug, companyId, puedeEditar }:
+  { slug: ModuleSlug; companyId: string; puedeEditar: boolean }) {
+  const esquemas = ESQUEMAS_POR_MODULO[slug] ?? [];
+  const [cual, setCual] = useState(0);
+
+  useEffect(() => { setCual(0); }, [slug]);
+
+  if (esquemas.length === 0) return <PorConstruir slug={slug} />;
+  const activo = esquemas[Math.min(cual, esquemas.length - 1)]!;
+
+  return (
+    <div className="grid gap-4">
+      {esquemas.length > 1 && (
+        <div className="flex gap-1 flex-wrap">
+          {esquemas.map((e, i) => (
+            <button key={e.tabla} onClick={() => setCual(i)}
+              className={`text-[13px] font-bold px-3.5 py-1.5 rounded-full transition ${
+                i === cual ? 'bg-ink text-bg' : 'text-muted hover:bg-accent/10'}`}>
+              {e.titulo}
+            </button>
+          ))}
+        </div>
+      )}
+      <Vista key={activo.tabla} esquema={activo} companyId={companyId} puedeEditar={puedeEditar} />
     </div>
   );
 }
@@ -230,6 +259,7 @@ function Configuracion({ esp, bloqueados, companyId, puedeEditarMarca }:
       )}
 
       {puedeEditarMarca && <MarcaDeLaEmpresa companyId={companyId} nombre={esp.empresa.nombre} />}
+      {puedeEditarMarca && <CamposPropios companyId={companyId} />}
     </>
   );
 }
