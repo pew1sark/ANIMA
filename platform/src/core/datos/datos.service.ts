@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Campo, Esquema, Fila, Opcion, TipoCampo } from '@/core/datos/tipos';
+import type { Campo, Detalle, Esquema, Fila, Opcion, TipoCampo } from '@/core/datos/tipos';
 
 /* Acceso genérico a cualquier entidad declarada. Ninguna consulta filtra por
    empresa por gusto: se pasa `company_id` porque la fila lo necesita, pero
@@ -38,6 +38,40 @@ export const datosService = {
       .from(e.tabla).update(parcial).eq('id', fila.id).select('*').single();
     if (error) throw error;
     return data as Fila;
+  },
+
+  /* Volver a leer una fila. Se usa después de tocar sus líneas: los totales
+     los recalcula un trigger, así que lo que hay en pantalla ya no sirve. */
+  async releer(e: Esquema, id: string): Promise<Fila | null> {
+    const { data, error } = await supabase.from(e.tabla).select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return (data ?? null) as Fila | null;
+  },
+
+  // ------------------------------------------------------------ las líneas
+
+  async lineas(d: Detalle, padreId: string): Promise<Fila[]> {
+    const { data, error } = await supabase
+      .from(d.tabla).select('*').eq(d.padre, padreId).order('created_at');
+    if (error) throw error;
+    return (data ?? []) as Fila[];
+  },
+
+  async agregarLinea(d: Detalle, companyId: string, padreId: string,
+                     valores: Record<string, unknown>): Promise<Fila> {
+    const limpio = Object.fromEntries(
+      Object.entries(valores).filter(([k, v]) => v != null && !d.campos.find(c => c.key === k)?.soloLectura));
+    const { data, error } = await supabase
+      .from(d.tabla)
+      .insert({ ...limpio, [d.padre]: padreId, company_id: companyId })
+      .select('*').single();
+    if (error) throw error;
+    return data as Fila;
+  },
+
+  async borrarLinea(d: Detalle, id: string): Promise<void> {
+    const { error } = await supabase.from(d.tabla).delete().eq('id', id);
+    if (error) throw error;
   },
 
   async borrar(e: Esquema, id: string): Promise<void> {

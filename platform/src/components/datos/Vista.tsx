@@ -27,7 +27,10 @@ export function Vista({ esquema, companyId, puedeEditar }:
     let vivo = true;
     setCargando(true); setError(null); setBusca(''); setModo('tabla');
 
-    const relaciones = esquema.campos.filter(c => c.tipo === 'relacion');
+    /* También las de las líneas: sin esto el desplegable de producto dentro de
+       un pedido sale vacío, que es exactamente donde más se necesita. */
+    const relaciones = [...esquema.campos, ...(esquema.detalle?.campos ?? [])]
+      .filter(c => c.tipo === 'relacion');
     Promise.all([
       datosService.listar(esquema, companyId),
       /* Si los campos propios fallan, la vista sigue en pie sin ellos: perder
@@ -74,6 +77,16 @@ export function Vista({ esquema, companyId, puedeEditar }:
     await datosService.borrar(esquema, abierta.id);
     setFilas(f => f.filter(x => x.id !== abierta.id));
     setAbierta(null);
+  }
+
+  /* Tras tocar una línea, el total del padre lo recalculó un trigger: lo que
+     hay en pantalla ya no sirve y hay que volver a leerlo. */
+  async function releerPadre() {
+    if (!abierta || abierta === 'nueva') return;
+    const fresca = await datosService.releer(esquema, abierta.id);
+    if (!fresca) return;
+    setFilas(f => f.map(x => x.id === fresca.id ? fresca : x));
+    setAbierta(fresca);
   }
 
   /* Edición en la celda o arrastre en el tablero: se guarda al vuelo, y si la
@@ -161,9 +174,11 @@ export function Vista({ esquema, companyId, puedeEditar }:
 
       {abierta && (
         <Ficha esquema={esquema} campos={campos} opciones={opciones}
+               companyId={companyId} puedeEditar={puedeEditar}
                fila={abierta === 'nueva' ? null : abierta}
                onGuardar={guardar}
                onBorrar={abierta !== 'nueva' && puedeEditar ? borrar : undefined}
+               onLineas={releerPadre}
                cerrar={() => setAbierta(null)} />
       )}
     </div>

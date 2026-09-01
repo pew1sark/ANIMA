@@ -181,12 +181,400 @@ export const PEDIDOS: Esquema = {
     { key: 'notes',       label: 'Notas',    tipo: 'texto-largo' }
   ],
   tablero: 'status',
-  orden: { campo: 'order_date', asc: false }
+  orden: { campo: 'order_date', asc: false },
+  detalle: {
+    tabla: 'order_items', padre: 'order_id',
+    titulo: 'Productos del pedido', singular: 'producto',
+    total: 'line_total',
+    campos: [
+      { key: 'product_id', label: 'Producto', tipo: 'relacion', requerido: true, enTabla: true,
+        relacion: { tabla: 'products', etiqueta: 'name' } },
+      { key: 'quantity_ordered', label: 'Cantidad', tipo: 'numero', requerido: true, enTabla: true },
+      { key: 'unit', label: 'Unidad', tipo: 'seleccion', opciones: UNIDAD, enTabla: true, porDefecto: 'kg' },
+      { key: 'unit_price', label: 'Precio unitario', tipo: 'moneda', requerido: true, enTabla: true },
+      { key: 'discount', label: 'Descuento', tipo: 'moneda', porDefecto: 0 },
+      { key: 'notes', label: 'Notas', tipo: 'texto' }
+    ]
+  }
+};
+
+// ------------------------------------------------------------------ compras
+
+const ESTADO_COMPRA: Opcion[] = [
+  { valor: 'borrador', nombre: 'Borrador', tono: 'neutro' },
+  { valor: 'recibida', nombre: 'Recibida', tono: 'ok' },
+  { valor: 'anulada',  nombre: 'Anulada',  tono: 'malo' }
+];
+
+export const COMPRAS: Esquema = {
+  tabla: 'purchases',
+  titulo: 'Compras', singular: 'Compra', principal: 'code',
+  vacio: 'Por aquí entra lo que después se vende. Cada compra alimenta el inventario.',
+  nivelEscritura: 60,
+  campos: [
+    { key: 'code',        label: 'Código',   tipo: 'texto', soloLectura: true, enTabla: true, ancho: '120px' },
+    { key: 'supplier_id', label: 'Proveedor',tipo: 'relacion', requerido: true, enTabla: true,
+      ancho: 'minmax(160px,2fr)', relacion: { tabla: 'suppliers', etiqueta: 'name' } },
+    { key: 'status',      label: 'Estado',   tipo: 'seleccion', opciones: ESTADO_COMPRA,
+      enTabla: true, enLinea: true, ancho: '130px', porDefecto: 'borrador' },
+    { key: 'purchase_date', label: 'Fecha',  tipo: 'fecha', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'total',       label: 'Total',    tipo: 'moneda', soloLectura: true, enTabla: true, ancho: '120px' },
+    { key: 'payment_status', label: 'Pago',  tipo: 'seleccion', opciones: PAGO, enTabla: true,
+      enLinea: true, ancho: '120px', porDefecto: 'pendiente' },
+    { key: 'payment_method', label: 'Forma de pago', tipo: 'seleccion', opciones: METODO, porDefecto: 'efectivo' },
+    { key: 'freight_cost',label: 'Flete',    tipo: 'moneda', porDefecto: 0 },
+    { key: 'other_costs', label: 'Otros costos', tipo: 'moneda', porDefecto: 0 },
+    { key: 'due_date',    label: 'Vence',    tipo: 'fecha' },
+    { key: 'invoice_number', label: 'N° de documento', tipo: 'texto' },
+    { key: 'origin',      label: 'Origen',   tipo: 'texto' },
+    { key: 'subtotal',    label: 'Subtotal', tipo: 'moneda', soloLectura: true },
+    { key: 'amount_paid', label: 'Pagado',   tipo: 'moneda', soloLectura: true },
+    { key: 'notes',       label: 'Notas',    tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'purchase_date', asc: false },
+  detalle: {
+    tabla: 'purchase_items', padre: 'purchase_id',
+    titulo: 'Productos de la compra', singular: 'producto',
+    total: 'line_total',
+    campos: [
+      { key: 'product_id', label: 'Producto', tipo: 'relacion', requerido: true, enTabla: true,
+        relacion: { tabla: 'products', etiqueta: 'name' } },
+      { key: 'quantity',   label: 'Cantidad', tipo: 'numero', requerido: true, enTabla: true },
+      { key: 'unit',       label: 'Unidad',   tipo: 'seleccion', opciones: UNIDAD, enTabla: true, porDefecto: 'kg' },
+      { key: 'unit_price', label: 'Precio unitario', tipo: 'moneda', requerido: true, enTabla: true },
+      { key: 'notes',      label: 'Notas',    tipo: 'texto' }
+    ]
+  }
+};
+
+// --------------------------------------------------------------- inventario
+
+const ESTADO_LOTE: Opcion[] = [
+  { valor: 'disponible', nombre: 'Disponible', tono: 'ok' },
+  { valor: 'agotado',    nombre: 'Agotado',    tono: 'neutro' },
+  { valor: 'vencido',    nombre: 'Vencido',    tono: 'malo' },
+  { valor: 'bloqueado',  nombre: 'Bloqueado',  tono: 'aviso' }
+];
+
+export const LOTES: Esquema = {
+  tabla: 'inventory_lots',
+  titulo: 'Inventario', singular: 'Lote', principal: 'code',
+  vacio: 'Cada entrada de mercadería crea un lote. De ahí sale el stock y el costo.',
+  campos: [
+    { key: 'code',       label: 'Lote',      tipo: 'texto', soloLectura: true, enTabla: true, ancho: '120px' },
+    { key: 'product_id', label: 'Producto',  tipo: 'relacion', requerido: true, enTabla: true,
+      ancho: 'minmax(160px,2fr)', relacion: { tabla: 'products', etiqueta: 'name' } },
+    { key: 'quantity_on_hand', label: 'En mano', tipo: 'numero', enTabla: true, enLinea: true, ancho: '100px' },
+    { key: 'quantity_available', label: 'Disponible', tipo: 'numero', soloLectura: true, enTabla: true, ancho: '110px' },
+    { key: 'unit',       label: 'Unidad',    tipo: 'seleccion', opciones: UNIDAD, enTabla: true, ancho: '100px', porDefecto: 'kg' },
+    { key: 'unit_cost',  label: 'Costo',     tipo: 'moneda', enTabla: true, enLinea: true, ancho: '110px' },
+    { key: 'expires_at', label: 'Vence',     tipo: 'fecha', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'status',     label: 'Estado',    tipo: 'seleccion', opciones: ESTADO_LOTE, enTabla: true,
+      enLinea: true, ancho: '130px', porDefecto: 'disponible' },
+    { key: 'initial_quantity', label: 'Cantidad inicial', tipo: 'numero', requerido: true },
+    { key: 'supplier_id',label: 'Proveedor', tipo: 'relacion', relacion: { tabla: 'suppliers', etiqueta: 'name' } },
+    { key: 'location_id',label: 'Bodega',    tipo: 'relacion', relacion: { tabla: 'locations', etiqueta: 'name' } },
+    { key: 'production_date', label: 'Producción', tipo: 'fecha' },
+    { key: 'origin',     label: 'Origen',    tipo: 'texto' },
+    { key: 'quantity_reserved', label: 'Reservado', tipo: 'numero', soloLectura: true },
+    { key: 'notes',      label: 'Notas',     tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'received_at', asc: false }
+};
+
+const TIPO_MOV: Opcion[] = [
+  { valor: 'entrada_compra',      nombre: 'Entrada por compra',  tono: 'ok' },
+  { valor: 'ajuste_positivo',     nombre: 'Ajuste +',            tono: 'ok' },
+  { valor: 'salida_venta',        nombre: 'Salida por venta',    tono: 'acento' },
+  { valor: 'reserva',             nombre: 'Reserva',             tono: 'neutro' },
+  { valor: 'liberacion_reserva',  nombre: 'Liberación',          tono: 'neutro' },
+  { valor: 'merma',               nombre: 'Merma',               tono: 'malo' },
+  { valor: 'ajuste_negativo',     nombre: 'Ajuste −',            tono: 'malo' },
+  { valor: 'devolucion',          nombre: 'Devolución',          tono: 'aviso' },
+  { valor: 'traslado',            nombre: 'Traslado',            tono: 'neutro' },
+  { valor: 'proceso_consumo',     nombre: 'Consumo de proceso',  tono: 'neutro' },
+  { valor: 'proceso_produccion',  nombre: 'Producción',          tono: 'ok' }
+];
+
+/* Los movimientos los escribe la base: son el registro de lo que pasó, no algo
+   que alguien teclee. Se muestran para poder auditar el stock. */
+export const MOVIMIENTOS: Esquema = {
+  tabla: 'inventory_movements',
+  titulo: 'Movimientos', singular: 'Movimiento', principal: 'reference_code',
+  vacio: 'Cada entrada, salida, merma o ajuste deja aquí su rastro. Lo escribe el sistema.',
+  campos: [
+    { key: 'created_at', label: 'Cuándo',   tipo: 'fecha', soloLectura: true, enTabla: true, ancho: '120px' },
+    { key: 'type',       label: 'Tipo',     tipo: 'seleccion', opciones: TIPO_MOV, soloLectura: true,
+      enTabla: true, ancho: '170px' },
+    { key: 'product_id', label: 'Producto', tipo: 'relacion', soloLectura: true, enTabla: true,
+      ancho: 'minmax(160px,2fr)', relacion: { tabla: 'products', etiqueta: 'name' } },
+    { key: 'quantity',   label: 'Cantidad', tipo: 'numero', soloLectura: true, enTabla: true, ancho: '110px' },
+    { key: 'unit',       label: 'Unidad',   tipo: 'seleccion', opciones: UNIDAD, soloLectura: true, enTabla: true, ancho: '100px' },
+    { key: 'reference_code', label: 'Documento', tipo: 'texto', soloLectura: true, enTabla: true, ancho: '130px' },
+    { key: 'reason',     label: 'Motivo',   tipo: 'texto', soloLectura: true }
+  ],
+  orden: { campo: 'created_at', asc: false }
+};
+
+export const BODEGAS: Esquema = {
+  tabla: 'locations',
+  titulo: 'Bodegas', singular: 'Bodega', principal: 'name',
+  vacio: 'Dónde se guarda lo que hay: bodegas, cámaras, vehículos.',
+  campos: [
+    { key: 'name',        label: 'Nombre',    tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'type',        label: 'Tipo',      tipo: 'texto', enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'bodega' },
+    { key: 'capacity_kg', label: 'Capacidad (kg)', tipo: 'numero', enTabla: true, enLinea: true, ancho: '140px' },
+    { key: 'status',      label: 'Estado',    tipo: 'seleccion', opciones: ESTADO, enTabla: true,
+      enLinea: true, ancho: '120px', porDefecto: 'activo' },
+    { key: 'notes',       label: 'Notas',     tipo: 'texto-largo' }
+  ],
+  orden: { campo: 'name', asc: true }
+};
+
+const MOTIVO_MERMA: Opcion[] = [
+  { valor: 'merma_proceso',    nombre: 'Merma de proceso' },
+  { valor: 'dano',             nombre: 'Daño' },
+  { valor: 'vencimiento',      nombre: 'Vencimiento' },
+  { valor: 'diferencia_peso',  nombre: 'Diferencia de peso' },
+  { valor: 'robo',             nombre: 'Robo' },
+  { valor: 'devolucion',       nombre: 'Devolución' },
+  { valor: 'otro',             nombre: 'Otro' }
+];
+
+export const MERMAS: Esquema = {
+  tabla: 'losses',
+  titulo: 'Mermas', singular: 'Merma', principal: 'code',
+  vacio: 'Lo que se perdió y por qué. Cada merma descuenta del inventario.',
+  campos: [
+    { key: 'code',       label: 'Código',   tipo: 'texto', soloLectura: true, enTabla: true, ancho: '110px' },
+    { key: 'product_id', label: 'Producto', tipo: 'relacion', requerido: true, enTabla: true,
+      ancho: 'minmax(160px,2fr)', relacion: { tabla: 'products', etiqueta: 'name' } },
+    { key: 'quantity',   label: 'Cantidad', tipo: 'numero', requerido: true, enTabla: true, ancho: '110px' },
+    { key: 'unit',       label: 'Unidad',   tipo: 'seleccion', opciones: UNIDAD, enTabla: true, ancho: '100px', porDefecto: 'kg' },
+    { key: 'reason',     label: 'Motivo',   tipo: 'seleccion', opciones: MOTIVO_MERMA, enTabla: true,
+      enLinea: true, ancho: '170px', porDefecto: 'otro' },
+    { key: 'cost',       label: 'Costo',    tipo: 'moneda', enTabla: true, enLinea: true, ancho: '110px', porDefecto: 0 },
+    { key: 'lot_id',     label: 'Lote',     tipo: 'relacion', relacion: { tabla: 'inventory_lots', etiqueta: 'code' } },
+    { key: 'notes',      label: 'Notas',    tipo: 'texto-largo' }
+  ],
+  tablero: 'reason',
+  orden: { campo: 'created_at', asc: false }
+};
+
+// ------------------------------------------------------------------ reparto
+
+const ESTADO_ENTREGA: Opcion[] = [
+  { valor: 'pendiente', nombre: 'Pendiente', tono: 'neutro' },
+  { valor: 'asignada',  nombre: 'Asignada',  tono: 'acento' },
+  { valor: 'en_camino', nombre: 'En camino', tono: 'aviso' },
+  { valor: 'entregada', nombre: 'Entregada', tono: 'ok' },
+  { valor: 'fallida',   nombre: 'Fallida',   tono: 'malo' }
+];
+
+export const ENTREGAS: Esquema = {
+  tabla: 'deliveries',
+  titulo: 'Entregas', singular: 'Entrega', principal: 'code',
+  vacio: 'Cada pedido que sale a la calle se sigue desde aquí.',
+  campos: [
+    { key: 'code',      label: 'Código',  tipo: 'texto', soloLectura: true, enTabla: true, ancho: '120px' },
+    { key: 'order_id',  label: 'Pedido',  tipo: 'relacion', requerido: true, enTabla: true,
+      ancho: 'minmax(150px,2fr)', relacion: { tabla: 'orders', etiqueta: 'code' } },
+    { key: 'status',    label: 'Estado',  tipo: 'seleccion', opciones: ESTADO_ENTREGA,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'pendiente' },
+    { key: 'scheduled_date', label: 'Programada', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'route_id',  label: 'Ruta',    tipo: 'relacion', enTabla: true, ancho: '150px',
+      relacion: { tabla: 'routes', etiqueta: 'name' } },
+    { key: 'amount_collected', label: 'Cobrado', tipo: 'moneda', enTabla: true, enLinea: true,
+      ancho: '120px', porDefecto: 0 },
+    { key: 'sequence',  label: 'Orden en la ruta', tipo: 'entero' },
+    { key: 'received_by_name', label: 'Recibió',   tipo: 'texto' },
+    { key: 'payment_method',   label: 'Forma de pago', tipo: 'seleccion', opciones: METODO },
+    { key: 'failure_reason',   label: 'Motivo del fallo', tipo: 'texto' },
+    { key: 'notes',     label: 'Notas',   tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'scheduled_date', asc: false }
+};
+
+export const RUTAS: Esquema = {
+  tabla: 'routes',
+  titulo: 'Rutas', singular: 'Ruta', principal: 'name',
+  vacio: 'Una ruta agrupa las entregas de un día. Se arma antes de salir.',
+  campos: [
+    { key: 'name',       label: 'Nombre', tipo: 'texto', enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'route_date', label: 'Fecha',  tipo: 'fecha', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'status',     label: 'Estado', tipo: 'texto', enTabla: true, enLinea: true, ancho: '140px',
+      porDefecto: 'planificada' },
+    { key: 'code',       label: 'Código', tipo: 'texto', soloLectura: true, enTabla: true, ancho: '110px' },
+    { key: 'notes',      label: 'Notas',  tipo: 'texto-largo' }
+  ],
+  orden: { campo: 'route_date', asc: false }
+};
+
+// ----------------------------------------------------------------- finanzas
+
+const DIRECCION_PAGO: Opcion[] = [
+  { valor: 'cobro', nombre: 'Cobro (entra)', tono: 'ok' },
+  { valor: 'pago',  nombre: 'Pago (sale)',   tono: 'malo' }
+];
+
+/* Registrar un pago no solo guarda una fila: el trigger `trg_apply_payment`
+   actualiza el saldo y el estado de pago del pedido o de la compra. Es el
+   ejemplo más claro de por qué el frontend no debe calcular nada. */
+export const PAGOS: Esquema = {
+  tabla: 'payments',
+  titulo: 'Pagos', singular: 'Pago', principal: 'code',
+  vacio: 'Lo que entró y lo que salió. Cada pago ajusta solo el saldo de su pedido o compra.',
+  nivelEscritura: 60,
+  campos: [
+    { key: 'code',      label: 'Código',    tipo: 'texto', soloLectura: true, enTabla: true, ancho: '120px' },
+    { key: 'direction', label: 'Dirección', tipo: 'seleccion', opciones: DIRECCION_PAGO, requerido: true,
+      enTabla: true, ancho: '150px', porDefecto: 'cobro' },
+    { key: 'amount',    label: 'Monto',     tipo: 'moneda', requerido: true, enTabla: true, ancho: '130px' },
+    { key: 'method',    label: 'Medio',     tipo: 'seleccion', opciones: METODO, enTabla: true,
+      enLinea: true, ancho: '140px', porDefecto: 'efectivo' },
+    { key: 'paid_at',   label: 'Fecha',     tipo: 'fecha', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'reference', label: 'Referencia',tipo: 'texto', enTabla: true, enLinea: true, ancho: '140px' },
+    { key: 'order_id',  label: 'Pedido',    tipo: 'relacion', relacion: { tabla: 'orders', etiqueta: 'code' } },
+    { key: 'purchase_id', label: 'Compra',  tipo: 'relacion', relacion: { tabla: 'purchases', etiqueta: 'code' } },
+    { key: 'customer_id', label: 'Cliente', tipo: 'relacion', relacion: { tabla: 'customers', etiqueta: 'name' } },
+    { key: 'supplier_id', label: 'Proveedor', tipo: 'relacion', relacion: { tabla: 'suppliers', etiqueta: 'name' } },
+    { key: 'notes',     label: 'Notas',     tipo: 'texto-largo' }
+  ],
+  tablero: 'direction',
+  orden: { campo: 'paid_at', asc: false }
+};
+
+export const POR_COBRAR: Esquema = {
+  tabla: 'opening_receivables',
+  titulo: 'Por cobrar (apertura)', singular: 'Documento', principal: 'customer_name',
+  vacio: 'Lo que ya se debía cuando la empresa entró a ANIMA. Se carga una vez.',
+  nivelEscritura: 60,
+  campos: [
+    { key: 'customer_name',  label: 'Cliente',   tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(170px,2fr)' },
+    { key: 'document_number',label: 'Documento', tipo: 'texto', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'amount',         label: 'Monto',     tipo: 'moneda', requerido: true, enTabla: true, ancho: '130px' },
+    { key: 'amount_paid',    label: 'Abonado',   tipo: 'moneda', enTabla: true, enLinea: true, ancho: '120px', porDefecto: 0 },
+    { key: 'due_date',       label: 'Vence',     tipo: 'fecha', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'issued_at',      label: 'Emitido',   tipo: 'fecha' },
+    { key: 'customer_id',    label: 'Cliente en ANIMA', tipo: 'relacion',
+      relacion: { tabla: 'customers', etiqueta: 'name' } },
+    { key: 'notes',          label: 'Notas',     tipo: 'texto-largo' }
+  ],
+  orden: { campo: 'due_date', asc: true }
+};
+
+export const POR_PAGAR: Esquema = {
+  tabla: 'opening_payables',
+  titulo: 'Por pagar (apertura)', singular: 'Documento', principal: 'supplier_name',
+  vacio: 'Lo que la empresa ya debía al entrar a ANIMA.',
+  nivelEscritura: 60,
+  campos: [
+    { key: 'supplier_name',  label: 'Proveedor', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(170px,2fr)' },
+    { key: 'document_number',label: 'Documento', tipo: 'texto', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'amount',         label: 'Monto',     tipo: 'moneda', requerido: true, enTabla: true, ancho: '130px' },
+    { key: 'amount_paid',    label: 'Pagado',    tipo: 'moneda', enTabla: true, enLinea: true, ancho: '120px', porDefecto: 0 },
+    { key: 'due_date',       label: 'Vence',     tipo: 'fecha', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'issued_at',      label: 'Emitido',   tipo: 'fecha' },
+    { key: 'supplier_id',    label: 'Proveedor en ANIMA', tipo: 'relacion',
+      relacion: { tabla: 'suppliers', etiqueta: 'name' } },
+    { key: 'notes',          label: 'Notas',     tipo: 'texto-largo' }
+  ],
+  orden: { campo: 'due_date', asc: true }
+};
+
+// ------------------------------------------------------------------ precios
+
+export const LISTAS_PRECIO: Esquema = {
+  tabla: 'price_lists',
+  titulo: 'Listas de precio', singular: 'Lista', principal: 'name',
+  vacio: 'Una lista por segmento: mayorista, restaurante, público. Cada cliente puede tener la suya.',
+  campos: [
+    { key: 'name',        label: 'Nombre', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'code',        label: 'Código', tipo: 'texto', requerido: true, enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'is_default',  label: 'Por defecto', tipo: 'booleano', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'status',      label: 'Estado', tipo: 'seleccion', opciones: ESTADO, enTabla: true,
+      enLinea: true, ancho: '120px', porDefecto: 'activo' },
+    { key: 'description', label: 'Descripción', tipo: 'texto-largo' }
+  ],
+  orden: { campo: 'name', asc: true },
+  detalle: {
+    tabla: 'price_list_items', padre: 'price_list_id',
+    titulo: 'Precios de la lista', singular: 'precio',
+    campos: [
+      { key: 'product_id', label: 'Producto', tipo: 'relacion', requerido: true, enTabla: true,
+        relacion: { tabla: 'products', etiqueta: 'name' } },
+      { key: 'price',      label: 'Precio',   tipo: 'moneda', requerido: true, enTabla: true }
+    ]
+  }
+};
+
+export const DIRECCIONES: Esquema = {
+  tabla: 'customer_addresses',
+  titulo: 'Direcciones de despacho', singular: 'Dirección', principal: 'address',
+  vacio: 'Un cliente puede recibir en varios lugares. Aquí viven esas direcciones.',
+  campos: [
+    { key: 'customer_id', label: 'Cliente',  tipo: 'relacion', requerido: true, enTabla: true,
+      ancho: 'minmax(160px,1fr)', relacion: { tabla: 'customers', etiqueta: 'name' } },
+    { key: 'address',     label: 'Dirección',tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'comuna',      label: 'Comuna',   tipo: 'texto', enTabla: true, enLinea: true, ancho: '140px' },
+    { key: 'label',       label: 'Etiqueta', tipo: 'texto', enTabla: true, enLinea: true, ancho: '120px', porDefecto: 'Principal' },
+    { key: 'is_default',  label: 'Principal',tipo: 'booleano', enTabla: true, enLinea: true, ancho: '110px' },
+    { key: 'region',      label: 'Región',   tipo: 'texto' },
+    { key: 'reference',   label: 'Referencia', tipo: 'texto' },
+    { key: 'contact_name',label: 'Contacto', tipo: 'texto' },
+    { key: 'contact_phone', label: 'Teléfono', tipo: 'texto' }
+  ],
+  orden: { campo: 'address', asc: true }
+};
+
+// ------------------------------------------------------------------ procesos
+
+export const ESPECIES: Esquema = {
+  tabla: 'fish_species',
+  titulo: 'Especies', singular: 'Especie', principal: 'common_name',
+  vacio: 'El catálogo de especies con que trabaja la empresa.',
+  campos: [
+    { key: 'common_name',    label: 'Nombre común',     tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'scientific_name',label: 'Nombre científico',tipo: 'texto', enTabla: true, enLinea: true, ancho: '190px' },
+    { key: 'family',         label: 'Familia',          tipo: 'texto', enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'status',         label: 'Estado',           tipo: 'seleccion', opciones: ESTADO, enTabla: true,
+      enLinea: true, ancho: '120px', porDefecto: 'activo' },
+    { key: 'notes',          label: 'Notas',            tipo: 'texto-largo' }
+  ],
+  orden: { campo: 'common_name', asc: true }
+};
+
+export const PROCESOS: Esquema = {
+  tabla: 'processing_orders',
+  titulo: 'Procesos', singular: 'Proceso', principal: 'code',
+  vacio: 'Convertir materia prima en producto elaborado, con su rendimiento.',
+  campos: [
+    { key: 'code',            label: 'Código',   tipo: 'texto', soloLectura: true, enTabla: true, ancho: '120px' },
+    { key: 'source_product_id', label: 'Entra',  tipo: 'relacion', requerido: true, enTabla: true,
+      ancho: 'minmax(160px,2fr)', relacion: { tabla: 'products', etiqueta: 'name' } },
+    { key: 'input_quantity',  label: 'Cantidad', tipo: 'numero', requerido: true, enTabla: true, ancho: '110px' },
+    { key: 'output_quantity', label: 'Sale',     tipo: 'numero', enTabla: true, enLinea: true, ancho: '100px', porDefecto: 0 },
+    { key: 'yield_pct',       label: 'Rendimiento %', tipo: 'numero', soloLectura: true, enTabla: true, ancho: '130px' },
+    { key: 'status',          label: 'Estado',   tipo: 'texto', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'source_lot_id',   label: 'Lote de origen', tipo: 'relacion', requerido: true,
+      relacion: { tabla: 'inventory_lots', etiqueta: 'code' } },
+    { key: 'waste_quantity',  label: 'Merma',    tipo: 'numero', porDefecto: 0 },
+    { key: 'location_id',     label: 'Bodega',   tipo: 'relacion', relacion: { tabla: 'locations', etiqueta: 'name' } },
+    { key: 'input_cost',      label: 'Costo de entrada', tipo: 'moneda', soloLectura: true },
+    { key: 'notes',           label: 'Notas',    tipo: 'texto-largo' }
+  ],
+  orden: { campo: 'created_at', asc: false }
 };
 
 /** Todo lo que el motor sabe dibujar, por módulo de la plataforma. */
 export const ESQUEMAS_POR_MODULO: Record<string, Esquema[]> = {
-  crm:        [CLIENTES],
+  crm:        [CLIENTES, DIRECCIONES, LISTAS_PRECIO],
   commerce:   [PEDIDOS, PRODUCTOS, CATEGORIAS],
-  operations: [PROVEEDORES]
+  operations: [LOTES, MOVIMIENTOS, COMPRAS, PROVEEDORES, BODEGAS, MERMAS],
+  delivery:   [ENTREGAS, RUTAS],
+  finance:    [PAGOS, POR_COBRAR, POR_PAGAR],
+  food:       [PROCESOS, ESPECIES]
 };

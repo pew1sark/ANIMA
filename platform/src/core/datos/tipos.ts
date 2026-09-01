@@ -46,6 +46,21 @@ export interface Campo {
   porDefecto?: unknown;
 }
 
+/* Las líneas de un documento: los productos de un pedido, los ítems de una
+   compra. Viven en su propia tabla, cuelgan del padre por una columna, y al
+   escribirlas los triggers de la base recalculan los totales del padre.
+   Por eso, después de tocar una línea, hay que volver a leer el padre. */
+export interface Detalle {
+  tabla: string;
+  /** Columna de la línea que apunta al padre. */
+  padre: string;
+  titulo: string;
+  singular: string;
+  campos: Campo[];
+  /** Columna con el total de la línea. La calcula la base. */
+  total?: string;
+}
+
 export interface Esquema {
   /** Tabla real en PostgreSQL. Es también la `entity` de `custom_fields`:
    *  el trigger `trg_validate_custom` valida usando `tg_table_name`, así que
@@ -65,6 +80,8 @@ export interface Esquema {
   nivelEscritura?: number;
   /** Texto que se muestra cuando todavía no hay ninguna fila. */
   vacio?: string;
+  /** Las líneas que cuelgan de cada fila, si las tiene. */
+  detalle?: Detalle;
 }
 
 export type Fila = Record<string, unknown> & { id: string; custom?: Record<string, unknown> };

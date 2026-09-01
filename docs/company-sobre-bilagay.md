@@ -23,15 +23,56 @@ Está declarado en `platform/src/core/modules/registry.ts`, en los campos `cubre
 y `tablas`. Ahí, y no en esta página, es donde hay que mirarlo cuando se
 construya cada pantalla; aquí va el resumen.
 
-| Módulo | Cubre | Estado |
+| Módulo | Entidades | Estado |
 |---|---|---|
-| `crm` · **Clientes** | ficha completa, tabla, tablero por tipo | **funcionando** |
-| `commerce` · **Ventas** | pedidos (con tablero por estado), catálogo, categorías | **funcionando** |
-| `operations` · **Operaciones** | proveedores | **proveedores sí**; faltan inventario y compras |
-| `delivery` · **Reparto** | rutas y entregas | tablas listas |
-| `finance` · **Finanzas** | cobranza, pagos, saldos de apertura | tablas listas |
-| `food` · **Procesos** | órdenes de proceso, rendimientos | tablas listas |
-| `core` | empresa, usuarios, roles, numeración, auditoría | marca y campos propios listos |
+| `crm` · **Clientes** | Clientes · Direcciones de despacho · Listas de precio | **funcionando** |
+| `commerce` · **Ventas** | Pedidos *(con líneas)* · Productos · Categorías | **funcionando** |
+| `operations` · **Operaciones** | Inventario · Movimientos · Compras *(con líneas)* · Proveedores · Bodegas · Mermas | **funcionando** |
+| `delivery` · **Reparto** | Entregas · Rutas | **funcionando** |
+| `finance` · **Finanzas** | Pagos · Por cobrar (apertura) · Por pagar (apertura) | **funcionando** |
+| `food` · **Procesos** | Procesos · Especies | **funcionando** |
+| `core` | marca, campos propios, módulos del plan | **funcionando** |
+| `support`, `ai` | — | sin pantalla |
+
+## Todos los módulos a la vista
+
+`MOSTRAR_TODOS_LOS_MODULOS` en `core/modules/registry.ts` está en **`true`**:
+el menú lista todos los módulos aunque el plan de la empresa no los incluya, y
+los que quedan fuera llevan un punto discreto al lado.
+
+Es **temporal y deliberado**, mientras COMPANY se termina de construir. Cambia
+solo lo que se dibuja: los datos siguen protegidos por RLS y por el nivel de
+rol, así que un módulo visible sobre una tabla que no corresponde no devuelve
+ni una fila. Cuando los planes estén decididos, se pone en `false`.
+
+## Los niveles de escritura no son todos iguales
+
+RLS no pide lo mismo para todo, y la pantalla lo respeta con
+`Esquema.nivelEscritura`:
+
+| Entidades | Nivel |
+|---|---|
+| Pagos, Compras, Aperturas | **60** (encargado) |
+| Todo lo demás | **40** (empleado) |
+
+## La sincronización, probada de punta a punta
+
+El frontend **no calcula nada**. Verificado en el navegador, con la base
+comprobada después:
+
+1. Se crea un pedido → la base le pone `PED-2026-000002`.
+2. Se le agrega una línea de 12 × $45.000 → `line_total` (columna generada)
+   da $540.000, y `trg_order_items_totals` sube `subtotal` y `total` del pedido.
+   La ficha vuelve a leer el padre y muestra el total nuevo.
+3. Se registra un pago de $200.000 → `trg_apply_payment` deja `amount_paid` en
+   200.000 y `payment_status` en **parcial**.
+4. Mover la tarjeta en el tablero cambia `status` y `trg_order_status_history`
+   guarda el paso.
+
+Sumar en el frontend habría sido más rápido de escribir y estaría mal: la base
+redondea, aplica descuentos y usa la cantidad preparada cuando existe. Un solo
+lugar donde se calcula es lo que evita que dos pantallas muestren dos totales
+distintos del mismo pedido.
 
 ## El motor de datos
 
@@ -86,20 +127,18 @@ vale más que saber que falta.
 No es una lista de deseos: es el orden en que las cosas se sostienen unas a
 otras.
 
-1. **Clientes** — de aquí cuelga todo lo demás. *Hecho.*
-2. **Catálogo y categorías** — `products`, `product_categories`. *Hecho.*
-3. **Pedidos** — cabecera y tablero por estado. *Hecho.*
-4. **Proveedores** — *Hecho.*
-5. **Líneas del pedido** — `order_items`. Hoy el pedido se crea con total 0:
-   falta la pantalla que le agregue productos y deje que los triggers calculen.
-   **Es lo siguiente.**
-6. **Inventario** — `inventory_lots`, `inventory_movements`. Qué hay y dónde.
-7. **Compras** — `purchases`, `purchase_items`. Cómo entra lo que se vende.
-8. **Cobranza** — `payments`, `opening_receivables`. Qué se debe.
-9. **Reparto** — `routes`, `deliveries`. Cuando haya pedidos que repartir.
+Los nueve pasos están hechos: clientes, catálogo, pedidos con sus líneas,
+proveedores, inventario, compras con sus líneas, cobranza y reparto.
 
-Del 5 en adelante, cada uno son veinte líneas en `esquemas.ts` salvo las
-líneas del pedido, que necesitan una pantalla maestro-detalle propia.
+Lo que queda no es más de lo mismo, es otra cosa:
+
+1. **Informes** — ventas por período, márgenes, rotación. Se leen las tablas
+   que ya están; falta decidir qué preguntas valen la pena.
+2. **La app de terreno** — JLIZ tiene seis pantallas para el repartidor
+   (`src/pages/worker`). Es una interfaz distinta, para el teléfono.
+3. **Correo saliente y cobranza automática** — sigue pendiente de portar.
+4. **El conector Bsale** — explícitamente aplazado.
+5. **`support` e `ai`** — sin pantalla todavía.
 
 ## Lo que falta traer de JLIZ
 

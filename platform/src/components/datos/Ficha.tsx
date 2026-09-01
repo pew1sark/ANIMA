@@ -2,17 +2,23 @@ import { useState, type FormEvent } from 'react';
 import type { Campo, Esquema, Fila, Opcion } from '@/core/datos/tipos';
 import { valor as leer } from '@/core/datos/tipos';
 import { Editor } from '@/components/datos/campos';
+import { Lineas } from '@/components/datos/Lineas';
 
 /* La ficha de una fila. No está escrita a mano: sale del esquema, así que un
    campo nuevo —incluidos los que agregue la propia empresa— aparece aquí sin
    tocar este archivo. */
-export function Ficha({ esquema, campos, fila, opciones, onGuardar, onBorrar, cerrar }: {
+export function Ficha({ esquema, campos, fila, opciones, companyId, puedeEditar,
+                        onGuardar, onBorrar, onLineas, cerrar }: {
   esquema: Esquema;
   campos: Campo[];
   fila: Fila | null;
   opciones: Record<string, Opcion[]>;
+  companyId: string;
+  puedeEditar: boolean;
   onGuardar: (valores: Record<string, unknown>) => Promise<void>;
   onBorrar?: () => Promise<void>;
+  /** Una línea cambió: hay que releer el padre, porque el total lo hizo la base. */
+  onLineas?: () => void;
   cerrar: () => void;
 }) {
   const [v, setV] = useState<Record<string, unknown>>(() => inicial(campos, fila));
@@ -75,6 +81,18 @@ export function Ficha({ esquema, campos, fila, opciones, onGuardar, onBorrar, ce
             </label>
           ))}
         </div>
+
+        {/* Las líneas solo existen si el documento ya existe: necesitan su id. */}
+        {esquema.detalle && fila && (
+          <Lineas detalle={esquema.detalle} padreId={fila.id} companyId={companyId}
+                  opciones={opciones} puedeEditar={puedeEditar}
+                  alCambiar={() => onLineas?.()} />
+        )}
+        {esquema.detalle && !fila && (
+          <p className="text-[12.5px] text-muted bg-sunk rounded-xl px-4 py-3">
+            Guarda primero y podrás agregarle {esquema.detalle.titulo.toLowerCase()}.
+          </p>
+        )}
 
         {calculados.length > 0 && (
           <div className="rounded-2xl bg-sunk px-4 py-3">

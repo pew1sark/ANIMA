@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/core/auth/AuthContext';
 import { useTenant } from '@/core/tenant/TenantContext';
-import { MODULES } from '@/core/modules/registry';
+import { MODULES, MOSTRAR_TODOS_LOS_MODULOS } from '@/core/modules/registry';
 import { cargarEspacio, cargarKpis, type Espacio as EspacioData } from '@/core/tenant/Espacio';
 import { Marca, MarcaCliente, PieAnima } from '@/components/Marca';
 import { MarcaDeLaEmpresa } from '@/components/company/MarcaEmpresa';
@@ -36,7 +36,9 @@ export function Espacio({ volver }: { volver?: () => void }) {
       .catch(() => {}).finally(() => setCargando(false));
   }, [cid]);
 
-  const disponibles = (esp?.modulos ?? []).filter(m => m.disponible && m.slug !== 'core');
+  /* Con el interruptor puesto se listan todos; si no, solo los del plan. */
+  const disponibles = (esp?.modulos ?? []).filter(m =>
+    m.slug !== 'core' && (MOSTRAR_TODOS_LOS_MODULOS || m.disponible));
   const bloqueados  = (esp?.modulos ?? []).filter(m => m.encendido && !m.disponible);
   const esAdmin = (esp?.mi_rol?.nivel ?? 0) >= 80;
 
@@ -58,7 +60,8 @@ export function Espacio({ volver }: { volver?: () => void }) {
           <Item activo={vista==='inicio'} onClick={() => setVista('inicio')} label="Inicio" />
           {disponibles.map(m => (
             <Item key={m.slug} activo={vista===m.slug} onClick={() => setVista(m.slug)}
-                  label={MODULES[m.slug as ModuleSlug]?.name ?? m.slug} />
+                  label={MODULES[m.slug as ModuleSlug]?.name ?? m.slug}
+                  fueraDelPlan={!m.disponible} />
           ))}
           {esAdmin && <Item activo={vista==='config'} onClick={() => setVista('config')} label="Configuración" />}
         </nav>
@@ -150,7 +153,7 @@ export function Espacio({ volver }: { volver?: () => void }) {
               esquemas declarados sobre las tablas de Bilagay. */}
           {!cargando && esp && cid && vista !== 'inicio' && vista !== 'config' && (
             <Modulo slug={vista as ModuleSlug} companyId={cid}
-                    puedeEditar={(esp.mi_rol?.nivel ?? 0) >= 40} />
+                    nivel={esp.mi_rol?.nivel ?? 0} />
           )}
 
           {!cargando && esp && cid && vista === 'config' && (
@@ -165,8 +168,8 @@ export function Espacio({ volver }: { volver?: () => void }) {
 
 /* Un módulo del plan. Si tiene entidades declaradas, se dibujan con el motor
    —una pestaña por entidad—; si no, se dice con honestidad qué falta. */
-function Modulo({ slug, companyId, puedeEditar }:
-  { slug: ModuleSlug; companyId: string; puedeEditar: boolean }) {
+function Modulo({ slug, companyId, nivel }:
+  { slug: ModuleSlug; companyId: string; nivel: number }) {
   const esquemas = ESQUEMAS_POR_MODULO[slug] ?? [];
   const [cual, setCual] = useState(0);
 
@@ -188,7 +191,10 @@ function Modulo({ slug, companyId, puedeEditar }:
           ))}
         </div>
       )}
-      <Vista key={activo.tabla} esquema={activo} companyId={companyId} puedeEditar={puedeEditar} />
+      {/* Cada entidad pide su nivel: pagos y compras exigen 60, el resto 40.
+          Es el mismo umbral que aplica RLS, dicho también en pantalla. */}
+      <Vista key={activo.tabla} esquema={activo} companyId={companyId}
+             puedeEditar={nivel >= (activo.nivelEscritura ?? 40)} />
     </div>
   );
 }
@@ -264,12 +270,18 @@ function Configuracion({ esp, bloqueados, companyId, puedeEditarMarca }:
   );
 }
 
-const Item = ({ activo, onClick, label }:
-  { activo: boolean; onClick: () => void; label: string }) => (
+const Item = ({ activo, onClick, label, fueraDelPlan }:
+  { activo: boolean; onClick: () => void; label: string; fueraDelPlan?: boolean }) => (
   <button onClick={onClick}
-    className={`text-left px-3 py-2 rounded-xl text-[13.5px] transition whitespace-nowrap ${
+    className={`text-left px-3 py-2 rounded-xl text-[13.5px] transition whitespace-nowrap
+                flex items-center gap-2 ${
       activo ? 'bg-ink text-bg font-bold' : 'text-ink-2 hover:bg-accent/10'}`}>
     {label}
+    {/* Un punto, no una etiqueta: se ve que está fuera del plan sin gritarlo. */}
+    {fueraDelPlan && (
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${activo ? 'bg-bg/50' : 'bg-accent/50'}`}
+            title="Fuera de tu plan · visible mientras se construye" />
+    )}
   </button>
 );
 

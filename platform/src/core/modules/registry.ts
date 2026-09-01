@@ -21,6 +21,21 @@ export interface ModuleDefinition {
   tablas?: string[];
 }
 
+/* ---------------------------------------------------------------------------
+   TEMPORAL — mientras COMPANY se termina de construir
+   ---------------------------------------------------------------------------
+   El menú muestra TODOS los módulos, estén o no en el plan de la empresa, y se
+   marca cuáles quedan fuera. Es deliberado: hace falta ver y probar todo antes
+   de organizar planes y accesos.
+
+   Esto cambia solo lo que se DIBUJA. Los datos siguen protegidos por RLS y por
+   el nivel de rol: un módulo visible sobre una tabla que no te corresponde no
+   devuelve ni una fila.
+
+   Cuando los planes estén decididos, esto pasa a `false` y el menú vuelve a
+   mostrar únicamente lo contratado. */
+export const MOSTRAR_TODOS_LOS_MODULOS = true;
+
 const AMBAS: ProductLine[] = ['studio', 'company'];
 const SOLO_COMPANY: ProductLine[] = ['company'];
 
