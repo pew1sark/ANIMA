@@ -1,12 +1,14 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/core/auth/AuthContext';
-import type { Membership, ModuleSlug } from '@/types/core';
+import type { Membership, ModuleSlug, ProductLine } from '@/types/core';
 
 const STORAGE_KEY = 'anima.company';
 
 interface TenantValue {
   memberships: Membership[];
+  /** Sub-plataformas a las que puede entrar. Lo decide el plan, en la base. */
+  lineas: Set<ProductLine>;
   current: Membership | null;
   modules: Set<ModuleSlug>;
   loading: boolean;
@@ -22,6 +24,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY));
   const [modules, setModules] = useState<Set<ModuleSlug>>(new Set());
+  const [lineas, setLineas] = useState<Set<ProductLine>>(new Set());
   const [loading, setLoading] = useState(true);
 
   /* Filtra por usuario a propósito. RLS deja ver a TODOS los miembros de tus
@@ -48,6 +51,15 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       });
   }, [user]);
 
+  /* Qué puertas se abren no lo decide el frontend: lo devuelve `mis_lineas()`,
+     que lo deduce del plan contratado (más el Alma, que es la entrada gratuita
+     a STUDIO). Aquí solo se dibuja lo que la base ya resolvió. */
+  useEffect(() => {
+    if (!user) { setLineas(new Set()); return; }
+    supabase.rpc('mis_lineas').then(({ data }) =>
+      setLineas(new Set((data ?? []) as ProductLine[])));
+  }, [user]);
+
   useEffect(() => {
     if (!currentId) { setModules(new Set()); localStorage.removeItem(STORAGE_KEY); return; }
     localStorage.setItem(STORAGE_KEY, currentId);
@@ -65,11 +77,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const current = memberships.find(m => m.company.id === currentId) ?? null;
 
   const value = useMemo<TenantValue>(() => ({
-    memberships, current, modules, loading,
+    memberships, current, modules, lineas, loading,
     select: (id: string) => setCurrentId(id || null),
     hasModule: (m) => modules.has(m),
     hasLevel: (min) => (current?.role.level ?? 0) >= min
-  }), [memberships, current, modules, loading]);
+  }), [memberships, current, modules, lineas, loading]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

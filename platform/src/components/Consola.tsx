@@ -7,13 +7,18 @@ import {
 } from '@/services/consola.service';
 
 const money = (n = 0) => '$' + Math.round(n).toLocaleString('es-CL');
+
+/* El plan vendido tiene un tope de usuarios. Cuando se llena hay que verlo
+   antes de que el cliente choque contra él. */
+const cupoLleno = (c: ClienteCartera) =>
+  c.usuarios_del_plan != null && c.usuarios >= c.usuarios_del_plan;
 const fecha = (s?: string | null) =>
   s ? new Date(s + 'T00:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
 /* La consola de plataforma. Aquí SARK no es dueño de nada: administra el
    software que otros usan. Por eso no hay ni un dato de la operación del
    cliente — RLS tampoco se lo daría. Solo la relación comercial. */
-export function Consola({ volver }: { volver: () => void }) {
+export function Consola({ volver }: { volver?: () => void }) {
   const { user, signOut } = useAuth();
   const [cartera, setCartera] = useState<ClienteCartera[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -31,18 +36,21 @@ export function Consola({ volver }: { volver: () => void }) {
   useEffect(recargar, []);
 
   const totales = cartera.reduce((a, c) => ({
-    mrr:    a.mrr + (c.suscripcion === 'activa' ? (c.mensualidad ?? 0) : 0),
-    saldo:  a.saldo + Number(c.saldo ?? 0),
-    vencidos: a.vencidos + Number(c.vencidos ?? 0)
-  }), { mrr: 0, saldo: 0, vencidos: 0 });
+    mrr:      a.mrr + (c.suscripcion === 'activa' ? (c.mensualidad ?? 0) : 0),
+    saldo:    a.saldo + Number(c.saldo ?? 0),
+    vencidos: a.vencidos + Number(c.vencidos ?? 0),
+    usuarios: a.usuarios + Number(c.usuarios ?? 0)
+  }), { mrr: 0, saldo: 0, vencidos: 0, usuarios: 0 });
 
   return (
     <div className="min-h-full">
       <header className="flex items-center gap-3 px-6 py-3 border-b border-line bg-surface/80 backdrop-blur sticky top-0 z-20">
         <Marca sub="Consola" />
-        <button onClick={volver} className="text-[13px] text-muted hover:text-ink transition ml-3">
-          ← Mis organizaciones
-        </button>
+        {volver && (
+          <button onClick={volver} className="text-[13px] text-muted hover:text-ink transition ml-3">
+            ← Cambiar de puerta
+          </button>
+        )}
         <span className="ml-auto text-[13px] text-muted hidden sm:block">{user?.email}</span>
         <span className="text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full bg-accent/15 text-accent-deep">
           Super Admin
@@ -73,11 +81,12 @@ export function Consola({ volver }: { volver: () => void }) {
 
         {!cargando && (
           <>
-            <div className="grid gap-2.5 sm:grid-cols-3">
+            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
               <Kpi l="Ingreso mensual" v={money(totales.mrr)} nota="suscripciones activas" />
               <Kpi l="Por cobrar" v={money(totales.saldo)}
                    alerta={totales.vencidos > 0 ? `${totales.vencidos} cobro(s) vencido(s)` : undefined} />
               <Kpi l="Clientes" v={String(cartera.length)} />
+              <Kpi l="Usuarios" v={String(totales.usuarios)} nota="con acceso hoy" />
             </div>
 
             <div className="grid gap-2">
@@ -91,9 +100,12 @@ export function Consola({ volver }: { volver: () => void }) {
                     </span>
                     <span className="min-w-0">
                       <b className="block text-[15px] font-extrabold tracking-tight truncate">{c.empresa}</b>
-                      <span className="text-[12px] text-muted">
+                      <span className="block text-[12px] text-muted">
                         {c.linea ?? 'sin línea'} · {c.plan ?? 'sin plan'}
                         {c.suscripcion && c.suscripcion !== 'activa' && ` · ${c.suscripcion}`}
+                      </span>
+                      <span className={`block text-[11.5px] ${cupoLleno(c) ? 'text-danger font-bold' : 'text-faint'}`}>
+                        {c.usuarios} de {c.usuarios_del_plan ?? '∞'} usuarios
                       </span>
                     </span>
                     <span className="ml-auto text-right">
@@ -146,7 +158,8 @@ function FichaCliente({ cliente, cerrar }: { cliente: ClienteCartera; cerrar: ()
 
   return (
     <Modal cerrar={cerrar} titulo={cliente.empresa}
-           sub={`${cliente.linea ?? '—'} · plan ${cliente.plan ?? '—'} · ${money(cliente.mensualidad ?? 0)} al mes`}>
+           sub={`${cliente.linea ?? '—'} · plan ${cliente.plan ?? '—'} · ${money(cliente.mensualidad ?? 0)} al mes`
+                + ` · ${cliente.usuarios} de ${cliente.usuarios_del_plan ?? '∞'} usuarios`}>
       {error && <p className="text-[13px] text-danger">{error}</p>}
       {cargando && <p className="text-[13px] text-muted">Cargando…</p>}
 

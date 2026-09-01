@@ -20,6 +20,16 @@ tareas, vínculos, cotizador, finanzas y agenda. Su unidad de trabajo es el
 **ANIMA COMPANY** — la empresa y su operación. Clientes, pedidos, inventario,
 compras, reparto, cobranza. Su unidad de trabajo es el *pedido*.
 
+## El plan manda
+
+La línea vivía en `companies.product_line_id` y el plan la repetía por su lado.
+Dos fuentes para el mismo hecho, y la 0070 ya tuvo que arreglar una organización
+que estaba en STUDIO con un plan de COMPANY.
+
+Desde la 0077 manda el plan: un trigger sobre `subscriptions` mantiene
+`companies.product_line_id` como espejo. La columna sigue ahí porque la leen
+`mi_espacio` y media aplicación, pero ya no se escribe a mano.
+
 ## Planes
 
 | Línea | Plan | Usuarios | Módulos |
@@ -62,10 +72,28 @@ Después de entrar en `/ANIMA/app/` lo primero que aparece son dos puertas. No e
 decoración: son dos formas distintas de trabajar y conviene decidir antes, no ir
 descubriéndolo por el menú.
 
+**Lo que se te abre lo decide tu plan**, no el frontend. Lo resuelve
+`mis_lineas()` (migración 0077) en la base:
+
 | Puerta | Se abre si | Lleva a |
 |---|---|---|
-| **ANIMA STUDIO** | tienes un Alma, o una organización de línea `studio` | `/ANIMA/home.html` |
-| **ANIMA COMPANY** | tienes una organización de línea `company`, o eres platform_admin | la plataforma |
+| **ANIMA STUDIO** | tu plan es de línea `studio`, o tienes un Alma y no perteneces a ninguna organización de COMPANY | `/ANIMA/home.html` |
+| **ANIMA COMPANY** | tu plan es de línea `company` | la plataforma |
+| **Consola** | eres `platform_admin` | el negocio del software |
+
+La suscripción `morosa` sigue abriendo: cortarle el acceso a quien debe es una
+decisión comercial, no algo que deba pasar solo.
+
+**La consola no cuelga de COMPANY.** Administrar el software no es operar una
+empresa: por eso va aparte, debajo de la línea, y no aparece dentro del espacio
+de ningún cliente.
+
+**El Alma no basta por sí sola.** El trigger `handle_new_user` le crea un Alma a
+toda cuenta de Auth —y publica un eco «✦ … despertó» en el Árbol—, así que a un
+cajero dado de alta en una pescadería le salía la puerta de STUDIO. La 0078
+cierra las dos puntas: `mis_lineas()` no abre STUDIO a quien pertenece a una
+organización de COMPANY, y `handle_new_user` acepta
+`raw_user_meta_data.origen = 'company'` para no crear Alma ni eco.
 
 **STUDIO no es una pantalla de esta app: es el ANIMA de siempre.** El Taller con
 sus 10.000 líneas ya existe y funciona; duplicarlo en React para mostrar

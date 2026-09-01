@@ -12,6 +12,9 @@ export interface ClienteCartera {
   plan: string | null;
   suscripcion: string | null;
   mensualidad: number | null;
+  /** Cuánta gente usa hoy la aplicación en ese cliente, y cuánta permite el plan. */
+  usuarios: number;
+  usuarios_del_plan: number | null;
   total_cobrado: number;
   total_pagado: number;
   saldo: number;

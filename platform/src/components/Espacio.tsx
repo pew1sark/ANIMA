@@ -4,6 +4,7 @@ import { useTenant } from '@/core/tenant/TenantContext';
 import { MODULES } from '@/core/modules/registry';
 import { cargarEspacio, cargarKpis, type Espacio as EspacioData } from '@/core/tenant/Espacio';
 import { Marca } from '@/components/Marca';
+import { Clientes } from '@/components/company/Clientes';
 import type { ModuleSlug } from '@/types/core';
 
 const money = (n = 0, m = 'CLP') =>
@@ -13,8 +14,7 @@ const num = (n = 0) => Math.round(n).toLocaleString('es-CL');
 /* El espacio de trabajo del cliente. La navegación NO está escrita a mano:
    sale de los módulos que su plan le permite. Dos empresas distintas ven
    menús distintos con el mismo código. */
-export function Espacio({ irAConsola, volver }:
-  { irAConsola?: () => void; volver?: () => void }) {
+export function Espacio({ volver }: { volver?: () => void }) {
   const { user, isPlatformAdmin, signOut } = useAuth();
   const { memberships, current, select } = useTenant();
   const cid = current?.company.id;
@@ -75,11 +75,6 @@ export function Espacio({ irAConsola, volver }:
           {volver && (
             <button onClick={volver} className="text-[12px] text-muted hover:text-ink transition text-left px-3">
               Cambiar de puerta
-            </button>
-          )}
-          {irAConsola && (
-            <button onClick={irAConsola} className="text-[12px] text-muted hover:text-ink transition text-left px-3">
-              Consola de plataforma
             </button>
           )}
         </div>
@@ -153,25 +148,50 @@ export function Espacio({ irAConsola, volver }:
             </>
           )}
 
-          {!cargando && esp && vista !== 'inicio' && vista !== 'config' && (
-            <div className="grid gap-3">
-              <h1 className="text-2xl font-extrabold tracking-tight">
-                {MODULES[vista as ModuleSlug]?.name ?? vista}
-              </h1>
-              <div className="rounded-2xl border border-line bg-surface p-8 text-center">
-                <p className="text-[14px] font-bold">Módulo disponible en tu plan</p>
-                <p className="text-[13px] text-muted mt-1 max-w-[52ch] mx-auto">
-                  Los datos y las funciones de este módulo ya viven en la base con tu empresa aislada.
-                  Falta construir esta pantalla.
-                </p>
-              </div>
-            </div>
+          {/* Clientes es el primer módulo de COMPANY construido de verdad sobre la
+              arquitectura de Bilagay. Los demás siguen el mismo camino. */}
+          {!cargando && esp && cid && vista === 'crm' && (
+            <Clientes companyId={cid} puedeEditar={(esp.mi_rol?.nivel ?? 0) >= 40} />
+          )}
+
+          {!cargando && esp && vista !== 'inicio' && vista !== 'config' && vista !== 'crm' && (
+            <PorConstruir slug={vista as ModuleSlug} />
           )}
 
           {!cargando && esp && vista === 'config' && (
             <Configuracion esp={esp} bloqueados={bloqueados} />
           )}
         </main>
+      </div>
+    </div>
+  );
+}
+
+/* Un módulo encendido cuya pantalla todavía no existe. Decir solo "falta
+   construir esta pantalla" no ayuda a nadie: aquí se dice qué cubre y sobre
+   qué tablas se va a construir, que ya están en la base y aisladas. */
+function PorConstruir({ slug }: { slug: ModuleSlug }) {
+  const def = MODULES[slug];
+  return (
+    <div className="grid gap-3">
+      <h1 className="text-2xl font-extrabold tracking-tight">{def?.name ?? slug}</h1>
+      <div className="rounded-2xl border border-line bg-surface p-8">
+        <p className="text-[14px] font-bold">Incluido en tu plan · pantalla en construcción</p>
+        {def?.cubre && <p className="text-[13px] text-muted mt-1.5 max-w-[58ch]">{def.cubre}</p>}
+        {def?.tablas && def.tablas.length > 0 && (
+          <>
+            <p className="text-[10px] uppercase tracking-wider font-extrabold text-muted mt-5 mb-2">
+              Ya está en la base, aislado por empresa
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {def.tablas.map(tb => (
+                <code key={tb} className="text-[11.5px] px-2 py-1 rounded-lg bg-sunk border border-line text-muted">
+                  {tb}
+                </code>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

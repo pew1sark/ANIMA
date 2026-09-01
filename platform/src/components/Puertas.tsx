@@ -4,14 +4,18 @@ import { Marca } from '@/components/Marca';
 import { env } from '@/config/env';
 
 /* El primer lugar después de entrar. ANIMA es una sola cuenta y dos mundos:
-   en STUDIO se crea, en COMPANY se administra. Elegir aquí evita que la
-   plataforma tenga que ser las dos cosas a la vez en la misma pantalla.
+   en STUDIO se crea, en COMPANY se administra. Cuál se abre lo decidió el plan;
+   aquí solo se elige.
 
    STUDIO no es una vista de esta app: es el ANIMA de siempre, en home.html.
    La sesión es la misma —mismo origen, mismo proyecto de Supabase—, así que
-   se cruza sin volver a entrar. */
-export function Puertas({ irAStudio, irACompany }:
-  { irAStudio: () => void; irACompany: () => void }) {
+   se cruza sin volver a entrar.
+
+   La consola va aparte, debajo de la línea: no es un tercer producto ni un
+   lugar donde se trabaje. Es el panel desde donde se mira el negocio del
+   software. */
+export function Puertas({ studio, company, consola }:
+  { studio?: () => void; company?: () => void; consola?: () => void }) {
   const { user, signOut } = useAuth();
 
   return (
@@ -28,34 +32,55 @@ export function Puertas({ irAStudio, irACompany }:
         <p className="text-[13px] text-muted mt-1.5 mb-7">{user?.email}</p>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Puerta
-            onClick={irAStudio}
+          {studio && <Puerta
+            onClick={studio}
             titulo="ANIMA STUDIO"
             lema="Donde creas."
-            texto="Tu Alma, el Taller, el Clan y el Mundo. Proyectos, clientes, cotizaciones y tu Raíz."
+            texto="Para quien trabaja con su obra: tu Alma, el Taller, el Clan y el Mundo."
             glifo={
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"
                    strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 20 L12 5 L20 20" />
               </svg>
             }
-          />
-          <Puerta
-            onClick={irACompany}
+          />}
+          {company && <Puerta
+            onClick={company}
             titulo="ANIMA COMPANY"
-            lema="Donde se administra."
-            texto="Las organizaciones que usan ANIMA: sus planes, sus módulos y la relación comercial."
+            lema="Donde se opera."
+            texto="Para empresas formales: clientes, pedidos, inventario, compras, reparto y cobranza."
             glifo={
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"
                    strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5" />
               </svg>
             }
-          />
+          />}
         </div>
 
+        {consola && (
+          <>
+            <div className="h-px bg-line mt-8 mb-4" />
+            <button onClick={consola}
+              className="w-full text-left flex items-center gap-3 px-4 py-3 rounded-2xl
+                         border border-line bg-sunk hover:border-accent transition group">
+              <span className="w-9 h-9 rounded-xl grid place-items-center bg-ink text-bg shrink-0">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                     strokeLinecap="round">
+                  <path d="M3 6h18M3 12h18M3 18h11" />
+                </svg>
+              </span>
+              <span className="min-w-0">
+                <b className="block text-[13.5px] font-extrabold tracking-tight">Consola de plataforma</b>
+                <span className="text-[12px] text-muted">Usuarios, planes y pagos de quienes usan ANIMA</span>
+              </span>
+              <span className="ml-auto text-faint group-hover:text-accent transition">→</span>
+            </button>
+          </>
+        )}
+
         <p className="text-[11.5px] text-faint mt-7 leading-relaxed">
-          Una sola cuenta para las dos. Puedes volver aquí cuando quieras.
+          Una sola cuenta. Lo que se te abre lo decide tu plan.
         </p>
       </div>
     </div>

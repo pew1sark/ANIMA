@@ -8,69 +8,77 @@ import { Espacio } from '@/components/Espacio';
 import { Consola } from '@/components/Consola';
 import { env } from '@/config/env';
 
+type Destino = 'company' | 'consola';
+
 /* El portal es UNA sola puerta para todos:
      sin sesión   → entrar
-     con sesión   → elegir sub-plataforma: STUDIO o COMPANY
+     con sesión   → elegir sub-plataforma
+
+   Qué puertas se abren NO lo decide esta pantalla: lo devuelve `mis_lineas()`,
+   que lo deduce del plan contratado. Aquí solo se dibuja.
 
    STUDIO no vive en esta app: es el ANIMA de siempre (home.html), en el mismo
-   origen y con la misma sesión de Supabase, así que se cruza sin volver a
-   entrar. COMPANY sí vive aquí: organizaciones, espacios y, para quien
-   administra el software, la consola.
+   origen y con la misma sesión de Supabase. COMPANY sí vive aquí.
 
-   Si solo hay una puerta abierta no se pregunta: nadie debería elegir cuando
-   no hay elección. */
+   La consola es aparte. No es una tercera línea de producto ni un lugar donde
+   se opere: es desde donde se mira el negocio del software. Por eso no cuelga
+   de COMPANY —administrar el software no es operar una empresa— y no aparece
+   dentro de ningún espacio de cliente. */
 function Portal() {
-  const { user, loading: authLoading, isPlatformAdmin, tieneAlma } = useAuth();
-  const { memberships, current, loading: tenantLoading, select } = useTenant();
-  const [puerta, setPuerta] = useState<'company' | null>(null);
-  const [enConsola, setEnConsola] = useState(false);
+  const { user, loading: authLoading, isPlatformAdmin } = useAuth();
+  const { memberships, current, lineas, loading: tenantLoading, select } = useTenant();
+  const [destino, setDestino] = useState<Destino | null>(null);
 
   const deCompany = memberships.filter(m => m.company.linea?.slug === 'company');
-  const deStudio  = memberships.filter(m => m.company.linea?.slug === 'studio');
 
-  const puedeStudio  = tieneAlma || deStudio.length > 0;
-  const puedeCompany = deCompany.length > 0 || isPlatformAdmin;
+  const puedeStudio  = lineas.has('studio');
+  const puedeCompany = lineas.has('company');
+  /* Cuántos lugares distintos hay a los que ir. Con uno solo no se pregunta. */
+  const puertas = (puedeStudio ? 1 : 0) + (puedeCompany ? 1 : 0) + (isPlatformAdmin ? 1 : 0);
 
-  /* Con una sola puerta se entra por ella. La elección no se guarda: vuelve a
-     hacerse en cada sesión, porque son dos formas distintas de trabajar. */
-  const abierta = puerta ?? (puedeStudio && puedeCompany ? null : puedeCompany ? 'company' : null);
+  const abierto: Destino | null = destino ?? (
+    puertas > 1 ? null : puedeCompany ? 'company' : isPlatformAdmin ? 'consola' : null
+  );
 
   const activa = deCompany.find(m => m.company.id === current?.company.id) ?? null;
-  /* Una sola organización y sin consola: tampoco hay nada que elegir. */
-  const unica = deCompany.length === 1 && !isPlatformAdmin ? deCompany[0]!.company.id : null;
+  /* Una sola organización: tampoco hay nada que elegir dentro de COMPANY. */
+  const unica = deCompany.length === 1 ? deCompany[0]!.company.id : null;
 
   useEffect(() => {
-    if (abierta === 'company' && !activa && unica) select(unica);
+    if (abierto === 'company' && !activa && unica) select(unica);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abierta, activa?.company.id, unica]);
+  }, [abierto, activa?.company.id, unica]);
 
   if (authLoading || tenantLoading) return <Cargando />;
   if (!user) return <Login />;
 
-  if (!abierta) {
-    if (puedeStudio && puedeCompany)
-      return <Puertas irAStudio={irAStudio} irACompany={() => setPuerta('company')} />;
-    if (puedeStudio) return <EntrandoAStudio />;
-    return <SinAcceso />;
+  if (!abierto) {
+    if (puertas === 0) return <SinAcceso />;
+    if (puertas === 1 && puedeStudio) return <EntrandoAStudio />;
+    return (
+      <Puertas
+        studio={puedeStudio ? irAStudio : undefined}
+        company={puedeCompany ? () => setDestino('company') : undefined}
+        consola={isPlatformAdmin ? () => setDestino('consola') : undefined}
+      />
+    );
   }
 
-  // ---------------- ANIMA COMPANY ----------------
-
-  const volverAPuertas = puedeStudio
-    ? () => { select(''); setEnConsola(false); setPuerta(null); }
+  const volver = puertas > 1
+    ? () => { select(''); setDestino(null); }
     : undefined;
 
-  /* La consola la protege RLS; esto solo decide qué se dibuja. */
-  if (enConsola && isPlatformAdmin) return <Consola volver={() => setEnConsola(false)} />;
+  // ---------------- La consola del software ----------------
+  /* Quién entra lo protege RLS; esto solo decide qué se dibuja. */
+  if (abierto === 'consola' && isPlatformAdmin) return <Consola volver={volver} />;
 
-  const irAConsola = isPlatformAdmin ? () => setEnConsola(true) : undefined;
-
-  if (deCompany.length === 0) return <SinOrganizacion irAConsola={irAConsola} volver={volverAPuertas} />;
+  // ---------------- ANIMA COMPANY ----------------
+  if (deCompany.length === 0) return <SinOrganizacion volver={volver} />;
   if (!activa) {
     if (unica) return <Cargando />;   // el efecto de arriba la está abriendo
-    return <Elegir organizaciones={deCompany} irAConsola={irAConsola} volver={volverAPuertas} />;
+    return <Elegir organizaciones={deCompany} volver={volver} />;
   }
-  return <Espacio irAConsola={irAConsola} volver={volverAPuertas} />;
+  return <Espacio volver={volver} />;
 }
 
 function irAStudio() { window.location.href = env.studio; }
@@ -81,8 +89,8 @@ const Cargando = () => (
   </div>
 );
 
-/* Ni Alma ni organización: la cuenta existe y no está en ningún lado. Es lo
-   que ve alguien recién dado de alta en Auth y en nada más. */
+/* Ni Alma ni plan: la cuenta existe y no está en ningún lado. Es lo que ve
+   alguien recién creado en Auth y en nada más. */
 function SinAcceso() {
   const { user, signOut } = useAuth();
   return (
@@ -90,8 +98,8 @@ function SinAcceso() {
       <div className="max-w-md text-center">
         <h1 className="text-2xl font-extrabold tracking-tight">Todavía no tienes acceso</h1>
         <p className="text-[14px] text-muted mt-2">
-          Tu cuenta <b>{user?.email}</b> existe, pero aún no tiene un Alma ni pertenece
-          a ninguna organización. Quien te invitó tiene que darte de alta.
+          Tu cuenta <b>{user?.email}</b> existe, pero todavía no tiene un plan ni un Alma.
+          Quien te invitó tiene que darte de alta.
         </p>
         <button onClick={signOut}
           className="mt-6 text-[13px] font-bold px-4 py-2 rounded-full border border-line hover:border-faint transition">
@@ -102,8 +110,8 @@ function SinAcceso() {
   );
 }
 
-function SinOrganizacion({ irAConsola, volver }:
-  { irAConsola?: () => void; volver?: () => void }) {
+/* El plan abre COMPANY, pero nadie lo agregó a la organización todavía. */
+function SinOrganizacion({ volver }: { volver?: () => void }) {
   const { user, signOut } = useAuth();
   return (
     <div className="min-h-full grid place-items-center p-6">
@@ -114,12 +122,6 @@ function SinOrganizacion({ irAConsola, volver }:
           de ANIMA COMPANY. Quien administra tu empresa tiene que invitarte.
         </p>
         <div className="mt-6 flex items-center justify-center gap-2 flex-wrap">
-          {irAConsola && (
-            <button onClick={irAConsola}
-              className="text-[13px] font-bold px-4 py-2 rounded-full bg-ink text-bg hover:opacity-90 transition">
-              Ir a la consola
-            </button>
-          )}
           {volver && (
             <button onClick={volver}
               className="text-[13px] font-bold px-4 py-2 rounded-full border border-line hover:border-faint transition">
