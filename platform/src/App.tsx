@@ -6,6 +6,7 @@ import { Puertas, EntrandoAStudio } from '@/components/Puertas';
 import { Elegir } from '@/components/Elegir';
 import { Espacio } from '@/components/Espacio';
 import { Consola } from '@/components/Consola';
+import { Cargando } from '@/components/Cargando';
 import { env } from '@/config/env';
 
 type Destino = 'company' | 'consola';
@@ -82,12 +83,6 @@ function Portal() {
 }
 
 function irAStudio() { window.location.href = env.studio; }
-
-const Cargando = () => (
-  <div className="min-h-full grid place-items-center">
-    <p className="text-[13px] text-muted">Cargando…</p>
-  </div>
-);
 
 /* Ni Alma ni plan: la cuenta existe y no está en ningún lado. Es lo que ve
    alguien recién creado en Auth y en nada más. */

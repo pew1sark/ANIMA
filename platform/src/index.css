@@ -27,3 +27,26 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* La espera. Es la misma figura que dibuja el sitio en `showBootLoader()`
+   (assets/js/anima.js + assets/css/studio.css #animaBoot): la marca ∧
+   trazándose. Se escribe en CSS plano porque es una animación de trazo sobre
+   SVG, no algo que las utilidades de Tailwind sepan expresar. */
+.anima-cargando path {
+  fill: none;
+  stroke: var(--color-ink);
+  stroke-width: 6.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 145;
+  stroke-dashoffset: 145;
+  animation: anima-trazo 1.7s ease-in-out infinite;
+}
+@keyframes anima-trazo {
+  0%          { stroke-dashoffset: 145; }
+  45%, 55%    { stroke-dashoffset: 0; }
+  100%        { stroke-dashoffset: -145; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .anima-cargando path { animation: none; stroke-dashoffset: 0; }
+}

@@ -2355,7 +2355,7 @@ function renderQDoc(a, opt){
       <table class="qd-table"><thead><tr><th>Concepto</th><th>Cant.</th><th>Unidad</th><th>P. unit.</th><th>Subtotal</th></tr></thead><tbody>${rows}</tbody></table>
       <div class="qd-totals"><div><span>Subtotal</span><b>${fmtq(t.sub,cur)}</b></div><div><span>Impuesto (${quoteDraft.taxPct||0}%)</span><b>${fmtq(t.tax,cur)}</b></div><div class="qd-grand"><span>Total</span><b>${fmtq(t.total,cur)}</b></div></div>
       ${notes}
-      <div class="qd-foot">${esc(a.name)}${a.city?" · "+esc(a.city):""}${a.country?" "+esc(a.country):""} · ANIMA — The Soul of Creativity</div>
+      <div class="qd-foot">${esc(a.name)}${a.city?" · "+esc(a.city):""}${a.country?" "+esc(a.country):""} · ANIMA — Technology System Connection</div>
     </div>
   </div>`;
 }
@@ -4636,7 +4636,7 @@ function exportPDF(){
     <h2>Proyectos</h2>${a.projects.map(p=>`<p><b>${esc(p.t)}</b> (${esc(p.st)}, ${p.pct}%) — ${esc(p.client)}</p>`).join("")||"<p>—</p>"}
     <h2>Portafolio</h2><p>${a.portfolio.map(p=>esc(p.t)+" ("+esc(p.k)+")").join(" · ")||"—"}</p>
     <h2>Raíz</h2><p>Abonos / pagos: ${money(inc)} · Egresos: ${money(exp)} · <b>Ganancia: ${money(inc-exp)}</b></p>
-    <div class="p-foot">ANIMA TSC — The Soul of Creativity · The Founding Era</div>`;
+    <div class="p-foot">ANIMA TSC — Technology System Connection</div>`;
   window.print();
 }
 
@@ -5534,16 +5534,19 @@ async function installApp(){
   else { alert("Cómo instalar ANIMA en tu dispositivo:\n\n• iPhone/iPad (Safari): toca Compartir ⬆️ → \"Agregar a inicio\".\n• Android (Chrome): menú ⋮ → \"Agregar a pantalla principal\".\n• Computador (Chrome/Edge): ícono de instalar ⊕ en la barra de direcciones.\n\nANIMA abrirá siempre en tu HOME, lista para habitar."); }
 }
 
-/* ---------- Despertar del Alma (pantalla de carga) ----------
-   Blanco absoluto, pixel art mínimo respirando en grises, "Despertando Alma…".
-   Cubre toda la pantalla hasta que el Alma real esté lista (o se redirija). */
-const BOOT_PIX=["....X....","...X.X...","..X.X.X..","...XXX...","XX..X..XX","...XXX...","..X.X.X..","...X.X...","....X...."];
-function bootPixel(){ let r=""; BOOT_PIX.forEach((row,y)=>{ [...row].forEach((ch,x)=>{ if(ch==="X") r+=`<rect x="${x}" y="${y}" width="1.04" height="1.04"/>`; }); });
-  return `<svg viewBox="0 0 9 9" shape-rendering="crispEdges" fill="#b4b4ba">${r}</svg>`; }
+/* ---------- Pantalla de carga ----------
+   La misma en todo ANIMA: la marca ∧ dibujándose y el nombre. La plataforma
+   (React) repite esta figura, así que esperar se ve igual en cualquier parte
+   del sistema. Cubre la pantalla hasta que lo real esté listo (o se redirija).
+   Estilos en assets/css/studio.css (#animaBoot). */
 function showBootLoader(){
   let el=document.getElementById("animaBoot");
   if(!el){ el=document.createElement("div"); el.id="animaBoot";
-    el.innerHTML=`<div class="ab-art">${bootPixel()}</div><div class="ab-label">Despertando Alma…</div>`;
+    el.setAttribute("role","status"); el.setAttribute("aria-live","polite");
+    el.innerHTML=
+      '<svg class="ab-mark" viewBox="0 0 100 100" aria-hidden="true"><path d="M18 82 L50 20 L82 82"/></svg>'+
+      '<div class="ab-name">ANIMA</div>'+
+      '<div class="ab-label">Cargando</div>';
     document.body.appendChild(el); }
   el.classList.remove("fade");
 }

@@ -1,9 +1,9 @@
 {
   "id": "anima-tsc",
-  "name": "ANIMA TSC — The Soul of Creativity",
+  "name": "ANIMA TSC — Technology System Connection",
   "short_name": "ANIMA",
-  "description": "Un sistema vivo para organizar la memoria, trayectoria, proyectos y crecimiento de una Alma.",
-  "start_url": "home.html",
+  "description": "Sistema de gestión multiempresa: ANIMA STUDIO para quien crea, ANIMA COMPANY para quien opera.",
+  "start_url": "app/",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -11,6 +11,11 @@
   "theme_color": "#f5f5f7",
   "lang": "es",
   "icons": [
-    { "src": "assets/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "assets/img/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

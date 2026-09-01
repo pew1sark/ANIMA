@@ -1,13 +1,18 @@
-# ANIMA TSC — The Soul of Creativity
+# ANIMA TSC — Technology System Connection
 
-> Aquí no existen usuarios. Existen **Almas**.
+> Un sistema. Dos plataformas.
 
-ANIMA no es un CRM. No es una red social. No es solo una IA.
-Es **un sistema vivo** para organizar la memoria, la trayectoria, los proyectos y el
-crecimiento de una Alma —sola, en un Clan o en un Santuario— sin perder nunca su identidad.
+**ANIMA STUDIO** para quien trabaja con su obra: proyectos, cotizaciones, cartera y
+portafolio. **ANIMA COMPANY** para empresas formales: clientes, pedidos, inventario,
+compras, reparto y cobranza.
 
-Este repositorio contiene la **primera Alpha** de ANIMA (The Founding Era), sembrada con
-**10 Almas Fundadoras** de LATAM y España.
+Las dos sobre el mismo núcleo y la misma cuenta. Lo que se te abre lo decide tu plan,
+y el aislamiento entre organizaciones no lo hace la aplicación: lo hace PostgreSQL con
+row level security.
+
+El lenguaje de la Alpha —Almas, Esencia, Ecos, el Árbol— **sigue vivo, pero solo dentro
+de ANIMA STUDIO**. La portada y la plataforma son profesionales; el mundo de las Almas es
+una de sus dos caras, no la marca entera.
 
 ---
 
@@ -17,14 +22,14 @@ Dos cosas distintas, con un mismo Supabase (`jwxeowowuxmijuexdrua`) detrás:
 
 | | Qué es | Dónde |
 |---|---|---|
-| **El sitio** | ANIMA TSC: el Studio de las Almas, el Árbol, la comunidad. Estático, sin build. Es lo que sirve GitHub Pages desde la raíz. | raíz + `assets/` |
+| **El sitio** | La portada pública (`index.html`) y el mundo de STUDIO: el Studio de las Almas, el Árbol, la comunidad. Estático, sin build. Es lo que sirve GitHub Pages desde la raíz. | raíz + `assets/` |
 | **La plataforma** | El SaaS multiempresa: **ANIMA STUDIO** y **ANIMA COMPANY**. React 19 + Vite. | `platform/` |
 | **La base** | Migraciones versionadas, funciones y semillas. | `supabase/` |
 | **La documentación** | Arquitectura, multi-tenancy, seguridad, líneas de producto. | `docs/` |
 
-**No mezclar los dos primeros.** La raíz está en producción para las Almas y la
-sirve Pages tal cual; mover un archivo de ahí rompe el sitio. La plataforma vive
-entera dentro de `platform/` y no se publica desde este repositorio.
+**No mezclar los dos primeros.** La raíz está en producción y la sirve Pages tal cual;
+mover un archivo de ahí rompe el sitio. La plataforma compila desde `platform/` hacia
+`app/`, que sí se versiona — ver [`docs/deployment.md`](docs/deployment.md).
 
 Para entender la plataforma, partir por [`docs/architecture.md`](docs/architecture.md)
 y [`docs/lineas-de-producto.md`](docs/lineas-de-producto.md).
