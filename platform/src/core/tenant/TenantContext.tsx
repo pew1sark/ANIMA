@@ -30,40 +30,54 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [tic, setTic] = useState(0);
 
-  /* Filtra por usuario a propósito. RLS deja ver a TODOS los miembros de tus
-     empresas —hace falta para el equipo—, así que sin este filtro la lista
-     traería también las membresías de otros: la organización aparecería
-     repetida y `current.role` podría ser el rol de otra persona. */
+  /* Todo lo de la sesión se pide junto y en orden.
+
+     Primero se cobran las invitaciones pendientes de este correo: invitar a
+     alguien basta, entra y ya está dentro. Y tiene que ser ANTES de lo demás
+     —no en paralelo—, porque `mis_lineas()` y las membresías dependen de que
+     esa membresía ya exista. Cuando corrían a la vez, quien acababa de ser
+     invitado veía "todavía no tienes acceso" pese a estar dentro.
+
+     La consulta de membresías filtra por usuario a propósito: RLS deja ver a
+     TODOS los miembros de tus empresas —hace falta para el equipo—, así que
+     sin ese filtro la lista traería también las de otros, la organización
+     saldría repetida y `current.role` podría ser el rol de otra persona. */
   useEffect(() => {
-    if (!user) { setMemberships([]); setLoading(false); return; }
+    if (!user) { setMemberships([]); setLineas(new Set()); setLoading(false); return; }
+    const uid = user.id;
+    let vivo = true;
+
     /* `loading` solo en la primera carga. Al recargar —por ejemplo tras
        cambiar el logo— levantarlo desmontaría el espacio entero y devolvería
        a la persona a Inicio, perdiendo la pantalla donde estaba. */
     if (tic === 0) setLoading(true);
-    supabase
-      .from('company_members')
-      .select('status, company:companies(*, linea:product_lines(slug,name)), role:roles(*)')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .then(({ data }) => {
-        const list = (data ?? []) as unknown as Membership[];
-        setMemberships(list);
-        /* No se elige nada aquí. Con dos sub-plataformas, entrar directo a la
-           única organización se saltaría la puerta. Solo se conserva la que ya
-           estaba abierta, si sigue siendo válida. */
-        setCurrentId(prev => (prev && list.some(m => m.company.id === prev)) ? prev : null);
-        setLoading(false);
-      });
-  }, [user, tic]);
 
-  /* Qué puertas se abren no lo decide el frontend: lo devuelve `mis_lineas()`,
-     que lo deduce del plan contratado (más el Alma, que es la entrada gratuita
-     a STUDIO). Aquí solo se dibuja lo que la base ya resolvió. */
-  useEffect(() => {
-    if (!user) { setLineas(new Set()); return; }
-    supabase.rpc('mis_lineas').then(({ data }) =>
-      setLineas(new Set((data ?? []) as ProductLine[])));
-  }, [user]);
+    (async () => {
+      try { await supabase.rpc('aceptar_invitaciones'); } catch { /* no bloquea la entrada */ }
+      if (!vivo) return;
+
+      const [{ data: filas }, { data: lin }] = await Promise.all([
+        supabase
+          .from('company_members')
+          .select('status, company:companies(*, linea:product_lines(slug,name)), role:roles(*)')
+          .eq('user_id', uid)
+          .eq('status', 'active'),
+        supabase.rpc('mis_lineas')
+      ]);
+      if (!vivo) return;
+
+      const list = (filas ?? []) as unknown as Membership[];
+      setMemberships(list);
+      setLineas(new Set((lin ?? []) as ProductLine[]));
+      /* No se elige nada aquí. Con dos sub-plataformas, entrar directo a la
+         única organización se saltaría la puerta. Solo se conserva la que ya
+         estaba abierta, si sigue siendo válida. */
+      setCurrentId(prev => (prev && list.some(m => m.company.id === prev)) ? prev : null);
+      setLoading(false);
+    })();
+
+    return () => { vivo = false; };
+  }, [user, tic]);
 
   useEffect(() => {
     if (!currentId) { setModules(new Set()); localStorage.removeItem(STORAGE_KEY); return; }

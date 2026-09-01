@@ -6,6 +6,8 @@ import { cargarEspacio, cargarKpis, type Espacio as EspacioData } from '@/core/t
 import { Marca, MarcaCliente, PieAnima } from '@/components/Marca';
 import { MarcaDeLaEmpresa } from '@/components/company/MarcaEmpresa';
 import { CamposPropios } from '@/components/company/CamposPropios';
+import { Equipo } from '@/components/company/Equipo';
+import { Informes } from '@/components/company/Informes';
 import { Vista } from '@/components/datos/Vista';
 import { ESQUEMAS_POR_MODULO } from '@/core/datos/esquemas';
 import type { ModuleSlug } from '@/types/core';
@@ -63,6 +65,7 @@ export function Espacio({ volver }: { volver?: () => void }) {
                   label={MODULES[m.slug as ModuleSlug]?.name ?? m.slug}
                   fueraDelPlan={!m.disponible} />
           ))}
+          <Item activo={vista==='informes'} onClick={() => setVista('informes')} label="Informes" />
           {esAdmin && <Item activo={vista==='config'} onClick={() => setVista('config')} label="Configuración" />}
         </nav>
 
@@ -151,7 +154,9 @@ export function Espacio({ volver }: { volver?: () => void }) {
 
           {/* Todos los módulos los dibuja el motor de datos a partir de los
               esquemas declarados sobre las tablas de Bilagay. */}
-          {!cargando && esp && cid && vista !== 'inicio' && vista !== 'config' && (
+          {!cargando && esp && cid && vista === 'informes' && <Informes companyId={cid} />}
+
+          {!cargando && esp && cid && vista !== 'inicio' && vista !== 'config' && vista !== 'informes' && (
             <Modulo slug={vista as ModuleSlug} companyId={cid}
                     nivel={esp.mi_rol?.nivel ?? 0} />
           )}
@@ -264,6 +269,9 @@ function Configuracion({ esp, bloqueados, companyId, puedeEditarMarca }:
         </p>
       )}
 
+      {(esp.mi_rol?.nivel ?? 0) >= 60 && (
+        <Equipo companyId={companyId} miNivel={esp.mi_rol?.nivel ?? 0} />
+      )}
       {puedeEditarMarca && <MarcaDeLaEmpresa companyId={companyId} nombre={esp.empresa.nombre} />}
       {puedeEditarMarca && <CamposPropios companyId={companyId} />}
     </>

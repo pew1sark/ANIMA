@@ -31,8 +31,43 @@ construya cada pantalla; aquí va el resumen.
 | `delivery` · **Reparto** | Entregas · Rutas | **funcionando** |
 | `finance` · **Finanzas** | Pagos · Por cobrar (apertura) · Por pagar (apertura) | **funcionando** |
 | `food` · **Procesos** | Procesos · Especies | **funcionando** |
-| `core` | marca, campos propios, módulos del plan | **funcionando** |
+| `core` | equipo, marca, campos propios, módulos del plan | **funcionando** |
+| **Informes** | ventas, margen, top, antigüedad de la deuda, inventario | **funcionando** |
 | `support`, `ai` | — | sin pantalla |
+
+## El equipo
+
+Sin esto una empresa cliente tiene un solo usuario, que es lo mismo que decir
+que no puede usar la plataforma. Está en **Configuración → Equipo**, desde
+nivel 60.
+
+- **Ver quién entra y con qué rol.** El correo vive en `auth.users`, que el
+  cliente no puede leer, así que la lista llega de la función `equipo()`.
+- **Cambiar el rol y suspender**, desde nivel 80. Nadie puede cambiarse el rol
+  a sí mismo: es la forma más común de quedarse fuera de la propia empresa.
+- **Invitar por correo.** No crea la cuenta: anota que ese correo pertenece
+  aquí. Cuando esa persona entra por primera vez,
+  **`aceptar_invitaciones()`** convierte la invitación en membresía con el rol
+  que se le puso.
+
+**El orden importa.** `aceptar_invitaciones()` tiene que correr **antes** de
+leer las membresías y las líneas de producto, no en paralelo: cuando corrían a
+la vez, quien acababa de ser invitado entraba y veía "todavía no tienes
+acceso" pese a estar ya dentro. Está resuelto en `TenantContext` con una sola
+secuencia.
+
+Todavía **no sale correo**: el aviso lo da quien invita. Eso se cierra cuando
+se porte el correo saliente de JLIZ.
+
+## Los informes
+
+`informe_ventas(company, desde, hasta)` devuelve todo en un jsonb: resumen
+(ventas, margen, ticket, cobrado, por cobrar), mes a mes, top diez clientes y
+productos, **antigüedad de la deuda por tramos** e inventario disponible.
+
+Se calcula en la base por la misma razón que los totales de un pedido: para que
+no haya dos respuestas a la misma pregunta según por dónde se mire. La pantalla
+no suma nada, dibuja.
 
 ## Todos los módulos a la vista
 
