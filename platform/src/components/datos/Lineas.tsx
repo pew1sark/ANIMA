@@ -68,10 +68,10 @@ export function Lineas({ detalle, padreId, companyId, opciones, puedeEditar, alC
   return (
     <section className="rounded-2xl border border-line bg-sunk/50 p-4 grid gap-3">
       <div className="flex items-baseline gap-3">
-        <h3 className="text-[10px] uppercase tracking-wider font-extrabold text-muted">{detalle.titulo}</h3>
+        <h3 className="rotulo">{detalle.titulo}</h3>
         <span className="text-[11.5px] text-faint">{lineas.length}</span>
         {suma != null && (
-          <span className="ml-auto text-[13px] font-bold tabular-nums">{money(suma)}</span>
+          <span className="ml-auto text-[15px] cifra">{money(suma)}</span>
         )}
       </div>
 
@@ -116,7 +116,7 @@ export function Lineas({ detalle, padreId, companyId, opciones, puedeEditar, alC
           <div className="grid gap-2.5 sm:grid-cols-2">
             {editables.map(c => (
               <label key={c.key}>
-                <span className="block text-[10px] uppercase tracking-wider font-extrabold text-muted mb-1">
+                <span className="rotulo block mb-1">
                   {c.label}{c.requerido && <span className="text-danger ml-1">*</span>}
                 </span>
                 <Editor campo={c} valor={nueva[c.key]} opciones={opciones[c.key]}
@@ -126,19 +126,16 @@ export function Lineas({ detalle, padreId, companyId, opciones, puedeEditar, alC
           </div>
           <div className="flex items-center gap-2 justify-end">
             <button type="button" onClick={() => { setNueva(null); setError(null); }}
-              className="text-[12.5px] text-muted hover:text-ink transition">Cancelar</button>
-            <button type="button" onClick={agregar} disabled={obrando}
-              className="text-[12.5px] font-bold px-4 py-1.5 rounded-full bg-ink text-bg
-                         disabled:opacity-45 hover:opacity-90 transition">
+              className="b b-fan b-sm">Cancelar</button>
+            <button type="button" onClick={agregar} disabled={obrando} className="b b-pri b-sm">
               {obrando ? 'Agregando…' : 'Agregar'}
             </button>
           </div>
         </div>
       ) : (
         <button type="button" onClick={() => { setNueva(vacia(detalle)); setError(null); }}
-          className="justify-self-start text-[12.5px] font-bold px-3.5 py-1.5 rounded-full
-                     border border-line hover:border-accent transition">
-          Agregar {detalle.singular.toLowerCase()}
+          className="b b-sec b-sm justify-self-start">
+          <span className="text-[14px] leading-none">+</span> Agregar {detalle.singular.toLowerCase()}
         </button>
       ))}
     </section>

@@ -6,6 +6,7 @@ import { cargarEspacio, cargarKpis, type Espacio as EspacioData } from '@/core/t
 import { Marca, MarcaCliente, PieAnima } from '@/components/Marca';
 import { MarcaDeLaEmpresa } from '@/components/company/MarcaEmpresa';
 import { CamposPropios } from '@/components/company/CamposPropios';
+import { PuestaEnMarcha } from '@/components/company/PuestaEnMarcha';
 import { Equipo } from '@/components/company/Equipo';
 import { Informes } from '@/components/company/Informes';
 import { Vista } from '@/components/datos/Vista';
@@ -109,10 +110,12 @@ export function Espacio({ volver }: { volver?: () => void }) {
           {!cargando && esp && vista === 'inicio' && (
             <>
               <div className="aparece">
-                <h1 className="text-[30px] font-extrabold tracking-tight">{esp.empresa.nombre}</h1>
-                <p className="text-[13px] text-muted mt-1">
-                  {esp.empresa.linea} · plan {esp.plan?.nombre ?? '—'} ·
-                  entras como {esp.mi_rol?.nombre ?? '—'}
+                <div className="rotulo">{esp.empresa.linea}</div>
+                <h1 className="titular mt-1.5" style={{ fontSize: 'clamp(30px,4vw,42px)' }}>
+                  {esp.empresa.nombre}
+                </h1>
+                <p className="text-[13px] text-muted mt-2">
+                  Plan {esp.plan?.nombre ?? '—'} · entras como {esp.mi_rol?.nombre ?? '—'}
                 </p>
               </div>
 
@@ -132,9 +135,7 @@ export function Espacio({ volver }: { volver?: () => void }) {
 
               {esp.features.length > 0 && (
                 <section className="grid gap-3">
-                  <h2 className="text-[10px] uppercase tracking-wider font-extrabold text-muted">
-                    Hecho para ustedes
-                  </h2>
+                  <h2 className="rotulo">Hecho para ustedes</h2>
                   <div className="grid gap-2">
                     {esp.features.map(f => (
                       <div key={f.slug} className="rounded-xl border border-line bg-surface p-4">
@@ -186,11 +187,10 @@ function Modulo({ slug, companyId, nivel }:
   return (
     <div className="grid gap-4">
       {esquemas.length > 1 && (
-        <div className="flex gap-1 flex-wrap">
+        <div role="tablist" className="flex gap-1 flex-wrap">
           {esquemas.map((e, i) => (
-            <button key={e.tabla} onClick={() => setCual(i)}
-              className={`text-[13px] font-bold px-3.5 py-1.5 rounded-full transition ${
-                i === cual ? 'bg-ink text-bg' : 'text-muted hover:bg-accent/10'}`}>
+            <button key={e.tabla} onClick={() => setCual(i)} role="tab"
+                    aria-selected={i === cual} className="pest">
               {e.titulo}
             </button>
           ))}
@@ -211,15 +211,13 @@ function PorConstruir({ slug }: { slug: ModuleSlug }) {
   const def = MODULES[slug];
   return (
     <div className="grid gap-3">
-      <h1 className="text-2xl font-extrabold tracking-tight">{def?.name ?? slug}</h1>
-      <div className="rounded-2xl border border-line bg-surface p-8">
-        <p className="text-[14px] font-bold">Incluido en tu plan · pantalla en construcción</p>
+      <div className="rotulo">{def?.name ?? slug}</div>
+      <div className="tarjeta p-8 mt-1.5">
+        <p className="titular" style={{ fontSize: 22 }}>Pantalla en construcción</p>
         {def?.cubre && <p className="text-[13px] text-muted mt-1.5 max-w-[58ch]">{def.cubre}</p>}
         {def?.tablas && def.tablas.length > 0 && (
           <>
-            <p className="text-[10px] uppercase tracking-wider font-extrabold text-muted mt-5 mb-2">
-              Ya está en la base, aislado por empresa
-            </p>
+            <p className="rotulo mt-5 mb-2">Ya está en la base, aislado por empresa</p>
             <div className="flex flex-wrap gap-1.5">
               {def.tablas.map(tb => (
                 <code key={tb} className="text-[11.5px] px-2 py-1 rounded-lg bg-sunk border border-line text-muted">
@@ -234,32 +232,83 @@ function PorConstruir({ slug }: { slug: ModuleSlug }) {
   );
 }
 
+/* La configuración en pestañas. Antes era una columna larga donde la puesta en
+   marcha, el equipo y los módulos competían por la misma atención. Cada cosa
+   en su pestaña se encuentra; apiladas, no. */
+type Solapa = 'empresa' | 'equipo' | 'marca' | 'campos' | 'modulos';
+
 function Configuracion({ esp, bloqueados, companyId, puedeEditarMarca }:
   { esp: EspacioData; bloqueados: EspacioData['modulos'];
     companyId: string; puedeEditarMarca: boolean }) {
+  const nivel = esp.mi_rol?.nivel ?? 0;
+  const [solapa, setSolapa] = useState<Solapa>('empresa');
+
+  const solapas: { id: Solapa; nombre: string; visible: boolean }[] = [
+    { id: 'empresa', nombre: 'Empresa',        visible: true },
+    { id: 'equipo',  nombre: 'Equipo',         visible: nivel >= 60 },
+    { id: 'marca',   nombre: 'Marca',          visible: puedeEditarMarca },
+    { id: 'campos',  nombre: 'Campos propios', visible: puedeEditarMarca },
+    { id: 'modulos', nombre: 'Módulos',        visible: true }
+  ];
+  const abiertas = solapas.filter(s => s.visible);
+
   return (
     <>
       <div className="aparece">
-        <h1 className="text-2xl font-extrabold tracking-tight">Configuración</h1>
-        <p className="text-[13px] text-muted mt-1 max-w-[62ch]">
-          Cómo quedó armada tu plataforma. Un módulo se usa si lo tienes encendido
-          <em> y</em> tu plan lo incluye.
+        <div className="rotulo">Configuración</div>
+        <h1 className="titular mt-1.5">{esp.empresa.nombre}</h1>
+        <p className="text-[13px] text-muted mt-1.5 max-w-[62ch]">
+          {esp.empresa.linea} · plan {esp.plan?.nombre ?? '—'} · entras como {esp.mi_rol?.nombre ?? '—'}
+        </p>
+      </div>
+
+      <div role="tablist" className="flex gap-1 flex-wrap border-b border-line pb-3">
+        {abiertas.map(s => (
+          <button key={s.id} role="tab" aria-selected={solapa === s.id}
+                  onClick={() => setSolapa(s.id)} className="pest">
+            {s.nombre}
+          </button>
+        ))}
+      </div>
+
+      {solapa === 'empresa' && (
+        <PuestaEnMarcha companyId={companyId} puedeEditar={puedeEditarMarca} />
+      )}
+      {solapa === 'equipo'  && nivel >= 60 && <Equipo companyId={companyId} miNivel={nivel} />}
+      {solapa === 'marca'   && puedeEditarMarca &&
+        <MarcaDeLaEmpresa companyId={companyId} nombre={esp.empresa.nombre} />}
+      {solapa === 'campos'  && puedeEditarMarca && <CamposPropios companyId={companyId} />}
+      {solapa === 'modulos' && <Modulos esp={esp} bloqueados={bloqueados} />}
+    </>
+  );
+}
+
+function Modulos({ esp, bloqueados }:
+  { esp: EspacioData; bloqueados: EspacioData['modulos'] }) {
+  return (
+    <section className="grid gap-3 aparece">
+      <div>
+        <div className="rotulo">Módulos</div>
+        <p className="text-[13px] text-muted mt-1.5 max-w-[62ch]">
+          Un módulo se usa si lo tienes encendido <em>y</em> tu plan lo incluye.
+          Mientras COMPANY se termina de construir, el menú los muestra todos.
         </p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {esp.modulos.map(m => (
           <div key={m.slug}
-            className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-[13px] ${
-              m.disponible ? 'border-line bg-surface' : 'border-line/60 text-faint'}`}>
+            className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl border text-[13px] ${
+              m.disponible ? 'border-line bg-surface' : 'border-line/60 text-faint bg-sunk/30'}`}>
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
               m.disponible ? 'bg-ok' : m.encendido ? 'bg-danger' : 'bg-faint/40'}`} />
             <span className={m.disponible ? 'font-bold' : ''}>
               {MODULES[m.slug as ModuleSlug]?.name ?? m.slug}
             </span>
-            {!m.disponible && m.encendido &&
-              <span className="ml-auto text-[10px] uppercase tracking-wider font-extrabold text-danger">fuera del plan</span>}
-            {!m.disponible && !m.encendido &&
-              <span className="ml-auto text-[10px] uppercase tracking-wider font-extrabold">off</span>}
+            {!m.disponible && (
+              <span className="ml-auto rotulo" style={{ fontSize: 9 }}>
+                {m.encendido ? 'fuera del plan' : 'apagado'}
+              </span>
+            )}
           </div>
         ))}
       </div>
@@ -268,13 +317,7 @@ function Configuracion({ esp, bloqueados, companyId, puedeEditarMarca }:
           {bloqueados.length} módulo(s) encendido(s) que tu plan no incluye. Subiendo de plan se activan solos.
         </p>
       )}
-
-      {(esp.mi_rol?.nivel ?? 0) >= 60 && (
-        <Equipo companyId={companyId} miNivel={esp.mi_rol?.nivel ?? 0} />
-      )}
-      {puedeEditarMarca && <MarcaDeLaEmpresa companyId={companyId} nombre={esp.empresa.nombre} />}
-      {puedeEditarMarca && <CamposPropios companyId={companyId} />}
-    </>
+    </section>
   );
 }
 
@@ -295,10 +338,10 @@ const Item = ({ activo, onClick, label, fueraDelPlan }:
 
 const Kpi = ({ l, v, nota, alerta }:
   { l: string; v: string; nota?: string; alerta?: string }) => (
-  <div className="rounded-2xl border border-line bg-surface p-4">
-    <div className="text-[10px] uppercase tracking-wider font-extrabold text-muted">{l}</div>
-    <div className="text-[21px] font-extrabold tracking-tight tabular-nums mt-0.5">{v}</div>
-    {alerta && <div className="text-[11.5px] font-bold text-danger mt-0.5">{alerta}</div>}
-    {nota && !alerta && <div className="text-[11.5px] text-faint mt-0.5">{nota}</div>}
+  <div className="tarjeta p-4 toque">
+    <div className="rotulo">{l}</div>
+    <div className="cifra-grande mt-2">{v}</div>
+    {alerta && <div className="text-[11.5px] font-bold text-danger mt-1.5">{alerta}</div>}
+    {nota && !alerta && <div className="text-[11.5px] text-faint mt-1.5">{nota}</div>}
   </div>
 );

@@ -58,8 +58,7 @@ export function Muestra({ campo, valor, opciones }:
   }
 }
 
-export const entrada = `w-full px-3 py-2 rounded-lg border border-line bg-surface text-[13.5px]
-                        outline-none focus:border-accent transition`;
+export const entrada = 'campo';
 
 /** Un campo escribible. Lo usan la ficha y la edición en la propia celda. */
 export function Editor({ campo, valor, opciones, onChange, onListo, compacto }: {
@@ -67,7 +66,7 @@ export function Editor({ campo, valor, opciones, onChange, onListo, compacto }: 
   onChange: (v: unknown) => void; onListo?: () => void; compacto?: boolean;
 }) {
   const cls = compacto
-    ? 'w-full px-2 py-1 rounded-md border border-accent bg-surface text-[13px] outline-none'
+    ? 'w-full px-2 py-1 rounded-md border border-accent bg-surface text-[13px] outline-none font-[inherit]'
     : entrada;
   const cerrar = { onBlur: onListo, autoFocus: compacto };
 

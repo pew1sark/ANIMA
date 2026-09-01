@@ -35,6 +35,32 @@ construya cada pantalla; aquí va el resumen.
 | **Informes** | ventas, margen, top, antigüedad de la deuda, inventario | **funcionando** |
 | `support`, `ai` | — | sin pantalla |
 
+## Puesta en marcha
+
+**Configuración → Empresa.** Lo que hay que preguntar una vez para que la
+plataforma deje de ser genérica: nombre corto y razón social, RUT, giro,
+dirección, comuna y región, contacto, moneda, zona horaria y el pie que va al
+final de cada documento.
+
+Se muestran **seis datos esenciales** con puntos que se van llenando —los que
+aparecen en un documento—, y el título cambia de «Cuéntanos de tu empresa» a
+«Tu empresa está configurada». Un formulario largo de puesta en marcha se
+abandona a la mitad; este cabe en una pantalla y dice cuánto falta.
+
+La identidad va a `companies` (la lee media aplicación) y el resto a
+`company_config` bajo la clave `ficha`. Las dos mitades se escriben en **una
+sola función**, `guardar_ficha_empresa()`: si una entrara y la otra no, la
+empresa quedaría con el nombre nuevo y la dirección vieja.
+
+De paso, `company_config` estaba **abierta a escritura desde nivel 40** — un
+empleado podía cambiar las reglas de operación. Ahora se lee en 40 y se
+escribe en 80.
+
+## Configuración en pestañas
+
+Empresa · Equipo · Marca · Campos propios · Módulos. Antes era una columna
+larga donde todo competía por la misma atención.
+
 ## El equipo
 
 Sin esto una empresa cliente tiene un solo usuario, que es lo mismo que decir

@@ -113,18 +113,21 @@ export function Vista({ esquema, companyId, puedeEditar }:
 
   return (
     <div className="grid gap-4 aparece">
-      <div className="flex items-end gap-3 flex-wrap">
+      <div className="flex items-end gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">{esquema.titulo}</h1>
-          <p className="text-[13px] text-muted mt-1">
-            {cargando ? 'Cargando…'
-              : `${lista.length}${lista.length !== filas.length ? ` de ${filas.length}` : ''} ${
-                  filas.length === 1 ? 'registro' : 'registros'}`}
-          </p>
+          <div className="rotulo">{esquema.titulo}</div>
+          <h1 className="titular mt-1.5">{tituloVivo(esquema, filas.length)}</h1>
+          {/* El titular ya dice cuántos hay: aquí solo se habla cuando la
+              búsqueda recortó la lista, que es cuando el número engaña. */}
+          {(cargando || lista.length !== filas.length) && (
+            <p className="text-[12.5px] text-muted mt-1.5">
+              {cargando ? 'Cargando…' : `${lista.length} de ${filas.length} tras la búsqueda`}
+            </p>
+          )}
         </div>
         {puedeEditar && (
-          <button onClick={() => setAbierta('nueva')}
-            className="ml-auto text-[13px] font-bold px-4 py-2 rounded-full bg-ink text-bg hover:opacity-90 transition">
+          <button onClick={() => setAbierta('nueva')} className="b b-pri ml-auto">
+            <span className="text-[15px] leading-none">+</span>
             Nuevo {esquema.singular.toLowerCase()}
           </button>
         )}
@@ -133,14 +136,11 @@ export function Vista({ esquema, companyId, puedeEditar }:
       <div className="flex items-center gap-3 flex-wrap">
         <input value={busca} onChange={e => setBusca(e.target.value)}
           placeholder={`Buscar en ${esquema.titulo.toLowerCase()}…`}
-          className="flex-1 min-w-[220px] px-3.5 py-2.5 rounded-xl border border-line bg-surface
-                     text-sm outline-none focus:border-accent transition" />
+          className="campo flex-1 min-w-[220px] py-2.5" />
         {campoTablero && (
-          <div className="flex rounded-xl border border-line overflow-hidden">
+          <div className="grupo">
             {(['tabla', 'tablero'] as Modo[]).map(m => (
-              <button key={m} onClick={() => setModo(m)}
-                className={`text-[12.5px] font-bold px-3.5 py-2 transition ${
-                  modo === m ? 'bg-ink text-bg' : 'bg-surface text-muted hover:text-ink'}`}>
+              <button key={m} onClick={() => setModo(m)} aria-pressed={modo === m}>
                 {m === 'tabla' ? 'Tabla' : 'Tablero'}
               </button>
             ))}
@@ -154,10 +154,19 @@ export function Vista({ esquema, companyId, puedeEditar }:
       )}
 
       {!cargando && filas.length === 0 && (
-        <div className="rounded-2xl border border-line bg-surface p-8 text-center">
-          <p className="text-[14px] font-bold">Todavía no hay {esquema.titulo.toLowerCase()}</p>
+        <div className="tarjeta p-10 text-center">
+          <p className="titular" style={{ fontSize: 22 }}>
+            Todavía no hay {esquema.titulo.toLowerCase()}
+          </p>
           {esquema.vacio && (
-            <p className="text-[13px] text-muted mt-1 max-w-[56ch] mx-auto">{esquema.vacio}</p>
+            <p className="text-[13.5px] text-muted mt-2.5 max-w-[54ch] mx-auto leading-relaxed">
+              {esquema.vacio}
+            </p>
+          )}
+          {puedeEditar && (
+            <button onClick={() => setAbierta('nueva')} className="b b-pri mt-6">
+              Crear el primero
+            </button>
           )}
         </div>
       )}
@@ -185,6 +194,13 @@ export function Vista({ esquema, companyId, puedeEditar }:
   );
 }
 
+/* El título dice de qué se está hablando, no solo cómo se llama la tabla.
+   "6 pedidos" informa más que "Pedidos", y es lo primero que se mira. */
+function tituloVivo(e: Esquema, n: number): string {
+  if (n === 0) return e.titulo;
+  return `${n} ${n === 1 ? e.singular.toLowerCase() : e.titulo.toLowerCase()}`;
+}
+
 // ------------------------------------------------------------------- tabla
 
 function Tabla({ columnas, filas, opciones, puedeEditar, abrir, cambiar }: {
@@ -197,28 +213,26 @@ function Tabla({ columnas, filas, opciones, puedeEditar, abrir, cambiar }: {
   const grid = { gridTemplateColumns: columnas.map(c => c.ancho ?? '1fr').join(' ') + ' 44px' };
 
   return (
-    <div className="rounded-2xl border border-line bg-surface overflow-x-auto">
+    <div className="tarjeta overflow-x-auto">
       <div className="min-w-max">
-        <div style={grid}
-          className="grid gap-px bg-line border-b border-line sticky top-0 z-10">
+        <div style={grid} className="grid bg-sunk border-b border-line sticky top-0 z-10">
           {columnas.map(c => (
-            <div key={c.key} className="bg-sunk px-3 py-2.5 text-[10px] uppercase tracking-wider
-                                        font-extrabold text-muted whitespace-nowrap">{c.label}</div>
+            <div key={c.key} className="rotulo px-3.5 py-3 whitespace-nowrap">{c.label}</div>
           ))}
-          <div className="bg-sunk" />
+          <div />
         </div>
 
         {filas.map(f => (
           <div key={f.id} style={grid}
-               className="grid gap-px bg-line border-b border-line last:border-0 group">
+               className="grid border-b border-line last:border-0 group hover:bg-sunk/50 transition">
             {columnas.map(c => {
               const editable = puedeEditar && c.enLinea && !c.soloLectura;
               const activa = editando?.id === f.id && editando.key === c.key;
               return (
                 <div key={c.key}
                      onClick={() => editable && setEditando({ id: f.id, key: c.key })}
-                     className={`bg-surface px-3 py-2 text-[13.5px] flex items-center min-w-0
-                                 group-hover:bg-sunk/40 transition ${editable ? 'cursor-text' : ''}`}>
+                     className={`px-3.5 py-2.5 text-[13.5px] flex items-center min-w-0
+                                 ${editable ? 'cursor-text' : ''}`}>
                   {activa
                     ? <Editor campo={c} valor={leer(f, c)} opciones={opciones[c.key]} compacto
                               onChange={v => cambiar(f, c, v)}
@@ -227,9 +241,8 @@ function Tabla({ columnas, filas, opciones, puedeEditar, abrir, cambiar }: {
                 </div>
               );
             })}
-            <button onClick={() => abrir(f)}
-              className="bg-surface grid place-items-center text-faint hover:text-accent
-                         group-hover:bg-sunk/40 transition" title="Abrir ficha">→</button>
+            <button onClick={() => abrir(f)} title="Abrir ficha"
+              className="grid place-items-center text-faint hover:text-accent transition">→</button>
           </div>
         ))}
       </div>
@@ -266,13 +279,11 @@ function Tablero({ campo, filas, esquema, campos, opciones, puedeEditar, abrir, 
               const f = filas.find(x => x.id === id);
               if (f && String(leer(f, campo) ?? '') !== col.valor) cambiar(f, campo, col.valor);
             }}
-            className={`w-[260px] shrink-0 rounded-2xl border p-2.5 transition ${
+            className={`w-[264px] shrink-0 rounded-2xl border p-2.5 transition ${
               encima === col.valor ? 'border-accent bg-accent/5' : 'border-line bg-sunk/40'}`}>
 
-            <div className="flex items-center gap-2 px-1.5 py-1 mb-2">
-              <b className="text-[11px] uppercase tracking-wider font-extrabold text-muted truncate">
-                {col.nombre}
-              </b>
+            <div className="flex items-center gap-2 px-2 py-1.5 mb-2">
+              <span className="rotulo truncate">{col.nombre}</span>
               <span className="ml-auto text-[11px] tabular-nums text-faint">{dentro.length}</span>
             </div>
 
@@ -281,8 +292,8 @@ function Tablero({ campo, filas, esquema, campos, opciones, puedeEditar, abrir, 
                 <div key={f.id} draggable={puedeEditar}
                   onDragStart={e => e.dataTransfer.setData('text/plain', f.id)}
                   onClick={() => abrir(f)}
-                  className="rounded-xl border border-line bg-surface p-3 cursor-pointer toque
-                             hover:border-accent">
+                  className="rounded-xl border border-line bg-surface p-3.5 cursor-pointer toque
+                             hover:border-accent shadow-[0_1px_2px_rgba(0,0,0,.03)]">
                   <b className="block text-[13.5px] font-bold truncate">
                     {principal ? String(leer(f, principal) ?? '—') : f.id.slice(0, 8)}
                   </b>

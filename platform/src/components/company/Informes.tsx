@@ -64,14 +64,13 @@ export function Informes({ companyId }: { companyId: string }) {
     <div className="grid gap-5 aparece">
       <div className="flex items-end gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Informes</h1>
-          <p className="text-[13px] text-muted mt-1">Lo que dicen tus datos, sin que nadie los interprete.</p>
+          <div className="rotulo">Informes</div>
+          <h1 className="titular mt-1.5">Cómo va el negocio</h1>
+          <p className="text-[13px] text-muted mt-1.5">Lo que dicen tus datos, sin que nadie los interprete.</p>
         </div>
-        <div className="ml-auto flex rounded-xl border border-line overflow-hidden">
+        <div className="grupo ml-auto">
           {PERIODOS.map(p => (
-            <button key={p.dias} onClick={() => setDias(p.dias)}
-              className={`text-[12.5px] font-bold px-3.5 py-2 transition ${
-                dias === p.dias ? 'bg-ink text-bg' : 'bg-surface text-muted hover:text-ink'}`}>
+            <button key={p.dias} onClick={() => setDias(p.dias)} aria-pressed={dias === p.dias}>
               {p.nombre}
             </button>
           ))}
@@ -85,8 +84,8 @@ export function Informes({ companyId }: { companyId: string }) {
       {cargando && <p className="text-[13px] text-muted">Calculando…</p>}
 
       {vacio && (
-        <div className="rounded-2xl border border-line bg-surface p-8 text-center">
-          <p className="text-[14px] font-bold">Todavía no hay ventas en este período</p>
+        <div className="tarjeta p-10 text-center">
+          <p className="titular" style={{ fontSize: 22 }}>Todavía no hay ventas en este período</p>
           <p className="text-[13px] text-muted mt-1 max-w-[54ch] mx-auto">
             Los informes se llenan solos a medida que se registran pedidos. Nada que configurar.
           </p>
@@ -172,8 +171,8 @@ export function Informes({ companyId }: { companyId: string }) {
 
 const Bloque = ({ titulo, nota, children }:
   { titulo: string; nota?: string; children: React.ReactNode }) => (
-  <section className="rounded-2xl border border-line bg-surface p-5 aparece aparece-2">
-    <h2 className="text-[10px] uppercase tracking-wider font-extrabold text-muted">{titulo}</h2>
+  <section className="tarjeta p-5 aparece aparece-2">
+    <h2 className="rotulo">{titulo}</h2>
     {nota && <p className="text-[12px] text-faint mt-1 mb-3">{nota}</p>}
     <div className={nota ? '' : 'mt-3'}>{children}</div>
   </section>
@@ -195,17 +194,17 @@ const Lista = ({ filas }: { filas: { nombre: string; valor: string; nota: string
 );
 
 const Dato = ({ l, v, n, alerta }: { l: string; v: string; n?: string; alerta?: boolean }) => (
-  <div className="rounded-2xl border border-line bg-surface p-4">
-    <div className="text-[10px] uppercase tracking-wider font-extrabold text-muted">{l}</div>
-    <div className={`text-[21px] font-extrabold tracking-tight tabular-nums mt-0.5 ${alerta ? 'text-danger' : ''}`}>{v}</div>
-    {n && <div className="text-[11.5px] text-faint mt-0.5">{n}</div>}
+  <div className="tarjeta p-4 toque">
+    <div className="rotulo">{l}</div>
+    <div className={`cifra-grande mt-2 ${alerta ? 'text-danger' : ''}`}>{v}</div>
+    {n && <div className="text-[11.5px] text-faint mt-1.5">{n}</div>}
   </div>
 );
 
 const Suelto = ({ l, v, alerta }: { l: string; v: string; alerta?: boolean }) => (
   <span>
-    <span className="block text-[10px] uppercase tracking-wider font-extrabold text-muted">{l}</span>
-    <b className={`block text-[17px] font-extrabold tabular-nums mt-0.5 ${alerta ? 'text-danger' : ''}`}>{v}</b>
+    <span className="rotulo block">{l}</span>
+    <b className={`block text-[19px] cifra mt-1 ${alerta ? 'text-danger' : ''}`}>{v}</b>
   </span>
 );
 

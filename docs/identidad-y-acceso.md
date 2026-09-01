@@ -24,6 +24,25 @@ Las dos se cargan desde Google Fonts en la portada, en la plataforma
 (`platform/index.html`) y en las páginas de STUDIO. En `assets/css/anima.css`
 Inter va **primera** en la pila; el sistema queda de respaldo.
 
+## Los componentes
+
+En `platform/src/index.css`, después de los tokens. Antes cada botón repetía su
+cadena de utilidades —catorce sitios donde cambiar un radio—; ahora están una
+vez. **Si algo se ve distinto en dos pantallas, es que una no usó esto.**
+
+| Clase | Qué es |
+|---|---|
+| `.b` + `.b-pri` / `.b-sec` / `.b-fan` / `.b-mal` | Botón: primario, secundario, fantasma, destructivo. `.b-sm` y `.b-blq` modifican |
+| `.grupo` | Botones de un mismo eje (Tabla / Tablero), con `aria-pressed` |
+| `.pest` | Pestaña suelta, con `aria-selected` |
+| `.rotulo` | Monoespaciada, mayúsculas, muy espaciada — el *eyebrow* de la portada |
+| `.titular` | Cormorant, ligera. Los títulos de pantalla |
+| `.cifra` / `.cifra-grande` | Tabulares; la grande en serif |
+| `.tarjeta` · `.campo` | Superficie e input |
+
+El estado se dice con atributos ARIA (`aria-pressed`, `aria-selected`), no con
+una clase extra: el CSS lo lee y el lector de pantalla también.
+
 ## El movimiento
 
 Una sola gramática, en `platform/src/index.css`:

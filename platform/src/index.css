@@ -90,3 +90,99 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .anima-cargando path { animation: none; stroke-dashoffset: 0; }
 }
+
+/* ===========================================================================
+   La voz de ANIMA en la plataforma
+   ===========================================================================
+   Antes cada botón repetía su cadena de utilidades: catorce sitios donde
+   cambiar un radio. Aquí están una vez. Si algo se ve distinto en dos
+   pantallas, es que una de las dos no usó esto.
+
+   La gramática es la de la portada: rótulo en monoespaciada muy espaciada,
+   titular en serif, cifras en tabulares, y una línea fina como único borde. */
+
+/* ---------- tipografía ---------- */
+.rotulo {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+.titular {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -.01em;
+  line-height: 1.05;
+  font-size: clamp(26px, 3.4vw, 34px);
+  color: var(--color-ink);
+}
+.cifra {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+  font-weight: 800;
+}
+/* Las cifras grandes van en serif: es lo que hace que un panel se lea como
+   ANIMA y no como una hoja de cálculo. */
+.cifra-grande {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.01em;
+  font-size: 27px;
+  line-height: 1;
+}
+
+/* ---------- botones ---------- */
+.b {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border-radius: 999px;
+  font-size: 13px; font-weight: 700; letter-spacing: .01em;
+  padding: 9px 18px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color .18s ease, border-color .18s ease,
+              color .18s ease, opacity .18s ease, transform .18s ease;
+}
+.b:disabled { opacity: .45; cursor: default; }
+.b:not(:disabled):hover { transform: translateY(-1px); }
+.b:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.b-pri  { background: var(--color-ink); color: var(--color-bg); }
+.b-pri:not(:disabled):hover { background: #000; }
+
+.b-sec  { border-color: var(--color-line); color: var(--color-ink); background: var(--color-surface); }
+.b-sec:not(:disabled):hover { border-color: var(--color-accent); }
+
+.b-fan  { color: var(--color-muted); background: transparent; padding-left: 12px; padding-right: 12px; }
+.b-fan:not(:disabled):hover { color: var(--color-ink); background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+
+.b-mal  { border-color: var(--color-line); color: var(--color-danger); background: var(--color-surface); }
+.b-mal:not(:disabled):hover { border-color: var(--color-danger); }
+
+.b-sm   { font-size: 12px; padding: 6px 13px; }
+.b-blq  { width: 100%; }
+
+/* Grupo de pestañas: una sola pieza, no botones sueltos. */
+.grupo { display: inline-flex; border: 1px solid var(--color-line); border-radius: 12px; overflow: hidden; background: var(--color-surface); }
+.grupo > button { font-size: 12.5px; font-weight: 700; padding: 8px 14px; color: var(--color-muted); transition: .18s; }
+.grupo > button:hover { color: var(--color-ink); }
+.grupo > button[aria-pressed="true"] { background: var(--color-ink); color: var(--color-bg); }
+
+/* Pestaña suelta, para navegar entre secciones. */
+.pest { font-size: 13px; font-weight: 700; padding: 7px 14px; border-radius: 999px; color: var(--color-muted); transition: .18s; }
+.pest:hover { color: var(--color-ink); background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.pest[aria-selected="true"] { background: var(--color-ink); color: var(--color-bg); }
+
+/* ---------- superficies y formularios ---------- */
+.tarjeta { background: var(--color-surface); border: 1px solid var(--color-line); border-radius: 18px; }
+.campo {
+  width: 100%; padding: 9px 12px; border-radius: 10px;
+  border: 1px solid var(--color-line); background: var(--color-surface);
+  font-size: 13.5px; font-family: inherit; color: var(--color-ink);
+  outline: none; transition: border-color .18s ease;
+}
+.campo:focus { border-color: var(--color-accent); }
+.campo::placeholder { color: var(--color-faint); }

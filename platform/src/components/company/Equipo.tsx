@@ -45,14 +45,14 @@ export function Equipo({ companyId, miNivel }: { companyId: string; miNivel: num
   return (
     <section className="grid gap-3 aparece aparece-1">
       <div>
-        <h2 className="text-[10px] uppercase tracking-wider font-extrabold text-muted">Equipo</h2>
+        <div className="rotulo">Equipo</div>
         <p className="text-[13px] text-muted mt-1.5 max-w-[62ch]">
           Quién entra a la plataforma y hasta dónde llega. El rol no es una etiqueta:
           lo comprueba la base en cada consulta.
         </p>
       </div>
 
-      <div className="rounded-2xl border border-line bg-surface p-5 grid gap-4">
+      <div className="tarjeta p-5 grid gap-4">
         {error && (
           <p role="alert" className="entra text-[13px] text-danger bg-danger/10 border border-danger/20
                                      rounded-xl px-3.5 py-2.5">{error}</p>
@@ -85,8 +85,7 @@ export function Equipo({ companyId, miNivel }: { companyId: string; miNivel: num
                     quedarse fuera de la propia empresa sin querer. */}
                 {puedeMandar && !m.soy_yo ? (
                   <select value={m.rol_slug} onChange={e => cambiarRol(m, e.target.value)}
-                    className="text-[12.5px] px-2.5 py-1.5 rounded-lg border border-line bg-surface
-                               outline-none focus:border-accent transition">
+                    className="campo w-auto py-1.5 text-[12.5px]">
                     {ROLES.map(r => <option key={r.slug} value={r.slug}>{r.nombre}</option>)}
                   </select>
                 ) : (
@@ -94,8 +93,7 @@ export function Equipo({ companyId, miNivel }: { companyId: string; miNivel: num
                 )}
 
                 {puedeMandar && !m.soy_yo && (
-                  <button onClick={() => alternar(m)}
-                    className="text-[12px] font-bold text-muted hover:text-danger transition">
+                  <button onClick={() => alternar(m)} className="b b-fan b-sm hover:!text-danger">
                     {m.estado === 'active' ? 'Suspender' : 'Reactivar'}
                   </button>
                 )}
@@ -108,12 +106,8 @@ export function Equipo({ companyId, miNivel }: { companyId: string; miNivel: num
         {puedeInvitar && (
           <div className="border-t border-line pt-4 grid gap-3">
             <div className="flex items-center gap-3">
-              <h3 className="text-[10px] uppercase tracking-wider font-extrabold text-muted">
-                Invitaciones pendientes
-              </h3>
-              <button onClick={() => setInvitando(v => !v)}
-                className="ml-auto text-[12.5px] font-bold px-3.5 py-1.5 rounded-full border border-line
-                           hover:border-accent transition">
+              <h3 className="rotulo">Invitaciones pendientes</h3>
+              <button onClick={() => setInvitando(v => !v)} className="b b-sec b-sm ml-auto">
                 {invitando ? 'Cancelar' : 'Invitar a alguien'}
               </button>
             </div>
@@ -139,9 +133,7 @@ export function Equipo({ companyId, miNivel }: { companyId: string; miNivel: num
                 <button onClick={async () => {
                           try { await equipoService.retirarInvitacion(i.id); recargar(); }
                           catch (e) { setError(msg(e)); } }}
-                  className="ml-auto text-[12px] font-bold text-muted hover:text-danger transition">
-                  Retirar
-                </button>
+                  className="b b-fan b-sm ml-auto hover:!text-danger">Retirar</button>
               </div>
             ))}
 
@@ -171,9 +163,8 @@ function FormularioInvitar({ companyId, listo, fallo }: {
     catch (err) { fallo(msg(err)); setGuardando(false); }
   }
 
-  const campo = `w-full px-3 py-2 rounded-lg border border-line bg-surface text-[13.5px]
-                 outline-none focus:border-accent transition`;
-  const etiqueta = 'block text-[10px] uppercase tracking-wider font-extrabold text-muted mb-1.5';
+  const campo = 'campo';
+  const etiqueta = 'rotulo block mb-1.5';
 
   return (
     <form onSubmit={enviar} className="rounded-xl border border-line bg-sunk p-4 grid gap-3 entra">
@@ -197,9 +188,7 @@ function FormularioInvitar({ companyId, listo, fallo }: {
       <p className="text-[11.5px] text-faint">
         {ROLES.find(r => r.slug === rol)?.que}
       </p>
-      <button type="submit" disabled={guardando || !email.trim()}
-        className="justify-self-end text-[13px] font-bold px-4 py-2 rounded-full bg-ink text-bg
-                   disabled:opacity-45 hover:opacity-90 transition">
+      <button type="submit" disabled={guardando || !email.trim()} className="b b-pri justify-self-end">
         {guardando ? 'Anotando…' : 'Invitar'}
       </button>
     </form>

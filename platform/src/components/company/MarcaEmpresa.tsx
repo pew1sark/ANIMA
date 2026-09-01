@@ -44,30 +44,26 @@ export function MarcaDeLaEmpresa({ companyId, nombre }:
   return (
     <section className="grid gap-3 aparece aparece-2">
       <div>
-        <h2 className="text-[10px] uppercase tracking-wider font-extrabold text-muted">Tu marca</h2>
+        <div className="rotulo">Tu marca</div>
         <p className="text-[13px] text-muted mt-1.5 max-w-[62ch]">
           Sube tu logo y la plataforma lo usa en tu espacio. ANIMA no desaparece:
           baja al pie, en pequeño.
         </p>
       </div>
 
-      <div className="rounded-2xl border border-line bg-surface p-5 grid gap-5">
+      <div className="tarjeta p-5 grid gap-5">
         <div className="flex items-center gap-5 flex-wrap">
           <div className="rounded-xl border border-line bg-sunk px-4 py-3">
             <MarcaCliente nombre={nombre} logo={marca?.logo_url} sub="Así se ve" />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => archivo.current?.click()} disabled={subiendo}
-              className="text-[13px] font-bold px-4 py-2 rounded-full bg-ink text-bg
-                         disabled:opacity-45 hover:opacity-90 transition">
+              className="b b-pri">
               {subiendo ? 'Subiendo…' : marca?.logo_url ? 'Cambiar logo' : 'Subir logo'}
             </button>
             {marca?.logo_url && (
               <button onClick={quitar} disabled={subiendo}
-                className="text-[13px] font-bold px-4 py-2 rounded-full border border-line
-                           hover:border-faint transition disabled:opacity-45">
-                Quitar
-              </button>
+                className="b b-sec">Quitar</button>
             )}
           </div>
           <input ref={archivo} type="file" hidden accept="image/png,image/jpeg,image/webp,image/svg+xml"

@@ -65,25 +65,23 @@ export function CamposPropios({ companyId }: { companyId: string }) {
   return (
     <section className="grid gap-3 aparece aparece-3">
       <div>
-        <h2 className="text-[10px] uppercase tracking-wider font-extrabold text-muted">Campos propios</h2>
+        <div className="rotulo">Campos propios</div>
         <p className="text-[13px] text-muted mt-1.5 max-w-[62ch]">
           Agrega a tus fichas los datos que tu operación necesita y ANIMA no trae de fábrica.
           Aparecen solos en el formulario y en la búsqueda, sin que nadie programe nada.
         </p>
       </div>
 
-      <div className="rounded-2xl border border-line bg-surface p-5 grid gap-4">
+      <div className="tarjeta p-5 grid gap-4">
         <div className="flex items-center gap-2 flex-wrap">
           {ENTIDADES.map(e => (
             <button key={e.valor} onClick={() => { setEntidad(e.valor); setNuevo(false); }}
-              className={`text-[12.5px] font-bold px-3 py-1.5 rounded-full transition ${
-                entidad === e.valor ? 'bg-ink text-bg' : 'border border-line text-muted hover:border-faint'}`}>
+              role="tab" aria-selected={entidad === e.valor} className="pest">
               {e.nombre}
             </button>
           ))}
           <button onClick={() => setNuevo(v => !v)}
-            className="ml-auto text-[12.5px] font-bold px-3.5 py-1.5 rounded-full border border-line
-                       hover:border-accent transition">
+            className="b b-sec b-sm ml-auto">
             {nuevo ? 'Cancelar' : 'Agregar campo'}
           </button>
         </div>
@@ -118,9 +116,7 @@ export function CamposPropios({ companyId }: { companyId: string }) {
                 </span>
               </span>
               <button onClick={() => apagar(c.id)}
-                className="ml-auto text-[12px] font-bold text-muted hover:text-danger transition">
-                Quitar
-              </button>
+                className="b b-fan b-sm ml-auto hover:!text-danger">Quitar</button>
             </div>
           ))}
         </div>
@@ -159,8 +155,7 @@ function Formulario({ companyId, entidad, listo, fallo }: {
     listo();
   }
 
-  const campo = `w-full px-3 py-2 rounded-lg border border-line bg-surface text-[13.5px]
-                 outline-none focus:border-accent transition`;
+  const campo = 'campo';
 
   return (
     <form onSubmit={guardar} className="rounded-xl border border-line bg-sunk p-4 grid gap-3 entra">
@@ -174,7 +169,7 @@ function Formulario({ companyId, entidad, listo, fallo }: {
           {label && <span className="block text-[11px] text-faint mt-1">Se guardará como <code>{clave(label)}</code></span>}
         </label>
         <label>
-          <span className="block text-[10px] uppercase tracking-wider font-extrabold text-muted mb-1.5">Tipo</span>
+          <span className="rotulo block mb-1.5">Tipo</span>
           <select value={tipo} onChange={e => setTipo(e.target.value)} className={campo}>
             {TIPOS.map(t => <option key={t.valor} value={t.valor}>{t.nombre}</option>)}
           </select>
@@ -183,7 +178,7 @@ function Formulario({ companyId, entidad, listo, fallo }: {
 
       {tipo === 'seleccion' && (
         <label>
-          <span className="block text-[10px] uppercase tracking-wider font-extrabold text-muted mb-1.5">
+          <span className="rotulo block mb-1.5">
             Opciones <span className="normal-case tracking-normal text-faint">· separadas por coma</span>
           </span>
           <input value={opciones} onChange={e => setOpciones(e.target.value)}
@@ -198,8 +193,7 @@ function Formulario({ companyId, entidad, listo, fallo }: {
           Obligatorio
         </label>
         <button type="submit" disabled={guardando || !label.trim()}
-          className="ml-auto text-[13px] font-bold px-4 py-2 rounded-full bg-ink text-bg
-                     disabled:opacity-45 hover:opacity-90 transition">
+          className="b b-pri ml-auto">
           {guardando ? 'Creando…' : 'Crear campo'}
         </button>
       </div>

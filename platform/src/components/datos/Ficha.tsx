@@ -53,7 +53,7 @@ export function Ficha({ esquema, campos, fila, opciones, companyId, puedeEditar,
                    rounded-3xl p-6 shadow-[0_24px_60px_rgba(0,0,0,.14)] grid gap-5 aparece">
         <div className="flex items-start gap-3">
           <div className="min-w-0">
-            <h2 className="text-xl font-extrabold tracking-tight truncate">
+            <h2 className="titular truncate" style={{ fontSize: 24 }}>
               {fila ? String(leer(fila, campos.find(c => c.key === esquema.principal)!) ?? esquema.singular)
                     : `Nuevo ${esquema.singular.toLowerCase()}`}
             </h2>
@@ -68,7 +68,7 @@ export function Ficha({ esquema, campos, fila, opciones, companyId, puedeEditar,
         <div className="grid gap-4 sm:grid-cols-2">
           {escribibles.map(c => (
             <label key={c.key} className={c.tipo === 'texto-largo' ? 'sm:col-span-2' : ''}>
-              <span className="block text-[10px] uppercase tracking-wider font-extrabold text-muted mb-1.5">
+              <span className="rotulo block mb-1.5">
                 {c.label}
                 {c.requerido && <span className="text-danger ml-1">*</span>}
                 {c.propio === false && (
@@ -96,9 +96,7 @@ export function Ficha({ esquema, campos, fila, opciones, companyId, puedeEditar,
 
         {calculados.length > 0 && (
           <div className="rounded-2xl bg-sunk px-4 py-3">
-            <p className="text-[10px] uppercase tracking-wider font-extrabold text-muted mb-2">
-              Lo calcula la base
-            </p>
+            <p className="rotulo mb-2">Lo calcula la base</p>
             <div className="flex flex-wrap gap-x-6 gap-y-1.5">
               {calculados.map(c => (
                 <span key={c.key} className="text-[12.5px]">
@@ -120,29 +118,20 @@ export function Ficha({ esquema, campos, fila, opciones, companyId, puedeEditar,
             confirmando ? (
               <span className="flex items-center gap-2">
                 <button type="button" onClick={borrar} disabled={guardando}
-                  className="text-[13px] font-bold px-4 py-2 rounded-full bg-danger text-white
-                             disabled:opacity-45 hover:opacity-90 transition">
+                  className="b b-sm" style={{ background: 'var(--color-danger)', color: '#fff' }}>
                   Sí, eliminar
                 </button>
-                <button type="button" onClick={() => setConfirmando(false)}
-                  className="text-[13px] text-muted hover:text-ink transition">No</button>
+                <button type="button" onClick={() => setConfirmando(false)} className="b b-fan b-sm">No</button>
               </span>
             ) : (
-              <button type="button" onClick={() => setConfirmando(true)}
-                className="text-[13px] font-bold px-4 py-2 rounded-full border border-line
-                           text-danger hover:border-danger transition">
+              <button type="button" onClick={() => setConfirmando(true)} className="b b-mal">
                 Eliminar
               </button>
             )
           )}
           <span className="ml-auto flex items-center gap-2">
-            <button type="button" onClick={cerrar}
-              className="text-[13px] font-bold px-4 py-2 rounded-full border border-line hover:border-faint transition">
-              Cancelar
-            </button>
-            <button type="submit" disabled={guardando}
-              className="text-[13px] font-bold px-5 py-2 rounded-full bg-ink text-bg
-                         disabled:opacity-45 hover:opacity-90 transition">
+            <button type="button" onClick={cerrar} className="b b-sec">Cancelar</button>
+            <button type="submit" disabled={guardando} className="b b-pri">
               {guardando ? 'Guardando…' : 'Guardar'}
             </button>
           </span>
