@@ -13,6 +13,8 @@ interface TenantValue {
   modules: Set<ModuleSlug>;
   loading: boolean;
   select: (companyId: string) => void;
+  /** Vuelve a leer las organizaciones. Se usa al cambiar la marca. */
+  recargar: () => void;
   hasModule: (m: ModuleSlug) => boolean;
   hasLevel: (min: number) => boolean;
 }
@@ -26,6 +28,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [modules, setModules] = useState<Set<ModuleSlug>>(new Set());
   const [lineas, setLineas] = useState<Set<ProductLine>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [tic, setTic] = useState(0);
 
   /* Filtra por usuario a propósito. RLS deja ver a TODOS los miembros de tus
      empresas —hace falta para el equipo—, así que sin este filtro la lista
@@ -33,7 +36,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
      repetida y `current.role` podría ser el rol de otra persona. */
   useEffect(() => {
     if (!user) { setMemberships([]); setLoading(false); return; }
-    setLoading(true);
+    /* `loading` solo en la primera carga. Al recargar —por ejemplo tras
+       cambiar el logo— levantarlo desmontaría el espacio entero y devolvería
+       a la persona a Inicio, perdiendo la pantalla donde estaba. */
+    if (tic === 0) setLoading(true);
     supabase
       .from('company_members')
       .select('status, company:companies(*, linea:product_lines(slug,name)), role:roles(*)')
@@ -42,14 +48,13 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       .then(({ data }) => {
         const list = (data ?? []) as unknown as Membership[];
         setMemberships(list);
-        // Con una sola organización se entra directo. Con varias, se elige.
         /* No se elige nada aquí. Con dos sub-plataformas, entrar directo a la
            única organización se saltaría la puerta. Solo se conserva la que ya
            estaba abierta, si sigue siendo válida. */
         setCurrentId(prev => (prev && list.some(m => m.company.id === prev)) ? prev : null);
         setLoading(false);
       });
-  }, [user]);
+  }, [user, tic]);
 
   /* Qué puertas se abren no lo decide el frontend: lo devuelve `mis_lineas()`,
      que lo deduce del plan contratado (más el Alma, que es la entrada gratuita
@@ -79,6 +84,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const value = useMemo<TenantValue>(() => ({
     memberships, current, modules, lineas, loading,
     select: (id: string) => setCurrentId(id || null),
+    recargar: () => setTic(n => n + 1),
     hasModule: (m) => modules.has(m),
     hasLevel: (min) => (current?.role.level ?? 0) >= min
   }), [memberships, current, modules, lineas, loading]);

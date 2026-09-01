@@ -13,7 +13,7 @@ export function Elegir({ organizaciones, volver }:
 
   return (
     <div className="min-h-full grid place-items-center p-6">
-      <div className="w-full max-w-lg">
+      <div className="w-full max-w-lg aparece">
         <div className="flex items-center justify-between mb-7">
           <Marca sub="Company" />
           <span className="flex items-center gap-4">
@@ -30,7 +30,7 @@ export function Elegir({ organizaciones, volver }:
         <div className="grid gap-2.5">
           {organizaciones.map(m => (
             <button key={m.company.id} onClick={() => select(m.company.id)}
-              className="text-left p-4 rounded-2xl border border-line bg-surface hover:border-accent transition group">
+              className="text-left p-4 rounded-2xl border border-line bg-surface hover:border-accent toque group">
               <div className="flex items-center gap-3">
                 <span className="w-10 h-10 rounded-xl grid place-items-center bg-accent/12 text-accent-deep
                                  font-extrabold text-[15px] shrink-0">

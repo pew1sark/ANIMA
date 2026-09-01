@@ -7,6 +7,7 @@ import { Elegir } from '@/components/Elegir';
 import { Espacio } from '@/components/Espacio';
 import { Consola } from '@/components/Consola';
 import { Cargando } from '@/components/Cargando';
+import { NuevaContrasena } from '@/components/NuevaContrasena';
 import { env } from '@/config/env';
 
 type Destino = 'company' | 'consola';
@@ -26,7 +27,7 @@ type Destino = 'company' | 'consola';
    de COMPANY —administrar el software no es operar una empresa— y no aparece
    dentro de ningún espacio de cliente. */
 function Portal() {
-  const { user, loading: authLoading, isPlatformAdmin } = useAuth();
+  const { user, loading: authLoading, isPlatformAdmin, recuperando } = useAuth();
   const { memberships, current, lineas, loading: tenantLoading, select } = useTenant();
   const [destino, setDestino] = useState<Destino | null>(null);
 
@@ -52,6 +53,9 @@ function Portal() {
 
   if (authLoading || tenantLoading) return <Cargando />;
   if (!user) return <Login />;
+  /* Venir del correo de recuperación es tener sesión sin haber entrado: lo
+     único que toca es poner la contraseña nueva. */
+  if (recuperando) return <NuevaContrasena />;
 
   if (!abierto) {
     if (puertas === 0) return <SinAcceso />;

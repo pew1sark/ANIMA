@@ -3,7 +3,8 @@ import { useAuth } from '@/core/auth/AuthContext';
 import { Marca } from '@/components/Marca';
 import {
   consolaService, pagado,
-  type ClienteCartera, type Cobro, type Concepto, type PlanDisponible
+  type ClienteCartera, type Cobro, type Concepto, type PlanDisponible,
+  type SolicitudAcceso
 } from '@/services/consola.service';
 
 const money = (n = 0) => '$' + Math.round(n).toLocaleString('es-CL');
@@ -25,6 +26,7 @@ export function Consola({ volver }: { volver?: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState<ClienteCartera | null>(null);
   const [nuevoCliente, setNuevoCliente] = useState(false);
+  const [solicitudes, setSolicitudes] = useState<SolicitudAcceso[]>([]);
 
   const recargar = () => {
     setCargando(true);
@@ -34,6 +36,9 @@ export function Consola({ volver }: { volver?: () => void }) {
       .finally(() => setCargando(false));
   };
   useEffect(recargar, []);
+  const recargarSolicitudes = () =>
+    consolaService.solicitudes().then(setSolicitudes).catch(() => {});
+  useEffect(() => { recargarSolicitudes(); }, []);
 
   const totales = cartera.reduce((a, c) => ({
     mrr:      a.mrr + (c.suscripcion === 'activa' ? (c.mensualidad ?? 0) : 0),
@@ -61,7 +66,7 @@ export function Consola({ volver }: { volver?: () => void }) {
         </button>
       </header>
 
-      <main className="p-6 max-w-4xl grid gap-8">
+      <main className="p-6 max-w-4xl grid gap-8 aparece">
         <div className="flex items-end gap-4 flex-wrap">
           <div>
             <h1 className="text-[30px] font-extrabold tracking-tight">Clientes</h1>
@@ -92,7 +97,7 @@ export function Consola({ volver }: { volver?: () => void }) {
             <div className="grid gap-2">
               {cartera.map(c => (
                 <button key={c.company_id} onClick={() => setAbierto(c)}
-                  className="text-left p-4 rounded-2xl border border-line bg-surface hover:border-accent transition group">
+                  className="text-left p-4 rounded-2xl border border-line bg-surface hover:border-accent toque group">
                   <div className="flex items-center gap-3 flex-wrap">
                     <span className="w-10 h-10 rounded-xl grid place-items-center bg-accent/12 text-accent-deep
                                      font-extrabold text-[15px] shrink-0">
@@ -129,6 +134,8 @@ export function Consola({ volver }: { volver?: () => void }) {
                 </div>
               )}
             </div>
+
+            <Solicitudes lista={solicitudes} recargar={recargarSolicitudes} />
           </>
         )}
       </main>
@@ -140,6 +147,75 @@ export function Consola({ volver }: { volver?: () => void }) {
 }
 
 /* ---------- La ficha de un cliente: su cuenta con la plataforma ---------- */
+/* Quién pidió entrar desde el login. No crea nada: solo deja ver a quién hay
+   que responder, y marcar la petición cuando ya se atendió. */
+function Solicitudes({ lista, recargar }:
+  { lista: SolicitudAcceso[]; recargar: () => void }) {
+  const [obrando, setObrando] = useState<string | null>(null);
+  const pendientes = lista.filter(s => s.status === 'pendiente');
+
+  async function resolver(id: string, status: 'invitada' | 'rechazada') {
+    setObrando(id);
+    try { await consolaService.resolverSolicitud(id, status); recargar(); }
+    finally { setObrando(null); }
+  }
+
+  return (
+    <section className="grid gap-3">
+      <div className="flex items-baseline gap-3">
+        <h2 className="text-[10px] uppercase tracking-wider font-extrabold text-muted">
+          Solicitudes de acceso
+        </h2>
+        {pendientes.length > 0 && (
+          <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5
+                           rounded-full bg-accent/15 text-accent-deep">
+            {pendientes.length} pendiente{pendientes.length === 1 ? '' : 's'}
+          </span>
+        )}
+      </div>
+
+      {pendientes.length === 0 && (
+        <p className="text-[13px] text-muted">
+          Nadie ha pedido acceso todavía. El formulario está en el login de la plataforma.
+        </p>
+      )}
+
+      <div className="grid gap-2">
+        {pendientes.map(s => (
+          <div key={s.id} className="rounded-2xl border border-line bg-surface p-4 aparece">
+            <div className="flex items-start gap-3 flex-wrap">
+              <span className="min-w-0 flex-1">
+                <b className="block text-[14px] font-bold truncate">{s.nombre || s.email}</b>
+                <span className="block text-[12px] text-muted truncate">
+                  {s.email}
+                  {s.organizacion && ` · ${s.organizacion}`}
+                  {` · ANIMA ${s.linea.toUpperCase()}`}
+                </span>
+                {s.mensaje && (
+                  <span className="block text-[12.5px] text-ink-2 mt-2 leading-relaxed">{s.mensaje}</span>
+                )}
+              </span>
+              <span className="flex items-center gap-2">
+                <button onClick={() => resolver(s.id, 'invitada')} disabled={obrando === s.id}
+                  className="text-[12px] font-bold px-3 py-1.5 rounded-full bg-ink text-bg
+                             disabled:opacity-45 hover:opacity-90 transition">
+                  Invitada
+                </button>
+                <button onClick={() => resolver(s.id, 'rechazada')} disabled={obrando === s.id}
+                  className="text-[12px] font-bold px-3 py-1.5 rounded-full border border-line
+                             hover:border-faint transition disabled:opacity-45">
+                  Descartar
+                </button>
+              </span>
+            </div>
+            <p className="text-[11px] text-faint mt-2">{fecha(s.created_at.slice(0, 10))}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function FichaCliente({ cliente, cerrar }: { cliente: ClienteCartera; cerrar: () => void }) {
   const [cobros, setCobros] = useState<Cobro[]>([]);
   const [conceptos, setConceptos] = useState<Concepto[]>([]);

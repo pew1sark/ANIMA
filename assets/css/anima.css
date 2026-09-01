@@ -26,7 +26,9 @@ html{scroll-behavior:smooth;overscroll-behavior-y:none}
 body{
   margin:0;
   overscroll-behavior-y:none;
-  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Helvetica Neue",Arial,sans-serif;
+  /* La misma tipografía que la portada y la plataforma: Inter manda, el
+     sistema queda de respaldo si la fuente no llega. */
+  font-family:"Inter",-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif;
   color:var(--text);
   background:
     radial-gradient(circle at 10% 0%,rgba(217,215,206,.9),transparent 32%),

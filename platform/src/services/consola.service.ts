@@ -54,6 +54,17 @@ export interface NuevoCliente {
   mensualidad?: number | null; implementacion?: number | null;
 }
 
+export interface SolicitudAcceso {
+  id: string;
+  email: string;
+  nombre: string | null;
+  organizacion: string | null;
+  linea: 'studio' | 'company';
+  mensaje: string | null;
+  status: 'pendiente' | 'invitada' | 'rechazada';
+  created_at: string;
+}
+
 export interface NuevoCobro {
   company_id: string; concept: string; description?: string | null;
   amount: number; due_date?: string | null;
@@ -61,6 +72,26 @@ export interface NuevoCobro {
 }
 
 export const consolaService = {
+  /* Quién pidió entrar. Se guardan desde el login sin crear ninguna cuenta:
+     abrir la puerta sigue siendo un acto deliberado. */
+  async solicitudes(): Promise<SolicitudAcceso[]> {
+    const { data, error } = await supabase
+      .from('access_requests')
+      .select('id, email, nombre, organizacion, linea, mensaje, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    return (data ?? []) as SolicitudAcceso[];
+  },
+
+  async resolverSolicitud(id: string, status: 'invitada' | 'rechazada') {
+    const { error } = await supabase
+      .from('access_requests')
+      .update({ status, resuelta_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
   async cartera(): Promise<ClienteCartera[]> {
     const { data, error } = await supabase
       .from('v_cartera_plataforma')

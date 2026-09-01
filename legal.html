@@ -5,63 +5,366 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#f5f5f7" />
   <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
-  <title>Legal · ANIMA TSC</title>
-  <link rel="stylesheet" href="assets/css/anima.css" />
+  <title>Términos y privacidad · ANIMA TSC</title>
+  <meta name="description" content="Condiciones del servicio y política de privacidad de ANIMA TSC — Technology System Connection." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;500&display=swap" rel="stylesheet" />
   <style>
-    .wrap{max-width:780px;margin:0 auto;padding:30px 22px 80px}
-    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
-    h1{font-size:clamp(34px,7vw,56px);letter-spacing:-.06em;margin:14px 0 4px}
-    h2{font-size:22px;letter-spacing:-.03em;margin:34px 0 8px;scroll-margin-top:20px}
-    p,li{color:#3a3a3a;font-size:15px;line-height:1.65}
-    ul{padding-left:18px}li{border:0;padding:4px 0}
-    .muted{color:var(--muted)}
-    .card{padding:22px;margin-top:16px}
+    :root{
+      --bg:#f5f5f7; --surface:#fff; --sunk:#f0eeea; --ink:#111; --ink-2:#3a3733;
+      --muted:#6e6e73; --faint:#9b9791; --line:#e6e3dd; --accent:#d0aa63; --accent-deep:#7b5920;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--bg);color:var(--ink);letter-spacing:.01em;
+      font-family:"Inter",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+      -webkit-font-smoothing:antialiased;line-height:1.6}
+    a{color:inherit}
+    .wrap{max-width:760px;margin:0 auto;padding:28px 22px 90px}
+
+    .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:38px}
+    .brand{display:flex;align-items:center;gap:11px;text-decoration:none}
+    .brand svg{width:24px;height:24px}
+    .brand b{font-size:15px;font-weight:800;letter-spacing:.14em}
+    .brand span{font-size:9px;text-transform:uppercase;letter-spacing:.3em;color:var(--muted);font-weight:700;display:block;margin-top:2px}
+    .volver{font-size:13px;color:var(--muted);text-decoration:none}
+    .volver:hover{color:var(--ink)}
+
+    .eyebrow{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:10px;letter-spacing:.3em;
+      text-transform:uppercase;color:var(--faint)}
+    h1{font-family:"Cormorant Garamond",serif;font-weight:300;font-size:clamp(34px,6.4vw,52px);
+      line-height:1.08;letter-spacing:-.01em;margin:14px 0 10px}
+    .intro{color:var(--muted);font-size:15px;max-width:60ch}
+
+    .indice{display:flex;flex-wrap:wrap;gap:8px;margin:30px 0 6px}
+    .indice a{font-size:12.5px;color:var(--muted);text-decoration:none;border:1px solid var(--line);
+      background:var(--surface);border-radius:999px;padding:6px 14px;transition:.2s}
+    .indice a:hover{border-color:var(--accent);color:var(--ink)}
+
+    section{background:var(--surface);border:1px solid var(--line);border-radius:20px;
+      padding:28px 26px;margin-top:16px;scroll-margin-top:20px}
+    h2{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
+    h2 .n{font-family:ui-monospace,monospace;font-size:11px;color:var(--faint);
+      letter-spacing:.16em;display:block;margin-bottom:8px;font-weight:600}
+    h3{font-size:14.5px;font-weight:700;margin:22px 0 6px}
+    p,li{color:var(--ink-2);font-size:14.5px}
+    ul{padding-left:20px;margin:8px 0}
+    li{margin:5px 0}
+    .nota{background:var(--sunk);border-radius:14px;padding:16px 18px;margin-top:18px}
+    .nota p{margin:0;font-size:13.5px;color:var(--muted)}
+    table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13.5px}
+    th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--faint);font-weight:800}
+    code{font-family:ui-monospace,monospace;font-size:12.5px;background:var(--sunk);
+      padding:1px 6px;border-radius:4px}
+    footer{text-align:center;color:var(--faint);font-size:12px;margin-top:40px}
+    footer a{color:var(--muted)}
   </style>
 </head>
 <body>
   <main class="wrap">
-    <div class="nav">
-      <a class="brand" href="index.html" style="text-decoration:none"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>ANIMA</a>
-      <a class="btn secondary sm" href="index.html">← Volver</a>
+    <div class="top">
+      <a class="brand" href="index.html">
+        <svg viewBox="0 0 100 100" fill="none"><path d="M18 82 L50 20 L82 82" stroke="#111" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span style="display:block"><b style="display:block">ANIMA</b><span>TSC</span></span>
+      </a>
+      <a class="volver" href="index.html">← Volver</a>
     </div>
 
-    <span class="pill gold">Legal · Founding Era</span>
-    <h1>Privacidad y términos</h1>
-    <p class="muted">ANIMA TSC está en beta cerrada. Estas políticas son claras y resumidas; se ampliarán antes del lanzamiento público. Última actualización: junio 2026.</p>
+    <div class="eyebrow">Condiciones del servicio</div>
+    <h1>Términos y privacidad</h1>
+    <p class="intro">
+      Estas condiciones rigen el uso de <b>ANIMA TSC — Technology System Connection</b>, el sistema
+      de gestión que se entrega en dos plataformas: ANIMA STUDIO y ANIMA COMPANY. Están escritas
+      para que se entiendan sin abogado. Última actualización: <b>31 de agosto de 2026</b>.
+    </p>
 
-    <div class="card">
-      <h2 id="privacidad">1. Privacidad</h2>
-      <p>En ANIMA no existen "usuarios": existen <b>Almas</b>. Tu Alma es tuya.</p>
+    <nav class="indice">
+      <a href="#quienes">1 · Quiénes somos</a>
+      <a href="#servicio">2 · El servicio</a>
+      <a href="#acceso">3 · Acceso y cuentas</a>
+      <a href="#datos">4 · De quién son los datos</a>
+      <a href="#privacidad">5 · Privacidad</a>
+      <a href="#seguridad">6 · Seguridad</a>
+      <a href="#pagos">7 · Planes y pagos</a>
+      <a href="#disponibilidad">8 · Disponibilidad y soporte</a>
+      <a href="#uso">9 · Uso aceptable</a>
+      <a href="#propiedad">10 · Propiedad intelectual</a>
+      <a href="#termino">11 · Término y salida</a>
+      <a href="#cambios">12 · Cambios</a>
+      <a href="#contacto">13 · Contacto</a>
+    </nav>
+
+    <!-- 1 -->
+    <section id="quienes">
+      <h2><span class="n">01</span>Quiénes somos</h2>
+      <p>
+        ANIMA TSC es un sistema desarrollado y operado por <b>SARK</b>, en Concepción, Chile
+        («ANIMA», «nosotros»). Quien contrata o usa el servicio es el <b>Cliente</b>: puede ser una
+        persona que trabaja por su cuenta (ANIMA STUDIO) o una organización con equipo
+        (ANIMA COMPANY).
+      </p>
+      <p>
+        Cuando el Cliente es una organización, quien acepta estas condiciones declara tener
+        facultades para obligarla.
+      </p>
+    </section>
+
+    <!-- 2 -->
+    <section id="servicio">
+      <h2><span class="n">02</span>El servicio</h2>
+      <p>
+        ANIMA TSC es software como servicio: se accede por internet, no se instala ni se entrega
+        el código. Se contrata por plan, y cada plan habilita una plataforma y un conjunto de
+        módulos.
+      </p>
+      <table>
+        <tr><th>Plataforma</th><th>Para</th><th>Cubre</th></tr>
+        <tr>
+          <td><b>ANIMA STUDIO</b></td>
+          <td>Profesionales y talleres que trabajan por encargo</td>
+          <td>Proyectos, cotizaciones, cartera de clientes, finanzas y portafolio</td>
+        </tr>
+        <tr>
+          <td><b>ANIMA COMPANY</b></td>
+          <td>Empresas con operación formal</td>
+          <td>Clientes, pedidos, inventario, compras, reparto y cobranza</td>
+        </tr>
+      </table>
+      <p style="margin-top:14px">
+        Los módulos incluidos, el número de usuarios y los valores quedan definidos en el plan
+        contratado y son visibles dentro de la plataforma. Subir de plan habilita módulos sobre la
+        misma información: no exige migrar nada.
+      </p>
+      <div class="nota">
+        <p>
+          <b>ANIMA está en desarrollo activo.</b> Se agregan módulos y se corrigen cosas de forma
+          continua. Avisaremos con antelación razonable cualquier cambio que altere de forma
+          relevante lo que el Cliente ya usa.
+        </p>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section id="acceso">
+      <h2><span class="n">03</span>Acceso y cuentas</h2>
       <ul>
-        <li><b>Qué guardamos:</b> tu correo (para iniciar sesión) y los datos que tú creas (Alma, trayectoria, portafolio, Raíz, proyectos, vínculos, memorias, agenda, Huellas).</li>
-        <li><b>Privado por defecto:</b> tu Raíz, memorias, agenda, vínculos y proyectos son <b>privados</b>. Nadie más los ve, ni siquiera dentro de un Clan o Santuario.</li>
-        <li><b>Lo que sí es público:</b> solo lo que tú eliges mostrar en tu Vista pública (nombre, bio, etiquetas, trayectoria, portafolio, enlaces).</li>
-        <li><b>No vendemos tus datos</b> ni los usamos para publicidad.</li>
-        <li><b>Infraestructura:</b> los datos se almacenan de forma segura en Supabase (PostgreSQL) con seguridad a nivel de fila (RLS).</li>
+        <li><b>No hay registro abierto.</b> Las cuentas se abren por invitación o a partir de una
+          solicitud revisada. Cada implementación se acuerda antes con quien la va a usar.</li>
+        <li>Cada persona usa una cuenta propia, con su correo. Las cuentas <b>no se comparten</b>:
+          el registro de quién hizo qué deja de servir si dos personas entran con la misma.</li>
+        <li>El Cliente es responsable de mantener sus credenciales en reserva y de avisarnos si
+          sospecha que alguien más las tiene.</li>
+        <li>Quien administra la organización decide a quién dar de alta, con qué rol y hasta qué
+          nivel, y puede retirar ese acceso en cualquier momento.</li>
+        <li>El número de usuarios activos está limitado por el plan contratado.</li>
       </ul>
+    </section>
 
-      <h2 id="terminos">2. Términos de uso</h2>
+    <!-- 4 -->
+    <section id="datos">
+      <h2><span class="n">04</span>De quién son los datos</h2>
+      <p>
+        <b>La información que el Cliente carga es del Cliente.</b> Sus clientes, pedidos, precios,
+        costos, proyectos, cotizaciones, documentos y archivos siguen siendo suyos mientras use el
+        servicio y también cuando lo deje.
+      </p>
+      <p>
+        ANIMA actúa como encargado del tratamiento: los guarda y los procesa para prestar el
+        servicio, siguiendo las instrucciones del Cliente. <b>No los vende, no los cede a terceros
+        con fines comerciales y no los usa para publicidad.</b>
+      </p>
+      <h3>Qué ve quien mantiene el software</h3>
+      <p>
+        La administración de ANIMA alcanza la <b>relación comercial</b>: qué plan tiene cada
+        organización, cuántos usuarios activos tiene, qué se le cobró y qué pagó. <b>No alcanza su
+        operación.</b> Las ventas, los costos, los clientes y el inventario de una organización no
+        son visibles desde la administración de la plataforma, y la base de datos tampoco los
+        entrega: la restricción está escrita en sus políticas de acceso, no solo en la aplicación.
+      </p>
+      <p>
+        La única excepción es el <b>soporte</b>: si el Cliente pide ayuda con un problema concreto y
+        para resolverlo hace falta mirar sus datos, lo pediremos y lo haremos con su autorización
+        expresa, acotado a eso y por el tiempo necesario.
+      </p>
+    </section>
+
+    <!-- 5 -->
+    <section id="privacidad">
+      <h2><span class="n">05</span>Privacidad</h2>
+      <h3>Qué guardamos</h3>
       <ul>
-        <li>El acceso es <b>por invitación</b> durante la Founding Era.</li>
-        <li>Eres responsable del contenido que publicas. Respeta los derechos de autor y a las demás Almas.</li>
-        <li>No se permite contenido ilegal, de odio, acoso ni spam. Podemos suspender Almas que incumplan.</li>
-        <li>ANIMA está en beta: pueden ocurrir cambios, interrupciones o pérdidas de datos. Te avisaremos de cambios importantes.</li>
-        <li>Conservas la propiedad de tu obra y tu contenido.</li>
+        <li><b>De la cuenta:</b> correo electrónico, nombre y el rol dentro de su organización.</li>
+        <li><b>De la organización:</b> nombre, identificación tributaria, plan y logo, si lo sube.</li>
+        <li><b>Lo que el Cliente carga:</b> la información de su operación o de su taller.</li>
+        <li><b>Registro de actividad:</b> qué se cambió, quién y cuándo, sobre información sensible.
+          Sirve para reconstruir qué pasó cuando algo no cuadra.</li>
       </ul>
+      <h3>Dónde</h3>
+      <p>
+        La información se almacena en <b>Supabase</b> (PostgreSQL), sobre infraestructura de
+        Amazon Web Services. Puede residir fuera de Chile. Al usar el servicio, el Cliente acepta
+        ese tratamiento transfronterizo.
+      </p>
+      <h3>Terceros</h3>
+      <p>
+        Usamos solo los proveedores necesarios para operar: alojamiento de base de datos y
+        archivos, y envío de correos de la cuenta (por ejemplo, recuperar contraseña). No hay
+        publicidad ni rastreadores de terceros en la plataforma.
+      </p>
+      <h3>Derechos</h3>
+      <p>
+        El Cliente puede pedir en cualquier momento acceder a sus datos, corregirlos, exportarlos o
+        eliminarlos, escribiendo al contacto de la sección 13. Respondemos dentro de los plazos que
+        exige la ley chilena de protección de datos personales.
+      </p>
+      <div class="nota">
+        <p>
+          <b>Sobre ANIMA STUDIO.</b> En STUDIO existe una capa pública opcional —perfil, portafolio,
+          trayectoria—. Solo se publica lo que la persona elige mostrar. Su información de trabajo
+          (finanzas, proyectos, clientes, agenda) es privada por defecto.
+        </p>
+      </div>
+    </section>
 
-      <h2 id="seguridad">3. Seguridad</h2>
+    <!-- 6 -->
+    <section id="seguridad">
+      <h2><span class="n">06</span>Seguridad</h2>
       <ul>
-        <li>Inicio de sesión con correo y contraseña cifrada (no guardamos tu contraseña en texto plano).</li>
-        <li>Cada Alma solo puede leer y escribir sus propios datos privados (RLS).</li>
-        <li>Usa una contraseña única. Si detectas algo extraño, escríbenos.</li>
-        <li>LUMBRE funciona de forma local por defecto; no envía tu información a servidores de IA salvo que tú lo conectes.</li>
+        <li><b>Aislamiento entre organizaciones a nivel de base de datos.</b> PostgreSQL aplica
+          <code>row level security</code> en cada tabla: una consulta mal escrita en la aplicación
+          no puede devolver información de otra organización, porque la base no se la entrega.</li>
+        <li><b>Permisos por nivel de rol</b> (propietario, administrador, encargado, empleado,
+          lectura), verificados en el servidor y no en la pantalla.</li>
+        <li>Las contraseñas se guardan cifradas con <code>bcrypt</code>. Nadie —tampoco
+          nosotros— puede leerlas.</li>
+        <li>Todo el tráfico viaja cifrado (HTTPS).</li>
+        <li>Si ocurriera un incidente que afecte datos del Cliente, se lo comunicaremos sin demora
+          indebida, con lo que sepamos y lo que estemos haciendo.</li>
       </ul>
+    </section>
 
-      <h2 id="contacto">4. Contacto</h2>
-      <p>¿Dudas o quieres borrar tu Alma y tus datos? Escribe a <b>SARK</b>, creador de ANIMA. Atenderemos tu solicitud.</p>
-    </div>
+    <!-- 7 -->
+    <section id="pagos">
+      <h2><span class="n">07</span>Planes y pagos</h2>
+      <ul>
+        <li>El servicio se cobra según el plan contratado. Los conceptos habituales son
+          <b>implementación</b> (una vez), <b>mensualidad</b> (recurrente) y, cuando corresponda,
+          <b>soporte</b>, <b>desarrollo a medida</b> o <b>módulos adicionales</b>.</li>
+        <li>Los valores se acuerdan por escrito antes de comenzar y quedan registrados en la
+          plataforma, donde el Cliente puede consultar sus cobros y pagos.</li>
+        <li>Los precios se expresan en pesos chilenos. Salvo que se indique lo contrario, no
+          incluyen impuestos.</li>
+        <li>La mensualidad se factura por período adelantado.</li>
+        <li><b>La mora no corta el acceso de forma automática.</b> Si hay pagos pendientes nos
+          pondremos en contacto; suspender el servicio es una decisión que se avisa antes, con
+          plazo razonable para regularizar.</li>
+        <li>Un cambio de precio se avisa con <b>al menos 30 días</b> de antelación y nunca se
+          aplica de forma retroactiva.</li>
+      </ul>
+    </section>
 
-    <p class="muted" style="text-align:center;margin-top:30px;font-size:12px">© 2026 ANIMA TSC — Technology System Connection</p>
+    <!-- 8 -->
+    <section id="disponibilidad">
+      <h2><span class="n">08</span>Disponibilidad y soporte</h2>
+      <ul>
+        <li>Trabajamos para que el servicio esté disponible de forma continua, pero <b>no
+          garantizamos un porcentaje de disponibilidad</b> mientras ANIMA esté en desarrollo. Si en
+          algún momento se compromete un nivel de servicio, se hará por escrito y en un anexo.</li>
+        <li>Las mantenciones planificadas se avisan con antelación y se hacen fuera de horario de
+          trabajo cuando es posible.</li>
+        <li>El soporte se presta por los canales acordados con cada Cliente. Los tiempos de
+          respuesta dependen del plan.</li>
+        <li>Mantenemos respaldos de la base de datos. Aun así, recomendamos al Cliente exportar
+          periódicamente su información crítica.</li>
+      </ul>
+    </section>
+
+    <!-- 9 -->
+    <section id="uso">
+      <h2><span class="n">09</span>Uso aceptable</h2>
+      <p>Al usar ANIMA TSC, el Cliente se compromete a:</p>
+      <ul>
+        <li>No cargar información obtenida ilícitamente ni tratar datos personales de terceros sin
+          la base legal para hacerlo.</li>
+        <li>No intentar acceder a información de otras organizaciones, ni sondear, vulnerar o
+          eludir los controles de seguridad.</li>
+        <li>No revender, sublicenciar ni ofrecer el servicio como propio sin acuerdo escrito.</li>
+        <li>No usar el sistema para actividades ilegales, ni para hostigar o dañar a personas.</li>
+        <li>No someter la plataforma a cargas automatizadas que degraden el servicio para otros.</li>
+      </ul>
+      <p>
+        El incumplimiento grave habilita a suspender el acceso. Salvo urgencia de seguridad,
+        avisaremos antes y daremos ocasión de corregirlo.
+      </p>
+    </section>
+
+    <!-- 10 -->
+    <section id="propiedad">
+      <h2><span class="n">10</span>Propiedad intelectual</h2>
+      <ul>
+        <li><b>El software es de ANIMA.</b> El Cliente recibe un derecho de uso mientras su plan
+          esté vigente: no una copia, no el código, no una licencia perpetua.</li>
+        <li><b>Los contenidos son del Cliente.</b> Su información, sus documentos, sus obras y su
+          logo siguen siendo suyos.</li>
+        <li>Al subir su logo, el Cliente nos autoriza únicamente a mostrarlo dentro de su propia
+          plataforma. Para usarlo como referencia comercial pediremos su permiso por escrito.</li>
+        <li>Los desarrollos a medida que se paguen como tales quedan disponibles para el Cliente
+          dentro de la plataforma. La propiedad del código base sigue siendo de ANIMA, salvo pacto
+          expreso distinto.</li>
+      </ul>
+    </section>
+
+    <!-- 11 -->
+    <section id="termino">
+      <h2><span class="n">11</span>Término y salida</h2>
+      <ul>
+        <li>El Cliente puede terminar cuando quiera, avisando con <b>30 días</b>. No se cobra
+          penalización por irse.</li>
+        <li>ANIMA puede terminar avisando con <b>60 días</b>, salvo incumplimiento grave.</li>
+        <li><b>Al terminar, el Cliente tiene 60 días para exportar su información.</b> Se la
+          entregamos en un formato legible por máquina, sin costo.</li>
+        <li>Pasado ese plazo, los datos se eliminan de los sistemas activos. Los respaldos rotan y
+          se sobrescriben según su propio ciclo.</li>
+        <li>Lo pagado por períodos ya prestados no se devuelve; lo pagado por adelantado y no
+          usado, sí.</li>
+      </ul>
+    </section>
+
+    <!-- 12 -->
+    <section id="cambios">
+      <h2><span class="n">12</span>Cambios en estas condiciones</h2>
+      <p>
+        Si estas condiciones cambian de forma relevante, avisaremos con <b>30 días</b> de
+        antelación, por correo y dentro de la plataforma. Si el Cliente no está de acuerdo, puede
+        terminar sin penalización antes de que entren en vigor. Los cambios menores —redacción,
+        aclaraciones— se publican con su fecha de actualización.
+      </p>
+      <p>
+        Estas condiciones se rigen por la ley chilena. Cualquier controversia se someterá a los
+        tribunales ordinarios de Concepción, sin perjuicio de los derechos que la ley reconoce a
+        los consumidores.
+      </p>
+    </section>
+
+    <!-- 13 -->
+    <section id="contacto">
+      <h2><span class="n">13</span>Contacto</h2>
+      <p>
+        Para dudas sobre estas condiciones, ejercer derechos sobre datos personales, pedir una
+        exportación o reportar un problema de seguridad:
+        <b><a href="mailto:sarkgraff@gmail.com">sarkgraff@gmail.com</a></b>.
+      </p>
+      <p>Respondemos toda solicitud, aunque sea para decir que necesitamos más tiempo.</p>
+    </section>
+
+    <footer>
+      <p>
+        © 2026 <b>ANIMA TSC — Technology System Connection</b><br>
+        <a href="index.html">Inicio</a> · <a href="app/">Entrar a la plataforma</a>
+      </p>
+    </footer>
   </main>
 </body>
 </html>

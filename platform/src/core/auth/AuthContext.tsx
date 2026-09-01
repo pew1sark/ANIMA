@@ -7,6 +7,9 @@ interface AuthValue {
   user: User | null;
   loading: boolean;
   isPlatformAdmin: boolean;
+  /** Volvió del correo de recuperación: hay sesión, pero para cambiar la clave. */
+  recuperando: boolean;
+  terminarRecuperacion: () => void;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -17,10 +20,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [recuperando, setRecuperando] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setLoading(false); });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    /* El enlace del correo abre una sesión de verdad, pero solo sirve para una
+       cosa: poner una contraseña nueva. Si no se atiende este evento, la app
+       lo trataría como un ingreso normal y la persona nunca la cambiaría. */
+    const { data: sub } = supabase.auth.onAuthStateChange((evento, s) => {
+      setSession(s);
+      if (evento === 'PASSWORD_RECOVERY') setRecuperando(true);
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -36,12 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: session?.user ?? null,
     loading,
     isPlatformAdmin,
+    recuperando,
+    terminarRecuperacion: () => setRecuperando(false),
     async signIn(email, password) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
     },
     async signOut() { await supabase.auth.signOut(); }
-  }), [session, loading, isPlatformAdmin]);
+  }), [session, loading, isPlatformAdmin, recuperando]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

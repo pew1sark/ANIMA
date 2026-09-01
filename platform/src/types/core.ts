@@ -42,7 +42,8 @@ export interface Company {
   /** La sub-plataforma a la que pertenece. Viene incrustada desde
    *  `product_lines`; puede faltar si la organización aún no tiene línea. */
   linea?: ProductLineInfo | null;
-  branding: Record<string, unknown>;
+  /** Lo que el cliente puede adaptar a su marca. Ver services/marca.service. */
+  branding: { logo_url?: string | null; color?: string | null } | null;
   settings: Record<string, unknown>;
   created_at: string;
 }

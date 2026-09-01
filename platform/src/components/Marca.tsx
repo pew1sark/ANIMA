@@ -1,15 +1,57 @@
-export function Marca({ sub = 'Plataforma' }: { sub?: string }) {
+/* La marca de ANIMA: la misma ∧ de la portada, trazada, sin caja ni relleno.
+   Es el único logo del sistema — si cambia, cambia aquí y en index.html del
+   sitio, y en ningún otro sitio más.
+
+   Cuando una organización sube el suyo, ANIMA no se pelea con él: cede la
+   cabecera y baja al pie como "Powered by ANIMA TSC" (ver <PieAnima>). */
+export function Apex({ className = 'w-[22px] h-[22px]' }: { className?: string }) {
   return (
-    <span className="flex items-center gap-2.5">
-      <span className="w-8 h-8 rounded-[10px] grid place-items-center border border-line bg-sunk text-accent-deep shrink-0">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-          <path d="M12 3l7 4v10l-7 4-7-4V7zM12 8l3.5 2v4L12 16l-3.5-2v-4z" />
-        </svg>
-      </span>
-      <span className="leading-tight">
-        <b className="block text-[15px] font-extrabold tracking-tight">ANIMA</b>
-        <span className="text-[10px] uppercase tracking-[.12em] font-extrabold text-accent-deep">{sub}</span>
+    <svg viewBox="0 0 100 100" fill="none" aria-hidden="true" className={className}>
+      <path d="M18 82 L50 20 L82 82" stroke="currentColor" strokeWidth="7"
+            strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Marca({ sub = 'TSC' }: { sub?: string }) {
+  return (
+    <span className="flex items-center gap-3">
+      <Apex className="w-[26px] h-[26px] text-ink shrink-0" />
+      <span className="leading-none">
+        <b className="block text-[15px] font-extrabold tracking-[.14em]">ANIMA</b>
+        <span className="block mt-1 text-[9px] uppercase tracking-[.3em] font-bold text-muted">{sub}</span>
       </span>
     </span>
+  );
+}
+
+/* El logo de la organización, si lo subió. Si no, sus iniciales. Minimalista a
+   propósito: es la marca del cliente, no un banner. */
+export function MarcaCliente({ nombre, logo, sub }:
+  { nombre: string; logo?: string | null; sub?: string | null }) {
+  return (
+    <span className="flex items-center gap-3 min-w-0">
+      {logo
+        ? <img src={logo} alt={nombre}
+               className="w-8 h-8 rounded-lg object-contain bg-surface shrink-0" />
+        : <span className="w-8 h-8 rounded-lg grid place-items-center bg-accent/12 text-accent-deep
+                           font-extrabold text-[12px] shrink-0">
+            {nombre.slice(0, 2).toUpperCase()}
+          </span>}
+      <span className="min-w-0 leading-tight">
+        <b className="block text-[13.5px] font-bold truncate">{nombre}</b>
+        {sub && <span className="block text-[10px] uppercase tracking-[.14em] font-extrabold text-muted truncate">{sub}</span>}
+      </span>
+    </span>
+  );
+}
+
+/* El pie. Donde manda la marca del cliente, ANIMA firma abajo y en pequeño. */
+export function PieAnima({ className = '' }: { className?: string }) {
+  return (
+    <p className={`flex items-center gap-1.5 text-[10.5px] text-faint ${className}`}>
+      <Apex className="w-[11px] h-[11px]" />
+      <span className="tracking-[.08em]">Powered by <b className="font-bold">ANIMA TSC</b></span>
+    </p>
   );
 }

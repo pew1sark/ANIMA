@@ -14,6 +14,12 @@
   --color-accent-deep: #7b5920;
   --color-ok: #3a8a5f;
   --color-danger: #b23b3b;
+
+  /* La misma tipografía que la portada. Inter para la interfaz; Cormorant
+     para los títulos, que es lo que le da el aire del sitio. */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 html, body, #root { height: 100%; }
@@ -24,8 +30,42 @@ body {
     var(--color-bg);
   background-attachment: fixed;
   color: var(--color-ink);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, system-ui, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  letter-spacing: .01em;
+}
+
+/* ---------------------------------------------------------------------------
+   Movimiento
+   ---------------------------------------------------------------------------
+   Una sola gramática para todo: las cosas aparecen subiendo un poco y se van
+   desvaneciendo. Nada rebota, nada gira. Lo mismo en STUDIO y en COMPANY.
+   Se respeta a quien pidió menos movimiento. */
+
+@keyframes anima-aparece {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes anima-entra {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Una vista que entra. El retraso escalona lo que llega junto. */
+.aparece      { animation: anima-aparece .42s cubic-bezier(.22,.61,.36,1) both; }
+.aparece-1    { animation-delay: .05s; }
+.aparece-2    { animation-delay: .10s; }
+.aparece-3    { animation-delay: .15s; }
+.entra        { animation: anima-entra .3s ease both; }
+
+/* Lo que se puede tocar responde igual en todas partes. */
+.toque { transition: border-color .2s ease, background-color .2s ease,
+                     color .2s ease, transform .2s ease, opacity .2s ease; }
+.toque:hover { transform: translateY(-1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .aparece, .entra { animation: none; opacity: 1; transform: none; }
+  .toque:hover { transform: none; }
 }
 
 /* La espera. Es la misma figura que dibuja el sitio en `showBootLoader()`

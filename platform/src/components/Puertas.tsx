@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/core/auth/AuthContext';
-import { Marca } from '@/components/Marca';
+import { Marca, Apex } from '@/components/Marca';
 import { env } from '@/config/env';
 
 /* El primer lugar después de entrar. ANIMA es una sola cuenta y dos mundos:
@@ -20,7 +20,7 @@ export function Puertas({ studio, company, consola }:
 
   return (
     <div className="min-h-full grid place-items-center p-6">
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-2xl aparece">
         <div className="flex items-center justify-between mb-8">
           <Marca />
           <button onClick={signOut} className="text-[13px] text-muted hover:text-ink transition">
@@ -37,12 +37,7 @@ export function Puertas({ studio, company, consola }:
             titulo="ANIMA STUDIO"
             lema="Donde creas."
             texto="Para quien trabaja con su obra: tu Alma, el Taller, el Clan y el Mundo."
-            glifo={
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"
-                   strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 20 L12 5 L20 20" />
-              </svg>
-            }
+            glifo={<Apex className="w-[22px] h-[22px]" />}
           />}
           {company && <Puerta
             onClick={company}
@@ -93,8 +88,7 @@ function Puerta({ onClick, titulo, lema, texto, glifo }: {
   return (
     <button onClick={onClick}
       className="text-left p-5 rounded-3xl border border-line bg-surface hover:border-accent
-                 hover:-translate-y-0.5 transition group
-                 shadow-[0_10px_30px_rgba(0,0,0,.04)]">
+                 toque group shadow-[0_10px_30px_rgba(0,0,0,.04)]">
       <span className="w-11 h-11 rounded-2xl grid place-items-center border border-line bg-sunk
                        text-accent-deep group-hover:bg-accent group-hover:text-white
                        group-hover:border-accent transition">

@@ -3,7 +3,8 @@ import { useAuth } from '@/core/auth/AuthContext';
 import { useTenant } from '@/core/tenant/TenantContext';
 import { MODULES } from '@/core/modules/registry';
 import { cargarEspacio, cargarKpis, type Espacio as EspacioData } from '@/core/tenant/Espacio';
-import { Marca } from '@/components/Marca';
+import { Marca, MarcaCliente, PieAnima } from '@/components/Marca';
+import { MarcaDeLaEmpresa } from '@/components/company/MarcaEmpresa';
 import { Clientes } from '@/components/company/Clientes';
 import type { ModuleSlug } from '@/types/core';
 
@@ -18,6 +19,7 @@ export function Espacio({ volver }: { volver?: () => void }) {
   const { user, isPlatformAdmin, signOut } = useAuth();
   const { memberships, current, select } = useTenant();
   const cid = current?.company.id;
+  const marca = current?.company.branding ?? null;
 
   const [esp, setEsp] = useState<EspacioData | null>(null);
   const [kpis, setKpis] = useState<Record<string, number>>({});
@@ -41,21 +43,14 @@ export function Espacio({ volver }: { volver?: () => void }) {
       {/* ---------- lateral ---------- */}
       <aside className="border-b md:border-b-0 md:border-r border-line bg-surface/70 backdrop-blur
                         md:sticky md:top-0 md:h-screen p-4 flex md:flex-col gap-4 overflow-x-auto">
-        <div className="hidden md:block"><Marca sub={esp?.empresa.linea?.replace('ANIMA ','') ?? 'Plataforma'} /></div>
-
+        {/* Arriba manda la marca de quien trabaja aquí. ANIMA firma al pie. */}
         {esp && (
-          <div className="hidden md:flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-line bg-sunk">
-            <span className="w-7 h-7 rounded-lg grid place-items-center bg-accent text-white font-extrabold text-[11px] shrink-0">
-              {esp.empresa.nombre.slice(0,2).toUpperCase()}
-            </span>
-            <span className="min-w-0 leading-tight">
-              <b className="block text-[13px] font-bold truncate">{esp.empresa.nombre}</b>
-              <span className="text-[10px] uppercase tracking-wider font-extrabold text-muted">
-                {esp.plan?.nombre ?? 'sin plan'}
-              </span>
-            </span>
+          <div className="hidden md:block px-1 pt-1">
+            <MarcaCliente nombre={esp.empresa.nombre} logo={marca?.logo_url}
+                          sub={esp.plan?.nombre ?? 'sin plan'} />
           </div>
         )}
+        <div className="md:hidden"><Marca sub={esp?.empresa.linea?.replace('ANIMA ','') ?? 'TSC'} /></div>
 
         <nav className="flex md:flex-col gap-1 flex-1">
           <Item activo={vista==='inicio'} onClick={() => setVista('inicio')} label="Inicio" />
@@ -77,6 +72,7 @@ export function Espacio({ volver }: { volver?: () => void }) {
               Cambiar de puerta
             </button>
           )}
+          <PieAnima className="px-3 pt-3 mt-1 border-t border-line" />
         </div>
       </aside>
 
@@ -104,7 +100,7 @@ export function Espacio({ volver }: { volver?: () => void }) {
 
           {!cargando && esp && vista === 'inicio' && (
             <>
-              <div>
+              <div className="aparece">
                 <h1 className="text-[30px] font-extrabold tracking-tight">{esp.empresa.nombre}</h1>
                 <p className="text-[13px] text-muted mt-1">
                   {esp.empresa.linea} · plan {esp.plan?.nombre ?? '—'} ·
@@ -112,7 +108,7 @@ export function Espacio({ volver }: { volver?: () => void }) {
                 </p>
               </div>
 
-              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4 aparece aparece-1">
                 <Kpi l="Ventas del mes" v={money(kpis.ventas_mes, esp.empresa.moneda)} />
                 <Kpi l="Por cobrar" v={money(kpis.cuentas_por_cobrar, esp.empresa.moneda)}
                      alerta={(kpis.cuentas_vencidas ?? 0) > 0 ? money(kpis.cuentas_vencidas, esp.empresa.moneda) + ' vencido' : undefined} />
@@ -158,8 +154,9 @@ export function Espacio({ volver }: { volver?: () => void }) {
             <PorConstruir slug={vista as ModuleSlug} />
           )}
 
-          {!cargando && esp && vista === 'config' && (
-            <Configuracion esp={esp} bloqueados={bloqueados} />
+          {!cargando && esp && cid && vista === 'config' && (
+            <Configuracion esp={esp} bloqueados={bloqueados}
+                           companyId={cid} puedeEditarMarca={esAdmin} />
           )}
         </main>
       </div>
@@ -197,11 +194,12 @@ function PorConstruir({ slug }: { slug: ModuleSlug }) {
   );
 }
 
-function Configuracion({ esp, bloqueados }:
-  { esp: EspacioData; bloqueados: EspacioData['modulos'] }) {
+function Configuracion({ esp, bloqueados, companyId, puedeEditarMarca }:
+  { esp: EspacioData; bloqueados: EspacioData['modulos'];
+    companyId: string; puedeEditarMarca: boolean }) {
   return (
     <>
-      <div>
+      <div className="aparece">
         <h1 className="text-2xl font-extrabold tracking-tight">Configuración</h1>
         <p className="text-[13px] text-muted mt-1 max-w-[62ch]">
           Cómo quedó armada tu plataforma. Un módulo se usa si lo tienes encendido
@@ -230,6 +228,8 @@ function Configuracion({ esp, bloqueados }:
           {bloqueados.length} módulo(s) encendido(s) que tu plan no incluye. Subiendo de plan se activan solos.
         </p>
       )}
+
+      {puedeEditarMarca && <MarcaDeLaEmpresa companyId={companyId} nombre={esp.empresa.nombre} />}
     </>
   );
 }

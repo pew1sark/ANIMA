@@ -40,7 +40,7 @@ export function Clientes({ companyId, puedeEditar }:
   const activos = todos.filter(c => c.status === 'activo').length;
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-5 aparece">
       <div className="flex items-end gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight">Clientes</h1>
@@ -94,7 +94,7 @@ export function Clientes({ companyId, puedeEditar }:
           {lista.map(c => (
             <button key={c.id} onClick={() => puedeEditar && setEditando(c)}
               disabled={!puedeEditar}
-              className="text-left p-4 rounded-2xl border border-line bg-surface transition group
+              className="text-left p-4 rounded-2xl border border-line bg-surface toque group
                          enabled:hover:border-accent disabled:cursor-default">
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="w-10 h-10 rounded-xl grid place-items-center bg-accent/12 text-accent-deep
