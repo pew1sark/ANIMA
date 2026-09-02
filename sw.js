@@ -1,14 +1,14 @@
 /* ANIMA — Service Worker (PWA)
    Network-first para archivos propios (siempre lo último), con
    respaldo a caché cuando no hay conexión. No intercepta Supabase ni CDNs. */
-const CACHE = "anima-v57";
+const CACHE = "anima-v58";
 const ASSETS = [
   "./", "index.html", "studio.html", "roadmap.html", "portfolio.html", "legal.html", "manifest.webmanifest",
   "umbral.html", "despertar.html", "home.html", "planes.html",
   "assets/css/anima.css", "assets/css/studio.css", "assets/css/umbral.css", "assets/css/world-tree.css", "assets/css/identity.css",
   "assets/js/seed.js", "assets/js/supabase.js", "assets/js/anima.js", "assets/js/portfolio.js",
   "assets/js/anima-state.js", "assets/js/rite.js", "assets/js/world-tree.js", "assets/js/icons.js",
-  "assets/img/icon.svg", "assets/img/lumbre.svg"
+  "assets/img/icon.svg", "assets/img/lumbre.svg", "assets/img/og-anima.png"
 ];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
