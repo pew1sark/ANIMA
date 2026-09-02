@@ -68,7 +68,7 @@ Company.
 
 ## Las dos puertas
 
-Después de entrar en `/ANIMA/app/` lo primero que aparece son dos puertas. No es
+Después de entrar en `/app/` lo primero que aparece son dos puertas. No es
 decoración: son dos formas distintas de trabajar y conviene decidir antes, no ir
 descubriéndolo por el menú.
 
@@ -100,7 +100,7 @@ sus 10.000 líneas ya existe y funciona; duplicarlo en React para mostrar
 "Falta construir esta pantalla" sería mentir. Se cruza sin volver a entrar
 porque las dos usan el mismo proyecto de Supabase en el mismo origen, así que
 comparten la sesión en `localStorage`. La ruta se deduce de `base` en
-`config/env.ts` (`/ANIMA/app/` → `/ANIMA/`); no hay una ruta escrita a mano.
+`config/env.ts` (`/app/` → `/`); no hay una ruta escrita a mano.
 
 Con una sola puerta abierta no se pregunta. Un Alma de la Alpha reincorporada
 —sin organización ninguna— entra directo a STUDIO; un empleado de un cliente,

@@ -7,8 +7,8 @@ repositorio es lo que se ve; el despliegue lo hace
 `.github/workflows/publicar.yml` en cada push a `main`.
 
 ```
-pew1sark.github.io/ANIMA/          la portada pública  (index.html + assets/)
-pew1sark.github.io/ANIMA/app/      la plataforma       (app/ = build de Vite)
+animatsc.com/          la portada pública  (index.html + assets/)
+animatsc.com/app/      la plataforma       (app/ = build de Vite)
 ```
 
 **La raíz es el sitio en producción.** Mover un archivo de ahí lo rompe.
@@ -23,7 +23,7 @@ carpeta se pisarían. Publicándola en `app/` cada una conserva el suyo.
 
 ```bash
 cd platform
-npm run build      # sale a ../app, con base /ANIMA/app/
+npm run build      # sale a ../app, con base /app/
 ```
 
 Después se versiona `app/` y se empuja a `main`. Sí: el build va al repositorio.
@@ -46,13 +46,12 @@ navegador de todos modos. La seguridad no está ahí, está en las políticas RL
 
 ## Probar el build antes de publicar
 
-Servido desde la raíz, `/app/` no funciona: las rutas apuntan a `/ANIMA/app/`.
-Hay que reproducir la subruta:
+Desde el dominio propio el sitio se sirve en la raíz, así que basta servir el
+repositorio tal cual:
 
 ```bash
-mkdir -p /tmp/pages && cp -R . /tmp/pages/ANIMA
-cd /tmp/pages && python3 -m http.server 4180
-# → http://localhost:4180/ANIMA/app/
+python3 -m http.server 4180
+# → http://localhost:4180/app/
 ```
 
 ## Si el sitio no cambia después de un push
@@ -65,8 +64,8 @@ un workflow del repositorio: si falla, falla donde se ve.
 Para comprobar qué está publicado de verdad, sin creerle al navegador:
 
 ```bash
-curl -sI https://pew1sark.github.io/ANIMA/ | grep -i last-modified
-curl -s  https://pew1sark.github.io/ANIMA/sw.js | grep -o 'anima-v[0-9]*'
+curl -sI https://animatsc.com/ | grep -i last-modified
+curl -s  https://animatsc.com/sw.js | grep -o 'anima-v[0-9]*'
 ```
 
 Ese `anima-v…` es la versión del service worker en `sw.js`. Si no coincide con

@@ -8,6 +8,7 @@ ni una base de datos por cliente. Hay un código y una base, y cada empresa es u
 
 ```
 GITHUB · un repositorio          github.com/pew1sark/ANIMA
+DOMINIO · el sitio público       animatsc.com  (CNAME en la raíz)
         │
    ANIMA Plataforma
         │

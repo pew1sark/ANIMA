@@ -6,7 +6,7 @@ function required(name: string, value: string | undefined): string {
 }
 
 /* El sitio de ANIMA vive un nivel arriba del build de la plataforma:
-   /ANIMA/app/ → /ANIMA/. Se deduce de `base`, así que no hay una ruta
+   /app/ → /. Se deduce de `base`, así que no hay una ruta
    escrita a mano que se pueda desincronizar. */
 const SITIO = import.meta.env.BASE_URL.replace(/app\/?$/, '');
 
