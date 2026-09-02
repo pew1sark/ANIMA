@@ -1,21 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/core/auth/AuthContext';
 import { useTenant } from '@/core/tenant/TenantContext';
-import { MODULES, MOSTRAR_TODOS_LOS_MODULOS } from '@/core/modules/registry';
-import { cargarEspacio, cargarKpis, type Espacio as EspacioData } from '@/core/tenant/Espacio';
+import { MODULES, MOSTRAR_TODOS_LOS_MODULOS, ZONAS } from '@/core/modules/registry';
+import { cargarEspacio, type Espacio as EspacioData } from '@/core/tenant/Espacio';
 import { Marca, MarcaCliente, PieAnima } from '@/components/Marca';
 import { MarcaDeLaEmpresa } from '@/components/company/MarcaEmpresa';
 import { CamposPropios } from '@/components/company/CamposPropios';
 import { PuestaEnMarcha } from '@/components/company/PuestaEnMarcha';
 import { Equipo } from '@/components/company/Equipo';
 import { Informes } from '@/components/company/Informes';
+import { Inicio } from '@/components/company/Inicio';
 import { Vista } from '@/components/datos/Vista';
 import { ESQUEMAS_POR_MODULO } from '@/core/datos/esquemas';
 import type { ModuleSlug } from '@/types/core';
-
-const money = (n = 0, m = 'CLP') =>
-  m === 'CLP' ? '$' + Math.round(n).toLocaleString('es-CL') : n.toLocaleString('es-CL');
-const num = (n = 0) => Math.round(n).toLocaleString('es-CL');
 
 /* El espacio de trabajo del cliente. La navegación NO está escrita a mano:
    sale de los módulos que su plan le permite. Dos empresas distintas ven
@@ -27,15 +24,14 @@ export function Espacio({ volver }: { volver?: () => void }) {
   const marca = current?.company.branding ?? null;
 
   const [esp, setEsp] = useState<EspacioData | null>(null);
-  const [kpis, setKpis] = useState<Record<string, number>>({});
   const [vista, setVista] = useState<string>('inicio');
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
     if (!cid) return;
     setCargando(true); setVista('inicio');
-    Promise.all([cargarEspacio(cid), cargarKpis(cid)])
-      .then(([e, k]) => { setEsp(e); setKpis(k); })
+    cargarEspacio(cid)
+      .then(setEsp)
       .catch(() => {}).finally(() => setCargando(false));
   }, [cid]);
 
@@ -44,6 +40,20 @@ export function Espacio({ volver }: { volver?: () => void }) {
     m.slug !== 'core' && (MOSTRAR_TODOS_LOS_MODULOS || m.disponible));
   const bloqueados  = (esp?.modulos ?? []).filter(m => m.encendido && !m.disponible);
   const esAdmin = (esp?.mi_rol?.nivel ?? 0) >= 80;
+
+  /* El menú por zonas. Un grupo sin módulos no se dibuja: encabezar una lista
+     vacía es peor que no encabezar nada. */
+  const zonas = useMemo(() => ZONAS.map(z => ({
+    ...z,
+    modulos: disponibles.filter(m => MODULES[m.slug as ModuleSlug]?.zona === z.id)
+  })).filter(z => z.modulos.length > 0), [esp]);
+
+  /* Cómo se llama lo que se está mirando. La cabecera lo dice, para que al
+     volver de otra pestaña del navegador no haya que deducirlo del contenido. */
+  const titulo = vista === 'inicio' ? 'Inicio'
+               : vista === 'informes' ? 'Informes'
+               : vista === 'config' ? 'Configuración'
+               : MODULES[vista as ModuleSlug]?.name ?? vista;
 
   return (
     <div className="min-h-full grid grid-cols-1 md:grid-cols-[248px_1fr]">
@@ -59,15 +69,31 @@ export function Espacio({ volver }: { volver?: () => void }) {
         )}
         <div className="md:hidden"><Marca sub={esp?.empresa.linea?.replace('ANIMA ','') ?? 'TSC'} /></div>
 
-        <nav className="flex md:flex-col gap-1 flex-1">
-          <Item activo={vista==='inicio'} onClick={() => setVista('inicio')} label="Inicio" />
-          {disponibles.map(m => (
-            <Item key={m.slug} activo={vista===m.slug} onClick={() => setVista(m.slug)}
-                  label={MODULES[m.slug as ModuleSlug]?.name ?? m.slug}
-                  fueraDelPlan={!m.disponible} />
+        {/* En pantalla ancha la navegación va agrupada; en móvil se convierte
+            en una sola tira que se desliza, donde los encabezados de grupo
+            solo estorbarían. */}
+        <nav className="flex md:flex-col gap-1 md:gap-4 flex-1">
+          <div className="flex md:flex-col gap-1">
+            <Item activo={vista==='inicio'} onClick={() => setVista('inicio')} label="Inicio" />
+            <Item activo={vista==='informes'} onClick={() => setVista('informes')} label="Informes" />
+          </div>
+
+          {zonas.map(z => (
+            <div key={z.id} className="flex md:flex-col gap-1">
+              <div className="grupo-nav hidden md:block">{z.nombre}</div>
+              {z.modulos.map(m => (
+                <Item key={m.slug} activo={vista===m.slug} onClick={() => setVista(m.slug)}
+                      label={MODULES[m.slug as ModuleSlug]?.name ?? m.slug}
+                      fueraDelPlan={!m.disponible} />
+              ))}
+            </div>
           ))}
-          <Item activo={vista==='informes'} onClick={() => setVista('informes')} label="Informes" />
-          {esAdmin && <Item activo={vista==='config'} onClick={() => setVista('config')} label="Configuración" />}
+
+          {esAdmin && (
+            <div className="flex md:flex-col gap-1">
+              <Item activo={vista==='config'} onClick={() => setVista('config')} label="Configuración" />
+            </div>
+          )}
         </nav>
 
         <div className="hidden md:grid gap-1.5">
@@ -89,10 +115,13 @@ export function Espacio({ volver }: { volver?: () => void }) {
       <div className="min-w-0">
         <header className="flex items-center gap-3 px-6 py-3 border-b border-line bg-surface/80 backdrop-blur sticky top-0 z-20">
           <span className="md:hidden"><Marca /></span>
-          <span className="hidden md:block text-[13px] text-muted">
-            {esp?.empresa.nombre} <span className="text-faint">·</span> {esp?.empresa.linea}
+          <span className="hidden md:flex items-baseline gap-2 min-w-0">
+            <b className="text-[13.5px] font-bold truncate">{titulo}</b>
+            <span className="text-[12.5px] text-faint truncate">
+              {esp?.empresa.nombre} · {esp?.empresa.linea}
+            </span>
           </span>
-          <span className="ml-auto text-[13px] text-muted hidden sm:block">{user?.email}</span>
+          <span className="ml-auto text-[13px] text-muted hidden lg:block truncate max-w-[220px]">{user?.email}</span>
           {isPlatformAdmin && (
             <span className="text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full bg-accent/15 text-accent-deep">
               Super Admin
@@ -104,34 +133,17 @@ export function Espacio({ volver }: { volver?: () => void }) {
           </button>
         </header>
 
-        <main className="p-6 max-w-4xl grid gap-8">
+        {/* El ancho: las tablas y los gráficos del panel no caben en 4xl, y
+            forzarlos ahí obliga a desplazar en horizontal lo que se lee en
+            vertical. El límite existe igual —una tabla a 2000px tampoco se
+            lee— pero está donde entra una fila de datos entera. */}
+        <main className="p-6 max-w-[1180px] grid gap-8">
           {cargando && <p className="text-[13px] text-muted">Cargando tu espacio…</p>}
 
-          {!cargando && esp && vista === 'inicio' && (
+          {!cargando && esp && cid && vista === 'inicio' && (
             <>
-              <div className="aparece">
-                <div className="rotulo">{esp.empresa.linea}</div>
-                <h1 className="titular mt-1.5" style={{ fontSize: 'clamp(30px,4vw,42px)' }}>
-                  {esp.empresa.nombre}
-                </h1>
-                <p className="text-[13px] text-muted mt-2">
-                  Plan {esp.plan?.nombre ?? '—'} · entras como {esp.mi_rol?.nombre ?? '—'}
-                </p>
-              </div>
-
-              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4 aparece aparece-1">
-                <Kpi l="Ventas del mes" v={money(kpis.ventas_mes, esp.empresa.moneda)} />
-                <Kpi l="Por cobrar" v={money(kpis.cuentas_por_cobrar, esp.empresa.moneda)}
-                     alerta={(kpis.cuentas_vencidas ?? 0) > 0 ? money(kpis.cuentas_vencidas, esp.empresa.moneda) + ' vencido' : undefined} />
-                <Kpi l="Pedidos abiertos" v={num(kpis.pedidos_pendientes)} />
-                <Kpi l="Stock" v={num(kpis.stock_total) + ' kg'}
-                     nota={kpis.stock_valor ? money(kpis.stock_valor, esp.empresa.moneda) : undefined} />
-                <Kpi l="Productos" v={num(kpis.productos_total)}
-                     alerta={(kpis.productos_stock_bajo ?? 0) > 0 ? num(kpis.productos_stock_bajo) + ' bajo mínimo' : undefined} />
-                <Kpi l="Clientes" v={num(kpis.clientes_activos)} />
-                <Kpi l="Proveedores" v={num(kpis.proveedores)} />
-                <Kpi l="Compras registradas" v={money(kpis.compras_historico, esp.empresa.moneda)} nota="histórico" />
-              </div>
+              <Inicio companyId={cid} moneda={esp.empresa.moneda}
+                      empresa={esp.empresa.nombre} linea={esp.empresa.linea} />
 
               {esp.features.length > 0 && (
                 <section className="grid gap-3">
@@ -141,8 +153,7 @@ export function Espacio({ volver }: { volver?: () => void }) {
                       <div key={f.slug} className="rounded-xl border border-line bg-surface p-4">
                         <div className="flex items-center gap-2 flex-wrap">
                           <b className="text-[14px] font-bold">{f.nombre}</b>
-                          <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5
-                                           rounded-full bg-accent/15 text-accent-deep">{f.etapa}</span>
+                          <span className="marca marca-acento">{f.etapa}</span>
                         </div>
                         {f.descripcion && <p className="text-[12.5px] text-muted mt-1">{f.descripcion}</p>}
                       </div>
@@ -291,7 +302,8 @@ function Modulos({ esp, bloqueados }:
         <div className="rotulo">Módulos</div>
         <p className="text-[13px] text-muted mt-1.5 max-w-[62ch]">
           Un módulo se usa si lo tienes encendido <em>y</em> tu plan lo incluye.
-          Mientras COMPANY se termina de construir, el menú los muestra todos.
+          En el menú aparecen los que cumplen las dos cosas; aquí está la lista
+          completa, para que se vea qué abre cada plan.
         </p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -323,25 +335,12 @@ function Modulos({ esp, bloqueados }:
 
 const Item = ({ activo, onClick, label, fueraDelPlan }:
   { activo: boolean; onClick: () => void; label: string; fueraDelPlan?: boolean }) => (
-  <button onClick={onClick}
-    className={`text-left px-3 py-2 rounded-xl text-[13.5px] transition whitespace-nowrap
-                flex items-center gap-2 ${
-      activo ? 'bg-ink text-bg font-bold' : 'text-ink-2 hover:bg-accent/10'}`}>
+  <button onClick={onClick} className="nav-item" aria-current={activo ? 'page' : undefined}>
     {label}
     {/* Un punto, no una etiqueta: se ve que está fuera del plan sin gritarlo. */}
     {fueraDelPlan && (
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${activo ? 'bg-bg/50' : 'bg-accent/50'}`}
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ml-auto ${activo ? 'bg-bg/50' : 'bg-accent/60'}`}
             title="Fuera de tu plan · visible mientras se construye" />
     )}
   </button>
-);
-
-const Kpi = ({ l, v, nota, alerta }:
-  { l: string; v: string; nota?: string; alerta?: string }) => (
-  <div className="tarjeta p-4 toque">
-    <div className="rotulo">{l}</div>
-    <div className="cifra-grande mt-2">{v}</div>
-    {alerta && <div className="text-[11.5px] font-bold text-danger mt-1.5">{alerta}</div>}
-    {nota && !alerta && <div className="text-[11.5px] text-faint mt-1.5">{nota}</div>}
-  </div>
 );
