@@ -3,169 +3,348 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f5f5f7" />
+  <meta name="theme-color" content="#0a0a0b" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/img/icon.svg" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ANIMA" />
-  <title>Planes — ANIMA TSC · Alma · Clan · Santuario</title>
-  <meta name="description" content="Las tres formas de habitar ANIMA: Alma (individual), Clan (2–8 Almas) y Santuario (organización). Elige tu umbral." />
+  <title>Planes — ANIMA TSC</title>
+  <meta name="description" content="Los planes de ANIMA STUDIO y ANIMA COMPANY. Un mismo núcleo; cada plan enciende los módulos que le corresponden. Subir de plan no migra nada." />
+  <meta property="og:title" content="Planes — ANIMA TSC" />
+  <meta property="og:description" content="STUDIO para quien crea. COMPANY para quien opera. Cada plan enciende lo que se usa." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/css/anima.css" />
-  <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cormorant+Garamond:wght@300&display=swap" rel="stylesheet" />
   <style>
-    .wrap{max-width:1140px;margin:0 auto;padding:22px 22px 90px}
-    .nav{position:sticky;top:14px;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:20px;
-      padding:12px 18px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.68);
-      backdrop-filter:blur(22px);box-shadow:0 16px 50px rgba(0,0,0,.06)}
-    .nav-links{display:flex;align-items:center;gap:10px}
+    /* Misma paleta y mismo aire que la portada: quien llega desde index.html
+       tiene que sentir que sigue en el mismo sistema, no en otro producto. */
+    :root{
+      --black:#08080a; --ink:#0a0a0b; --veil:#101013;
+      --soft:#9a9aa2; --faint:#5e5e66; --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.05);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--black);color:#ededf0;
+      font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      line-height:1.6;-webkit-font-smoothing:antialiased;letter-spacing:.01em;overflow-x:hidden}
+    a{color:inherit;text-decoration:none}
+    h1,h2,h3{margin:0;font-weight:400;letter-spacing:-.02em;line-height:1.1}
+    .serif{font-family:"Cormorant Garamond",serif;font-weight:300}
+    .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;text-transform:uppercase;letter-spacing:.34em;font-size:10.5px;color:var(--faint)}
+    .wrap{max-width:1080px;margin:0 auto;padding:0 26px}
+    .muted{color:var(--soft)} .faint{color:var(--faint)}
 
-    .head{text-align:center;padding:54px 0 18px;max-width:760px;margin:0 auto}
-    .eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:12px;font-weight:850;letter-spacing:.42em;
-      text-transform:uppercase;color:#7b5920;padding:8px 16px;border-radius:999px;border:1px solid rgba(208,170,99,.32);
-      background:rgba(208,170,99,.10);margin-bottom:16px}
-    .head h1{font-size:clamp(42px,8vw,86px);line-height:.92;letter-spacing:-.07em;margin:0}
-    .head p{color:var(--muted);font-size:18px;margin:18px auto 0;max-width:600px}
+    nav{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;align-items:center;justify-content:space-between;
+      padding:18px 26px;backdrop-filter:blur(10px);background:linear-gradient(180deg,rgba(8,8,10,.7),transparent);transition:.3s}
+    nav .brand{display:flex;align-items:center;gap:11px;font-size:15px;letter-spacing:.06em;font-weight:500}
+    nav .apex{width:20px;height:20px}
+    nav .links{display:flex;align-items:center;gap:8px}
+    nav a.lk{font-size:12.5px;color:var(--soft);padding:8px 12px;border-radius:2px;transition:.2s}
+    nav a.lk:hover,nav a.lk.on{color:#fff}
+    .btn{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);background:transparent;color:#fff;
+      border-radius:2px;padding:11px 20px;font-size:13px;font-weight:500;transition:.25s;letter-spacing:.04em}
+    .btn:hover{border-color:#fff;background:#fff;color:var(--ink)}
+    .btn.solid{background:#fff;color:var(--ink);border-color:#fff}
+    .btn.solid:hover{background:transparent;color:#fff;border-color:#fff}
+    .btn.sm{padding:8px 14px;font-size:12px}
+    @media(max-width:760px){ nav .links a.lk{display:none} }
 
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px;margin-top:30px}
-    .s4{grid-column:span 4}.s12{grid-column:span 12}
+    .head{padding:150px 0 12px;text-align:center}
+    .head h1{font-family:"Cormorant Garamond",serif;font-weight:300;font-size:clamp(32px,5.6vw,56px);margin-top:22px}
+    .head p{color:var(--soft);font-size:16px;max-width:600px;margin:20px auto 0}
 
-    .plan{display:flex;flex-direction:column;scroll-margin-top:96px;position:relative;transition:.25s ease}
-    .plan:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
-    .plan.featured{border-color:rgba(208,170,99,.45);box-shadow:0 28px 90px rgba(208,170,99,.16)}
-    .plan .lvl{font-size:40px;line-height:1}
-    .plan h2{font-size:30px;letter-spacing:-.04em;margin:10px 0 2px}
-    .plan .who{color:var(--muted);font-size:13.5px;min-height:34px}
-    .plan .feat{list-style:none;padding:0;margin:16px 0;line-height:1.5;flex:1}
-    .plan .feat li{display:flex;gap:9px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
-    .plan .feat li:first-child{border-top:0}
-    .plan .feat .ck{color:var(--gold);font-weight:900;flex:0 0 auto}
-    .ribbon{position:absolute;top:18px;right:18px}
+    section.block{padding:88px 0;border-top:1px solid var(--line-2)}
+    .eyebrow{margin-bottom:24px}
+    .lead{font-family:"Cormorant Garamond",serif;font-weight:300;font-size:clamp(26px,4.2vw,42px);line-height:1.14;max-width:780px}
+    .para{color:var(--soft);font-size:15.5px;max-width:640px;margin-top:20px}
 
-    .compare{width:100%;border-collapse:collapse;margin-top:14px;font-size:14px}
-    .compare th,.compare td{padding:13px 14px;text-align:left;border-bottom:1px solid var(--line)}
-    .compare th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-    .compare td.c{text-align:center}
-    .compare tr td:first-child{font-weight:700}
-    .yes{color:var(--ok);font-weight:800}.no{color:var(--soft)}
+    /* Tarjetas de plan */
+    .plans{display:grid;gap:18px;margin-top:44px}
+    .plans.tres{grid-template-columns:repeat(3,1fr)}
+    .plans.cuatro{grid-template-columns:repeat(4,1fr)}
+    .plan{display:flex;flex-direction:column;border:1px solid var(--line-2);border-radius:3px;padding:28px 24px;
+      background:linear-gradient(180deg,rgba(255,255,255,.025),transparent);transition:.3s;scroll-margin-top:96px}
+    .plan:hover{border-color:var(--line);background:linear-gradient(180deg,rgba(255,255,255,.05),transparent)}
+    .plan .tag{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+    .plan h3{font-size:22px;font-weight:500;letter-spacing:.02em;margin-top:14px}
+    .plan .cupo{font-size:12.5px;color:#fff;margin-top:6px}
+    .plan p.que{color:var(--soft);font-size:13.5px;margin:12px 0 0}
+    .plan ul{list-style:none;padding:0;margin:20px 0 24px;display:grid;gap:7px;flex:1}
+    .plan li{color:var(--faint);font-size:12.5px;padding-left:16px;position:relative;line-height:1.5}
+    .plan li::before{content:"—";position:absolute;left:0;color:var(--line)}
+    .plan li b{color:#c9c9ce;font-weight:500}
 
-    .footer{text-align:center;color:var(--muted);border-top:1px solid var(--line);padding:40px;margin-top:64px}
-    @media(max-width:880px){.s4{grid-column:span 12}.nav-links a.lk{display:none}.compare{display:block;overflow-x:auto}}
+    /* Comparativa */
+    .tabla{width:100%;border-collapse:collapse;margin-top:40px;font-size:13.5px}
+    .tabla th,.tabla td{padding:12px 14px;border-bottom:1px solid var(--line-2);text-align:left}
+    .tabla thead th{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);font-weight:400}
+    .tabla td.c,.tabla th.c{text-align:center}
+    .tabla tbody td:first-child{color:#ededf0}
+    .tabla tbody td:first-child small{display:block;color:var(--faint);font-size:11.5px;margin-top:3px;line-height:1.5}
+    .si{color:#fff}.no{color:var(--faint);opacity:.5}
+    .scrollx{overflow-x:auto}
+
+    .found{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:44px}
+    .found div{border:1px solid var(--line-2);border-radius:3px;padding:26px}
+    .found b{font-size:15px;font-weight:500;display:block}
+    .found p{color:var(--soft);font-size:13.5px;margin-top:9px}
+
+    .call{text-align:center;padding:110px 0}
+    .call .lead{margin:0 auto}
+    .call .para{margin:20px auto 0}
+    .call .acts{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+
+    footer{border-top:1px solid var(--line-2);padding:46px 0;text-align:center;color:var(--faint);font-size:12px}
+    footer .flinks{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+    footer .flinks a{color:var(--soft);font-size:12.5px}
+    footer .flinks a:hover{color:#fff}
+
+    @media(max-width:980px){ .plans.cuatro{grid-template-columns:repeat(2,1fr)} }
+    @media(max-width:760px){ .plans.tres,.plans.cuatro{grid-template-columns:1fr} .found{grid-template-columns:1fr} }
   </style>
+  <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>
 </head>
 <body>
-  <main class="wrap">
-    <nav class="nav">
-      <a class="brand" href="index.html" style="text-decoration:none"><span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>ANIMA TSC</a>
-      <div class="nav-links">
-        <a class="lk btn ghost sm" href="index.html">Inicio</a>
-        <a class="lk btn secondary sm" href="roadmap.html">Roadmap V6</a>
-        <a class="btn sm" href="app/">Cruzar el umbral →</a>
+
+  <nav id="nav">
+    <a class="brand" href="index.html">
+      <svg class="apex" viewBox="0 0 100 100" fill="none"><path d="M22 78 L50 26 L78 78" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ANIMA <span class="faint" style="font-size:10px;letter-spacing:.3em">TSC</span>
+    </a>
+    <div class="links">
+      <a class="lk" href="index.html#sistema">El sistema</a>
+      <a class="lk" href="index.html#modulos">Módulos</a>
+      <a class="lk on" href="planes.html">Planes</a>
+      <a class="btn sm solid" href="app/">Entrar</a>
+    </div>
+  </nav>
+
+  <header class="head wrap">
+    <div class="mono">Los planes</div>
+    <h1 class="serif">Un mismo núcleo. Cada plan enciende lo suyo.</h1>
+    <p>Clientes, dinero, agenda y permisos están construidos una sola vez para todo ANIMA. Tu plan no cambia el sistema:
+      decide qué módulos aparecen encendidos y cuánta gente entra contigo.</p>
+  </header>
+
+  <!-- ============================ STUDIO ============================ -->
+  <section class="block" id="studio">
+    <div class="wrap">
+      <div class="mono eyebrow">ANIMA STUDIO</div>
+      <h2 class="lead serif">Para quien vive de lo que crea.</h2>
+      <p class="para">Profesionales independientes, talleres y equipos pequeños que trabajan por encargo. El corazón es el
+        Taller: proyectos con avance por etapas, cotizaciones, abonos y portafolio.</p>
+
+      <div class="plans tres">
+        <div class="plan" id="solo">
+          <span class="tag">Studio · 01</span>
+          <h3>Solo</h3>
+          <div class="cupo">1 persona</div>
+          <p class="que">Un creador trabajando por su cuenta: obra, agenda y portafolio.</p>
+          <ul>
+            <li><b>Taller</b> — proyectos, cotizaciones y portafolio</li>
+            <li><b>Agenda</b> — compromisos y recordatorios</li>
+            <li><b>Core</b> — tu cuenta, tus permisos y la numeración de tus documentos</li>
+          </ul>
+          <a class="btn" href="mailto:sarkgraff@gmail.com?subject=ANIMA%20STUDIO%20—%20plan%20Solo">Conversar este plan →</a>
+        </div>
+
+        <div class="plan" id="taller">
+          <span class="tag">Studio · 02</span>
+          <h3>Taller</h3>
+          <div class="cupo">Hasta 3 personas</div>
+          <p class="que">Cuando hay clientes y dinero de por medio: cotizaciones, vínculos y finanzas.</p>
+          <ul>
+            <li>Todo lo del plan Solo</li>
+            <li><b>Clientes</b> — ficha, direcciones y listas de precio</li>
+            <li><b>Finanzas</b> — cobranza, pagos, saldos y movimientos</li>
+          </ul>
+          <a class="btn" href="mailto:sarkgraff@gmail.com?subject=ANIMA%20STUDIO%20—%20plan%20Taller">Conversar este plan →</a>
+        </div>
+
+        <div class="plan" id="clan">
+          <span class="tag">Studio · 03</span>
+          <h3>Clan</h3>
+          <div class="cupo">Hasta 10 personas</div>
+          <p class="que">Un equipo creativo con encargos y ventas.</p>
+          <ul>
+            <li>Todo lo del plan Taller, para cada miembro</li>
+            <li><b>Ventas</b> — catálogo, pedidos e historial de estados</li>
+            <li><b>Soporte</b> — canal directo con quien mantiene el software</li>
+          </ul>
+          <a class="btn" href="mailto:sarkgraff@gmail.com?subject=ANIMA%20STUDIO%20—%20plan%20Clan">Conversar este plan →</a>
+        </div>
       </div>
-    </nav>
 
-    <header class="head">
-      <span class="eyebrow">Los Planes</span>
-      <h1>Elige tu umbral</h1>
-      <p>ANIMA crece contigo: empieza como una <b>Alma</b>, reúnete en un <b>Clan</b> o levanta un <b>Santuario</b> completo. Tu identidad y tu privacidad viajan contigo en cada nivel.</p>
-    </header>
-
-    <!-- Planes -->
-    <div class="grid">
-      <!-- ALMA -->
-      <div class="card s4 plan" id="alma">
-        <span class="lvl">◆</span>
-        <span class="pill" style="margin-top:10px;width:max-content">Nivel 1</span>
-        <h2>Alma</h2>
-        <p class="who">Para el creador individual: artistas, muralistas, tatuadores, músicos, diseñadores.</p>
-        <ul class="feat">
-          <li><span class="ck">✦</span> Alma e identidad creativa editable</li>
-          <li><span class="ck">✦</span> Trayectoria, portafolio y memorias</li>
-          <li><span class="ck">✦</span> Proyectos (flujo de trabajo) y agenda</li>
-          <li><span class="ck">✦</span> Raíz privada y biblioteca</li>
-          <li><span class="ck">✦</span> Centro documental: cotizaciones, propuestas y más en PDF</li>
-          <li><span class="ck">✦</span> LUMBRE (modo local) y camino por niveles</li>
-        </ul>
-        <a class="btn" href="app/">Crear mi Alma →</a>
-      </div>
-
-      <!-- CLAN -->
-      <div class="card s4 plan featured" id="clan">
-        <span class="ribbon pill gold">Más elegido</span>
-        <span class="lvl">❂</span>
-        <span class="pill" style="margin-top:10px;width:max-content">Nivel 2</span>
-        <h2>Clan</h2>
-        <p class="who">Para estudios y colectivos: de 2 a 8 Almas que crean juntas.</p>
-        <ul class="feat">
-          <li><span class="ck">✦</span> Todo lo del plan Alma, para cada miembro</li>
-          <li><span class="ck">✦</span> Comunidad privada por invitación</li>
-          <li><span class="ck">✦</span> Agenda, vínculos y turnos compartidos</li>
-          <li><span class="ck">✦</span> Raíz del Clan y memoria colectiva</li>
-          <li><span class="ck">✦</span> Muro y constelación del Clan</li>
-          <li><span class="ck">✦</span> Cada Alma conserva su espacio privado</li>
-        </ul>
-        <a class="btn gold" href="app/">Solicitar un Clan →</a>
-      </div>
-
-      <!-- SANTUARIO -->
-      <div class="card s4 plan" id="santuario">
-        <span class="lvl">🜁</span>
-        <span class="pill" style="margin-top:10px;width:max-content">Nivel 3</span>
-        <h2>Santuario</h2>
-        <p class="who">Para organizaciones y comunidades: más de 8 Almas y varios Clanes.</p>
-        <ul class="feat">
-          <li><span class="ck">✦</span> Todo lo del plan Clan, a gran escala</li>
-          <li><span class="ck">✦</span> Múltiples Clanes y departamentos</li>
-          <li><span class="ck">✦</span> Raíz general y panel del Santuario</li>
-          <li><span class="ck">✦</span> Distribución por nivel y Almas destacadas</li>
-          <li><span class="ck">✦</span> LUMBRE organizacional (conectada)</li>
-          <li><span class="ck">✦</span> Roles y gobernanza del Creador</li>
-        </ul>
-        <a class="btn" href="app/">Hablar de un Santuario →</a>
+      <div class="scrollx">
+        <table class="tabla">
+          <thead><tr><th>Módulo</th><th class="c">Solo</th><th class="c">Taller</th><th class="c">Clan</th></tr></thead>
+          <tbody>
+            <tr><td>Taller<small>Proyectos, cotizaciones y portafolio.</small></td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Agenda<small>Compromisos y recordatorios.</small></td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Core<small>Empresa, usuarios, roles, numeración y auditoría.</small></td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Clientes<small>Ficha, despachos, listas de precio y precios especiales.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Finanzas<small>Cobranza, pagos, saldos de apertura y movimientos.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Ventas<small>Catálogo, pedidos y su historial de estados.</small></td><td class="c no">—</td><td class="c no">—</td><td class="c si">✓</td></tr>
+            <tr><td>Soporte<small>Canal con quien mantiene el software.</small></td><td class="c no">—</td><td class="c no">—</td><td class="c si">✓</td></tr>
+            <tr><td>Personas incluidas</td><td class="c">1</td><td class="c">3</td><td class="c">10</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
+  </section>
 
-    <!-- Comparativa -->
-    <div class="card s12" style="margin-top:22px">
-      <span class="pill gold">Comparativa</span>
-      <table class="compare">
-        <thead><tr><th>Qué incluye</th><th class="c">◆ Alma</th><th class="c">❂ Clan</th><th class="c">🜁 Santuario</th></tr></thead>
-        <tbody>
-          <tr><td>Almas</td><td class="c">1</td><td class="c">2–8</td><td class="c">8+</td></tr>
-          <tr><td>Espacio privado por Alma</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td></tr>
-          <tr><td>Centro documental + PDF</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td></tr>
-          <tr><td>Agenda y vínculos compartidos</td><td class="c no">—</td><td class="c yes">✓</td><td class="c yes">✓</td></tr>
-          <tr><td>Raíz colectiva</td><td class="c no">—</td><td class="c yes">✓</td><td class="c yes">✓</td></tr>
-          <tr><td>Múltiples Clanes y departamentos</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">✓</td></tr>
-          <tr><td>IA organizacional (LUMBRE conectada)</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">✓</td></tr>
-          <tr><td>Roles y gobernanza del Creador</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">✓</td></tr>
-        </tbody>
-      </table>
-      <p class="muted" style="font-size:12.5px;margin-top:14px">🔒 Privacidad absoluta: Mi Alma ≠ Mi Clan ≠ Mi Santuario. Nada se comparte automáticamente.</p>
-    </div>
+  <!-- ============================ COMPANY ============================ -->
+  <section class="block" id="company">
+    <div class="wrap">
+      <div class="mono eyebrow">ANIMA COMPANY</div>
+      <h2 class="lead serif">Para la empresa que ya no cabe en una planilla.</h2>
+      <p class="para">Operación con inventario, personal, reparto y cobranza. Los módulos de COMPANY se activan por plan y
+        se suman sobre el mismo núcleo: nada se migra al subir, se enciende lo que ya estaba ahí.</p>
 
-    <!-- CTA -->
-    <div class="card s12" style="text-align:center;padding:46px;margin-top:22px;background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.72))">
-      <span class="pill gold">The Founding Era</span>
-      <h2 style="font-size:clamp(26px,4.5vw,42px);letter-spacing:-.05em;margin:14px 0 8px">El acceso es por invitación</h2>
-      <p class="muted" style="max-width:580px;margin:0 auto">Estamos sembrando las primeras Almas. Cruza el umbral para conocer ANIMA por dentro o pide tu código de invitación.</p>
-      <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:24px">
-        <a class="btn" style="padding:16px 26px;font-size:15.5px" href="app/">Cruzar el umbral →</a>
-        <a class="btn secondary" style="padding:16px 26px;font-size:15.5px" href="index.html#filosofia">Conocer la filosofía</a>
+      <div class="plans cuatro">
+        <div class="plan" id="starter">
+          <span class="tag">Company · 01</span>
+          <h3>Starter</h3>
+          <div class="cupo">Hasta 2 personas</div>
+          <p class="que">Una persona empezando. Lo justo para ordenarse.</p>
+          <ul>
+            <li><b>Clientes</b> y listas de precio</li>
+            <li><b>Agenda</b> del equipo</li>
+            <li><b>Core</b> — usuarios, roles y auditoría</li>
+            <li><b>Soporte</b> directo</li>
+          </ul>
+          <a class="btn" href="mailto:sarkgraff@gmail.com?subject=ANIMA%20COMPANY%20—%20plan%20Starter">Conversar este plan →</a>
+        </div>
+
+        <div class="plan" id="pro">
+          <span class="tag">Company · 02</span>
+          <h3>Pro</h3>
+          <div class="cupo">Hasta 8 personas</div>
+          <p class="que">Un equipo chico con operación real.</p>
+          <ul>
+            <li>Todo lo del plan Starter</li>
+            <li><b>Ventas</b> — catálogo y pedidos</li>
+            <li><b>Finanzas</b> — cobranza y pagos</li>
+            <li><b>Taller</b> — proyectos y cotizaciones</li>
+          </ul>
+          <a class="btn" href="mailto:sarkgraff@gmail.com?subject=ANIMA%20COMPANY%20—%20plan%20Pro">Conversar este plan →</a>
+        </div>
+
+        <div class="plan" id="business">
+          <span class="tag">Company · 03</span>
+          <h3>Business</h3>
+          <div class="cupo">Hasta 25 personas</div>
+          <p class="que">Empresa con operación, reparto y control del dinero.</p>
+          <ul>
+            <li>Todo lo del plan Pro</li>
+            <li><b>Operaciones</b> — inventario por lotes, mermas, bodegas, compras y proveedores</li>
+            <li><b>Reparto</b> — rutas, entregas y seguimiento</li>
+            <li><b>Procesos</b> — órdenes, rendimientos y elaborados</li>
+          </ul>
+          <a class="btn" href="mailto:sarkgraff@gmail.com?subject=ANIMA%20COMPANY%20—%20plan%20Business">Conversar este plan →</a>
+        </div>
+
+        <div class="plan" id="enterprise">
+          <span class="tag">Company · 04</span>
+          <h3>Enterprise</h3>
+          <div class="cupo">Sin tope de personas</div>
+          <p class="que">A medida, con acompañamiento y desarrollos propios.</p>
+          <ul>
+            <li>Todos los módulos encendidos</li>
+            <li><b>IA</b> — asistencia sobre los datos de la empresa</li>
+            <li>Integraciones y desarrollos a pedido</li>
+            <li>Acompañamiento en la implementación</li>
+          </ul>
+          <a class="btn" href="mailto:sarkgraff@gmail.com?subject=ANIMA%20COMPANY%20—%20Enterprise">Conversar este plan →</a>
+        </div>
+      </div>
+
+      <div class="scrollx">
+        <table class="tabla">
+          <thead><tr><th>Módulo</th><th class="c">Starter</th><th class="c">Pro</th><th class="c">Business</th><th class="c">Enterprise</th></tr></thead>
+          <tbody>
+            <tr><td>Core<small>Empresa, usuarios, roles, numeración y auditoría.</small></td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Clientes<small>Ficha, despachos, listas de precio y precios especiales.</small></td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Agenda<small>Compromisos y recordatorios del equipo.</small></td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Soporte<small>Canal con quien mantiene el software.</small></td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Ventas<small>Catálogo, pedidos y su historial de estados.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Finanzas<small>Cobranza, pagos, saldos de apertura y movimientos.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Taller<small>Proyectos, cotizaciones y portafolio.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Operaciones<small>Inventario por lotes, mermas, bodegas, compras y proveedores.</small></td><td class="c no">—</td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Reparto<small>Rutas, entregas y seguimiento en terreno.</small></td><td class="c no">—</td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Procesos<small>Órdenes de proceso, rendimientos y productos elaborados.</small></td><td class="c no">—</td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>IA<small>Asistencia sobre los datos de la empresa.</small></td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c si">✓</td></tr>
+            <tr><td>Personas incluidas</td><td class="c">2</td><td class="c">8</td><td class="c">25</td><td class="c">Sin tope</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
+  </section>
 
-    <div class="footer">
-      <strong>ANIMA TSC — Technology System Connection</strong><br>ANIMA STUDIO · ANIMA COMPANY
-      <div style="margin-top:18px;font-size:11.5px;line-height:1.8">
-        <a href="legal.html#privacidad" style="color:var(--muted);margin:0 8px">Privacidad</a>·
-        <a href="legal.html#terminos" style="color:var(--muted);margin:0 8px">Términos</a>·
-        <a href="legal.html#seguridad" style="color:var(--muted);margin:0 8px">Seguridad</a>
+  <!-- ============================ CÓMO SE ENTRA ============================ -->
+  <section class="block" id="acceso">
+    <div class="wrap">
+      <div class="mono eyebrow">Cómo se entra</div>
+      <h2 class="lead serif">El plan decide qué se enciende. Nunca qué se guarda.</h2>
+      <div class="found">
+        <div>
+          <b>Subir de plan no migra nada</b>
+          <p>Los módulos que aún no te corresponden ya están construidos sobre las mismas tablas. Cambiar de plan los
+            enciende, con la información intacta y sin traspasos.</p>
+        </div>
+        <div>
+          <b>14 días para probarlo con tus datos</b>
+          <p>Todos los planes de incorporación parten con período de prueba. Enterprise no lo necesita: se arma con
+            acompañamiento desde el primer día.</p>
+        </div>
+        <div>
+          <b>Cada empresa ve lo suyo</b>
+          <p>La separación no depende del plan ni del código de la aplicación: PostgreSQL aplica row level security en
+            cada tabla, y la base no devuelve lo que no corresponde.</p>
+        </div>
+        <div>
+          <b>El precio se conversa en la incorporación</b>
+          <p>Depende de la línea, del plan y de cuánto acompañamiento necesite la puesta en marcha. ANIMA está
+            incorporando organizaciones de a poco: cada implementación se arma con quien la va a usar.</p>
+        </div>
       </div>
     </div>
-  </main>
+  </section>
+
+  <section class="call">
+    <div class="wrap">
+      <div class="mono eyebrow">Acceso por invitación</div>
+      <h2 class="lead serif">Conversemos antes de que exista una cuenta.</h2>
+      <p class="para">Cuéntanos cómo trabajas hoy y en qué se te va el tiempo. De ahí sale qué plataforma te sirve, qué
+        plan enciende lo que necesitas y qué queda fuera por ahora.</p>
+      <div class="acts">
+        <a class="btn solid" href="mailto:sarkgraff@gmail.com?subject=ANIMA%20TSC%20—%20quiero%20entrar">Escribir a ANIMA</a>
+        <a class="btn" href="index.html#sistema">Conocer el sistema</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="flinks">
+        <a href="index.html#sistema">El sistema</a>
+        <a href="index.html#modulos">Módulos</a>
+        <a href="planes.html">Planes</a>
+        <a href="legal.html#privacidad">Privacidad</a>
+        <a href="legal.html#terminos">Términos</a>
+        <a href="app/">Entrar</a>
+      </div>
+      <strong style="color:#cfcfd4;font-weight:500;letter-spacing:.04em">ANIMA TSC — Technology System Connection</strong><br>
+      <span style="opacity:.7">Sistema de gestión multiempresa · Concepción, Chile</span>
+    </div>
+  </footer>
+
+  <script>
+    addEventListener("scroll", function(){
+      var n = document.getElementById("nav");
+      n.style.background = scrollY > 40 ? "rgba(8,8,10,.82)" : "";
+    });
+  </script>
 </body>
 </html>
