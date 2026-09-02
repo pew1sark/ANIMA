@@ -1,38 +1,43 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/core/auth/AuthContext';
 import { Marca } from '@/components/Marca';
 import {
-  consolaService, pagado,
-  type ClienteCartera, type Cobro, type Concepto, type PlanDisponible,
-  type SolicitudAcceso
+  consolaService, senalesDe, gravedadDe, diasSin,
+  type EstadoCliente, type Gravedad, type PlanDisponible, type SolicitudAcceso
 } from '@/services/consola.service';
+import { dinero, cantidad, diaCorto } from '@/lib/formato';
 
-const money = (n = 0) => '$' + Math.round(n).toLocaleString('es-CL');
+/* La consola de plataforma: el centro de control de ANIMA TSC.
+   ---------------------------------------------------------------------------
+   Qué se mira aquí: si el cliente entra, si usa, si le queda cupo, si su plan
+   le sirve, si terminó de arrancar. Estado, no cuentas.
 
-/* El plan vendido tiene un tope de usuarios. Cuando se llena hay que verlo
-   antes de que el cliente choque contra él. */
-const cupoLleno = (c: ClienteCartera) =>
-  c.usuarios_del_plan != null && c.usuarios >= c.usuarios_del_plan;
-const fecha = (s?: string | null) =>
-  s ? new Date(s + 'T00:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+   Qué NO se mira aquí: cuánto debe, qué se le facturó, qué pagó. Eso vive en
+   ANIMA COMPANY, en la ficha del cliente, con los mismos documentos y los
+   mismos vencimientos que cualquier otro cliente. Estuvo aquí un tiempo y era
+   un enredo: dos sitios donde mirar lo mismo, y ninguno completo.
 
-/* La consola de plataforma. Aquí SARK no es dueño de nada: administra el
-   software que otros usan. Por eso no hay ni un dato de la operación del
-   cliente — RLS tampoco se lo daría. Solo la relación comercial. */
+   La operación del cliente tampoco se ve — y no por decencia: RLS no se la
+   entrega a nadie que no sea miembro de esa empresa. */
+
+const TONO: Record<Gravedad, string> = {
+  malo: 'var(--color-danger)', aviso: 'var(--color-aviso)', ok: 'var(--color-ok)'
+};
+
 export function Consola({ volver }: { volver?: () => void }) {
   const { user, signOut } = useAuth();
-  const [cartera, setCartera] = useState<ClienteCartera[]>([]);
+  const [clientes, setClientes] = useState<EstadoCliente[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [abierto, setAbierto] = useState<ClienteCartera | null>(null);
+  const [abierto, setAbierto] = useState<EstadoCliente | null>(null);
   const [nuevoCliente, setNuevoCliente] = useState(false);
   const [solicitudes, setSolicitudes] = useState<SolicitudAcceso[]>([]);
 
   const recargar = () => {
     setCargando(true);
-    consolaService.cartera()
-      .then(setCartera)
-      .catch(e => setError(e.message ?? 'No se pudo cargar la cartera'))
+    consolaService.estado()
+      .then(setClientes)
+      .catch(e => setError(e.message ?? 'No se pudo cargar el estado'))
       .finally(() => setCargando(false));
   };
   useEffect(recargar, []);
@@ -40,12 +45,21 @@ export function Consola({ volver }: { volver?: () => void }) {
     consolaService.solicitudes().then(setSolicitudes).catch(() => {});
   useEffect(() => { recargarSolicitudes(); }, []);
 
-  const totales = cartera.reduce((a, c) => ({
-    mrr:      a.mrr + (c.suscripcion === 'activa' ? (c.mensualidad ?? 0) : 0),
-    saldo:    a.saldo + Number(c.saldo ?? 0),
-    vencidos: a.vencidos + Number(c.vencidos ?? 0),
-    usuarios: a.usuarios + Number(c.usuarios ?? 0)
-  }), { mrr: 0, saldo: 0, vencidos: 0, usuarios: 0 });
+  /* Ordenados por lo que necesita atención. Una lista alfabética obliga a
+     leerla entera cada mañana para descubrir qué cambió. */
+  const lista = useMemo(() => {
+    const peso: Record<Gravedad, number> = { malo: 0, aviso: 1, ok: 2 };
+    return [...clientes]
+      .map(c => ({ c, senales: senalesDe(c) }))
+      .sort((a, b) => peso[gravedadDe(a.senales)] - peso[gravedadDe(b.senales)]
+                   || a.c.empresa.localeCompare(b.c.empresa));
+  }, [clientes]);
+
+  const totales = clientes.reduce((a, c) => ({
+    activos: a.activos + (c.suscripcion === 'activa' ? 1 : 0),
+    usuarios: a.usuarios + Number(c.usuarios ?? 0),
+    atencion: a.atencion + (gravedadDe(senalesDe(c)) !== 'ok' ? 1 : 0)
+  }), { activos: 0, usuarios: 0, atencion: 0 });
 
   return (
     <div className="min-h-full">
@@ -56,79 +70,87 @@ export function Consola({ volver }: { volver?: () => void }) {
             ← Cambiar de puerta
           </button>
         )}
-        <span className="ml-auto text-[13px] text-muted hidden sm:block">{user?.email}</span>
-        <span className="text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full bg-accent/15 text-accent-deep">
-          Super Admin
-        </span>
+        <span className="ml-auto text-[13px] text-muted hidden lg:block truncate max-w-[220px]">{user?.email}</span>
+        <span className="marca marca-acento">Super Admin</span>
         <button onClick={signOut}
           className="text-[13px] font-bold px-3.5 py-1.5 rounded-full border border-line hover:border-faint transition">
           Salir
         </button>
       </header>
 
-      <main className="p-6 max-w-4xl grid gap-8 aparece">
-        <div className="flex items-end gap-4 flex-wrap">
-          <div>
-            <h1 className="text-[30px] font-extrabold tracking-tight">Clientes</h1>
-            <p className="text-[13px] text-muted mt-1 max-w-[62ch]">
-              El negocio del software: quién usa la plataforma, con qué plan y qué debe.
-              La operación de cada cliente es suya — desde aquí no se ve, y la base tampoco la entrega.
+      <main className="p-6 max-w-[1180px] grid gap-6 aparece">
+        <div className="flex items-end gap-4 flex-wrap min-w-0">
+          <div className="min-w-0">
+            <div className="rotulo rotulo-tenue">ANIMA TSC</div>
+            <h1 className="titular mt-1">Centro de control</h1>
+            <p className="subtitulo mt-1.5">
+              El estado de cada cliente: si entra, si usa, si le queda cupo y si arrancó.
+              Lo que le facturas y lo que te debe vive en ANIMA COMPANY, en su ficha de cliente.
             </p>
           </div>
-          <button onClick={() => setNuevoCliente(true)}
-            className="ml-auto text-[13px] font-bold px-4 py-2 rounded-full bg-ink text-bg hover:opacity-90 transition">
+          <button onClick={() => setNuevoCliente(true)} className="b b-pri ml-auto">
             Nuevo cliente
           </button>
         </div>
 
-        {error && <p className="text-[13px] text-danger">{error}</p>}
-        {cargando && <p className="text-[13px] text-muted">Cargando la cartera…</p>}
+        {error && <p role="alert" className="tarjeta p-4 text-[13px] text-danger">{error}</p>}
+
+        {cargando && (
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4" aria-busy="true">
+            {[0, 1, 2, 3].map(i => <div key={i} className="tarjeta" style={{ height: 94 }} />)}
+          </div>
+        )}
 
         {!cargando && (
           <>
             <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-              <Kpi l="Ingreso mensual" v={money(totales.mrr)} nota="suscripciones activas" />
-              <Kpi l="Por cobrar" v={money(totales.saldo)}
-                   alerta={totales.vencidos > 0 ? `${totales.vencidos} cobro(s) vencido(s)` : undefined} />
-              <Kpi l="Clientes" v={String(cartera.length)} />
-              <Kpi l="Usuarios" v={String(totales.usuarios)} nota="con acceso hoy" />
+              <Kpi l="Clientes" v={cantidad(clientes.length)} />
+              <Kpi l="Suscripciones activas" v={cantidad(totales.activos)}
+                   nota={`de ${clientes.length}`} />
+              <Kpi l="Usuarios con acceso" v={cantidad(totales.usuarios)} />
+              <Kpi l="Piden atención" v={cantidad(totales.atencion)}
+                   tono={totales.atencion > 0 ? 'aviso' : 'ok'} />
             </div>
 
-            <div className="grid gap-2">
-              {cartera.map(c => (
-                <button key={c.company_id} onClick={() => setAbierto(c)}
-                  className="text-left p-4 rounded-2xl border border-line bg-surface hover:border-accent toque group">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span className="w-10 h-10 rounded-xl grid place-items-center bg-accent/12 text-accent-deep
-                                     font-extrabold text-[15px] shrink-0">
-                      {c.empresa.slice(0, 2).toUpperCase()}
-                    </span>
-                    <span className="min-w-0">
-                      <b className="block text-[15px] font-extrabold tracking-tight truncate">{c.empresa}</b>
-                      <span className="block text-[12px] text-muted">
-                        {c.linea ?? 'sin línea'} · {c.plan ?? 'sin plan'}
-                        {c.suscripcion && c.suscripcion !== 'activa' && ` · ${c.suscripcion}`}
+            <div className="grid gap-2.5">
+              {lista.map(({ c, senales }) => {
+                const g = gravedadDe(senales);
+                const dias = diasSin(c.ultima_actividad);
+                return (
+                  <button key={c.company_id} onClick={() => setAbierto(c)}
+                    className="tarjeta p-4 text-left toque hover:border-accent group">
+                    <div className="flex items-start gap-3 flex-wrap">
+                      {/* El punto es la respuesta rápida: qué mirar primero. */}
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-2"
+                            style={{ background: TONO[g] }} title={g} />
+                      <span className="min-w-0 flex-1">
+                        <b className="block text-[15px] tracking-tight truncate"
+                           style={{ fontWeight: 'var(--peso-negro)' }}>{c.empresa}</b>
+                        <span className="block text-[12px] text-muted">
+                          {c.linea ?? 'sin línea'} · {c.plan ?? 'sin plan'} · /{c.slug}
+                          {c.suscripcion && c.suscripcion !== 'activa' && ` · ${c.suscripcion}`}
+                        </span>
+                        <span className="flex flex-wrap gap-1.5 mt-2">
+                          {senales.map((s, i) => (
+                            <span key={i} className={`marca ${s.tono === 'malo' ? 'marca-malo'
+                                                     : s.tono === 'aviso' ? 'marca-aviso' : 'marca-ok'}`}>
+                              {s.texto}
+                            </span>
+                          ))}
+                        </span>
                       </span>
-                      <span className={`block text-[11.5px] ${cupoLleno(c) ? 'text-danger font-bold' : 'text-faint'}`}>
-                        {c.usuarios} de {c.usuarios_del_plan ?? '∞'} usuarios
+                      <span className="flex gap-6 shrink-0">
+                        <Mini l="Usuarios" v={`${c.usuarios}${c.usuarios_plan != null ? ` / ${c.usuarios_plan}` : ''}`} />
+                        <Mini l="Actividad" v={dias == null ? 'nunca' : dias === 0 ? 'hoy' : `${dias} d`} />
+                        <Mini l="Módulos" v={`${c.modulos} / ${c.modulos_plan}`} />
                       </span>
-                    </span>
-                    <span className="ml-auto text-right">
-                      <span className="block text-[15px] font-extrabold tabular-nums">{money(c.mensualidad ?? 0)}</span>
-                      <span className="text-[11px] text-faint">al mes</span>
-                    </span>
-                    {Number(c.saldo) > 0 && (
-                      <span className={`text-[11.5px] font-bold tabular-nums px-2.5 py-1 rounded-full
-                        ${Number(c.vencidos) > 0 ? 'bg-danger/12 text-danger' : 'bg-sunk text-muted'}`}>
-                        debe {money(Number(c.saldo))}
-                      </span>
-                    )}
-                    <span className="text-faint group-hover:text-accent transition">→</span>
-                  </div>
-                </button>
-              ))}
-              {cartera.length === 0 && (
-                <div className="rounded-2xl border border-line bg-surface p-8 text-center">
+                      <span className="text-faint group-hover:text-accent transition self-center">→</span>
+                    </div>
+                  </button>
+                );
+              })}
+              {clientes.length === 0 && (
+                <div className="tarjeta p-8 text-center">
                   <p className="text-[14px] font-bold">Todavía no hay clientes</p>
                   <p className="text-[13px] text-muted mt-1">El primero se da de alta con el botón de arriba.</p>
                 </div>
@@ -140,15 +162,81 @@ export function Consola({ volver }: { volver?: () => void }) {
         )}
       </main>
 
-      {abierto && <FichaCliente cliente={abierto} cerrar={() => { setAbierto(null); recargar(); }} />}
+      {abierto && <FichaEstado cliente={abierto} cerrar={() => setAbierto(null)} />}
       {nuevoCliente && <FormNuevoCliente cerrar={() => { setNuevoCliente(false); recargar(); }} />}
     </div>
   );
 }
 
-/* ---------- La ficha de un cliente: su cuenta con la plataforma ---------- */
-/* Quién pidió entrar desde el login. No crea nada: solo deja ver a quién hay
-   que responder, y marcar la petición cuando ya se atendió. */
+/* ---------------- La ficha: el estado de un cliente, en detalle ------------ */
+
+function FichaEstado({ cliente: c, cerrar }: { cliente: EstadoCliente; cerrar: () => void }) {
+  const senales = senalesDe(c);
+  const dias = diasSin(c.ultima_actividad);
+
+  return (
+    <Modal cerrar={cerrar} titulo={c.empresa}
+           sub={`${c.linea ?? 'sin línea'} · plan ${c.plan ?? '—'} · /${c.slug}`}>
+      <div className="grid gap-4">
+        <section className="grid gap-2">
+          <h3 className="rotulo rotulo-tenue">Qué pasa</h3>
+          <div className="grid gap-1.5">
+            {senales.map((s, i) => (
+              <div key={i} className="flex items-center gap-2.5 rounded-xl px-3 py-2"
+                   style={{ background: 'var(--color-sunk)' }}>
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: TONO[s.tono] }} />
+                <span className="text-[13px]">{s.texto}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="grid gap-2">
+          <h3 className="rotulo rotulo-tenue">Acceso</h3>
+          <div className="flex flex-wrap gap-x-8 gap-y-2">
+            <Dato l="Usuarios activos" v={`${c.usuarios}${c.usuarios_plan != null ? ` de ${c.usuarios_plan}` : ''}`} />
+            <Dato l="Suscripción" v={c.suscripcion ?? '—'} />
+            <Dato l="Estado de la cuenta" v={c.estado} />
+            <Dato l="Cliente desde" v={c.desde ? diaCorto(c.desde.slice(0, 10)) : '—'} />
+          </div>
+        </section>
+
+        <section className="grid gap-2">
+          <h3 className="rotulo rotulo-tenue">Uso</h3>
+          <div className="flex flex-wrap gap-x-8 gap-y-2">
+            <Dato l="Última actividad"
+                  v={dias == null ? 'nunca' : dias === 0 ? 'hoy' : `hace ${dias} días`} />
+            <Dato l="Acciones en 7 días" v={cantidad(c.acciones_7d)} />
+            <Dato l="Módulos encendidos" v={`${c.modulos} de ${c.modulos_plan} del plan`} />
+            <Dato l="Puesta en marcha" v={c.levantamiento} />
+          </div>
+        </section>
+
+        <section className="grid gap-2">
+          <h3 className="rotulo rotulo-tenue">Qué tiene cargado</h3>
+          <div className="flex flex-wrap gap-x-8 gap-y-2">
+            <Dato l="Clientes" v={cantidad(c.datos.clientes)} />
+            <Dato l="Productos" v={cantidad(c.datos.productos)} />
+            <Dato l="Pedidos" v={cantidad(c.datos.pedidos)} />
+            <Dato l="Pedidos en 30 días" v={cantidad(c.datos.pedidos_30d)} />
+          </div>
+          <p className="text-[11.5px] text-faint">
+            Son recuentos, no contenido: la operación de {c.empresa} es suya y la base no la entrega
+            a quien no sea miembro de esa empresa.
+          </p>
+        </section>
+
+        <p className="text-[12px] text-muted rounded-xl px-3.5 py-3" style={{ background: 'var(--color-sunk)' }}>
+          Lo que le facturas y lo que te debe no está aquí: vive en <b>ANIMA COMPANY</b>, en la ficha
+          de {c.empresa} como cliente tuyo, con sus documentos y vencimientos.
+        </p>
+      </div>
+    </Modal>
+  );
+}
+
+/* ---------------- Quién pidió entrar ---------------- */
+
 function Solicitudes({ lista, recargar }:
   { lista: SolicitudAcceso[]; recargar: () => void }) {
   const [obrando, setObrando] = useState<string | null>(null);
@@ -163,12 +251,9 @@ function Solicitudes({ lista, recargar }:
   return (
     <section className="grid gap-3">
       <div className="flex items-baseline gap-3">
-        <h2 className="text-[10px] uppercase tracking-wider font-extrabold text-muted">
-          Solicitudes de acceso
-        </h2>
+        <h2 className="rotulo">Solicitudes de acceso</h2>
         {pendientes.length > 0 && (
-          <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5
-                           rounded-full bg-accent/15 text-accent-deep">
+          <span className="marca marca-acento">
             {pendientes.length} pendiente{pendientes.length === 1 ? '' : 's'}
           </span>
         )}
@@ -182,7 +267,7 @@ function Solicitudes({ lista, recargar }:
 
       <div className="grid gap-2">
         {pendientes.map(s => (
-          <div key={s.id} className="rounded-2xl border border-line bg-surface p-4 aparece">
+          <div key={s.id} className="tarjeta p-4 aparece">
             <div className="flex items-start gap-3 flex-wrap">
               <span className="min-w-0 flex-1">
                 <b className="block text-[14px] font-bold truncate">{s.nombre || s.email}</b>
@@ -197,18 +282,12 @@ function Solicitudes({ lista, recargar }:
               </span>
               <span className="flex items-center gap-2">
                 <button onClick={() => resolver(s.id, 'invitada')} disabled={obrando === s.id}
-                  className="text-[12px] font-bold px-3 py-1.5 rounded-full bg-ink text-bg
-                             disabled:opacity-45 hover:opacity-90 transition">
-                  Invitada
-                </button>
+                  className="b b-pri b-sm">Invitada</button>
                 <button onClick={() => resolver(s.id, 'rechazada')} disabled={obrando === s.id}
-                  className="text-[12px] font-bold px-3 py-1.5 rounded-full border border-line
-                             hover:border-faint transition disabled:opacity-45">
-                  Descartar
-                </button>
+                  className="b b-sec b-sm">Descartar</button>
               </span>
             </div>
-            <p className="text-[11px] text-faint mt-2">{fecha(s.created_at.slice(0, 10))}</p>
+            <p className="text-[11px] text-faint mt-2">{diaCorto(s.created_at.slice(0, 10))}</p>
           </div>
         ))}
       </div>
@@ -216,208 +295,14 @@ function Solicitudes({ lista, recargar }:
   );
 }
 
-function FichaCliente({ cliente, cerrar }: { cliente: ClienteCartera; cerrar: () => void }) {
-  const [cobros, setCobros] = useState<Cobro[]>([]);
-  const [conceptos, setConceptos] = useState<Concepto[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [nuevo, setNuevo] = useState(false);
+/* ---------------- El alta ---------------- */
 
-  const recargar = () => {
-    setCargando(true);
-    Promise.all([consolaService.cobros(cliente.company_id), consolaService.conceptos()])
-      .then(([c, k]) => { setCobros(c); setConceptos(k); })
-      .catch(e => setError(e.message ?? 'No se pudieron cargar los cobros'))
-      .finally(() => setCargando(false));
-  };
-  useEffect(recargar, [cliente.company_id]);
-
-  return (
-    <Modal cerrar={cerrar} titulo={cliente.empresa}
-           sub={`${cliente.linea ?? '—'} · plan ${cliente.plan ?? '—'} · ${money(cliente.mensualidad ?? 0)} al mes`
-                + ` · ${cliente.usuarios} de ${cliente.usuarios_del_plan ?? '∞'} usuarios`}>
-      {error && <p className="text-[13px] text-danger">{error}</p>}
-      {cargando && <p className="text-[13px] text-muted">Cargando…</p>}
-
-      {!cargando && (
-        <>
-          <div className="flex items-center gap-3">
-            <h3 className="text-[10px] uppercase tracking-wider font-extrabold text-muted">Cobros</h3>
-            <button onClick={() => setNuevo(v => !v)}
-              className="ml-auto text-[12px] font-bold px-3 py-1.5 rounded-full border border-line hover:border-accent transition">
-              {nuevo ? 'Cancelar' : 'Nuevo cobro'}
-            </button>
-          </div>
-
-          {nuevo && (
-            <FormCobro companyId={cliente.company_id} conceptos={conceptos}
-                       listo={() => { setNuevo(false); recargar(); }} />
-          )}
-
-          <div className="grid gap-2">
-            {cobros.map(c => <FilaCobro key={c.id} cobro={c} conceptos={conceptos} recargar={recargar} />)}
-            {cobros.length === 0 && !nuevo && (
-              <p className="text-[13px] text-muted">Sin cobros emitidos todavía.</p>
-            )}
-          </div>
-        </>
-      )}
-    </Modal>
-  );
-}
-
-function FilaCobro({ cobro, conceptos, recargar }:
-  { cobro: Cobro; conceptos: Concepto[]; recargar: () => void }) {
-  const [pagando, setPagando] = useState(false);
-  const [monto, setMonto] = useState('');
-  const [metodo, setMetodo] = useState('transferencia');
-  const [error, setError] = useState<string | null>(null);
-
-  const yaPagado = pagado(cobro);
-  const resta = cobro.amount - yaPagado;
-  const nombre = conceptos.find(k => k.slug === cobro.concept)?.name ?? cobro.concept;
-  const vencido = cobro.status === 'pendiente' && cobro.due_date && cobro.due_date < new Date().toISOString().slice(0, 10);
-
-  const registrar = async () => {
-    setError(null);
-    const n = Number(monto);
-    if (!n || n <= 0) { setError('El monto tiene que ser mayor que cero'); return; }
-    if (n > resta) { setError(`Como máximo ${money(resta)}, que es lo que falta`); return; }
-    try {
-      await consolaService.registrarPago(cobro.id, n, metodo);
-      setPagando(false); setMonto(''); recargar();
-    } catch (e: any) { setError(e.message ?? 'No se pudo registrar'); }
-  };
-
-  return (
-    <div className={`rounded-xl border p-3.5 ${cobro.status === 'anulado' ? 'border-line/60 opacity-60' : 'border-line'} bg-surface`}>
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="min-w-0">
-          <b className="block text-[13.5px] font-bold">{nombre}</b>
-          <span className="text-[11.5px] text-muted">
-            {cobro.description || 'sin detalle'} · emitido {fecha(cobro.issued_at)}
-            {cobro.due_date && ` · vence ${fecha(cobro.due_date)}`}
-          </span>
-        </span>
-        <span className="ml-auto text-right">
-          <span className="block text-[14px] font-extrabold tabular-nums">{money(cobro.amount)}</span>
-          {yaPagado > 0 && yaPagado < cobro.amount &&
-            <span className="text-[11px] text-muted tabular-nums">pagado {money(yaPagado)}</span>}
-        </span>
-        <Estado status={cobro.status} vencido={!!vencido} />
-      </div>
-
-      {cobro.status === 'pendiente' && (
-        <div className="mt-2.5 flex items-center gap-2 flex-wrap">
-          {!pagando ? (
-            <button onClick={() => { setPagando(true); setMonto(String(resta)); }}
-              className="text-[12px] font-bold px-3 py-1.5 rounded-full border border-line hover:border-accent transition">
-              Registrar pago
-            </button>
-          ) : (
-            <>
-              <input value={monto} onChange={e => setMonto(e.target.value)} inputMode="numeric"
-                     placeholder="Monto"
-                     className="w-32 px-3 py-1.5 rounded-lg border border-line bg-bg text-[13px] tabular-nums" />
-              <select value={metodo} onChange={e => setMetodo(e.target.value)}
-                      className="px-3 py-1.5 rounded-lg border border-line bg-bg text-[13px]">
-                <option value="transferencia">Transferencia</option>
-                <option value="efectivo">Efectivo</option>
-                <option value="tarjeta">Tarjeta</option>
-                <option value="otro">Otro</option>
-              </select>
-              <button onClick={registrar}
-                className="text-[12px] font-bold px-3 py-1.5 rounded-full bg-ink text-bg hover:opacity-90 transition">
-                Guardar
-              </button>
-              <button onClick={() => { setPagando(false); setError(null); }}
-                className="text-[12px] text-muted hover:text-ink transition">Cancelar</button>
-            </>
-          )}
-          <button onClick={() => consolaService.anularCobro(cobro.id).then(recargar)}
-            className="text-[12px] text-muted hover:text-danger transition ml-auto">Anular</button>
-        </div>
-      )}
-
-      {error && <p className="text-[12px] text-danger mt-2">{error}</p>}
-
-      {(cobro.platform_payments ?? []).length > 0 && (
-        <div className="mt-2.5 pt-2.5 border-t border-line grid gap-1">
-          {cobro.platform_payments.map(p => (
-            <div key={p.id} className="flex items-center gap-2 text-[11.5px] text-muted">
-              <span>{fecha(p.paid_at)}</span>
-              <span className="text-faint">·</span>
-              <span>{p.method ?? 'sin método'}</span>
-              <span className="ml-auto tabular-nums font-bold text-ink-2">{money(p.amount)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FormCobro({ companyId, conceptos, listo }:
-  { companyId: string; conceptos: Concepto[]; listo: () => void }) {
-  const [concept, setConcept] = useState(conceptos[0]?.slug ?? 'mensualidad');
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [due, setDue] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [guardando, setGuardando] = useState(false);
-
-  const guardar = async () => {
-    setError(null);
-    const n = Number(amount);
-    if (!n || n <= 0) { setError('El monto tiene que ser mayor que cero'); return; }
-    setGuardando(true);
-    try {
-      await consolaService.crearCobro({
-        company_id: companyId, concept, amount: n,
-        description: description || null, due_date: due || null
-      });
-      listo();
-    } catch (e: any) { setError(e.message ?? 'No se pudo crear el cobro'); }
-    finally { setGuardando(false); }
-  };
-
-  return (
-    <div className="rounded-xl border border-accent/40 bg-sunk p-3.5 grid gap-2.5">
-      <div className="grid sm:grid-cols-2 gap-2.5">
-        <Campo l="Concepto">
-          <select value={concept} onChange={e => setConcept(e.target.value)} className={inputCls}>
-            {conceptos.map(k => <option key={k.slug} value={k.slug}>{k.name}</option>)}
-          </select>
-        </Campo>
-        <Campo l="Monto">
-          <input value={amount} onChange={e => setAmount(e.target.value)} inputMode="numeric"
-                 placeholder="0" className={inputCls + ' tabular-nums'} />
-        </Campo>
-      </div>
-      <Campo l="Detalle (opcional)">
-        <input value={description} onChange={e => setDescription(e.target.value)}
-               placeholder="Ej: mensualidad de septiembre" className={inputCls} />
-      </Campo>
-      <Campo l="Vence (opcional)">
-        <input type="date" value={due} onChange={e => setDue(e.target.value)} className={inputCls} />
-      </Campo>
-      {error && <p className="text-[12px] text-danger">{error}</p>}
-      <button onClick={guardar} disabled={guardando}
-        className="justify-self-start text-[13px] font-bold px-4 py-2 rounded-full bg-ink text-bg hover:opacity-90 transition disabled:opacity-50">
-        {guardando ? 'Guardando…' : 'Emitir cobro'}
-      </button>
-    </div>
-  );
-}
-
-/* ---------- Alta de cliente ---------- */
 function FormNuevoCliente({ cerrar }: { cerrar: () => void }) {
   const [planes, setPlanes] = useState<PlanDisponible[]>([]);
   const [nombre, setNombre] = useState('');
   const [slug, setSlug] = useState('');
   const [plan, setPlan] = useState('');
   const [mensualidad, setMensualidad] = useState('');
-  const [implementacion, setImplementacion] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -446,26 +331,26 @@ function FormNuevoCliente({ cerrar }: { cerrar: () => void }) {
         slug: slug || sugerirSlug(nombre),
         plan,
         linea: elegido?.linea_slug ?? 'company',
-        mensualidad: mensualidad ? Number(mensualidad) : null,
-        implementacion: implementacion ? Number(implementacion) : null
+        mensualidad: mensualidad ? Number(mensualidad) : null
       });
       cerrar();
-    } catch (e: any) { setError(e.message ?? 'No se pudo dar de alta'); }
-    finally { setGuardando(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo dar de alta');
+    } finally { setGuardando(false); }
   };
 
   return (
     <Modal cerrar={cerrar} titulo="Nuevo cliente"
-           sub="Queda registrado como cliente. No pasas a ser miembro de su empresa: sus usuarios se dan de alta cuando ellos entren.">
+           sub="Abre la cuenta y enciende lo que trae el plan. No pasas a ser miembro de su empresa: sus usuarios entran cuando los inviten.">
       <div className="grid gap-2.5">
         <Campo l="Nombre">
           <input value={nombre} autoFocus
                  onChange={e => { setNombre(e.target.value); if (!slug) setSlug(''); }}
-                 placeholder="Ej: Panadería San Miguel" className={inputCls} />
+                 placeholder="Ej: Panadería San Miguel" className="campo" />
         </Campo>
         <Campo l="Identificador" nota="minúsculas, números y guiones">
           <input value={slug || sugerirSlug(nombre)} onChange={e => setSlug(e.target.value)}
-                 placeholder="panaderia-san-miguel" className={inputCls} />
+                 placeholder="panaderia-san-miguel" className="campo" />
         </Campo>
         <div className="grid sm:grid-cols-2 gap-2.5">
           <Campo l="Plan">
@@ -475,26 +360,27 @@ function FormNuevoCliente({ cerrar }: { cerrar: () => void }) {
                       const p = planes.find(x => x.slug === e.target.value);
                       if (p) setMensualidad(String(p.price_amount));
                     }}
-                    className={inputCls}>
+                    className="campo">
               {planes.map(p => (
                 <option key={p.slug} value={p.slug}>
-                  {p.linea?.replace('ANIMA ', '')} · {p.name} — {money(p.price_amount)}
+                  {p.linea?.replace('ANIMA ', '')} · {p.name} — {dinero(p.price_amount)}
                 </option>
               ))}
             </select>
           </Campo>
-          <Campo l="Mensualidad" nota="puedes cambiarla">
+          <Campo l="Mensualidad pactada" nota="puede no ser la de lista">
             <input value={mensualidad} onChange={e => setMensualidad(e.target.value)} inputMode="numeric"
-                   className={inputCls + ' tabular-nums'} />
+                   className="campo tabular-nums" />
           </Campo>
         </div>
-        <Campo l="Implementación (opcional)" nota="si va, se emite el cobro con 30 días de plazo">
-          <input value={implementacion} onChange={e => setImplementacion(e.target.value)} inputMode="numeric"
-                 placeholder="0" className={inputCls + ' tabular-nums'} />
-        </Campo>
-        {error && <p className="text-[13px] text-danger">{error}</p>}
-        <button onClick={guardar} disabled={guardando}
-          className="justify-self-start text-[13px] font-bold px-4 py-2 rounded-full bg-ink text-bg hover:opacity-90 transition disabled:opacity-50">
+        {/* La implementación se cobraba desde aquí y ya no: es un documento del
+            cliente, y los documentos viven en COMPANY junto a los demás. */}
+        <p className="text-[12px] text-muted rounded-xl px-3.5 py-2.5" style={{ background: 'var(--color-sunk)' }}>
+          Lo que le cobres —implementación, cuotas, mensualidades— se registra en
+          <b> ANIMA COMPANY</b>, en su ficha de cliente. Aquí solo se abre la cuenta.
+        </p>
+        {error && <p role="alert" className="text-[13px] text-danger">{error}</p>}
+        <button onClick={guardar} disabled={guardando} className="b b-pri justify-self-start">
           {guardando ? 'Dando de alta…' : 'Dar de alta'}
         </button>
       </div>
@@ -502,56 +388,53 @@ function FormNuevoCliente({ cerrar }: { cerrar: () => void }) {
   );
 }
 
-/* ---------- Piezas ---------- */
-const inputCls = 'w-full px-3 py-2 rounded-lg border border-line bg-bg text-[13.5px]';
+/* ---------------- Piezas ---------------- */
 
 const Campo = ({ l, nota, children }: { l: string; nota?: string; children: React.ReactNode }) => (
   <label className="grid gap-1">
-    <span className="text-[10px] uppercase tracking-wider font-extrabold text-muted">
+    <span className="rotulo">
       {l}{nota && <span className="normal-case tracking-normal font-normal text-faint"> · {nota}</span>}
     </span>
     {children}
   </label>
 );
 
-const Estado = ({ status, vencido }: { status: string; vencido: boolean }) => {
-  const [txt, cls] =
-    status === 'pagado'  ? ['pagado', 'bg-ok/15 text-ok'] :
-    status === 'anulado' ? ['anulado', 'bg-sunk text-faint'] :
-    vencido              ? ['vencido', 'bg-danger/12 text-danger'] :
-                           ['pendiente', 'bg-sunk text-muted'];
-  return (
-    <span className={`text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full ${cls}`}>
-      {txt}
-    </span>
-  );
-};
-
-const Kpi = ({ l, v, nota, alerta }: { l: string; v: string; nota?: string; alerta?: string }) => (
-  <div className="rounded-2xl border border-line bg-surface p-4">
-    <div className="text-[10px] uppercase tracking-wider font-extrabold text-muted">{l}</div>
-    <div className="text-[21px] font-extrabold tracking-tight tabular-nums mt-0.5">{v}</div>
-    {alerta && <div className="text-[11.5px] font-bold text-danger mt-0.5">{alerta}</div>}
-    {nota && !alerta && <div className="text-[11.5px] text-faint mt-0.5">{nota}</div>}
+const Kpi = ({ l, v, nota, tono }: { l: string; v: string; nota?: string; tono?: Gravedad }) => (
+  <div className="tarjeta p-4 toque">
+    <div className="rotulo">{l}</div>
+    <div className="cifra-grande mt-2" style={{ color: tono && tono !== 'ok' ? TONO[tono] : undefined }}>{v}</div>
+    {nota && <div className="mt-1.5" style={{ fontSize: 11.5, color: 'var(--color-faint)' }}>{nota}</div>}
   </div>
+);
+
+const Mini = ({ l, v }: { l: string; v: string }) => (
+  <span className="text-right">
+    <span className="block rotulo rotulo-tenue" style={{ fontSize: 9.5 }}>{l}</span>
+    <b className="block text-[13.5px] cifra">{v}</b>
+  </span>
+);
+
+const Dato = ({ l, v }: { l: string; v: string }) => (
+  <span className="grid gap-0.5">
+    <span className="rotulo rotulo-tenue">{l}</span>
+    <b className="text-[14px]" style={{ fontWeight: 'var(--peso-fuerte)' }}>{v}</b>
+  </span>
 );
 
 function Modal({ titulo, sub, cerrar, children }:
   { titulo: string; sub?: string; cerrar: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-40 bg-ink/25 backdrop-blur-sm grid place-items-start justify-center overflow-y-auto p-4 sm:p-8"
-         onClick={cerrar}>
-      <div className="w-full max-w-xl rounded-2xl border border-line bg-bg shadow-xl"
-           onClick={e => e.stopPropagation()}>
-        <div className="flex items-start gap-3 p-5 border-b border-line">
+    <div className="panel-fondo entra" onClick={cerrar}>
+      <div className="panel max-w-xl" onClick={e => e.stopPropagation()}>
+        <header className="panel-cab">
           <div className="min-w-0">
-            <h2 className="text-[19px] font-extrabold tracking-tight">{titulo}</h2>
+            <h2 className="titular truncate" style={{ fontSize: 20 }}>{titulo}</h2>
             {sub && <p className="text-[12.5px] text-muted mt-0.5">{sub}</p>}
           </div>
           <button onClick={cerrar}
             className="ml-auto text-[13px] text-muted hover:text-ink transition shrink-0">Cerrar</button>
-        </div>
-        <div className="p-5 grid gap-3">{children}</div>
+        </header>
+        <div className="panel-cuerpo">{children}</div>
       </div>
     </div>
   );
