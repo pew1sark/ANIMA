@@ -44,6 +44,11 @@ export interface Campo {
   ancho?: string;
   /** Valor con el que nace una fila nueva. */
   porDefecto?: unknown;
+  /** Bajo qué encabezado va en la ficha. Los campos del mismo grupo salen
+   *  juntos y en el orden en que se declaran; los que no lo llevan abren el
+   *  formulario sin encabezado. Sin ningún `grupo` en el esquema, la ficha
+   *  parte sola entre lo principal y "Más datos". */
+  grupo?: string;
 }
 
 /* Las líneas de un documento: los productos de un pedido, los ítems de una

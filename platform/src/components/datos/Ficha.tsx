@@ -45,75 +45,89 @@ export function Ficha({ esquema, campos, fila, opciones, companyId, puedeEditar,
     catch (err) { setError(mensaje(err)); setGuardando(false); setConfirmando(false); }
   }
 
+  const bloques = agrupa(escribibles);
+
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-ink/25 backdrop-blur-sm entra"
-         onClick={cerrar}>
+    <div className="panel-fondo entra" onClick={cerrar}>
+      {/* Tres partes: cabecera fija, cuerpo que se desplaza, pie fijo. Cuando
+          todo se desplazaba junto —como estaba— un formulario largo dejaba
+          fuera de vista el título y el botón de guardar: había que subir a
+          ciegas para saber qué se estaba llenando. Las clases ya existían en
+          `index.css`; lo que faltaba era usarlas. */}
       <form onClick={e => e.stopPropagation()} onSubmit={guardar}
-        className="w-full max-w-2xl max-h-[88vh] overflow-y-auto bg-surface border border-line
-                   rounded-3xl p-6 shadow-[0_24px_60px_rgba(0,0,0,.14)] grid gap-5 aparece">
-        <div className="flex items-start gap-3">
+            className="panel max-w-2xl aparece">
+
+        <header className="panel-cab">
           <div className="min-w-0">
-            <h2 className="titular truncate" style={{ fontSize: 24 }}>
+            <h2 className="titular truncate" style={{ fontSize: 22 }}>
               {fila ? String(leer(fila, campos.find(c => c.key === esquema.principal)!) ?? esquema.singular)
                     : `${esquema.femenino ? 'Nueva' : 'Nuevo'} ${esquema.singular.toLowerCase()}`}
             </h2>
             <p className="text-[12.5px] text-muted mt-0.5">
-              {fila ? esquema.singular : 'Solo lo marcado como obligatorio hace falta ahora.'}
+              {fila ? esquema.singular : 'Solo lo marcado con * hace falta ahora.'}
             </p>
           </div>
-          <button type="button" onClick={cerrar}
-            className="ml-auto text-[13px] text-muted hover:text-ink transition">Cerrar</button>
-        </div>
+          <button type="button" onClick={cerrar} aria-label="Cerrar"
+            className="ml-auto shrink-0 text-[13px] text-muted hover:text-ink transition">Cerrar</button>
+        </header>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {escribibles.map(c => (
-            <label key={c.key} className={c.tipo === 'texto-largo' ? 'sm:col-span-2' : ''}>
-              <span className="rotulo block mb-1.5">
-                {c.label}
-                {c.requerido && <span className="text-danger ml-1">*</span>}
-                {c.propio === false && (
-                  <span className="ml-2 normal-case tracking-normal text-faint font-bold">· propio</span>
-                )}
-              </span>
-              <Editor campo={c} valor={v[c.key]} opciones={opciones[c.key]}
-                      onChange={x => setV(p => ({ ...p, [c.key]: x }))} />
-              {c.ayuda && <span className="block text-[11.5px] text-faint mt-1">{c.ayuda}</span>}
-            </label>
+        <div className="panel-cuerpo">
+          {bloques.map((b, i) => (
+            <section key={b.nombre ?? i} className="grid gap-3">
+              {b.nombre && (
+                <h3 className="rotulo rotulo-tenue"
+                    style={{ borderTop: i > 0 ? '1px solid var(--color-line)' : undefined,
+                             paddingTop: i > 0 ? 16 : 0 }}>
+                  {b.nombre}
+                </h3>
+              )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                {b.campos.map(c => (
+                  <label key={c.key} className={c.tipo === 'texto-largo' ? 'sm:col-span-2' : ''}>
+                    <span className="rotulo block mb-1.5">
+                      {c.label}
+                      {c.requerido && <span className="text-danger ml-1">*</span>}
+                      {c.propio === false && (
+                        <span className="ml-2 normal-case tracking-normal text-faint font-bold">· propio</span>
+                      )}
+                    </span>
+                    <Editor campo={c} valor={v[c.key]} opciones={opciones[c.key]}
+                            onChange={x => setV(p => ({ ...p, [c.key]: x }))} />
+                    {c.ayuda && <span className="block text-[11.5px] text-faint mt-1">{c.ayuda}</span>}
+                  </label>
+                ))}
+              </div>
+            </section>
           ))}
+
+          {/* Las líneas solo existen si el documento ya existe: necesitan su id. */}
+          {esquema.detalle && fila && (
+            <Lineas detalle={esquema.detalle} padreId={fila.id} companyId={companyId}
+                    opciones={opciones} puedeEditar={puedeEditar}
+                    alCambiar={() => onLineas?.()} />
+          )}
+          {esquema.detalle && !fila && (
+            <p className="text-[12.5px] text-muted bg-sunk rounded-xl px-4 py-3">
+              Guarda primero y podrás agregarle {esquema.detalle.titulo.toLowerCase()}.
+            </p>
+          )}
+
+          {calculados.length > 0 && (
+            <div className="rounded-2xl bg-sunk px-4 py-3">
+              <p className="rotulo mb-2">Lo calcula la base</p>
+              <div className="flex flex-wrap gap-x-6 gap-y-1.5">
+                {calculados.map(c => (
+                  <span key={c.key} className="text-[12.5px]">
+                    <span className="text-muted">{c.label}: </span>
+                    <b className="tabular-nums">{textoDe(c, leer(fila!, c))}</b>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Las líneas solo existen si el documento ya existe: necesitan su id. */}
-        {esquema.detalle && fila && (
-          <Lineas detalle={esquema.detalle} padreId={fila.id} companyId={companyId}
-                  opciones={opciones} puedeEditar={puedeEditar}
-                  alCambiar={() => onLineas?.()} />
-        )}
-        {esquema.detalle && !fila && (
-          <p className="text-[12.5px] text-muted bg-sunk rounded-xl px-4 py-3">
-            Guarda primero y podrás agregarle {esquema.detalle.titulo.toLowerCase()}.
-          </p>
-        )}
-
-        {calculados.length > 0 && (
-          <div className="rounded-2xl bg-sunk px-4 py-3">
-            <p className="rotulo mb-2">Lo calcula la base</p>
-            <div className="flex flex-wrap gap-x-6 gap-y-1.5">
-              {calculados.map(c => (
-                <span key={c.key} className="text-[12.5px]">
-                  <span className="text-muted">{c.label}: </span>
-                  <b className="tabular-nums">{textoDe(c, leer(fila!, c))}</b>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <p role="alert" className="entra text-[13px] text-danger bg-danger/10 border border-danger/20
-                                     rounded-xl px-3.5 py-2.5">{error}</p>
-        )}
-
-        <div className="flex items-center gap-2 flex-wrap">
+        <footer className="panel-pie">
           {onBorrar && fila && (
             confirmando ? (
               <span className="flex items-center gap-2">
@@ -124,10 +138,16 @@ export function Ficha({ esquema, campos, fila, opciones, companyId, puedeEditar,
                 <button type="button" onClick={() => setConfirmando(false)} className="b b-fan b-sm">No</button>
               </span>
             ) : (
-              <button type="button" onClick={() => setConfirmando(true)} className="b b-mal">
+              <button type="button" onClick={() => setConfirmando(true)} className="b b-mal b-sm">
                 Eliminar
               </button>
             )
+          )}
+          {/* El error va en el pie y no en el cuerpo: si va arriba, en un
+              formulario largo se guarda, no pasa nada visible, y hay que subir
+              a buscar por qué. */}
+          {error && (
+            <p role="alert" className="entra text-[12.5px] text-danger min-w-0 flex-1">{error}</p>
           )}
           <span className="ml-auto flex items-center gap-2">
             <button type="button" onClick={cerrar} className="b b-sec">Cancelar</button>
@@ -135,10 +155,40 @@ export function Ficha({ esquema, campos, fila, opciones, companyId, puedeEditar,
               {guardando ? 'Guardando…' : 'Guardar'}
             </button>
           </span>
-        </div>
+        </footer>
       </form>
     </div>
   );
+}
+
+/* Cómo se ordena un formulario largo.
+   ---------------------------------------------------------------------------
+   La ficha de un cliente tiene diecisiete campos. Puestos en fila, todos con
+   el mismo peso, hay que leerlos enteros para encontrar el teléfono.
+
+   Si el esquema declara `grupo`, manda esa declaración. Si no, se parte en dos
+   por un criterio que ya existía: lo que sale en la tabla o es obligatorio es
+   lo que se mira siempre; el resto se agrupa debajo bajo un encabezado. */
+function agrupa(campos: Campo[]): { nombre: string | null; campos: Campo[] }[] {
+  if (campos.some(c => c.grupo)) {
+    const orden: string[] = [];
+    const por = new Map<string, Campo[]>();
+    for (const c of campos) {
+      const g = c.grupo ?? '';
+      if (!por.has(g)) { por.set(g, []); orden.push(g); }
+      por.get(g)!.push(c);
+    }
+    return orden.map(g => ({ nombre: g || null, campos: por.get(g)! }));
+  }
+
+  const principales = campos.filter(c => c.enTabla || c.requerido);
+  const resto = campos.filter(c => !(c.enTabla || c.requerido));
+  if (resto.length === 0) return [{ nombre: null, campos: principales }];
+  if (principales.length === 0) return [{ nombre: null, campos: resto }];
+  return [
+    { nombre: null, campos: principales },
+    { nombre: 'Más datos', campos: resto }
+  ];
 }
 
 function inicial(campos: Campo[], fila: Fila | null): Record<string, unknown> {
