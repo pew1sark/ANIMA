@@ -10,8 +10,10 @@ import { PuestaEnMarcha } from '@/components/company/PuestaEnMarcha';
 import { Equipo } from '@/components/company/Equipo';
 import { Informes } from '@/components/company/Informes';
 import { Inicio } from '@/components/company/Inicio';
+import { ResumenModulo } from '@/components/company/ResumenModulo';
+import { Novedades } from '@/components/company/Novedades';
+import { pestanasDe } from '@/core/modules/pestanas';
 import { Vista } from '@/components/datos/Vista';
-import { ESQUEMAS_POR_MODULO } from '@/core/datos/esquemas';
 import type { ModuleSlug } from '@/types/core';
 
 /* El espacio de trabajo del cliente. La navegación NO está escrita a mano:
@@ -170,7 +172,7 @@ export function Espacio({ volver }: { volver?: () => void }) {
 
           {!cargando && esp && cid && vista !== 'inicio' && vista !== 'config' && vista !== 'informes' && (
             <Modulo slug={vista as ModuleSlug} companyId={cid}
-                    nivel={esp.mi_rol?.nivel ?? 0} />
+                    nivel={esp.mi_rol?.nivel ?? 0} moneda={esp.empresa.moneda} />
           )}
 
           {!cargando && esp && cid && vista === 'config' && (
@@ -183,34 +185,58 @@ export function Espacio({ volver }: { volver?: () => void }) {
   );
 }
 
-/* Un módulo del plan. Si tiene entidades declaradas, se dibujan con el motor
-   —una pestaña por entidad—; si no, se dice con honestidad qué falta. */
-function Modulo({ slug, companyId, nivel }:
-  { slug: ModuleSlug; companyId: string; nivel: number }) {
-  const esquemas = ESQUEMAS_POR_MODULO[slug] ?? [];
+/* Exportado para poder mirarlo aislado: es la pieza con más ramas de la app
+   —pestañas, resumen, entidades— y montarla sola ahorra tener que entrar con
+   sesión para ver si una pestaña dibuja.
+
+   Un módulo del plan, con sus sub-pestañas. La primera casi siempre es el
+   resumen —la respuesta— y detrás vienen las entidades, que son donde se
+   carga. Qué pestañas tiene lo declara `pestanasDe()`; aquí solo se dibujan.
+
+   Un módulo sin nada declarado dice con honestidad qué falta. */
+export function Modulo({ slug, companyId, nivel, moneda }:
+  { slug: ModuleSlug; companyId: string; nivel: number; moneda: string }) {
+  const pestanas = useMemo(() => pestanasDe(slug), [slug]);
   const [cual, setCual] = useState(0);
 
   useEffect(() => { setCual(0); }, [slug]);
 
-  if (esquemas.length === 0) return <PorConstruir slug={slug} />;
-  const activo = esquemas[Math.min(cual, esquemas.length - 1)]!;
+  if (pestanas.length === 0) return <PorConstruir slug={slug} />;
+  const activa = pestanas[Math.min(cual, pestanas.length - 1)]!;
+  const def = MODULES[slug];
 
   return (
     <div className="grid gap-4">
-      {esquemas.length > 1 && (
-        <div role="tablist" className="flex gap-1 flex-wrap">
-          {esquemas.map((e, i) => (
-            <button key={e.tabla} onClick={() => setCual(i)} role="tab"
+      <div className="aparece">
+        <div className="rotulo">{def?.name ?? slug}</div>
+        {def?.cubre && <p className="subtitulo mt-1.5">{def.cubre}</p>}
+      </div>
+
+      {pestanas.length > 1 && (
+        <div role="tablist" className="flex gap-1 flex-wrap"
+             style={{ borderBottom: '1px solid var(--color-line)', paddingBottom: 12 }}>
+          {pestanas.map((p, i) => (
+            <button key={p.id} onClick={() => setCual(i)} role="tab"
                     aria-selected={i === cual} className="pest">
-              {e.titulo}
+              {p.nombre}
             </button>
           ))}
         </div>
       )}
+
+      {activa.tipo === 'resumen' && (
+        <ResumenModulo companyId={companyId} modulo={slug} moneda={moneda}
+                       titulo={def?.name ?? slug} />
+      )}
+
+      {activa.tipo === 'novedades' && <Novedades />}
+
       {/* Cada entidad pide su nivel: pagos y compras exigen 60, el resto 40.
           Es el mismo umbral que aplica RLS, dicho también en pantalla. */}
-      <Vista key={activo.tabla} esquema={activo} companyId={companyId}
-             puedeEditar={nivel >= (activo.nivelEscritura ?? 40)} />
+      {activa.tipo === 'datos' && (
+        <Vista key={activa.esquema.tabla} esquema={activa.esquema} companyId={companyId}
+               puedeEditar={nivel >= (activa.esquema.nivelEscritura ?? 40)} />
+      )}
     </div>
   );
 }

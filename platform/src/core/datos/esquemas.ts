@@ -145,7 +145,7 @@ export const PROVEEDORES: Esquema = {
 
 export const CATEGORIAS: Esquema = {
   tabla: 'product_categories',
-  titulo: 'Categorías', singular: 'Categoría', principal: 'name',
+  titulo: 'Categorías', singular: 'Categoría', femenino: true, principal: 'name',
   vacio: 'Las categorías ordenan el catálogo. Con pocas basta.',
   campos: [
     { key: 'name',        label: 'Nombre',      tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
@@ -208,7 +208,7 @@ const ESTADO_COMPRA: Opcion[] = [
 
 export const COMPRAS: Esquema = {
   tabla: 'purchases',
-  titulo: 'Compras', singular: 'Compra', principal: 'code',
+  titulo: 'Compras', singular: 'Compra', femenino: true, principal: 'code',
   vacio: 'Por aquí entra lo que después se vende. Cada compra alimenta el inventario.',
   nivelEscritura: 60,
   campos: [
@@ -320,7 +320,7 @@ export const MOVIMIENTOS: Esquema = {
 
 export const BODEGAS: Esquema = {
   tabla: 'locations',
-  titulo: 'Bodegas', singular: 'Bodega', principal: 'name',
+  titulo: 'Bodegas', singular: 'Bodega', femenino: true, principal: 'name',
   vacio: 'Dónde se guarda lo que hay: bodegas, cámaras, vehículos.',
   campos: [
     { key: 'name',        label: 'Nombre',    tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
@@ -345,7 +345,7 @@ const MOTIVO_MERMA: Opcion[] = [
 
 export const MERMAS: Esquema = {
   tabla: 'losses',
-  titulo: 'Mermas', singular: 'Merma', principal: 'code',
+  titulo: 'Mermas', singular: 'Merma', femenino: true, principal: 'code',
   vacio: 'Lo que se perdió y por qué. Cada merma descuenta del inventario.',
   campos: [
     { key: 'code',       label: 'Código',   tipo: 'texto', soloLectura: true, enTabla: true, ancho: '110px' },
@@ -375,7 +375,7 @@ const ESTADO_ENTREGA: Opcion[] = [
 
 export const ENTREGAS: Esquema = {
   tabla: 'deliveries',
-  titulo: 'Entregas', singular: 'Entrega', principal: 'code',
+  titulo: 'Entregas', singular: 'Entrega', femenino: true, principal: 'code',
   vacio: 'Cada pedido que sale a la calle se sigue desde aquí.',
   campos: [
     { key: 'code',      label: 'Código',  tipo: 'texto', soloLectura: true, enTabla: true, ancho: '120px' },
@@ -400,7 +400,7 @@ export const ENTREGAS: Esquema = {
 
 export const RUTAS: Esquema = {
   tabla: 'routes',
-  titulo: 'Rutas', singular: 'Ruta', principal: 'name',
+  titulo: 'Rutas', singular: 'Ruta', femenino: true, principal: 'name',
   vacio: 'Una ruta agrupa las entregas de un día. Se arma antes de salir.',
   campos: [
     { key: 'name',       label: 'Nombre', tipo: 'texto', enTabla: true, ancho: 'minmax(180px,2fr)' },
@@ -489,7 +489,7 @@ export const POR_PAGAR: Esquema = {
 
 export const LISTAS_PRECIO: Esquema = {
   tabla: 'price_lists',
-  titulo: 'Listas de precio', singular: 'Lista', principal: 'name',
+  titulo: 'Listas de precio', singular: 'Lista', femenino: true, principal: 'name',
   vacio: 'Una lista por segmento: mayorista, restaurante, público. Cada cliente puede tener la suya.',
   campos: [
     { key: 'name',        label: 'Nombre', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
@@ -513,7 +513,7 @@ export const LISTAS_PRECIO: Esquema = {
 
 export const DIRECCIONES: Esquema = {
   tabla: 'customer_addresses',
-  titulo: 'Direcciones de despacho', singular: 'Dirección', principal: 'address',
+  titulo: 'Direcciones de despacho', singular: 'Dirección', femenino: true, principal: 'address',
   vacio: 'Un cliente puede recibir en varios lugares. Aquí viven esas direcciones.',
   campos: [
     { key: 'customer_id', label: 'Cliente',  tipo: 'relacion', requerido: true, enTabla: true,
@@ -534,7 +534,7 @@ export const DIRECCIONES: Esquema = {
 
 export const ESPECIES: Esquema = {
   tabla: 'fish_species',
-  titulo: 'Especies', singular: 'Especie', principal: 'common_name',
+  titulo: 'Especies', singular: 'Especie', femenino: true, principal: 'common_name',
   vacio: 'El catálogo de especies con que trabaja la empresa.',
   campos: [
     { key: 'common_name',    label: 'Nombre común',     tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
@@ -569,6 +569,140 @@ export const PROCESOS: Esquema = {
   orden: { campo: 'created_at', asc: false }
 };
 
+// ------------------------------------------------------------------- agenda
+
+/* `agenda` y `tasks` vienen de STUDIO y llevan `alma_id` además de
+   `company_id`. Tienen las dos políticas —una por alma, otra por empresa—, así
+   que el motor las lee filtrando por empresa sin tocar nada de STUDIO. */
+export const COMPROMISOS: Esquema = {
+  tabla: 'agenda',
+  titulo: 'Compromisos', singular: 'Compromiso', principal: 'title',
+  vacio: 'Lo que hay que hacer en una fecha: una entrega, una visita, un cobro.',
+  campos: [
+    { key: 'title',   label: 'Compromiso', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'on_date', label: 'Fecha',      tipo: 'fecha', requerido: true, enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'at_time', label: 'Hora',       tipo: 'texto', enTabla: true, enLinea: true, ancho: '100px' },
+    { key: 'notes',   label: 'Notas',      tipo: 'texto-largo', enTabla: true, ancho: 'minmax(160px,1fr)' }
+  ],
+  orden: { campo: 'on_date', asc: true }
+};
+
+const PRIORIDAD: Opcion[] = [
+  { valor: 'Alta',  nombre: 'Alta',  tono: 'malo' },
+  { valor: 'Media', nombre: 'Media', tono: 'aviso' },
+  { valor: 'Baja',  nombre: 'Baja',  tono: 'neutro' }
+];
+
+/* Los estados son los que STUDIO ya escribió en la tabla, con su mayúscula y
+   todo. Inventar aquí un juego nuevo dejaría fuera del tablero a las tareas
+   que ya existen. */
+const ESTADO_TAREA: Opcion[] = [
+  { valor: 'Pendiente',  nombre: 'Pendiente',  tono: 'neutro' },
+  { valor: 'En proceso', nombre: 'En proceso', tono: 'acento' },
+  { valor: 'Hecha',      nombre: 'Hecha',      tono: 'ok' },
+  { valor: 'Archivada',  nombre: 'Archivada',  tono: 'neutro' }
+];
+
+export const TAREAS: Esquema = {
+  tabla: 'tasks',
+  titulo: 'Tareas', singular: 'Tarea', femenino: true, principal: 'title',
+  vacio: 'Pendientes con responsable y fecha. Lo que no está aquí, no existe.',
+  campos: [
+    { key: 'title',    label: 'Tarea',     tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'status',   label: 'Estado',    tipo: 'seleccion', opciones: ESTADO_TAREA,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'Pendiente' },
+    { key: 'priority', label: 'Prioridad', tipo: 'seleccion', opciones: PRIORIDAD,
+      enTabla: true, enLinea: true, ancho: '120px', porDefecto: 'Media' },
+    { key: 'due_at',   label: 'Vence',     tipo: 'fecha', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'project',  label: 'Proyecto',  tipo: 'texto', enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'notes',    label: 'Notas',     tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'due_at', asc: true }
+};
+
+// ------------------------------------------------------------------- taller
+
+const ESTADO_PROYECTO: Opcion[] = [
+  { valor: 'Planificado',   nombre: 'Planificado',   tono: 'neutro' },
+  { valor: 'Cotizando',     nombre: 'Cotizando',     tono: 'aviso' },
+  { valor: 'Aprobado',      nombre: 'Aprobado',      tono: 'acento' },
+  { valor: 'En producción', nombre: 'En producción', tono: 'acento' },
+  { valor: 'Revisión',      nombre: 'Revisión',      tono: 'aviso' },
+  { valor: 'Entregado',     nombre: 'Entregado',     tono: 'ok' },
+  { valor: 'Cerrado',       nombre: 'Cerrado',       tono: 'neutro' }
+];
+
+export const PROYECTOS: Esquema = {
+  tabla: 'projects',
+  titulo: 'Proyectos', singular: 'Proyecto', principal: 'title',
+  vacio: 'Un encargo con presupuesto, avance y fecha. Es la unidad de trabajo del Taller.',
+  campos: [
+    { key: 'title',   label: 'Proyecto',  tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'client',  label: 'Cliente',   tipo: 'texto', enTabla: true, enLinea: true, ancho: '160px' },
+    { key: 'status',  label: 'Estado',    tipo: 'seleccion', opciones: ESTADO_PROYECTO,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'Cotizando' },
+    { key: 'pct',     label: 'Avance %',  tipo: 'entero', enTabla: true, enLinea: true, ancho: '110px', porDefecto: 0 },
+    { key: 'budget',  label: 'Presupuesto', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'paid',    label: 'Cobrado',   tipo: 'moneda', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'due_at',  label: 'Entrega',   tipo: 'fecha', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'started_at',  label: 'Inicio',      tipo: 'fecha' },
+    { key: 'category',    label: 'Categoría',   tipo: 'texto' },
+    { key: 'responsible', label: 'Responsable', tipo: 'texto' },
+    { key: 'comuna',      label: 'Comuna',      tipo: 'texto' },
+    { key: 'city',        label: 'Ciudad',      tipo: 'texto' },
+    { key: 'description', label: 'Descripción', tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'due_at', asc: true }
+};
+
+const ESTADO_COTIZACION: Opcion[] = [
+  { valor: 'Borrador',  nombre: 'Borrador',  tono: 'neutro' },
+  { valor: 'Enviada',   nombre: 'Enviada',   tono: 'aviso' },
+  { valor: 'Aprobada',  nombre: 'Aprobada',  tono: 'ok' },
+  { valor: 'Rechazada', nombre: 'Rechazada', tono: 'malo' }
+];
+
+export const COTIZACIONES: Esquema = {
+  tabla: 'quotes',
+  titulo: 'Cotizaciones', singular: 'Cotización', femenino: true, principal: 'title',
+  vacio: 'Lo que se ofreció y por cuánto. De aquí sale el proyecto cuando la aprueban.',
+  campos: [
+    { key: 'title',       label: 'Concepto', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'client_name', label: 'Cliente',  tipo: 'texto', enTabla: true, enLinea: true, ancho: '170px' },
+    { key: 'status',      label: 'Estado',   tipo: 'seleccion', opciones: ESTADO_COTIZACION,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'Borrador' },
+    { key: 'total',       label: 'Total',    tipo: 'moneda', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'subtotal',    label: 'Neto',     tipo: 'moneda', enTabla: true, ancho: '120px' },
+    { key: 'discipline',  label: 'Disciplina', tipo: 'texto' },
+    { key: 'tax_pct',     label: 'Impuesto %', tipo: 'numero' },
+    { key: 'notes',       label: 'Notas',    tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'created_at', asc: false }
+};
+
+// ------------------------------------------------------------------ soporte
+
+/* Los avisos los escribe el sistema; aquí se leen y se marcan. Por eso casi
+   todo es de solo lectura menos la fecha de lectura, que es lo único que le
+   toca poner a quien los recibe. */
+export const AVISOS: Esquema = {
+  tabla: 'notifications',
+  titulo: 'Avisos', singular: 'Aviso', principal: 'title',
+  vacio: 'Aquí llegan los avisos del sistema: stock bajo, cobros vencidos, cambios de versión.',
+  campos: [
+    { key: 'title',      label: 'Aviso',   tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'kind',       label: 'Tipo',    tipo: 'texto', enTabla: true, ancho: '130px' },
+    { key: 'created_at', label: 'Cuándo',  tipo: 'fecha', soloLectura: true, enTabla: true, ancho: '130px' },
+    { key: 'read_at',    label: 'Leído',   tipo: 'fecha', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'body',       label: 'Detalle', tipo: 'texto-largo', enTabla: true, ancho: 'minmax(180px,1fr)' },
+    { key: 'link',       label: 'Enlace',  tipo: 'texto' }
+  ],
+  orden: { campo: 'created_at', asc: false }
+};
+
 /** Todo lo que el motor sabe dibujar, por módulo de la plataforma. */
 export const ESQUEMAS_POR_MODULO: Record<string, Esquema[]> = {
   crm:        [CLIENTES, DIRECCIONES, LISTAS_PRECIO],
@@ -576,5 +710,8 @@ export const ESQUEMAS_POR_MODULO: Record<string, Esquema[]> = {
   operations: [LOTES, MOVIMIENTOS, COMPRAS, PROVEEDORES, BODEGAS, MERMAS],
   delivery:   [ENTREGAS, RUTAS],
   finance:    [PAGOS, POR_COBRAR, POR_PAGAR],
-  food:       [PROCESOS, ESPECIES]
+  food:       [PROCESOS, ESPECIES],
+  agenda:     [COMPROMISOS, TAREAS],
+  creator:    [PROYECTOS, COTIZACIONES],
+  support:    [AVISOS]
 };

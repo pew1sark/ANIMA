@@ -128,7 +128,7 @@ export function Vista({ esquema, companyId, puedeEditar }:
         {puedeEditar && (
           <button onClick={() => setAbierta('nueva')} className="b b-pri ml-auto">
             <span className="text-[15px] leading-none">+</span>
-            Nuevo {esquema.singular.toLowerCase()}
+            {esquema.femenino ? 'Nueva' : 'Nuevo'} {esquema.singular.toLowerCase()}
           </button>
         )}
       </div>
@@ -165,7 +165,7 @@ export function Vista({ esquema, companyId, puedeEditar }:
           )}
           {puedeEditar && (
             <button onClick={() => setAbierta('nueva')} className="b b-pri mt-6">
-              Crear el primero
+              {esquema.femenino ? 'Crear la primera' : 'Crear el primero'}
             </button>
           )}
         </div>

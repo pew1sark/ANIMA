@@ -55,7 +55,7 @@ export function Ficha({ esquema, campos, fila, opciones, companyId, puedeEditar,
           <div className="min-w-0">
             <h2 className="titular truncate" style={{ fontSize: 24 }}>
               {fila ? String(leer(fila, campos.find(c => c.key === esquema.principal)!) ?? esquema.singular)
-                    : `Nuevo ${esquema.singular.toLowerCase()}`}
+                    : `${esquema.femenino ? 'Nueva' : 'Nuevo'} ${esquema.singular.toLowerCase()}`}
             </h2>
             <p className="text-[12.5px] text-muted mt-0.5">
               {fila ? esquema.singular : 'Solo lo marcado como obligatorio hace falta ahora.'}

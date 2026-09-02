@@ -71,6 +71,10 @@ export interface Esquema {
   singular: string;
   /** Campo de texto que identifica la fila: se busca y se ordena por él. */
   principal: string;
+  /** El género del singular, para que la interfaz no diga "Nuevo tarea".
+   *  Se declara y no se adivina: en español la terminación no basta —"Cliente"
+   *  es masculino y "Especie" femenino, y las dos acaban en -e. */
+  femenino?: boolean;
   campos: Campo[];
   /** Si está, se habilita la vista de tablero agrupando por este campo. */
   tablero?: string;
