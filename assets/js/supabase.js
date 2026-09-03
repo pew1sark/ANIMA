@@ -34,6 +34,19 @@ try{
   }
 }catch(e){ console.warn("ANIMA: Supabase no disponible, modo local.", e); }
 
+/* Los topes del plan los aplica la base con SQLSTATE 45000 (migración 0092),
+   y el mensaje ya viene escrito para mostrarse tal cual. Aquí solo se marca el
+   error y se avisa por un evento: así cualquier pantalla que inserte algo
+   —también las que se escriban mañana— muestra el aviso sin acordarse de
+   pedirlo, en vez de fallar en silencio. */
+function marcarCupo(error){
+  if(error && String(error.code) === "45000"){
+    error.cupo = true;
+    try{ document.dispatchEvent(new CustomEvent("anima:cupo", { detail:{ mensaje:error.message } })); }catch(e){}
+  }
+  return error;
+}
+
 const Cloud = {
   enabled: !!_sb,
   client: _sb,
@@ -170,9 +183,13 @@ const Cloud = {
   },
 
   /* CRUD genérico por tabla (para editar/eliminar cualquier ítem) */
-  async insertRow(table, row){ const { data, error } = await _sb.from(table).insert(row).select().single(); if(error) throw error; return data; },
+  async insertRow(table, row){ const { data, error } = await _sb.from(table).insert(row).select().single(); if(error) throw marcarCupo(error); return data; },
   async updateRow(table, id, patch){ const { error } = await _sb.from(table).update(patch).eq("id", id); if(error) throw error; },
   async deleteRow(table, id){ const { error } = await _sb.from(table).delete().eq("id", id); if(error) throw error; },
+
+  /* Uso y tope de cada cuota del plan contratado. Lista vacía = sin topes,
+     que es lo que tienen Pro, Max y Enterprise. Lo calcula la base. */
+  async cuotas(){ try{ const { data, error } = await _sb.rpc("cuotas"); if(error) return []; return data||[]; }catch(e){ return []; } },
 
   /* Clientes y cotizaciones */
   async clients(almaId){ const { data } = await _sb.from("clients").select("id,name,kind,role,email,phone,notes,created_at").eq("alma_id", almaId).order("created_at",{ascending:false}); return data||[]; },

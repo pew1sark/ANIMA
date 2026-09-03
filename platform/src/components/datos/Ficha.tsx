@@ -3,6 +3,7 @@ import type { Campo, Esquema, Fila, Opcion } from '@/core/datos/tipos';
 import { valor as leer } from '@/core/datos/tipos';
 import { Editor } from '@/components/datos/campos';
 import { Lineas } from '@/components/datos/Lineas';
+import { esCupoAgotado } from '@/services/cuotas.service';
 
 /* La ficha de una fila. No está escrita a mano: sale del esquema, así que un
    campo nuevo —incluidos los que agregue la propia empresa— aparece aquí sin
@@ -216,6 +217,10 @@ function mensaje(err: unknown): string {
     : (err && typeof err === 'object' && 'message' in err)
       ? String((err as { message: unknown }).message)
       : String(err);
+  /* El tope del plan (SQLSTATE 45000) llega ya escrito para leerse —dice cuál
+     es el tope y qué hacer—, así que se muestra tal cual en vez de traducirlo
+     a algo más pobre. */
+  if (esCupoAgotado(err)) return m;
   if (/null value in column "(\w+)"/.test(m)) {
     const col = m.match(/null value in column "(\w+)"/)?.[1];
     return `Falta un valor obligatorio${col ? ` en ${col}` : ''}.`;

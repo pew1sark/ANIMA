@@ -5,6 +5,7 @@ import { Columnas } from '@/components/graficos/Columnas';
 import { Tramos } from '@/components/graficos/Tramos';
 import { MapaChile } from '@/components/mapa/MapaChile';
 import { dinero, dineroCorto, cantidad, variacion, mesCorto, diaCorto, cuando } from '@/lib/formato';
+import { Cuotas } from '@/components/company/Cuotas';
 
 /* La pantalla de inicio de ANIMA COMPANY.
    ---------------------------------------------------------------------------
@@ -140,6 +141,8 @@ export function Inicio({ companyId, moneda, empresa, linea }: Props) {
               </div>}
         </section>
       </div>
+
+      <Cuotas companyId={companyId} />
 
       {/* ------------------------------------------------------ puesta en marcha */}
       {arranque && (

@@ -2822,6 +2822,24 @@ function toast(msg){
   t.textContent=msg; requestAnimationFrame(()=>{ t.style.opacity="1"; t.style.transform="translateX(-50%) translateY(-4px)"; });
   clearTimeout(t._h); t._h=setTimeout(()=>{ t.style.opacity="0"; t.style.transform="translateX(-50%)"; },2600);
 }
+/* El tope del plan lo aplica la base, no esta pantalla. supabase.js avisa por
+   un evento en cuanto una inserción choca, y el aviso se da aquí una sola vez
+   para todo el Taller: sin esto, la persona ve que "no pasó nada" y no sabe
+   por qué. */
+document.addEventListener("anima:cupo", function(e){
+  toast((e.detail && e.detail.mensaje) || "Tu plan llegó a su tope.");
+});
+
+/* Uso y tope de cada cuota. Se pide una vez y se repinta Mi Plan si es la
+   ventana abierta — el mismo patrón de loadSantMeta. */
+async function loadCuotas(){
+  if(!Cloud.enabled || state.cuotas) return;
+  try{
+    state.cuotas = await Cloud.cuotas();
+    if(state.view === "miplan") renderView();
+  }catch(e){ state.cuotas = []; }
+}
+
 /* ===========================================================
    ESENCIA — Recompensas de crecimiento (primeros pasos).
    Otorgan Esencia visible (xp) por hitos para que el Alma sienta pronto
@@ -3720,6 +3738,31 @@ const PLAN_PICK_FEATURES={
 };
 function vMiPlan(a){
   const cur=almaPlan(a); const admin=(isCreator&&!state.viewAs);
+  loadCuotas();
+  /* Hasta dónde llega el plan contratado. Se enseña antes de chocar: un tope
+     que se descubre al chocar hace perder el trabajo que se estaba haciendo.
+     Quien no tiene topes no ve nada — la base le devuelve la lista vacía. */
+  const cuotas = state.cuotas || [];
+  const barras = cuotas.length ? `<div class="card s12">
+      <span class="pill">Tu plan</span>
+      <h2 style="font-size:22px;letter-spacing:-.03em;margin:10px 0 4px">Hasta dónde llega</h2>
+      <p class="muted" style="font-size:12.5px;margin:0 0 14px">Los topes son de volumen, no de funciones:
+        ninguna ventana está apagada y nada se borra al llegar al límite.</p>
+      ${cuotas.map(c=>{
+        const lleno = c.uso >= c.tope, cerca = !lleno && c.pct >= 80;
+        const col = lleno ? "#b23b3b" : cerca ? "#b8862f" : "#3a3733";
+        return `<div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:13px">
+            <span>${esc(c.etiqueta)}</span>
+            <span style="font-variant-numeric:tabular-nums;color:${col};font-weight:600">${c.uso}
+              <span class="muted" style="font-weight:400">/ ${c.tope}</span></span>
+          </div>
+          <div style="height:5px;border-radius:99px;background:rgba(0,0,0,.08);overflow:hidden;margin-top:5px">
+            <div style="height:100%;width:${Math.max(c.pct, c.uso>0?3:0)}%;background:${col};transition:width .3s"></div>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>` : "";
   const card=k=>{ const m=PLAN_META[k]; const on=cur===k;
     return `<div class="card s4 plan-pick ${on?'on':''}">
       <span class="lvl" style="font-size:34px;line-height:1">${m.ico}</span>
@@ -3736,6 +3779,7 @@ function vMiPlan(a){
     ? `<p class="muted" style="max-width:640px">Como Creador, asignas la Forma de cada Alma desde la <b>Consola</b>. Aquí puedes asignar la tuya.</p>`
     : `<p class="muted" style="max-width:640px">Tu Forma define cómo habitas ANIMA. Toda Alma nace como <b>Alma</b>. Cuando quieras crear junto a otras, puedes <b>fundar tu propio Clan</b> —y, con él, un <b>Santuario</b>.</p>`;
   return `<div class="grid">
+    ${barras}
     <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
       <span class="pill gold">Forma</span>
       <h2 style="font-size:26px;letter-spacing:-.04em;margin:10px 0 4px">Cómo habitas ANIMA</h2>
