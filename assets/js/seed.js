@@ -3,43 +3,17 @@
    (Sin Almas demo: la comunidad son las Almas reales en la nube)
    =========================================================== */
 
-/* --- Camino del Alma: 8 niveles, fuente única --- */
-const LEVELS = [
-  { key:"ORIGEN", label:"ORIGEN", name:"Origen",         emoji:"○", color:"#d0aa63", xp:0,     desc:"El primer umbral. Aquí nace la memoria de una Alma." },
-  { key:"CHISPA", label:"CHISPA", name:"Chispa",         emoji:"✦", color:"#c0703a", xp:400,   desc:"La chispa. Aquí comienza el fuego de una Alma." },
-  { key:"RAIZ",   label:"RAÍZ",   name:"Raíz",           emoji:"🌱", color:"#5f8a3a", xp:1200,  desc:"Las raíces. La trayectoria empieza a sostenerse." },
-  { key:"PULSO",  label:"PULSO",  name:"Pulso",          emoji:"〰", color:"#8a6f3a", xp:2600,  desc:"El pulso. Crear sin miedo, con identidad propia." },
-  { key:"HUELLA", label:"HUELLA", name:"Huella",         emoji:"✧", color:"#3a6f8a", xp:4800,  desc:"La huella. El Alma se vuelve reconocible." },
-  { key:"TOTEM",  label:"TÓTEM",  name:"Tótem",          emoji:"🜂", color:"#5a4f8a", xp:8000,  desc:"El tótem. Más allá del oficio: dirección y propósito." },
-  { key:"AURA",   label:"AURA",   name:"Aura",           emoji:"◎", color:"#7b3a8a", xp:13000, desc:"El aura. Una Alma que guía y deja legado." },
-  { key:"ANIMA",  label:"ANIMA",  name:"Alma Despierta", emoji:"∞", color:"#111111", xp:21000, desc:"Alma despierta. El círculo se completa." }
-];
-const LEVEL_ALIASES = { FOUNDING:"ORIGEN", EMBER:"CHISPA", ROOT:"RAIZ", WILD:"PULSO", AETHER:"TOTEM", SPIRIT:"AURA" };
-const normalizeLevelKey = k => LEVEL_ALIASES[String(k||"").toUpperCase()] || String(k||"ORIGEN").toUpperCase();
-const levelByKey = k => LEVELS.find(l => l.key === normalizeLevelKey(k)) || LEVELS[0];
-const levelRank = k => { const i = LEVELS.findIndex(l => l.key === normalizeLevelKey(k)); return i < 0 ? 0 : i; };
-
-/* --- Almacenamiento por nivel (Alpha 2026) --- */
-/* Espeja public.storage_quota() del backend (migración 0013). */
-const LEVEL_STORAGE = {
-  ORIGEN:{ images:3,  pdfs:1, mb:30  },
-  CHISPA:{ images:5,  pdfs:1, mb:50  },
-  RAIZ:  { images:7,  pdfs:2, mb:80  },
-  PULSO: { images:7,  pdfs:2, mb:80  },
-  HUELLA:{ images:8,  pdfs:2, mb:90  },
-  TOTEM: { images:9,  pdfs:2, mb:95  },
-  AURA:  { images:10, pdfs:2, mb:100 },
-  ANIMA: { images:10, pdfs:2, mb:100 }
+/* --- Cuota de archivos por plan ---
+   Antes la abría el Camino del Alma: el Alma desbloqueaba obras y megas al
+   subir de nivel. Ahora la abre el plan contratado. La fuente de verdad es el
+   plan en la base; esto es el espejo local para avisar antes de subir. */
+const PLAN_STORAGE = {
+  ALMA:      { images:10,  pdfs:2,  mb:100  },
+  CLAN:      { images:30,  pdfs:6,  mb:300  },
+  SANTUARIO: { images:100, pdfs:20, mb:1000 }
 };
-const storageLimit = k => LEVEL_STORAGE[normalizeLevelKey(k)] || LEVEL_STORAGE.ORIGEN;
-function levelProgress(xp){
-  let cur = LEVELS[0];
-  for(const l of LEVELS){ if(xp >= l.xp) cur = l; }
-  const idx = LEVELS.indexOf(cur);
-  const next = LEVELS[idx+1] || null;
-  const pct = next ? Math.round(((xp - cur.xp) / (next.xp - cur.xp)) * 100) : 100;
-  return { cur, next, pct, idx };
-}
+const normalizeStorageKey = k => PLAN_STORAGE[String(k||"").toUpperCase()] ? String(k).toUpperCase() : "ALMA";
+const storageLimit = k => PLAN_STORAGE[normalizeStorageKey(k)];
 
 /* --- LUMBRE: modos del motor agente --- */
 const LUMBRE_MODES = [
@@ -88,21 +62,21 @@ const money = n => {
 
 /* --- Alma invitada (solo cuando no hay sesión) --- */
 const SEED_ALMAS = [{
-  id:"guest", name:"Invitada", color:"#9a8c70", level:"CHISPA", xp:0,
+  id:"guest", name:"Invitada", color:"#9a8c70", xp:0,
   role:"", city:"", country:"", bio:"Entra o crea tu Alma para empezar a construir tu mundo.",
   tags:[], clan:null, plan:"SANTUARIO", team_role:null,
   finance:{ income:[], expense:[] }, projects:[], portfolio:[], trajectory:[],
   memories:[], library:[], agenda:[], clients:[], tasks:[]
 }];
 
-/* --- Clanes (Nivel 2) --- */
+/* --- Clanes --- */
 const SEED_CLANS = [
   { id:"blackink", name:"BLACK INK STUDIO", emoji:"🖤", desc:"Estudio de tatuaje y muralismo.", members:[] },
   { id:"aetherlab", name:"AETHER LAB", emoji:"☽", desc:"Laboratorio de IA, sonido y dirección de arte.", members:[] },
   { id:"wildhouse", name:"WILD HOUSE", emoji:"🐾", desc:"Casa de streetwear y muralismo comunitario.", members:[] }
 ];
 
-/* --- Santuario (Nivel 3) --- */
+/* --- Santuario --- */
 const SEED_SANCTUARY = {
   name:"ANIMA — Founding Sanctuary",
   emoji:"🜁",

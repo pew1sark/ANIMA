@@ -9,7 +9,7 @@ const SB_URL = "https://jwxeowowuxmijuexdrua.supabase.co";
 const SB_KEY = "sb_publishable_vrVyAVt19nSsedXoCzYr-g_QFQc9w_R";
 
 let _sb = null;
-const ALMA_FIELDS = "id,user_id,slug,name,role,city,country,bio,color,level,xp,clan,santuario,tags,plan,team_role,crew_role,avatar_url,banner_url,discipline,specialty,handle,territory,website,instagram,portfolio_url,shop_url,headline,availability,sparks,created_at,council,world_access,essence,affinity,visibility,is_founding,origin_soul,origin_number,era,awakening_completed";
+const ALMA_FIELDS = "id,user_id,slug,name,role,city,country,bio,color,xp,clan,santuario,tags,plan,team_role,crew_role,avatar_url,banner_url,discipline,specialty,handle,territory,website,instagram,portfolio_url,shop_url,headline,availability,sparks,created_at,council,world_access,essence,affinity,visibility,is_founding,origin_soul,origin_number,era,awakening_completed";
 const MODULE_FIELDS = {
   projects:"id,title,client,status,pct,description,started_at,due_at,budget,paid,deliverables,tags,client_id,owner_type,owner,context,template,category,responsible,archive,payments,checklist,history,color,city,comuna",
   finance_entries:"id,title,amount,period,category,occurred_at,method,notes,kind",
@@ -20,10 +20,9 @@ const MODULE_FIELDS = {
   agenda:"id,at_time,title,on_date,notes",
   tasks:"id,title,priority,status,due_at,project,notes,sort"
 };
-const LEVEL_ALIASES_CLOUD = { FOUNDING:"ORIGEN", EMBER:"CHISPA", ROOT:"RAIZ", WILD:"PULSO", AETHER:"TOTEM", SPIRIT:"AURA" };
-const LEVEL_BACKEND_ALIASES = { ORIGEN:"FOUNDING", CHISPA:"EMBER", RAIZ:"ROOT", PULSO:"WILD", HUELLA:"TOTEM", TOTEM:"AETHER", AURA:"SPIRIT", ANIMA:"ANIMA" };
-function normalizeCloudLevel(key){ return LEVEL_ALIASES_CLOUD[String(key||"").toUpperCase()] || String(key||"CHISPA").toUpperCase(); }
-function backendLevelKey(key){ return LEVEL_BACKEND_ALIASES[normalizeCloudLevel(key)] || "FOUNDING"; }
+/* Aquí vivían las equivalencias entre los nombres de nivel de la interfaz
+   (ORIGEN, CHISPA, RAIZ…) y los del backend. STUDIO ya no tiene niveles: la
+   Esencia cuenta actividad y el plan contratado es el que abre puertas. */
 try{
   if(window.supabase && window.supabase.createClient){
     /* Sesión recordada en el dispositivo: persiste y se renueva sola. El Alma
@@ -58,7 +57,7 @@ const Cloud = {
   async allAlmas(){
     if(!_sb) return [];
     const { data } = await _sb.from("almas")
-      .select("id,slug,name,role,crew_role,discipline,specialty,avatar_url,city,country,territory,bio,color,level,xp,clan,santuario,plan,team_role,sparks,tags,is_founding,council,world_access,visibility,created_at")
+      .select("id,slug,name,role,crew_role,discipline,specialty,avatar_url,city,country,territory,bio,color,xp,clan,santuario,plan,team_role,sparks,tags,is_founding,council,world_access,visibility,created_at")
       .eq("is_founding", false)
       .order("created_at", { ascending:false });
     return data || [];
@@ -356,9 +355,6 @@ const Cloud = {
     await _sb.from("obsidian_links").insert({ table_name:tableName, record_id:recordId, vault_path:vaultPath });
   },
 
-  /* Límite de almacenamiento del nivel: {images, pdfs, mb}. */
-  async storageQuota(level){ if(!_sb) return null; const { data } = await _sb.rpc("storage_quota", { p_level:backendLevelKey(level) }); return data; },
-
   /* Subir un archivo a un bucket separado (avatars | portfolio | temp),
      siempre dentro de la carpeta /<uid>/… Devuelve la URL pública. */
   async uploadTo(bucket, file, folder){
@@ -422,7 +418,7 @@ window.Cloud = Cloud;
 function dbAlmaToState(row, m){
   return {
     id: "me-"+row.id, almaId: row.id, live: true,
-    name: row.name, color: row.color || "#111111", level: normalizeCloudLevel(row.level || "CHISPA"), xp: row.xp || 0,
+    name: row.name, color: row.color || "#111111", xp: row.xp || 0,
     role: row.role || "Creador", city: row.city || "", country: row.country || "",
     bio: row.bio || "", tags: row.tags || [], clan: row.clan || null, santuario: row.santuario || null,
     plan: row.plan || "ALMA", team_role: row.team_role || null,

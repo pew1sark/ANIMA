@@ -1,5 +1,5 @@
 /* ===========================================================
-   ANIMA — Estado del Alma (onboarding · niveles · esencia)
+   ANIMA — Estado del Alma (onboarding · esencia)
    -----------------------------------------------------------
    Fuente única de verdad para el RITO DE ENTRADA y el HOME.
    Vive en localStorage (la "primera etapa de la vida de ANIMA")
@@ -7,8 +7,8 @@
    best-effort. El Alma decide qué comparte: aquí solo guardamos
    lo mínimo para que el viaje continúe entre sesiones.
 
-   Esta capa describe el mismo Camino del Alma que usa el Studio:
-   8 niveles, desde ORIGEN hasta ANIMA.
+   La Esencia cuenta actividad, igual que en el Studio. El Camino
+   del Alma (8 niveles) se retiró: nada aquí otorga permisos.
    =========================================================== */
 (function (global) {
   "use strict";
@@ -29,48 +29,9 @@
     { key: "ESTRATEGA",   glyph: "♟", name: "Estratega",   desc: "Lee el tablero completo. Su fuerza es la decisión: prioridad, recursos y el siguiente movimiento correcto." }
   ];
 
-  /* --- El Camino del Alma: 8 niveles, fuente ritual del HOME/Umbral ---
-     Misma escala que el Studio: una sola Esencia, un solo camino. */
-  var LEVELS = [
-    { key: "ORIGEN", n: 1, glyph: "○", name: "Origen", color: "#d0aa63", xp: 0,
-      desc: "El primer umbral. Aquí nace la memoria de una Alma.",
-      unlocks: ["Mi Alma", "Esencia", "Primer Despertar"] },
-    { key: "CHISPA", n: 2, glyph: "✦", name: "Chispa", color: "#c0703a", xp: 400,
-      desc: "La chispa. Aquí comienza el fuego de una Alma.",
-      unlocks: ["Mi Alma completa", "Trayectoria", "Portafolio"] },
-    { key: "RAIZ",   n: 3, glyph: "🌱", name: "Raíz",   color: "#5f8a3a", xp: 1200,
-      desc: "Echas raíces. Empiezas a conectar con otras Almas.",
-      unlocks: ["Constelación", "Vínculos", "Contactos"] },
-    { key: "PULSO",  n: 4, glyph: "〰", name: "Pulso",  color: "#8a6f3a", xp: 2600,
-      desc: "Tu Alma late. Lo que creas empieza a moverse.",
-      unlocks: ["Proyectos", "Tareas", "Estados"] },
-    { key: "HUELLA", n: 5, glyph: "✧", name: "Huella", color: "#3a6f8a", xp: 4800,
-      desc: "Dejas huella. Tu obra y tu memoria toman cuerpo.",
-      unlocks: ["Biblioteca", "Archivos", "PDFs", "Imágenes", "Portafolio"] },
-    { key: "TOTEM",  n: 6, glyph: "🜂", name: "Tótem",  color: "#5a4f8a", xp: 8000,
-      desc: "Tu visión se vuelve dirección y propósito.",
-      unlocks: ["Clan", "Lumbre", "Organización de ideas"] },
-    { key: "AURA",   n: 7, glyph: "◎", name: "Aura",   color: "#7b3a8a", xp: 13000,
-      desc: "Tu Alma irradia. El sistema empieza a trabajar por ti.",
-      unlocks: ["Automatizaciones", "Recordatorios", "Flujos", "Integraciones"] },
-    { key: "ANIMA",  n: 8, glyph: "∞", name: "ANIMA",  color: "#111111", xp: 21000,
-      desc: "Alma despierta. El ecosistema completo es tuyo.",
-      unlocks: ["Ecosistema completo", "Agentes", "Memoria", "Vista avanzada"] }
-  ];
-  var LEVEL_ALIASES = { FOUNDING:"ORIGEN", EMBER:"CHISPA", ROOT:"RAIZ", WILD:"PULSO", AETHER:"TOTEM", SPIRIT:"AURA" };
-  function normalizeLevelKey(key){ return LEVEL_ALIASES[String(key || "").toUpperCase()] || String(key || "ORIGEN").toUpperCase(); }
-
-  /* --- Menú progresivo de ANIMA (req. 8) --- */
-  var MENU = [
-    { glyph: "○",  t: "Origen",     level: "ORIGEN", view: "mialma" },
-    { glyph: "✦", t: "Mi Alma",    level: "CHISPA", view: "mialma" },
-    { glyph: "🌱", t: "Constelación", level: "RAIZ",   view: "clientes" },
-    { glyph: "💓", t: "Pulso",      level: "PULSO",  view: "proyectos" },
-    { glyph: "📜", t: "Huella",     level: "HUELLA", view: "portafolio" },
-    { glyph: "🔥", t: "Lumbre",     level: "TOTEM",  view: "lumbre" },
-    { glyph: "🜂", t: "Aura",       level: "AURA",   view: "agenda" },
-    { glyph: "∞",  t: "ANIMA",      level: "ANIMA",  view: "santuario" }
-  ];
+  /* Aquí vivían los 8 niveles del Camino del Alma y el menú que se abría con
+     ellos. Se retiraron con la capa de juego: la Esencia solo cuenta actividad
+     y quien abre puertas es el plan contratado. */
 
   function defaults() {
     return {
@@ -96,31 +57,10 @@
   }
   function save(s) { localStorage.setItem(LS_KEY, JSON.stringify(s)); }
 
-  /* Nivel actual según Esencia acumulada. */
-  function levelOf(esencia) {
-    var idx = 0;
-    for (var i = LEVELS.length - 1; i >= 0; i--) {
-      if ((esencia || 0) >= LEVELS[i].xp) { idx = i; break; }
-    }
-    return idx;
-  }
-
-  function progress(esencia) {
-    var idx = levelOf(esencia);
-    var lv = LEVELS[idx];
-    var next = LEVELS[idx + 1] || null;
-    var into = (esencia || 0) - lv.xp;
-    var span = next ? (next.xp - lv.xp) : 1;
-    var pct = next ? Math.min(100, Math.round((into / span) * 100)) : 100;
-    return { idx: idx, level: lv, next: next, into: into, span: span, pct: pct };
-  }
-
   var API = {
     LS_KEY: LS_KEY,
     ALPHA_CODE: ALPHA_CODE,
     AFINIDADES: AFINIDADES,
-    LEVELS: LEVELS,
-    MENU: MENU,
 
     get: load,
     save: save,
@@ -159,34 +99,19 @@
           }).catch(function () {});
         }
       } catch (e) {}
-      return API.progress();
+      return s.esencia;
     },
     /* Otorga Esencia una sola vez por clave (perfil completo, primera chispa…). */
     addEsenciaOnce: function (key, amount, reason) {
       var s = load();
-      if (s.awarded[key]) return API.progress();
+      if (s.awarded[key]) return s.esencia;
       s.awarded[key] = true; save(s);
       return API.addEsencia(amount, reason);
     },
     setEsencia: function (value) {
-      var s = load(); s.esencia = Math.max(0, value || 0); save(s); return API.progress();
+      var s = load(); s.esencia = Math.max(0, value || 0); save(s); return s.esencia;
     },
     wasAwarded: function (key) { return !!load().awarded[key]; },
-
-    /* --- Niveles --- */
-    levelOf: function (esencia) { return LEVELS[levelOf(esencia == null ? load().esencia : esencia)]; },
-    progress: function (esencia) { return progress(esencia == null ? load().esencia : esencia); },
-    normalizeLevelKey: normalizeLevelKey,
-    levelByKey: function (key) { var nk = normalizeLevelKey(key); return LEVELS.filter(function (l) { return l.key === nk; })[0] || LEVELS[0]; },
-
-    /* ¿La sección del menú está desbloqueada al nivel actual? */
-    isUnlocked: function (levelKey, esencia) {
-      var cur = levelOf(esencia == null ? load().esencia : esencia);
-      var target = -1;
-      var nk = normalizeLevelKey(levelKey);
-      for (var i = 0; i < LEVELS.length; i++) { if (LEVELS[i].key === nk) { target = i; break; } }
-      return target <= cur;
-    },
 
     /* --- Crear Alma (guarda local + nube best-effort) --- */
     createAlma: function (data) {

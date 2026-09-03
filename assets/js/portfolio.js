@@ -19,7 +19,7 @@ const isImg=u=>u&&/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i.test(u);
 async function main(){
   if(!sb){ $("#app").innerHTML="<div class='empty'>No hay conexión.</div>"; return; }
   if(!almaId && !slug){ $("#app").innerHTML="<div class='empty'><h2>Portafolio no encontrado</h2><p>Falta el identificador del Alma.</p></div>"; return; }
-  let qy=sb.from("almas").select("id,slug,name,role,crew_role,avatar_url,banner_url,discipline,specialty,headline,availability,territory,country,city,bio,tags,website,instagram,portfolio_url,shop_url,visibility,color,level,xp,sparks,created_at"); qy = almaId ? qy.eq("id",almaId) : qy.eq("slug",slug);
+  let qy=sb.from("almas").select("id,slug,name,role,crew_role,avatar_url,banner_url,discipline,specialty,headline,availability,territory,country,city,bio,tags,website,instagram,portfolio_url,shop_url,visibility,color,xp,sparks,created_at"); qy = almaId ? qy.eq("id",almaId) : qy.eq("slug",slug);
   const { data:a } = await qy.maybeSingle();
   if(!a){ $("#app").innerHTML="<div class='empty'><h2>Esta Alma aún no es pública</h2><p>Puede que el enlace sea incorrecto.</p></div>"; return; }
   if(a.visibility && a.visibility.public===false){
@@ -36,7 +36,6 @@ async function main(){
 }
 
 function render(a, port, traj){
-  const lv = (typeof levelByKey==="function") ? levelByKey(a.level) : {label:a.level||"",color:"#d0aa63",emoji:"✦"};
   const vis = a.visibility||{}; const show=k=>vis[k]!==false;
   document.title = `${a.name} · Portafolio · ANIMA`;
   const bannerUrl=mediaUrl(a.banner_url);
@@ -85,7 +84,7 @@ function render(a, port, traj){
         <h1>${esc(a.name)}</h1>
         ${headline}
         <div class="pf-meta">${esc(idline||"")}${a.territory||a.country?" · "+esc(a.territory||a.country):""}</div>
-        <div class="pf-badges"><span class="pf-badge" style="border-color:${lv.color}55;color:${lv.color}">${lv.emoji||"✦"} ${lv.label||a.level}</span>${role}${avail}
+        <div class="pf-badges">${role}${avail}
           <button class="spark-btn" id="sparkBtn" data-spark="${a.id}">✦ Dar Chispa</button></div>
       </div>
     </div>

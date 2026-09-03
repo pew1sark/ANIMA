@@ -109,16 +109,6 @@
 .stat .lbl{color:var(--muted);font-size:12.5px}
 .kpi{font-size:34px;letter-spacing:-.06em;font-weight:800;line-height:1;margin:4px 0}
 
-/* ---------- Level badge / path ---------- */
-.level-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;font-weight:850;font-size:13px;border:1px solid var(--line)}
-.path{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
-.lv{text-align:center;padding:13px 6px;border-radius:16px;background:rgba(255,255,255,.5);border:1px solid var(--line);position:relative}
-.lv .e{font-size:22px}
-.lv b{display:block;font-size:11px;margin-top:4px;letter-spacing:.02em}
-.lv small{color:var(--muted);font-size:10px}
-.lv.cur{background:linear-gradient(145deg,rgba(208,170,99,.22),rgba(255,255,255,.7));border-color:rgba(208,170,99,.4);box-shadow:var(--shadow-soft)}
-.lv.passed{opacity:.55}
-
 /* ---------- Lists / rows ---------- */
 .row{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:0}
@@ -231,28 +221,10 @@
 .hbar .hb span{display:block;height:100%;background:linear-gradient(90deg,#111,var(--warm),var(--gold));border-radius:999px}
 .hbar b{width:24px;text-align:right;font-size:13px}
 
-/* ---------- Camino del Alma (PIXEL ART) ---------- */
+/* La tipografía pixel sobrevive al Camino del Alma: la usan el mapa de Almas
+   y la línea de Esencia. El resto (tablero de niveles, sprites, barra de
+   progreso) se fue con el camino. */
 .pixel-font{font-family:"Press Start 2P",monospace;letter-spacing:0;line-height:1.6}
-.camino-card{background:
-  repeating-linear-gradient(0deg,rgba(208,170,99,.04) 0 2px,transparent 2px 4px),
-  linear-gradient(160deg,#f7efdc,#efe3c6);
-  border:2px solid #d9c79a;box-shadow:0 0 0 2px #fff inset,var(--shadow-soft);image-rendering:pixelated}
-.camino-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.camino-head .pixel-font{font-size:16px;color:#5b4824;text-shadow:2px 2px 0 #e6d3a3}
-.camino-track{display:grid;grid-template-columns:repeat(8,1fr);gap:10px}
-.ptile{position:relative;text-align:center;padding:12px 6px 10px;border-radius:0;
-  background:#fbf5e6;border:3px solid #c9b486;box-shadow:3px 3px 0 #cdb47e;transition:.12s}
-.ptile .pn{position:absolute;top:4px;left:6px;font-size:8px;color:#b8862f}
-.ptile .pix{width:100%;max-width:54px;height:auto;display:block;margin:6px auto 8px;image-rendering:pixelated}
-.ptile b{display:block;font-size:8px;color:#5b4824}
-.ptile.cur{background:#fff6df;border-color:var(--gold);box-shadow:3px 3px 0 var(--gold),0 0 16px rgba(208,170,99,.5);transform:translateY(-2px)}
-.ptile.passed{opacity:.78}
-.ptile.passed::after{content:"✓";position:absolute;top:4px;right:6px;font-size:9px;color:#5f8a3a}
-@media(max-width:760px){.camino-track{grid-template-columns:repeat(4,1fr)}}
-.camino-head .ia{background:rgba(255,255,255,.7);border-color:#d9c79a;color:#7b5920}
-.camino-prog{margin-top:16px}
-.camino-prog .bar{height:12px;border:2px solid #d9c79a;background:#efe3c6}
-.camino-prog small{display:block;margin-top:7px;font-size:12px}
 
 /* Mapa: barra de identidad + tamaños */
 .map-card{background:linear-gradient(160deg,#17161c,#20222b);border:2px solid #2c2a35;color:#f5f5f7}
@@ -853,7 +825,6 @@
   .menu-btn{display:none !important}
   #installBtn{display:none !important}
   .s3,.s4,.s5,.s6,.s7,.s8{grid-column:span 12}
-  .path{grid-template-columns:repeat(4,1fr)}
   .thumbs{grid-template-columns:1fr 1fr}
 }
 
@@ -861,10 +832,6 @@
    ALPHA 2026 — Cronología · Insignias · navegación que crece
    =========================================================== */
 a.nav-item{text-decoration:none;color:inherit}
-.nav-next{margin:14px 6px 4px;padding:11px 12px;border:1px dashed var(--line-strong,rgba(0,0,0,.14));
-  border-radius:12px;font-size:11.5px;line-height:1.45;color:var(--muted);
-  background:radial-gradient(circle at 0% 0%,rgba(208,170,99,.08),transparent 70%)}
-.nav-next b{color:var(--gold-deep,#7b5920)}
 
 /* Cronología del Alma */
 .tl-soul{position:relative;margin:6px 0 2px;padding-left:6px}
@@ -906,14 +873,6 @@ a.nav-item{text-decoration:none;color:inherit}
 .country-row:last-child{border-bottom:0}
 .country-row b{color:var(--gold-deep,#7b5920)}
 
-/* Bloqueo por nivel (Alpha 2026) */
-.nav-item.locked{opacity:.6;cursor:pointer}
-.nav-item.locked:hover{opacity:.85}
-.nav-item.locked .lock-lv{margin-left:auto;font-size:9.5px;font-weight:850;letter-spacing:.03em;
-  color:var(--gold-deep,#7b5920);background:rgba(208,170,99,.14);padding:2px 7px;border-radius:999px;white-space:nowrap}
-.locked-view{text-align:center;padding:48px 24px}
-.locked-view .locked-glyph{font-size:44px;opacity:.5;line-height:1}
-
 /* ===========================================================
    PRIMERA LLEGADA PROGRESIVA — descubrir moradas + aviso sereno
    =========================================================== */
@@ -949,7 +908,6 @@ a.nav-item{text-decoration:none;color:inherit}
 .morada-tab:hover{color:#0a0a0b}
 .morada-tab.on{color:#0a0a0b;font-weight:620}
 .morada-tab.on::after{transform:scaleX(1)}
-.morada-tab .mt-lock{font-size:10px;opacity:.55}
 .morada-tab .mt-ico{display:inline-grid;place-items:center;width:16px;height:16px;opacity:.55;transition:opacity .2s ease}
 .morada-tab .mt-ico svg{width:15px;height:15px}
 .morada-tab:hover .mt-ico,.morada-tab.on .mt-ico{opacity:1}
@@ -1350,9 +1308,7 @@ a.nav-item{text-decoration:none;color:inherit}
 .nc-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:86px}
 .nc-right .proj-bar{width:80px}
 .nc-late{color:var(--danger);font-weight:800;font-size:11px}
-.camino-mini{display:flex;align-items:center;gap:12px;padding:12px 20px;opacity:.85}
-.camino-mini .pix{width:22px;height:22px;display:block}
-.camino-mini .cm-bar{width:150px;height:6px;flex:0 0 auto}
-@media(max-width:960px){ .s2{grid-column:span 6} .camino-mini{flex-wrap:wrap} }
+.esencia-mini{display:flex;align-items:center;gap:12px;padding:12px 20px;opacity:.85}
+@media(max-width:960px){ .s2{grid-column:span 6} .esencia-mini{flex-wrap:wrap} }
 .kpi-sm{padding:14px 12px}
 .kpi-m .num{font-size:12.5px;letter-spacing:-.04em;white-space:nowrap;line-height:1.4}

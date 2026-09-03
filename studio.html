@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/anima.css" />
-  <link rel="stylesheet" href="assets/css/studio.css?v=nucleo-v6" />
+  <link rel="stylesheet" href="assets/css/studio.css?v=nucleo-v7" />
   <link rel="stylesheet" href="assets/css/world-tree.css" />
   <link rel="stylesheet" href="assets/css/identity.css" />
 </head>
@@ -153,18 +153,10 @@
     </div>
   </div>
 
-  <!-- MODAL NIVELES -->
-  <div class="auth-modal" id="levelModal">
-    <div class="auth-box">
-      <div class="auth-head"><div style="flex:1"><b>El camino del Alma</b><br><small class="muted">Sube de nivel creando. Cada nivel abre nuevas ventanas.</small></div><button class="btn ghost sm" id="levelClose">✕</button></div>
-      <div id="levelBody"></div>
-    </div>
-  </div>
-
   <!-- MODAL ESENCIA (informativo) -->
   <div class="auth-modal" id="esenciaModal">
     <div class="auth-box">
-      <div class="auth-head"><div style="flex:1"><b>La Esencia</b><br><small class="muted">La energía que reúnes al crear. Te hace subir de nivel.</small></div><button class="btn ghost sm" id="esenciaClose">✕</button></div>
+      <div class="auth-head"><div style="flex:1"><b>La Esencia</b><br><small class="muted">La cuenta de tu actividad dentro de ANIMA STUDIO.</small></div><button class="btn ghost sm" id="esenciaClose">✕</button></div>
       <div id="esenciaBody"></div>
     </div>
   </div>
@@ -267,10 +259,9 @@
       </div>
       <p class="muted" style="font-size:12.5px;margin:2px 0 12px">Un pequeño libro vivo. Toca cualquier término para abrirlo. Aquí encontrarás el lenguaje de ANIMA, por si quieres entenderlo mejor.</p>
       <div class="codice">
-        <details open><summary>¿Qué es ANIMA?</summary><p>Un mundo vivo para creadores. Aquí no hay usuarios: hay <b>Almas</b>. No mides seguidores ni likes, sino tu <b>Esencia</b> y tu <b>Huella</b>. Organizas tu identidad, tu trabajo y tu trayectoria, y creces junto a otras Almas.</p></details>
+        <details open><summary>¿Qué es ANIMA?</summary><p>Un mundo vivo para creadores. Aquí no hay usuarios: hay <b>Almas</b>. No mides seguidores ni likes, sino tu <b>Esencia</b> —la actividad que registras— y tu <b>Huella</b>. Organizas tu identidad, tu trabajo y tu trayectoria, y creces junto a otras Almas.</p></details>
         <details><summary>Alma</summary><p>Tú, dentro de ANIMA. Tu identidad creativa: nombre, oficio, bio, portafolio y trayectoria. Cada Alma decide qué muestra al mundo y qué guarda en privado.</p></details>
-        <details><summary>Esencia</summary><p>La energía que reúnes al crear y participar. Sustituye a los “puntos”. Sube con cada acción (completar tu identidad, subir obras, dejar Ecos, el Ritual) y te lleva de un nivel al siguiente.</p></details>
-        <details><summary>Niveles del camino</summary><p>El Alma crece por moradas: <b>Origen → Chispa → Raíz → Pulso → Huella → Tótem → Aura → ANIMA</b>. Cada nivel revela nuevas ventanas y posibilidades. No se desbloquea todo de golpe: ANIMA se descubre a tu ritmo.</p></details>
+        <details><summary>Esencia</summary><p>La cuenta de lo que haces dentro de ANIMA STUDIO. Sube con cada acción (completar tu identidad, subir obras, crear proyectos, dejar Ecos, el Ritual) y refleja tu actividad acumulada. <b>No abre ni cierra ventanas</b>: eso lo decide tu plan.</p></details>
         <details><summary>Huella</summary><p>Lo que dejas en el mundo: una obra publicada o una entrada en el Muro de la comunidad. Tus Huellas forman tu rastro creativo y hacen resonar el Árbol.</p></details>
         <details><summary>Eco</summary><p>Una respuesta, un comentario en una Huella. Sustituye a los “me gusta”: en ANIMA las cosas resuenan, no se acumulan.</p></details>
         <details><summary>Chispa</summary><p>El aprecio del mundo a una Huella. Puedes dar <b>una sola Chispa por Huella</b> en el muro. Las Chispas que recibes quedan en tu Alma.</p></details>
@@ -282,9 +273,9 @@
         <details><summary>Árbol de Almas</summary><p>El corazón del Mundo. Un organismo vivo que crece con la actividad de todas las Almas: cuantas más crean, más despierta el Árbol.</p></details>
         <details><summary>Ritual del Eco</summary><p>Una ceremonia diaria: <b>una vez al día</b> compartes una Huella sobre lo que creaste esta semana. Enciende el Árbol y suma Esencia.</p></details>
         <details><summary>Mundo · Constelación</summary><p>El mapa de las Almas que habitan ANIMA, por ubicación. Puedes visitar otras Almas y ver lo que decidieron hacer público: su portafolio y su resumen.</p></details>
-        <details><summary>Clan</summary><p>Una constelación pequeña de <b>2 a 8 Almas</b> que crean juntas, con <b>nombre, símbolo y descripción propios</b>. Comparten Plan de trabajo, Calendario, proyectos y memoria. Roles: <b>Admin</b> (representa al Clan, control total), <b>Líder</b> (segunda mano: tareas, calendario, proyectos) y <b>Alma</b> (miembro). Despierta con la Esencia o por invitación.</p></details>
+        <details><summary>Clan</summary><p>Una constelación pequeña de <b>2 a 8 Almas</b> que crean juntas, con <b>nombre, símbolo y descripción propios</b>. Comparten Plan de trabajo, Calendario, proyectos y memoria. Roles: <b>Admin</b> (representa al Clan, control total), <b>Líder</b> (segunda mano: tareas, calendario, proyectos) y <b>Alma</b> (miembro). Lo fundas tú o entras por invitación.</p></details>
         <details><summary>Santuario</summary><p>No es una sección: es un <b>estado superior</b>. Una organización viva (<b>8+ Almas</b>) que reúne <b>varios Clanes</b> bajo un mismo techo, con vista general, eventos y su propio pulso del Árbol. Estructura: Santuario → Clanes → Almas.</p></details>
-        <details><summary>LUMBRE</summary><p>Tu chispa compañera: el motor agente de ANIMA. Aún <b>no despierta</b> — reunirá voz cuando el mundo tenga más Esencia. Pronto te ayudará con tu Raíz, tus proyectos y tu camino.</p></details>
+        <details><summary>LUMBRE</summary><p>Tu chispa compañera: el motor agente de ANIMA. Aún <b>no despierta</b> — reunirá voz cuando el mundo tenga más Esencia. Pronto te ayudará con tu Raíz, tus proyectos y tu trayectoria.</p></details>
         <details><summary>Raíz</summary><p>El sustento del Alma: tus ingresos, egresos y ganancia. Siempre privado. Es la base que sostiene tu trayectoria.</p></details>
         <details><summary>Insignias</summary><p>Marcas que descubres al habitar ANIMA. No se anuncian: se encuentran.</p></details>
       </div>
@@ -292,9 +283,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/js/supabase.js?v=nucleo-v3"></script>
-  <script src="assets/js/anima-state.js?v=nucleo-v2"></script>
-  <script src="assets/js/seed.js?v=nucleo-v2"></script>
+  <script src="assets/js/supabase.js?v=nucleo-v4"></script>
+  <script src="assets/js/anima-state.js?v=nucleo-v3"></script>
+  <script src="assets/js/seed.js?v=nucleo-v3"></script>
   <script src="assets/js/icons.js"></script>
   <script src="assets/js/world-tree.js"></script>
   <script src="assets/js/services/ai.service.js"></script>
@@ -305,7 +296,7 @@
   <script src="assets/js/lumbre/lumbre.providers.js"></script>
   <script src="assets/js/lumbre/lumbre.memory.js"></script>
   <script src="assets/js/lumbre/lumbre.agent.js"></script>
-  <script src="assets/js/anima.js?v=nucleo-v6"></script>
+  <script src="assets/js/anima.js?v=nucleo-v7"></script>
   <script>if(window.WorldTree) WorldTree.init();</script>
 </body>
 </html>

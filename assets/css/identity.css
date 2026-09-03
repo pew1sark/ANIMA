@@ -44,9 +44,6 @@
 /* Un realce muy leve al pasar por las tarjetas con acción. */
 .card.map-card,.card.wt-card{transition:box-shadow .2s ease}
 
-/* Camino del Alma (símbolos oficiales) con respiración. */
-.ptile b{letter-spacing:.02em}
-
 /* En pantallas grandes, el icono activo gana un punto de marca. */
 @media(min-width:1024px){
   .nav-item.active{position:relative}
