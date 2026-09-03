@@ -15,14 +15,10 @@ export function Elegir({ organizaciones, volver }:
     <div className="min-h-full grid place-items-center p-6">
       <div className="w-full max-w-lg aparece">
         <div className="flex items-center justify-between mb-7">
-          <Marca sub="Company" />
-          <span className="flex items-center gap-4">
-            {volver && (
-              <button onClick={volver} className="text-[13px] text-muted hover:text-ink transition">
-                ← Cambiar de puerta
-              </button>
-            )}
-            <button onClick={signOut} className="text-[13px] text-muted hover:text-ink transition">Salir</button>
+          <Marca sub="Company" linea="company" />
+          <span className="flex items-center gap-1">
+            {volver && <button onClick={volver} className="b b-fan b-sm">← Cambiar de puerta</button>}
+            <button onClick={signOut} className="b b-fan b-sm">Salir</button>
           </span>
         </div>
         <h1 className="text-2xl font-extrabold tracking-tight">¿Dónde quieres entrar?</h1>
@@ -30,7 +26,10 @@ export function Elegir({ organizaciones, volver }:
         <div className="grid gap-2.5">
           {organizaciones.map(m => (
             <button key={m.company.id} onClick={() => select(m.company.id)}
-              className="text-left p-4 rounded-2xl border border-line bg-surface hover:border-accent toque group">
+              className="text-left p-4 rounded-2xl border border-line bg-surface hover:border-accent group
+                         shadow-[0_1px_2px_rgba(17,17,17,.05)] hover:shadow-[0_12px_28px_rgba(17,17,17,.09)]
+                         hover:-translate-y-0.5 active:translate-y-0 transition duration-200
+                         focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2">
               <div className="flex items-center gap-3">
                 <span className="w-10 h-10 rounded-xl grid place-items-center bg-accent/12 text-accent-deep
                                  font-extrabold text-[15px] shrink-0">
@@ -40,7 +39,8 @@ export function Elegir({ organizaciones, volver }:
                   <b className="block text-[15px] font-extrabold tracking-tight truncate">{m.company.name}</b>
                   <span className="text-[12px] text-muted">{m.role.name} · {m.company.currency}</span>
                 </span>
-                <span className="ml-auto text-faint group-hover:text-accent transition">→</span>
+                <span className="ml-auto text-faint group-hover:text-accent transition-transform duration-200
+                                 group-hover:translate-x-0.5">→</span>
               </div>
             </button>
           ))}

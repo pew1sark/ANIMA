@@ -54,9 +54,14 @@ export interface SolicitudAcceso {
   email: string;
   nombre: string | null;
   organizacion: string | null;
+  telefono: string | null;
   linea: 'studio' | 'company';
   mensaje: string | null;
   status: 'pendiente' | 'invitada' | 'rechazada';
+  /** De dónde vino: el login de /app/ o el formulario de la portada. */
+  fuente: 'login' | 'portada';
+  /** La oferta que se le prometió. Hay que honrarla al abrir la cuenta. */
+  promo: string | null;
   created_at: string;
 }
 
@@ -66,7 +71,7 @@ export const consolaService = {
   async solicitudes(): Promise<SolicitudAcceso[]> {
     const { data, error } = await supabase
       .from('access_requests')
-      .select('id, email, nombre, organizacion, linea, mensaje, status, created_at')
+      .select('id, email, nombre, organizacion, telefono, linea, mensaje, status, fuente, promo, created_at')
       .order('created_at', { ascending: false })
       .limit(50);
     if (error) throw error;

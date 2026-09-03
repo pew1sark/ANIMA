@@ -29,10 +29,6 @@ export function NuevaContrasena() {
     }
   }
 
-  const campo = `w-full px-3.5 py-2.5 rounded-xl border border-line bg-sunk text-sm
-                 outline-none focus:border-accent transition`;
-  const etiqueta = 'block text-[10px] uppercase tracking-wider font-extrabold text-muted mb-1.5';
-
   return (
     <div className="min-h-full grid place-items-center p-6">
       <form onSubmit={submit}
@@ -44,28 +40,25 @@ export function NuevaContrasena() {
           Elige una que no uses en otra parte. Con esto entras a ANIMA TSC.
         </p>
 
-        <label className={etiqueta}>Contraseña</label>
-        <input type="password" required autoFocus value={clave} onChange={e => setClave(e.target.value)}
-               autoComplete="new-password" className={campo + ' mb-4'} />
+        <label className="etiqueta" htmlFor="clave-nueva">Contraseña</label>
+        <input id="clave-nueva" type="password" required autoFocus value={clave}
+               onChange={e => setClave(e.target.value)}
+               autoComplete="new-password" className="campo mb-4" />
 
-        <label className={etiqueta}>Repítela</label>
-        <input type="password" required value={repetida} onChange={e => setRepetida(e.target.value)}
-               autoComplete="new-password" className={campo + ' mb-5'} />
+        <label className="etiqueta" htmlFor="clave-repetida">Repítela</label>
+        <input id="clave-repetida" type="password" required value={repetida}
+               onChange={e => setRepetida(e.target.value)}
+               autoComplete="new-password" className="campo mb-5" />
 
         {error && (
           <p role="alert" className="entra text-[13px] text-danger bg-danger/10 border border-danger/20
                                      rounded-xl px-3.5 py-2.5 mb-4">{error}</p>
         )}
 
-        <button type="submit" disabled={busy}
-          className="w-full py-2.5 rounded-full bg-ink text-bg text-sm font-bold
-                     disabled:opacity-45 hover:opacity-90 transition">
-          {busy ? 'Guardando…' : 'Guardar y entrar'}
+        <button type="submit" disabled={busy} className="b b-pri b-lg b-blq">
+          {busy ? <><span className="girito" />Guardando…</> : 'Guardar y entrar'}
         </button>
-        <button type="button" onClick={signOut}
-          className="w-full mt-3 text-[12.5px] text-muted hover:text-ink transition">
-          Cancelar
-        </button>
+        <button type="button" onClick={signOut} className="b b-fan b-blq mt-2">Cancelar</button>
       </form>
     </div>
   );

@@ -8,8 +8,13 @@ export interface Solicitud {
   email: string;
   nombre?: string | null;
   organizacion?: string | null;
+  telefono?: string | null;
   linea: 'studio' | 'company';
   mensaje?: string | null;
+  /** Dónde se llenó el formulario. La portada tiene el suyo desde sep 2026. */
+  fuente?: 'login' | 'portada';
+  /** La oferta con la que entró, si entró con una. */
+  promo?: 'mes-extra' | null;
 }
 
 export const accesoService = {
@@ -35,8 +40,13 @@ export const accesoService = {
       email: s.email.trim().toLowerCase(),
       nombre: limpio(s.nombre),
       organizacion: limpio(s.organizacion),
+      telefono: limpio(s.telefono),
       linea: s.linea,
-      mensaje: limpio(s.mensaje)
+      mensaje: limpio(s.mensaje),
+      fuente: s.fuente ?? 'login',
+      /* La oferta viaja con la fila. Un mes gratis prometido en una pantalla y
+         no escrito en la base es un mes que nadie va a honrar. */
+      promo: s.promo ?? null
     });
     /* Índice único sobre los pendientes: pedir dos veces no es un error que
        haya que mostrar en rojo, es que ya está pedido. */

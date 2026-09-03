@@ -261,7 +261,7 @@ function Solicitudes({ lista, recargar }:
 
       {pendientes.length === 0 && (
         <p className="text-[13px] text-muted">
-          Nadie ha pedido acceso todavía. El formulario está en el login de la plataforma.
+          Nadie ha pedido acceso todavía. Los formularios están en la portada del sitio y en el login.
         </p>
       )}
 
@@ -270,9 +270,16 @@ function Solicitudes({ lista, recargar }:
           <div key={s.id} className="tarjeta p-4 aparece">
             <div className="flex items-start gap-3 flex-wrap">
               <span className="min-w-0 flex-1">
-                <b className="block text-[14px] font-bold truncate">{s.nombre || s.email}</b>
-                <span className="block text-[12px] text-muted truncate">
+                <span className="flex items-center gap-2 flex-wrap">
+                  <b className="text-[14px] font-bold truncate">{s.nombre || s.email}</b>
+                  {/* Lo que hay que honrar al abrir la cuenta va delante, no en
+                      una nota al pie: es lo único de la ficha que cuesta plata. */}
+                  {s.promo === 'mes-extra' && <span className="marca marca-acento">+1 mes gratis</span>}
+                  {s.fuente === 'portada' && <span className="marca">Portada</span>}
+                </span>
+                <span className="block text-[12px] text-muted truncate mt-0.5">
                   {s.email}
+                  {s.telefono && ` · ${s.telefono}`}
                   {s.organizacion && ` · ${s.organizacion}`}
                   {` · ANIMA ${s.linea.toUpperCase()}`}
                 </span>

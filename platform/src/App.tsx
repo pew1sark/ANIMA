@@ -100,10 +100,7 @@ function SinAcceso() {
           Tu cuenta <b>{user?.email}</b> existe, pero todavía no tiene un plan ni un Alma.
           Quien te invitó tiene que darte de alta.
         </p>
-        <button onClick={signOut}
-          className="mt-6 text-[13px] font-bold px-4 py-2 rounded-full border border-line hover:border-faint transition">
-          Salir
-        </button>
+        <button onClick={signOut} className="b b-sec mt-6">Salir</button>
       </div>
     </div>
   );
@@ -121,16 +118,8 @@ function SinOrganizacion({ volver }: { volver?: () => void }) {
           de ANIMA COMPANY. Quien administra tu empresa tiene que invitarte.
         </p>
         <div className="mt-6 flex items-center justify-center gap-2 flex-wrap">
-          {volver && (
-            <button onClick={volver}
-              className="text-[13px] font-bold px-4 py-2 rounded-full border border-line hover:border-faint transition">
-              Volver
-            </button>
-          )}
-          <button onClick={signOut}
-            className="text-[13px] font-bold px-4 py-2 rounded-full border border-line hover:border-faint transition">
-            Salir
-          </button>
+          {volver && <button onClick={volver} className="b b-sec">Volver</button>}
+          <button onClick={signOut} className="b b-sec">Salir</button>
         </div>
       </div>
     </div>

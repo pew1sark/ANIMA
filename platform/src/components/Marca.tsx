@@ -13,10 +13,35 @@ export function Apex({ className = 'w-[22px] h-[22px]' }: { className?: string }
   );
 }
 
-export function Marca({ sub = 'TSC' }: { sub?: string }) {
+/* El glifo de ANIMA COMPANY. Es el mismo pico, con una viga.
+
+   Antes COMPANY se dibujaba con un edificio genérico —el de cualquier juego de
+   iconos— y no decía nada: ni que fuera ANIMA, ni qué la distingue de STUDIO.
+   La idea es una sola: STUDIO es el pico abierto, el de quien sube solo;
+   COMPANY es ese mismo pico atravesado por la viga que lo sostiene, porque una
+   empresa es la estructura que aguanta el peso de varios. Y de paso el trazo
+   cierra la A de ANIMA: no es un icono prestado, es la marca.
+
+   Misma retícula, mismo grosor y mismas puntas redondas que <Apex>, así que
+   los dos se pueden poner uno al lado del otro sin que uno pese más. */
+export function ApexCompany({ className = 'w-[22px] h-[22px]' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 100" fill="none" aria-hidden="true" className={className}>
+      <g stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 82 L50 20 L82 82" />
+        <path d="M28 62 L72 62" />
+      </g>
+    </svg>
+  );
+}
+
+/* La firma: glifo + palabra. `linea` elige de qué producto es la cara. */
+export function Marca({ sub = 'TSC', linea = 'tsc' }:
+  { sub?: string; linea?: 'tsc' | 'studio' | 'company' }) {
+  const Glifo = linea === 'company' ? ApexCompany : Apex;
   return (
     <span className="flex items-center gap-3">
-      <Apex className="w-[26px] h-[26px] text-ink shrink-0" />
+      <Glifo className="w-[26px] h-[26px] text-ink shrink-0" />
       <span className="leading-none">
         <b className="block text-[15px] font-extrabold tracking-[.14em]">ANIMA</b>
         <span className="block mt-1 text-[9px] uppercase tracking-[.3em] font-bold text-muted">{sub}</span>

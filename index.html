@@ -12,7 +12,7 @@
   <title>ANIMA TSC — Technology System Connection</title>
   <meta name="description" content="Un sistema de gestión con dos plataformas: ANIMA STUDIO para quien crea, ANIMA COMPANY para quien opera. Una sola cuenta, con el aislamiento escrito en la base de datos." />
   <meta property="og:title" content="ANIMA TSC — Technology System Connection" />
-  <meta property="og:description" content="ANIMA STUDIO para quien crea. ANIMA COMPANY para quien opera. Un solo sistema, una sola cuenta." />
+  <meta property="og:description" content="ANIMA STUDIO para quien crea. ANIMA COMPANY para quien opera. Solicita acceso y suma un mes gratis." />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="ANIMA TSC" />
   <meta property="og:locale" content="es_CL" />
@@ -24,7 +24,7 @@
   <meta property="og:image:alt" content="ANIMA TSC — Un sistema. Dos plataformas." />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="ANIMA TSC — Technology System Connection" />
-  <meta name="twitter:description" content="ANIMA STUDIO para quien crea. ANIMA COMPANY para quien opera. Un solo sistema, una sola cuenta." />
+  <meta name="twitter:description" content="ANIMA STUDIO para quien crea. ANIMA COMPANY para quien opera. Solicita acceso y suma un mes gratis." />
   <meta name="twitter:image" content="https://animatsc.com/assets/img/og-anima.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -34,6 +34,7 @@
       --black:#08080a; --ink:#0a0a0b; --veil:#101013;
       --white:#ffffff; --paper:#f4f4f5;
       --soft:#9a9aa2; --faint:#5e5e66; --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.05);
+      --gold:#d0aa63; --gold-soft:rgba(208,170,99,.14);
     }
     *{box-sizing:border-box}
     html{scroll-behavior:smooth}
@@ -57,12 +58,29 @@
     nav .links{display:flex;align-items:center;gap:8px}
     nav a.lk{font-size:12.5px;color:var(--soft);padding:8px 12px;border-radius:2px;transition:.2s}
     nav a.lk:hover{color:#fff}
-    .btn{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);background:transparent;color:#fff;
-      border-radius:2px;padding:11px 20px;font-size:13px;font-weight:500;transition:.25s;letter-spacing:.04em}
-    .btn:hover{border-color:#fff;background:#fff;color:var(--ink)}
-    .btn.solid{background:#fff;color:var(--ink);border-color:#fff}
-    .btn.solid:hover{background:transparent;color:#fff;border-color:#fff}
-    .btn.sm{padding:8px 14px;font-size:12px}
+    /* ---------- BOTONES ----------
+       Redondos del todo, como los de la plataforma: es el mismo sistema, no
+       se disfraza de otra cosa al cruzar a /app/. La sombra corta y el realce
+       de un píxel arriba les dan canto de tecla; al pulsar se hunden de verdad. */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;
+      border:1px solid var(--line);background:rgba(255,255,255,.03);color:#fff;
+      border-radius:999px;padding:12px 22px;font-size:13.5px;font-weight:600;letter-spacing:.01em;
+      transition:background-color .18s ease,border-color .18s ease,color .18s ease,
+                 box-shadow .18s ease,transform .18s ease}
+    .btn:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.07);transform:translateY(-1px)}
+    .btn:active{transform:translateY(0);transition-duration:.06s}
+    .btn:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+    .btn.solid{background:linear-gradient(180deg,#fff,#e9e9ec);color:var(--ink);border-color:#fff;
+      box-shadow:0 1px 2px rgba(0,0,0,.3)}
+    .btn.solid:hover{background:#fff;box-shadow:0 10px 26px rgba(255,255,255,.16)}
+    /* El dorado es de la oferta y de nada más. */
+    .btn.gold{background:linear-gradient(180deg,#e2c489,var(--gold) 64%);color:#2b1f08;border-color:#c2a05e;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 1px 2px rgba(0,0,0,.3)}
+    .btn.gold:hover{background:linear-gradient(180deg,#ecd39c,#d9b673 64%);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 12px 30px rgba(208,170,99,.24)}
+    .btn.sm{padding:9px 16px;font-size:12.5px}
+    .btn .fl{transition:transform .18s ease}
+    .btn:hover .fl{transform:translateX(2px)}
     @media(max-width:720px){ nav .links a.lk{display:none} }
 
     /* ---------- HERO ----------
@@ -90,9 +108,9 @@
       filter:drop-shadow(0 0 24px rgba(255,255,255,.35));animation:rise 1.4s ease both}
     @keyframes rise{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
     .hero-center{max-width:640px}
-    .hero .kicker{font-size:clamp(10px,1.4vw,11.5px);letter-spacing:.42em;text-transform:uppercase;color:#c9c9ce;
-      font-family:ui-monospace,"SF Mono",Menlo,monospace;
-      animation:fadeUp 1.4s ease both;animation-delay:.35s;opacity:0}
+    /* La oferta entra primero, con el mismo desvanecido que el resto: si
+       apareciera de golpe sería lo único que se mueve distinto en la pantalla. */
+    .hero .chip{animation:fadeUp 1.4s ease both;animation-delay:.35s;opacity:0}
     .hero h1{margin-top:20px;font-family:"Cormorant Garamond",serif;font-weight:300;
       font-size:clamp(30px,5.4vw,54px);line-height:1.1;
       animation:fadeUp 1.4s ease both;animation-delay:.6s;opacity:0}
@@ -165,6 +183,65 @@
     footer .flinks a{color:var(--soft);font-size:12.5px}
     footer .flinks a:hover{color:#fff}
 
+    /* ---------- LA OFERTA Y EL FORMULARIO ----------
+       La portada tenía un `mailto:` como única puerta para quien todavía no
+       es cliente. Un correo en blanco es mucho pedir: aquí se pregunta lo
+       justo —quién eres, dónde te escribo, qué administras— y lo demás se
+       conversa después. La oferta va escrita en la fila que se guarda, no
+       solo en esta pantalla: ver la migración 0087. */
+    .chip{display:inline-flex;align-items:center;gap:9px;border:1px solid rgba(208,170,99,.34);
+      background:var(--gold-soft);color:#f0dcb4;border-radius:999px;padding:7px 15px 7px 9px;
+      font-size:12px;letter-spacing:.02em}
+    .chip b{background:var(--gold);color:#2b1f08;border-radius:999px;padding:3px 9px;
+      font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+    .chip:hover{border-color:rgba(208,170,99,.6)}
+
+    .acceso{display:grid;grid-template-columns:.92fr 1.08fr;gap:44px;margin-top:44px;align-items:start}
+    .oferta .num{display:grid;gap:20px;margin-top:30px;counter-reset:p}
+    .oferta .num > div{padding-left:40px;position:relative;counter-increment:p}
+    .oferta .num > div::before{content:"0" counter(p);position:absolute;left:0;top:1px;
+      font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.16em;color:var(--gold)}
+    .oferta .num b{display:block;font-size:15px;font-weight:500}
+    .oferta .num p{color:var(--soft);font-size:13.5px;margin:6px 0 0}
+
+    .caja{border:1px solid var(--line);border-radius:22px;padding:30px;
+      background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015))}
+    .caja h3{font-size:19px;font-weight:500;letter-spacing:-.01em}
+    .caja .nota{color:var(--soft);font-size:13px;margin:8px 0 24px}
+    form .fila{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    form label{display:block;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:9.5px;
+      letter-spacing:.2em;text-transform:uppercase;color:var(--soft);margin-bottom:7px}
+    form label .op{text-transform:none;letter-spacing:.02em;color:var(--faint)}
+    .campo{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;
+      padding:12px 14px;color:#fff;font-family:inherit;font-size:14px;transition:.18s;-webkit-appearance:none}
+    .campo::placeholder{color:#55555c}
+    .campo:hover{border-color:rgba(255,255,255,.22)}
+    .campo:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(208,170,99,.16);
+      background:rgba(255,255,255,.06)}
+    textarea.campo{resize:vertical;min-height:82px}
+    .grupo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .op-plat{display:block;text-align:left;border:1px solid var(--line);border-radius:14px;padding:13px 15px;
+      background:rgba(255,255,255,.03);color:#fff;transition:.18s;cursor:pointer}
+    .op-plat:hover{border-color:rgba(255,255,255,.26);transform:translateY(-1px)}
+    .op-plat[aria-pressed="true"]{border-color:var(--gold);background:var(--gold-soft);
+      box-shadow:0 0 0 3px rgba(208,170,99,.14)}
+    .op-plat .tt{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;letter-spacing:.06em}
+    .op-plat .tt svg{width:15px;height:15px}
+    .op-plat small{display:block;color:var(--soft);font-size:11.5px;margin-top:3px}
+    .campos{display:grid;gap:16px;margin-top:22px}
+    .miel{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+    .legal{color:var(--faint);font-size:11px;line-height:1.6;margin:16px 0 0}
+    .legal a{color:var(--soft);text-decoration:underline;text-underline-offset:2px}
+    .estado{display:none;font-size:13px;border-radius:12px;padding:12px 14px;margin-top:16px;line-height:1.5}
+    .estado.mal{display:block;color:#f0b4b4;background:rgba(178,59,59,.16);border:1px solid rgba(178,59,59,.34)}
+    .listo{text-align:center;padding:16px 4px 8px}
+    .listo .tick{width:46px;height:46px;margin:0 auto 18px;border-radius:999px;display:grid;place-items:center;
+      background:var(--gold-soft);border:1px solid rgba(208,170,99,.4)}
+    .listo h3{font-size:21px;font-weight:400;font-family:"Cormorant Garamond",serif}
+    .listo p{color:var(--soft);font-size:13.5px;margin:12px auto 0;max-width:38ch}
+
+    @media(max-width:900px){ .acceso{grid-template-columns:1fr;gap:34px} }
+    @media(max-width:560px){ form .fila,.grupo{grid-template-columns:1fr} .caja{padding:24px 20px} }
     @media(max-width:860px){ .mods{grid-template-columns:repeat(2,1fr)} .steps{grid-template-columns:1fr} }
     @media(max-width:760px){
       .duo,.found{grid-template-columns:1fr}
@@ -172,7 +249,7 @@
       .hero-center{top:54%}
     }
     @media (prefers-reduced-motion: reduce){
-      .glow,.scroll-hint,.apex-mark,.hero .kicker,.hero h1,.hero .sub,.hero-cta{animation:none;opacity:1}
+      .glow,.scroll-hint,.apex-mark,.hero .chip,.hero h1,.hero .sub,.hero-cta{animation:none;opacity:1}
     }
   </style>
 </head>
@@ -188,7 +265,8 @@
       <a class="lk" href="#modulos">Módulos</a>
       <a class="lk" href="#base">Cómo funciona</a>
       <a class="lk" href="planes.html">Planes</a>
-      <a class="btn sm solid" href="app/">Entrar</a>
+      <a class="lk" href="app/">Entrar</a>
+      <a class="btn sm gold" href="#acceso">Solicitar acceso</a>
     </div>
   </nav>
 
@@ -199,15 +277,18 @@
     <div class="hero-stack">
       <svg class="apex-mark" viewBox="0 0 100 100" fill="none"><path d="M18 82 L50 20 L82 82" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <div class="hero-center">
-        <div class="kicker">Technology System Connection</div>
-        <h1>Un sistema.<br>Dos plataformas.</h1>
+        <a class="chip" href="#acceso"><b>1 mes gratis</b> para quien pide acceso ahora</a>
+        <h1 style="margin-top:26px">Un sistema.<br>Dos plataformas.</h1>
         <p class="sub"><b style="color:#fff;font-weight:500">ANIMA STUDIO</b> para quien crea.
           <b style="color:#fff;font-weight:500">ANIMA COMPANY</b> para quien opera.
           La misma base, la misma cuenta, cada trabajo en su lugar.</p>
         <div class="hero-cta">
-          <a class="btn solid" href="app/">Entrar a la plataforma</a>
+          <a class="btn gold" href="#acceso">Solicitar acceso <span class="fl">→</span></a>
           <a class="btn" href="#sistema">Conocer el sistema</a>
         </div>
+        <p class="faint" style="font-size:11.5px;margin-top:18px;letter-spacing:.02em">
+          Se abre por invitación · La implementación se arma contigo · Concepción, Chile
+        </p>
       </div>
       <div class="wordmark">
         <div class="nm serif">ANIMA</div>
@@ -241,7 +322,7 @@
           </ul>
         </div>
         <div class="plat">
-          <svg class="sy" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5"/></svg>
+          <svg class="sy" viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 82 L50 20 L82 82"/><path d="M28 62 L72 62"/></svg>
           <h3>ANIMA COMPANY</h3>
           <div class="for">Para empresas formales.</div>
           <p>Operación con inventario, personal, reparto y cobranza. Pensada donde el volumen ya no cabe en una planilla.</p>
@@ -332,16 +413,113 @@
     </div>
   </section>
 
-  <!-- LLAMADO FINAL -->
-  <section class="call">
+  <!-- ======================== SOLICITAR ACCESO ======================== -->
+  <section class="block" id="acceso">
     <div class="wrap">
-      <div class="mono eyebrow" style="text-align:center">Acceso por invitación</div>
-      <h2 class="lead serif">ANIMA está incorporando organizaciones<br>de a poco, y con acompañamiento.</h2>
-      <p class="para">Cada implementación se arma con quien la va a usar. Si quieres que tu operación entre, conversemos antes
-        de que exista una cuenta.</p>
-      <div style="margin-top:34px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-        <a class="btn solid" href="app/">Entrar a la plataforma</a>
-        <a class="btn" href="mailto:sarkgraff@gmail.com?subject=ANIMA%20TSC%20—%20consulta">Escribir a ANIMA</a>
+      <div class="mono eyebrow">Solicitar acceso</div>
+      <div class="acceso">
+
+        <div class="oferta">
+          <h2 class="lead serif">Un mes gratis,<br><em>y una conversación antes.</em></h2>
+          <p class="para">ANIMA está incorporando organizaciones de a poco. Cada implementación se arma con quien
+            la va a usar: por eso primero conversamos y después existe la cuenta. Quien lo pide ahora entra con
+            <b style="color:#fff;font-weight:500">un mes sin costo</b> sobre el plan que contrate.</p>
+          <div class="num">
+            <div>
+              <b>Nos cuentas cómo trabajas hoy</b>
+              <p>En qué se te va el tiempo, qué llevas en planillas y qué se te pierde entre medio.</p>
+            </div>
+            <div>
+              <b>Te decimos qué te sirve</b>
+              <p>Qué plataforma, qué plan enciende lo que necesitas y qué queda fuera por ahora. Sin vender módulos que no vas a usar.</p>
+            </div>
+            <div>
+              <b>Abrimos la cuenta con tu mes gratis</b>
+              <p>Con tus datos cargados y alguien acompañando la puesta en marcha, no con un manual.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="caja">
+          <form id="fAcceso" novalidate>
+            <h3>Pedir acceso</h3>
+            <p class="nota">Esto no crea una cuenta: abre una conversación y te reserva el mes gratis.</p>
+
+            <label id="lPlat">¿Para qué plataforma?</label>
+            <div class="grupo" role="group" aria-labelledby="lPlat">
+              <button type="button" class="op-plat" data-linea="company" aria-pressed="true">
+                <span class="tt">
+                  <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 82 L50 20 L82 82"/><path d="M28 62 L72 62"/></svg>
+                  COMPANY
+                </span>
+                <small>Una empresa</small>
+              </button>
+              <button type="button" class="op-plat" data-linea="studio" aria-pressed="false">
+                <span class="tt">
+                  <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 82 L50 20 L82 82"/></svg>
+                  STUDIO
+                </span>
+                <small>Mi obra o taller</small>
+              </button>
+            </div>
+
+            <div class="campos">
+              <div class="fila">
+                <div>
+                  <label for="fNombre">Nombre</label>
+                  <input class="campo" id="fNombre" name="nombre" autocomplete="name" required />
+                </div>
+                <div>
+                  <label for="fCorreo">Correo</label>
+                  <input class="campo" id="fCorreo" name="email" type="email" autocomplete="email" inputmode="email" required />
+                </div>
+              </div>
+              <div class="fila">
+                <div>
+                  <label for="fOrg">Organización <span class="op">· opcional</span></label>
+                  <input class="campo" id="fOrg" name="organizacion" autocomplete="organization" />
+                </div>
+                <div>
+                  <label for="fTel">Teléfono <span class="op">· opcional</span></label>
+                  <input class="campo" id="fTel" name="telefono" type="tel" autocomplete="tel" inputmode="tel" placeholder="+56 9 …" />
+                </div>
+              </div>
+              <div>
+                <label for="fMsg">¿Qué necesitas administrar? <span class="op">· opcional</span></label>
+                <textarea class="campo" id="fMsg" name="mensaje" rows="3"
+                  placeholder="Cuántas personas, qué llevas hoy en planillas, qué te urge ordenar."></textarea>
+              </div>
+            </div>
+
+            <!-- La trampa de miel: un campo que ningún humano ve ni tabula. Si
+                 viene lleno, lo llenó un robot y la solicitud se descarta sin
+                 decírselo — un error le enseña a esquivarlo. -->
+            <input class="miel" type="text" id="fWeb" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+
+            <p class="estado" id="fError" role="alert"></p>
+
+            <button class="btn gold" type="submit" id="fEnviar" style="width:100%;margin-top:22px">
+              Enviar solicitud <span class="fl">→</span>
+            </button>
+
+            <p class="legal">
+              Al enviar aceptas los <a href="legal.html#terminos">términos</a> y el
+              <a href="legal.html#privacidad">tratamiento de tus datos</a>. Usamos lo que escribas solo para responderte.
+              ¿Prefieres el correo? <a href="mailto:sarkgraff@gmail.com?subject=ANIMA%20TSC%20%E2%80%94%20quiero%20entrar">sarkgraff@gmail.com</a>
+            </p>
+          </form>
+
+          <div class="listo" id="fListo" hidden>
+            <div class="tick">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d0aa63" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
+            <h3 id="fListoTitulo">Solicitud recibida</h3>
+            <p id="fListoTexto">Queda anotada, con tu mes gratis reservado. Te escribimos para conversar qué
+              necesitas antes de abrir la cuenta.</p>
+            <a class="btn" href="planes.html" style="margin-top:24px">Ver los planes mientras tanto</a>
+          </div>
+        </div>
+
       </div>
     </div>
   </section>
@@ -355,6 +533,7 @@
         <a href="planes.html">Planes</a>
         <a href="legal.html#privacidad">Privacidad</a>
         <a href="legal.html#terminos">Términos</a>
+        <a href="#acceso">Solicitar acceso</a>
         <a href="app/">Entrar</a>
       </div>
       <strong style="color:#cfcfd4;font-weight:500;letter-spacing:.04em">ANIMA TSC — Technology System Connection</strong><br>
@@ -371,6 +550,111 @@
     addEventListener("scroll", function(){
       var n=document.getElementById("nav");
       n.style.background = scrollY>40 ? "rgba(8,8,10,.82)" : "";
+    });
+  })();
+  </script>
+  <script>
+  /* ---------------------------------------------------------------------
+     El formulario de acceso
+     ---------------------------------------------------------------------
+     Escribe directo en `access_requests` de Supabase con la clave pública
+     —la misma que ya viaja en el paquete de /app/, hecha para ser pública—.
+     No crea cuenta ni la puede crear: la política RLS de esa tabla solo deja
+     insertar filas `pendiente`, y no deja leer ninguna. Abrir la puerta sigue
+     siendo un acto deliberado desde la consola.
+
+     La oferta viaja en la fila (`promo`), no solo en esta pantalla: un mes
+     gratis prometido aquí y no escrito en la base es un mes que nadie honra.  */
+  (function(){
+    var API = "https://jwxeowowuxmijuexdrua.supabase.co/rest/v1/access_requests";
+    var KEY = "sb_publishable_vrVyAVt19nSsedXoCzYr-g_QFQc9w_R";
+
+    var form = document.getElementById("fAcceso");
+    if (!form) return;
+    var listo   = document.getElementById("fListo");
+    var error   = document.getElementById("fError");
+    var enviar  = document.getElementById("fEnviar");
+    var linea   = "company";
+
+    /* El selector de plataforma. Son dos botones, no un <select>: se toca la
+       caja entera y se ve cuál está elegida sin abrir nada. */
+    var opciones = form.querySelectorAll(".op-plat");
+    Array.prototype.forEach.call(opciones, function(b){
+      b.addEventListener("click", function(){
+        linea = b.getAttribute("data-linea");
+        Array.prototype.forEach.call(opciones, function(o){
+          o.setAttribute("aria-pressed", String(o === b));
+        });
+      });
+    });
+
+    function limpio(v){ v = (v || "").trim(); return v === "" ? null : v; }
+
+    function fallo(texto){
+      error.textContent = texto;
+      error.className = "estado mal";
+      enviar.disabled = false;
+      enviar.innerHTML = 'Enviar solicitud <span class="fl">→</span>';
+    }
+
+    function exito(titulo, texto){
+      document.getElementById("fListoTitulo").textContent = titulo;
+      document.getElementById("fListoTexto").textContent  = texto;
+      form.hidden = true;
+      listo.hidden = false;
+      listo.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    form.addEventListener("submit", function(e){
+      e.preventDefault();
+      error.className = "estado";
+
+      var correo = form.email.value.trim();
+      var nombre = form.nombre.value.trim();
+      if (!nombre) { return fallo("Falta tu nombre."); }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) { return fallo("Revisa el correo: no parece una dirección válida."); }
+
+      /* Si el robot cayó en la trampa, se le agradece y no se guarda nada. */
+      if (form.website.value) {
+        return exito("Solicitud recibida", "Queda anotada. Te escribimos pronto.");
+      }
+
+      enviar.disabled = true;
+      enviar.innerHTML = "Enviando…";
+
+      fetch(API, {
+        method: "POST",
+        headers: {
+          "apikey": KEY,
+          "Authorization": "Bearer " + KEY,
+          "Content-Type": "application/json",
+          "Prefer": "return=minimal"
+        },
+        body: JSON.stringify({
+          email:        correo.toLowerCase(),
+          nombre:       nombre,
+          organizacion: limpio(form.organizacion.value),
+          telefono:     limpio(form.telefono.value),
+          mensaje:      limpio(form.mensaje.value),
+          linea:        linea,
+          fuente:       "portada",
+          promo:        "mes-extra"
+        })
+      }).then(function(r){
+        if (r.ok) {
+          return exito("Solicitud recibida",
+            "Queda anotada, con tu mes gratis reservado. Te escribimos para conversar qué necesitas antes de abrir la cuenta.");
+        }
+        /* Pedirlo dos veces no es un error que haya que mostrar en rojo: es que
+           ya estaba pedido. La base lo impide con un índice único. */
+        if (r.status === 409) {
+          return exito("Ya te teníamos anotado",
+            "Tu solicitud sigue pendiente y tu mes gratis, reservado. Te escribimos en cuanto la revisemos.");
+        }
+        fallo("No se pudo enviar la solicitud. Inténtalo en unos minutos o escríbenos a sarkgraff@gmail.com.");
+      }).catch(function(){
+        fallo("No se pudo enviar la solicitud. Revisa tu conexión o escríbenos a sarkgraff@gmail.com.");
+      });
     });
   })();
   </script>

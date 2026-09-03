@@ -125,14 +125,9 @@ export function Espacio({ volver }: { volver?: () => void }) {
           </span>
           <span className="ml-auto text-[13px] text-muted hidden lg:block truncate max-w-[220px]">{user?.email}</span>
           {isPlatformAdmin && (
-            <span className="text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full bg-accent/15 text-accent-deep">
-              Super Admin
-            </span>
+            <span className="marca marca-acento">Super Admin</span>
           )}
-          <button onClick={signOut}
-            className="text-[13px] font-bold px-3.5 py-1.5 rounded-full border border-line hover:border-faint transition">
-            Salir
-          </button>
+          <button onClick={signOut} className="b b-sec b-sm">Salir</button>
         </header>
 
         {/* El ancho: las tablas y los gráficos del panel no caben en 4xl, y
