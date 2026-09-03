@@ -7,10 +7,16 @@
    Antes la abría el Camino del Alma: el Alma desbloqueaba obras y megas al
    subir de nivel. Ahora la abre el plan contratado. La fuente de verdad es el
    plan en la base; esto es el espejo local para avisar antes de subir. */
+/* Las cuotas de archivo por plan. Son de las pocas que el Taller aplica de
+   verdad, así que tienen que ser exactamente las que publica planes.html: si
+   la página promete 1 GB y el código corta en 100 MB, la página miente.
+
+   Venían de la Alpha gratuita —10 imágenes y 100 MB— y para un plan de pago
+   eran una burla: un portafolio de obras se come eso en una tarde. */
 const PLAN_STORAGE = {
-  ALMA:      { images:10,  pdfs:2,  mb:100  },
-  CLAN:      { images:30,  pdfs:6,  mb:300  },
-  SANTUARIO: { images:100, pdfs:20, mb:1000 }
+  ALMA:      { images:60,   pdfs:12,  mb:1000  },   // Starter · $9.990
+  CLAN:      { images:400,  pdfs:80,  mb:15000 },   // Pro     · $29.990
+  SANTUARIO: { images:1500, pdfs:300, mb:50000 }    // Max     · $49.990
 };
 const normalizeStorageKey = k => PLAN_STORAGE[String(k||"").toUpperCase()] ? String(k).toUpperCase() : "ALMA";
 const storageLimit = k => PLAN_STORAGE[normalizeStorageKey(k)];

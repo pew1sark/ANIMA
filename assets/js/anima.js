@@ -141,10 +141,14 @@ let isCreator = false;   // se activa en refreshAuth si la sesión es del Creado
    El Creador (correo) está por encima de todo: ve y edita todo,
    y solo él ve Consola + Personalizar. Ninguna otra Alma las ve. */
 const PLAN_TIERS = [["ALMA","◆ Alma"],["CLAN","❂ Clan"],["SANTUARIO","🜁 Santuario"]];
+/* Los tres planes de STUDIO. El nombre interno es el de siempre —Alma, Clan,
+   Santuario— y el comercial es el que publica planes.html: Starter, Pro y Max.
+   Los cupos son los del plan contratado, no un adorno: si aquí dicen otra cosa
+   que la página, alguien va a reclamar con razón. */
 const PLAN_META = {
-  ALMA:      { ico:"◆", t:"Alma",      sub:"Individual",        nivel:1 },
-  CLAN:      { ico:"❂", t:"Clan",      sub:"Equipo (2–8)",      nivel:2 },
-  SANTUARIO: { ico:"🜁", t:"Santuario", sub:"Organización (8+)", nivel:3 }
+  ALMA:      { ico:"◆", t:"Alma",      sub:"Starter · 1 persona",     nivel:1 },
+  CLAN:      { ico:"❂", t:"Clan",      sub:"Pro · hasta 3",           nivel:2 },
+  SANTUARIO: { ico:"🜁", t:"Santuario", sub:"Max · hasta 10",          nivel:3 }
 };
 const PLAN_ORDER = ["ALMA","CLAN","SANTUARIO"];
 /* Vistas que cada plan DESBLOQUEA por encima del espacio individual.
