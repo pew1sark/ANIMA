@@ -15,6 +15,9 @@ interface TenantValue {
   select: (companyId: string) => void;
   /** Vuelve a leer las organizaciones. Se usa al cambiar la marca. */
   recargar: () => void;
+  /** Sube uno con cada recarga. Quien tenga datos derivados del espacio
+   *  —la moneda, los módulos encendidos— los vuelve a pedir mirando esto. */
+  version: number;
   hasModule: (m: ModuleSlug) => boolean;
   hasLevel: (min: number) => boolean;
 }
@@ -96,12 +99,12 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const current = memberships.find(m => m.company.id === currentId) ?? null;
 
   const value = useMemo<TenantValue>(() => ({
-    memberships, current, modules, lineas, loading,
+    memberships, current, modules, lineas, loading, version: tic,
     select: (id: string) => setCurrentId(id || null),
     recargar: () => setTic(n => n + 1),
     hasModule: (m) => modules.has(m),
     hasLevel: (min) => (current?.role.level ?? 0) >= min
-  }), [memberships, current, modules, lineas, loading]);
+  }), [memberships, current, modules, lineas, loading, tic]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

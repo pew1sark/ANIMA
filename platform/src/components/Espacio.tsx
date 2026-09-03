@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/core/auth/AuthContext';
 import { useTenant } from '@/core/tenant/TenantContext';
 import { MODULES, MOSTRAR_TODOS_LOS_MODULOS, ZONAS } from '@/core/modules/registry';
@@ -12,7 +13,9 @@ import { Informes } from '@/components/company/Informes';
 import { Inicio } from '@/components/company/Inicio';
 import { ResumenModulo } from '@/components/company/ResumenModulo';
 import { Novedades } from '@/components/company/Novedades';
+import { AnalisisFinanciero } from '@/components/company/AnalisisFinanciero';
 import { pestanasDe } from '@/core/modules/pestanas';
+import { fijarMoneda } from '@/lib/formato';
 import { Vista } from '@/components/datos/Vista';
 import type { ModuleSlug } from '@/types/core';
 
@@ -21,7 +24,7 @@ import type { ModuleSlug } from '@/types/core';
    menús distintos con el mismo código. */
 export function Espacio({ volver }: { volver?: () => void }) {
   const { user, isPlatformAdmin, signOut } = useAuth();
-  const { memberships, current, select } = useTenant();
+  const { memberships, current, select, version } = useTenant();
   const cid = current?.company.id;
   const marca = current?.company.branding ?? null;
 
@@ -29,13 +32,20 @@ export function Espacio({ volver }: { volver?: () => void }) {
   const [vista, setVista] = useState<string>('inicio');
   const [cargando, setCargando] = useState(true);
 
+  /* Cambiar de organización sí devuelve a Inicio: la pestaña donde estabas
+     era de la otra empresa. Recargar el mismo espacio —moneda, módulos— no,
+     porque entonces cambiar algo en Configuración te sacaría de ahí. */
+  useEffect(() => { setVista('inicio'); }, [cid]);
+
   useEffect(() => {
     if (!cid) return;
-    setCargando(true); setVista('inicio');
+    setCargando(true);
     cargarEspacio(cid)
-      .then(setEsp)
+      /* Antes de dibujar nada: todo lo que sea dinero se escribe en la moneda
+         de esta empresa, incluidas las celdas del motor de datos. */
+      .then(e => { fijarMoneda(e.empresa.moneda); setEsp(e); })
       .catch(() => {}).finally(() => setCargando(false));
-  }, [cid]);
+  }, [cid, version]);
 
   /* Con el interruptor puesto se listan todos; si no, solo los del plan. */
   const disponibles = (esp?.modulos ?? []).filter(m =>
@@ -167,7 +177,8 @@ export function Espacio({ volver }: { volver?: () => void }) {
 
           {!cargando && esp && cid && vista !== 'inicio' && vista !== 'config' && vista !== 'informes' && (
             <Modulo slug={vista as ModuleSlug} companyId={cid}
-                    nivel={esp.mi_rol?.nivel ?? 0} moneda={esp.empresa.moneda} />
+                    nivel={esp.mi_rol?.nivel ?? 0} moneda={esp.empresa.moneda}
+                    addons={esp.features.map(f => f.slug)} />
           )}
 
           {!cargando && esp && cid && vista === 'config' && (
@@ -189,9 +200,12 @@ export function Espacio({ volver }: { volver?: () => void }) {
    carga. Qué pestañas tiene lo declara `pestanasDe()`; aquí solo se dibujan.
 
    Un módulo sin nada declarado dice con honestidad qué falta. */
-export function Modulo({ slug, companyId, nivel, moneda }:
-  { slug: ModuleSlug; companyId: string; nivel: number; moneda: string }) {
-  const pestanas = useMemo(() => pestanasDe(slug), [slug]);
+export function Modulo({ slug, companyId, nivel, moneda, addons = [] }:
+  { slug: ModuleSlug; companyId: string; nivel: number; moneda: string;
+    /** Los addons encendidos para esta empresa. Un addon puede agregar una
+     *  pestaña a un módulo; el módulo no sabe cuál ni tiene que saberlo. */
+    addons?: string[] }) {
+  const pestanas = useMemo(() => pestanasDe(slug, addons), [slug, addons.join(',')]);
   const [cual, setCual] = useState(0);
 
   useEffect(() => { setCual(0); }, [slug]);
@@ -225,6 +239,10 @@ export function Modulo({ slug, companyId, nivel, moneda }:
       )}
 
       {activa.tipo === 'novedades' && <Novedades />}
+
+      {activa.tipo === 'analisis' && (
+        <AnalisisFinanciero companyId={companyId} moneda={moneda} />
+      )}
 
       {/* Cada entidad pide su nivel: pagos y compras exigen 60, el resto 40.
           Es el mismo umbral que aplica RLS, dicho también en pantalla. */}
@@ -310,44 +328,88 @@ function Configuracion({ esp, bloqueados, companyId, puedeEditarMarca }:
       {solapa === 'marca'   && puedeEditarMarca &&
         <MarcaDeLaEmpresa companyId={companyId} nombre={esp.empresa.nombre} />}
       {solapa === 'campos'  && puedeEditarMarca && <CamposPropios companyId={companyId} />}
-      {solapa === 'modulos' && <Modulos esp={esp} bloqueados={bloqueados} />}
+      {solapa === 'modulos' && (
+        <Modulos esp={esp} bloqueados={bloqueados}
+                 companyId={companyId} puedeEncender={puedeEditarMarca} />
+      )}
     </>
   );
 }
 
-function Modulos({ esp, bloqueados }:
-  { esp: EspacioData; bloqueados: EspacioData['modulos'] }) {
+function Modulos({ esp, bloqueados, companyId, puedeEncender }:
+  { esp: EspacioData; bloqueados: EspacioData['modulos'];
+    companyId: string; puedeEncender: boolean }) {
+  const { recargar } = useTenant();
+  const [cambiando, setCambiando] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  /* Encender y apagar es de la empresa, no de la Consola: quien paga decide
+     qué usa de lo que paga. Lo que NO puede es encender lo que su plan no
+     incluye —eso lo rechaza la base— así que aquí ni se ofrece. */
+  async function alternar(slug: string, encender: boolean) {
+    setCambiando(slug); setError(null);
+    const { error: e } = await supabase.rpc('company_module_set', {
+      p_company: companyId, p_modulo: slug, p_encendido: encender
+    });
+    setCambiando(null);
+    if (e) { setError(e.message); return; }
+    recargar();     // el menú lateral se rehace con lo que quedó encendido
+  }
+
   return (
     <section className="grid gap-3 aparece">
       <div>
         <div className="rotulo">Módulos</div>
         <p className="text-[13px] text-muted mt-1.5 max-w-[62ch]">
           Un módulo se usa si lo tienes encendido <em>y</em> tu plan lo incluye.
-          En el menú aparecen los que cumplen las dos cosas; aquí está la lista
-          completa, para que se vea qué abre cada plan.
+          Los de tu plan los enciendes y apagas aquí: apagar uno solo lo saca del
+          menú, no borra nada de lo que ya registraste.
         </p>
       </div>
+
+      {error && (
+        <p role="alert" className="entra text-[13px] text-danger bg-danger/10 border border-danger/20
+                                   rounded-xl px-3.5 py-2.5">{error}</p>
+      )}
+
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {esp.modulos.map(m => (
-          <div key={m.slug}
-            className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl border text-[13px] ${
-              m.disponible ? 'border-line bg-surface' : 'border-line/60 text-faint bg-sunk/30'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-              m.disponible ? 'bg-ok' : m.encendido ? 'bg-danger' : 'bg-faint/40'}`} />
-            <span className={m.disponible ? 'font-bold' : ''}>
-              {MODULES[m.slug as ModuleSlug]?.name ?? m.slug}
-            </span>
-            {!m.disponible && (
-              <span className="ml-auto rotulo" style={{ fontSize: 9 }}>
-                {m.encendido ? 'fuera del plan' : 'apagado'}
+        {esp.modulos.map(m => {
+          const def = MODULES[m.slug as ModuleSlug];
+          const puede = puedeEncender && m.en_el_plan && m.slug !== 'core';
+          return (
+            <div key={m.slug}
+              className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl border text-[13px] ${
+                m.disponible ? 'border-line bg-surface' : 'border-line/60 text-faint bg-sunk/30'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                m.disponible ? 'bg-ok' : m.en_el_plan ? 'bg-faint/40' : 'bg-line'}`} />
+              <span className={m.disponible ? 'font-bold' : ''} title={def?.cubre}>
+                {def?.name ?? m.slug}
               </span>
-            )}
-          </div>
-        ))}
+              {puede ? (
+                <button onClick={() => alternar(m.slug, !m.encendido)}
+                        disabled={cambiando === m.slug}
+                        className="ml-auto b b-sec b-sm"
+                        title={m.encendido ? 'Sacarlo del menú' : 'Ponerlo en el menú'}>
+                  {cambiando === m.slug ? '…' : m.encendido ? 'Apagar' : 'Encender'}
+                </button>
+              ) : (
+                <span className="ml-auto rotulo" style={{ fontSize: 9 }}>
+                  {m.slug === 'core' ? 'siempre' : m.en_el_plan ? (m.encendido ? 'en uso' : 'apagado') : 'otro plan'}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
+
       {bloqueados.length > 0 && (
         <p className="text-[12.5px] text-muted">
           {bloqueados.length} módulo(s) encendido(s) que tu plan no incluye. Subiendo de plan se activan solos.
+        </p>
+      )}
+      {!puedeEncender && (
+        <p className="text-[12.5px] text-faint">
+          Solo un administrador puede encender o apagar módulos.
         </p>
       )}
     </section>
