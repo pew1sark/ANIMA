@@ -15,6 +15,8 @@ import type { ModuleSlug } from '@/types/core';
      datos     — una entidad dibujada por el motor (`Vista`)
      novedades — el registro de versiones de la plataforma, que es común a
                  todas las empresas y por eso no pasa por el motor
+     analisis  — el análisis financiero, que es un addon: aparece solo si la
+                 empresa lo tiene encendido en `company_features`
 
    Un módulo sin declaración cae en el comportamiento de siempre: una pestaña
    por entidad. Así, agregar una entidad nueva sigue sin obligar a tocar esto. */
@@ -22,7 +24,8 @@ import type { ModuleSlug } from '@/types/core';
 export type Pestana =
   | { id: string; nombre: string; tipo: 'resumen' }
   | { id: string; nombre: string; tipo: 'datos'; esquema: Esquema }
-  | { id: string; nombre: string; tipo: 'novedades' };
+  | { id: string; nombre: string; tipo: 'novedades' }
+  | { id: string; nombre: string; tipo: 'analisis' };
 
 /** Los módulos cuyo resumen sabe calcular `resumen_modulo()`. */
 export const CON_RESUMEN = new Set<string>([
@@ -41,12 +44,18 @@ const CORTO: Record<string, string> = {
   processing_orders: 'Procesos'
 };
 
-export function pestanasDe(slug: ModuleSlug): Pestana[] {
+export function pestanasDe(slug: ModuleSlug, addons: string[] = []): Pestana[] {
   const esquemas = ESQUEMAS_POR_MODULO[slug] ?? [];
   const salida: Pestana[] = [];
 
   if (CON_RESUMEN.has(slug)) {
     salida.push({ id: 'resumen', nombre: 'Resumen', tipo: 'resumen' });
+  }
+
+  /* El análisis va inmediatamente después del resumen y antes de las
+     entidades: primero la respuesta, después el detalle, al final la carga. */
+  if (slug === 'finance' && addons.includes('analisis_financiero')) {
+    salida.push({ id: 'analisis', nombre: 'Análisis', tipo: 'analisis' });
   }
 
   for (const e of esquemas) {
