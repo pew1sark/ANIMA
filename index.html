@@ -9,23 +9,24 @@
   <link rel="apple-touch-icon" href="assets/img/icon.svg" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ANIMA" />
-  <title>ANIMA TSC — Technology System Connection</title>
-  <meta name="description" content="Un sistema de gestión con dos plataformas: ANIMA STUDIO para quien crea, ANIMA COMPANY para quien opera. Una sola cuenta, con el aislamiento escrito en la base de datos." />
+  <link rel="canonical" href="https://www.animatsc.com/" />
+  <title>ANIMA TSC — Sistema de gestión multiempresa: STUDIO y COMPANY</title>
+  <meta name="description" content="Dos plataformas sobre un mismo núcleo: ANIMA STUDIO para quien crea, ANIMA COMPANY para quien opera. Desde $9.990 CLP al mes. Pide acceso y suma un mes gratis." />
   <meta property="og:title" content="ANIMA TSC — Technology System Connection" />
   <meta property="og:description" content="ANIMA STUDIO para quien crea. ANIMA COMPANY para quien opera. Solicita acceso y suma un mes gratis." />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="ANIMA TSC" />
   <meta property="og:locale" content="es_CL" />
-  <meta property="og:url" content="https://animatsc.com/" />
+  <meta property="og:url" content="https://www.animatsc.com/" />
   <!-- La tarjeta que se ve al pegar el enlace en Instagram, WhatsApp o un correo. -->
-  <meta property="og:image" content="https://animatsc.com/assets/img/og-anima.png" />
+  <meta property="og:image" content="https://www.animatsc.com/assets/img/og-anima.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="ANIMA TSC — Un sistema. Dos plataformas." />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="ANIMA TSC — Technology System Connection" />
   <meta name="twitter:description" content="ANIMA STUDIO para quien crea. ANIMA COMPANY para quien opera. Solicita acceso y suma un mes gratis." />
-  <meta name="twitter:image" content="https://animatsc.com/assets/img/og-anima.png" />
+  <meta name="twitter:image" content="https://www.animatsc.com/assets/img/og-anima.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cormorant+Garamond:wght@300;500&display=swap" rel="stylesheet" />
@@ -438,6 +439,13 @@
               <p>Con tus datos cargados y alguien acompañando la puesta en marcha, no con un manual.</p>
             </div>
           </div>
+          <!-- El precio no se esconde detrás del formulario: quien está
+               decidiendo quiere saber antes de escribir su correo. -->
+          <p class="faint" style="font-size:12.5px;margin-top:30px;padding-top:22px;border-top:1px solid var(--line-2)">
+            Los planes parten en <b style="color:#fff;font-weight:500">$9.990 CLP al mes</b> en STUDIO y en
+            <b style="color:#fff;font-weight:500">$29.990</b> en COMPANY, con el precio publicado.
+            <a href="planes.html" style="color:var(--gold)">Ver planes y precios →</a>
+          </p>
         </div>
 
         <div class="caja">
@@ -659,5 +667,56 @@
   })();
   </script>
   <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>
+  <!-- Datos estructurados: lo que Google y las redes leen del sitio sin
+       tener que interpretar el diseño. Si cambian los precios de arriba,
+       cambian aquí: una cifra distinta en cada sitio es peor que ninguna. -->
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.animatsc.com/#organizacion",
+      "name": "ANIMA TSC",
+      "alternateName": "ANIMA Technology System Connection",
+      "url": "https://www.animatsc.com/",
+      "logo": "https://www.animatsc.com/assets/img/icon.svg",
+      "image": "https://www.animatsc.com/assets/img/og-anima.png",
+      "email": "tscanima@gmail.com",
+      "description": "Sistema de gestión multiempresa con dos plataformas: ANIMA STUDIO para quien trabaja con su obra y ANIMA COMPANY para empresas con operación."
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.animatsc.com/#sitio",
+      "url": "https://www.animatsc.com/",
+      "name": "ANIMA TSC",
+      "inLanguage": "es",
+      "publisher": {
+        "@id": "https://www.animatsc.com/#organizacion"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://www.animatsc.com/#sistema",
+      "name": "ANIMA TSC",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Navegador web",
+      "url": "https://www.animatsc.com/",
+      "description": "Gestión multiempresa con aislamiento por row level security en PostgreSQL: clientes, ventas, finanzas, agenda, inventario, reparto y taller.",
+      "publisher": {
+        "@id": "https://www.animatsc.com/#organizacion"
+      },
+      "offers": {
+        "@type": "AggregateOffer",
+        "priceCurrency": "CLP",
+        "lowPrice": "9990",
+        "highPrice": "49990",
+        "offerCount": "5",
+        "url": "https://www.animatsc.com/planes.html"
+      }
+    }
+  ]
+}
+  </script>
 </body>
 </html>
