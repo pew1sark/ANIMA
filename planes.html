@@ -129,10 +129,15 @@
     .nota-precio{color:var(--faint);font-size:12px;margin-top:22px;line-height:1.6;max-width:640px}
 
     /* Add-ons y desarrollo a medida */
-    .addons{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:40px}
-    .addons div{border:1px solid var(--line-2);border-radius:3px;padding:24px}
-    .addons b{font-size:14.5px;font-weight:500;display:block}
-    .addons p{color:var(--soft);font-size:13px;margin-top:8px}
+    .catalogo{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:34px}
+    .catalogo > div{border:1px solid var(--line-2);border-radius:3px;padding:24px 26px;
+      background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
+    .catalogo .grupo{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.18em;
+      text-transform:uppercase;color:var(--gold);display:block}
+    .catalogo ul{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:11px}
+    .catalogo li{color:var(--soft);font-size:13px;line-height:1.55;padding-left:16px;position:relative}
+    .catalogo li::before{content:"+";position:absolute;left:0;color:var(--gold);opacity:.7}
+    .catalogo li b{color:#ededf0;font-weight:500}
     .regla{margin-top:34px;border:1px solid rgba(208,170,99,.3);background:var(--gold-soft);
       border-radius:3px;padding:20px 24px}
     .regla b{color:#f0dcb4;font-weight:500;font-size:14.5px;display:block}
@@ -175,7 +180,7 @@
     footer .flinks a:hover{color:#fff}
 
     @media(max-width:980px){ .plans.cuatro{grid-template-columns:repeat(2,1fr)} }
-    @media(max-width:760px){ .addons{grid-template-columns:1fr} }
+    @media(max-width:760px){ .catalogo{grid-template-columns:1fr} }
     @media(max-width:760px){ .plans.tres,.plans.cuatro{grid-template-columns:1fr} .found{grid-template-columns:1fr} }
   </style>
   <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>
@@ -295,8 +300,9 @@
     <div class="wrap">
       <div class="mono eyebrow">ANIMA COMPANY</div>
       <h2 class="lead serif">Para la empresa que ya no cabe en una planilla.</h2>
-      <p class="para">Operación con inventario, personal, reparto y cobranza. Los módulos de COMPANY se activan por plan y
-        se suman sobre el mismo núcleo: nada se migra al subir, se enciende lo que ya estaba ahí.</p>
+      <p class="para">Aquí los planes no se diferencian por módulos: <b style="color:#fff;font-weight:500">los tres traen
+        el sistema completo</b>. Lo que cambia es hasta dónde llega — cuánta gente, cuánto volumen, y qué se le puede
+        colgar encima. Empezar chico no significa empezar mutilado.</p>
 
       <div class="plans tres">
         <div class="plan" id="company-basico">
@@ -304,12 +310,14 @@
           <h3>Básico</h3>
           <div class="precio"><span class="cifra">$29.990</span><span class="unidad">CLP / mes</span></div>
           <div class="cupo">Hasta 10 personas</div>
-          <p class="que">Una empresa chica ordenando lo primero: a quién le vende y con qué agenda.</p>
+          <p class="que">Todos los módulos encendidos, con límites de volumen. Para la empresa que necesita el sistema
+            entero antes de tener el tamaño.</p>
           <ul>
-            <li><b>Clientes</b> — ficha, despachos y listas de precio</li>
-            <li><b>Agenda</b> del equipo</li>
-            <li><b>Core</b> — usuarios, roles, numeración y auditoría</li>
-            <li><b>Soporte</b> directo</li>
+            <li><b>Los diez módulos base</b> — clientes, ventas, finanzas, inventario, compras, reparto, procesos,
+              taller, agenda y soporte</li>
+            <li>Hasta <b>500 clientes</b>, <b>500 productos</b> y <b>500 documentos al mes</b></li>
+            <li><b>1 bodega</b> y <b>2 GB</b> de archivo</li>
+            <li>Soporte por correo</li>
           </ul>
           <a class="btn blq" href="index.html#acceso">Empezar aquí <span class="fl">→</span></a>
           <p class="addon">
@@ -323,13 +331,13 @@
           <h3>Pro</h3>
           <div class="precio"><span class="cifra">$49.990</span><span class="unidad">CLP / mes</span></div>
           <div class="cupo">Hasta 25 personas</div>
-          <p class="que">La operación completa: lo que entra, lo que sale, lo que se produce y lo que se cobra.</p>
+          <p class="que">Los mismos módulos, sin techo, y con todo lo que se le pueda sumar encima.</p>
           <ul>
-            <li>Todo lo del plan Básico</li>
-            <li><b>Ventas</b> y <b>Finanzas</b> — pedidos, cobranza y pagos</li>
-            <li><b>Operaciones</b> — inventario por lotes, mermas, bodegas, compras y proveedores</li>
-            <li><b>Reparto</b> — rutas, entregas y seguimiento</li>
-            <li><b>Procesos</b> — órdenes, rendimientos y elaborados</li>
+            <li>Los diez módulos base, <b>sin límites</b></li>
+            <li>Clientes, productos, documentos y bodegas <b>sin tope</b></li>
+            <li><b>20 GB</b> de archivo</li>
+            <li><b>Add-ons y desarrollo a medida</b></li>
+            <li>Soporte prioritario</li>
           </ul>
           <a class="btn gold blq" href="index.html#acceso">Solicitar acceso <span class="fl">→</span></a>
           <p class="addon si">
@@ -343,13 +351,14 @@
           <h3>Enterprise</h3>
           <div class="precio cotiza"><span class="cifra">Se cotiza</span></div>
           <div class="cupo">Sin tope de personas</div>
-          <p class="que">Varias empresas y varios operadores bajo un mismo sistema, con lo que cada una necesite encima.</p>
+          <p class="que">Varias empresas, varios operadores, y tus datos ya adentro desde el primer día.</p>
           <ul>
             <li>Todo lo del plan Pro, en cada empresa</li>
-            <li><b>Multiempresa</b> — se administran varias sin mezclar nada</li>
+            <li><b>Implementación e integración de datos</b> — migramos lo que ya tienes y lo conectamos con lo que ya usas</li>
+            <li><b>Multiempresa</b> — varias sin mezclar nada</li>
             <li><b>Multioperador</b> — cada quien con su alcance y su registro</li>
-            <li><b>IA</b> — asistencia sobre los datos de la empresa</li>
-            <li>Integraciones y desarrollos a pedido, con acompañamiento</li>
+            <li><b>IA</b> sobre los datos de la empresa</li>
+            <li>Desarrollos a pedido y acompañamiento</li>
           </ul>
           <a class="btn blq" href="index.html#acceso">Solicitar cotización <span class="fl">→</span></a>
           <p class="addon si">
@@ -361,23 +370,22 @@
 
       <div class="scrollx">
         <table class="tabla">
-          <caption class="mono" style="text-align:left;padding:0 0 10px">Qué enciende cada plan de COMPANY</caption>
-          <thead><tr><th>Módulo</th><th class="c">Básico</th><th class="c">Pro</th><th class="c">Enterprise</th></tr></thead>
+          <caption class="mono" style="text-align:left;padding:0 0 10px">Dónde llega cada plan de COMPANY</caption>
+          <thead><tr><th>Qué</th><th class="c">Básico</th><th class="c">Pro</th><th class="c">Enterprise</th></tr></thead>
           <tbody>
-            <tr><td>Core<small>Empresa, usuarios, roles, numeración y auditoría.</small></td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
-            <tr><td>Clientes<small>Ficha, despachos, listas de precio y precios especiales.</small></td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
-            <tr><td>Agenda<small>Compromisos y recordatorios del equipo.</small></td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
-            <tr><td>Soporte<small>Canal con quien mantiene el software.</small></td><td class="c si">✓</td><td class="c si">✓</td><td class="c si">✓</td></tr>
-            <tr><td>Ventas<small>Catálogo, pedidos y su historial de estados.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
-            <tr><td>Finanzas<small>Cobranza, pagos, saldos de apertura y movimientos.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
-            <tr><td>Taller<small>Proyectos, cotizaciones y portafolio.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
-            <tr><td>Operaciones<small>Inventario por lotes, mermas, bodegas, compras y proveedores.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
-            <tr><td>Reparto<small>Rutas, entregas y seguimiento en terreno.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
-            <tr><td>Procesos<small>Órdenes de proceso, rendimientos y productos elaborados.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
-            <tr><td>IA<small>Asistencia sobre los datos de la empresa.</small></td><td class="c no">—</td><td class="c no">—</td><td class="c si">✓</td></tr>
-            <tr><td>Multiempresa y multioperador<small>Varias empresas y varios operadores en un mismo sistema.</small></td><td class="c no">—</td><td class="c no">—</td><td class="c si">✓</td></tr>
-            <tr><td>Add-ons y desarrollo a medida<small>Se cotizan aparte y se suman al plan.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
-            <tr><td>Personas incluidas</td><td class="c">10</td><td class="c">25</td><td class="c">Sin tope</td></tr>
+            <tr><td>Módulos base<small>Clientes, ventas, finanzas, inventario, compras, reparto, procesos, taller, agenda y soporte.</small></td><td class="c si">Los diez</td><td class="c si">Los diez</td><td class="c si">Los diez</td></tr>
+            <tr><td>Personas incluidas</td><td class="c">10</td><td class="c">25</td><td class="c si">Sin tope</td></tr>
+            <tr><td>Clientes</td><td class="c">500</td><td class="c si">Sin tope</td><td class="c si">Sin tope</td></tr>
+            <tr><td>Productos en catálogo</td><td class="c">500</td><td class="c si">Sin tope</td><td class="c si">Sin tope</td></tr>
+            <tr><td>Documentos al mes<small>Pedidos, guías y facturas.</small></td><td class="c">500</td><td class="c si">Sin tope</td><td class="c si">Sin tope</td></tr>
+            <tr><td>Bodegas</td><td class="c">1</td><td class="c si">Sin tope</td><td class="c si">Sin tope</td></tr>
+            <tr><td>Archivo<small>Documentos y respaldos.</small></td><td class="c">2 GB</td><td class="c">20 GB</td><td class="c si">A convenir</td></tr>
+            <tr><td>Add-ons<small>Del catálogo de más abajo.</small></td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>Desarrollo a medida</td><td class="c no">—</td><td class="c si">✓</td><td class="c si">✓</td></tr>
+            <tr><td>IA sobre tus datos</td><td class="c no">—</td><td class="c">Add-on</td><td class="c si">✓</td></tr>
+            <tr><td>Implementación e integración de datos<small>Migrar lo que ya tienes y conectarlo con lo que ya usas.</small></td><td class="c no">—</td><td class="c">Add-on</td><td class="c si">Incluida</td></tr>
+            <tr><td>Multiempresa y multioperador</td><td class="c no">—</td><td class="c no">—</td><td class="c si">✓</td></tr>
+            <tr><td>Soporte</td><td class="c">Por correo</td><td class="c">Prioritario</td><td class="c si">Dedicado</td></tr>
             <tr><td>Precio</td><td class="c si">$29.990</td><td class="c si">$49.990</td><td class="c si">Se cotiza</td></tr>
           </tbody>
         </table>
@@ -385,7 +393,8 @@
 
       <p class="nota-precio">Precios en pesos chilenos (CLP), por organización y al mes, con los impuestos que
         correspondan aparte. Si facturas fuera de Chile, la moneda y la forma de pago se acuerdan en la incorporación.
-        Los cupos de personas son los que vienen incluidos: sumar más gente también es un add-on.</p>
+        Los límites del Básico son de volumen, no de información: nada se borra al alcanzarlos, y al subir a Pro se
+        levantan sin migrar nada.</p>
     </div>
   </section>
 
@@ -395,34 +404,59 @@
       <div class="mono eyebrow">Add-ons y desarrollo a medida</div>
       <h2 class="lead serif">Lo que tu operación tenga de propio,<br>se construye encima. No se fuerza adentro.</h2>
       <p class="para">Ningún plan intenta adivinar tu caso raro. Cuando aparece —una integración con lo que ya usas, un
-        informe que solo tiene sentido en tu rubro, un módulo fuera de tu plan— se cotiza aparte y se monta sobre la
-        misma base, sin tocar lo que ya funciona.</p>
-
-      <div class="addons">
-        <div>
-          <b>Módulos fuera de tu plan</b>
-          <p>Encender uno que tu plan no trae, sin cambiarte de plan entero. Por ejemplo la IA sobre tus propios datos.</p>
-        </div>
-        <div>
-          <b>Integraciones</b>
-          <p>Con lo que ya usas para facturar, vender o comprar. Se conecta a tu operación en vez de pedirte que la cambies.</p>
-        </div>
-        <div>
-          <b>Desarrollo a medida</b>
-          <p>Un flujo, un informe o una pantalla que solo existe en tu empresa. Se construye y queda mantenido con el resto.</p>
-        </div>
-        <div>
-          <b>Más personas o más archivo</b>
-          <p>Sumar gente por sobre el cupo del plan, o más espacio para documentos y respaldos.</p>
-        </div>
-      </div>
+        informe que solo tiene sentido en tu rubro, una capacidad que se te quedó chica— se cotiza aparte y se monta
+        sobre la misma base, sin tocar lo que ya funciona y sin migrar nada.</p>
 
       <div class="regla">
         <b>Se agregan sobre planes Pro o superiores</b>
         <p>En Studio Starter y en Company Básico no se cuelgan add-ons ni desarrollos a medida: son planes cerrados, y
           esa es justamente la razón de que cuesten lo que cuestan. Para sumarlos, el paso es subir a Pro — que no migra
-          nada: enciende lo que ya estaba construido, con tu información intacta.</p>
+          nada: levanta los límites y enciende lo que ya estaba construido, con tu información intacta.</p>
       </div>
+
+      <div class="catalogo">
+        <div>
+          <span class="grupo">Módulos adicionales</span>
+          <ul>
+            <li><b>IA sobre tus datos</b> — preguntar en palabras por ventas, stock o cobranza, y que responda con lo tuyo</li>
+            <li><b>Portal de clientes</b> — que tu cliente vea sus pedidos, sus guías y su saldo sin llamarte</li>
+            <li><b>Etiquetas y códigos de barra</b> — imprimir y leer en bodega y en el mesón</li>
+            <li><b>Reparto avanzado</b> — rutas, hoja de ruta del día y firma en la entrega</li>
+          </ul>
+        </div>
+        <div>
+          <span class="grupo">Integraciones</span>
+          <ul>
+            <li><b>Facturación electrónica</b> — emitir y recibir documentos sin copiar nada a mano</li>
+            <li><b>Pasarela de pagos</b> — links de pago y conciliación de lo que llega</li>
+            <li><b>Tienda en línea</b> — pedidos y stock sincronizados con la web</li>
+            <li><b>Contabilidad</b> — la salida mensual en el formato que pide tu contador</li>
+            <li><b>Avisos por WhatsApp o correo</b> — estado del pedido, cobranza y recordatorios</li>
+          </ul>
+        </div>
+        <div>
+          <span class="grupo">Capacidad</span>
+          <ul>
+            <li><b>Más personas</b> — usuarios por sobre el cupo que incluye el plan</li>
+            <li><b>Más archivo</b> — espacio para documentos, fotos y respaldos</li>
+            <li><b>Más bodegas o sucursales</b> — cuando la operación se abre a otro punto</li>
+            <li><b>Más volumen</b> — subir los topes de clientes, catálogo o documentos sin cambiar de plan</li>
+          </ul>
+        </div>
+        <div>
+          <span class="grupo">A medida</span>
+          <ul>
+            <li><b>Implementación e integración de datos</b> — cargar lo que ya tienes (planillas u otro sistema) y
+              dejarlo conectado. Va incluida en Enterprise</li>
+            <li><b>Informes propios</b> — el que solo tiene sentido en tu rubro</li>
+            <li><b>Flujos y pantallas propias</b> — lo que tu operación hace distinto a todas las demás</li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="nota-precio">Cada add-on se cotiza según su alcance y se suma a la cuota del plan. Una vez montado queda
+        mantenido con el resto del sistema: no es un parche aparte que se rompe en la siguiente actualización. Si lo que
+        necesitas no está en esta lista, se conversa igual — la lista es de lo que ya sabemos hacer, no de lo que se puede.</p>
     </div>
   </section>
 
@@ -434,8 +468,9 @@
       <div class="found">
         <div>
           <b>Subir de plan no migra nada</b>
-          <p>Los módulos que aún no te corresponden ya están construidos sobre las mismas tablas. Cambiar de plan los
-            enciende, con la información intacta y sin traspasos.</p>
+          <p>Todo está construido sobre las mismas tablas. En COMPANY, subir levanta los topes de volumen; en STUDIO,
+            enciende los módulos que faltaban. En los dos casos con la información intacta y sin traspasos: no hay un
+            "sistema chico" del que haya que salir.</p>
         </div>
         <div>
           <b>14 días para probarlo, y un mes de regalo</b>
@@ -465,39 +500,36 @@
       <h2 class="lead serif">Lo que se pregunta antes de decidir.</h2>
       <div class="faq">
         <details>
+          <summary>¿Qué significa que el plan Básico tenga límites?</summary>
+          <p>Que trae el sistema completo —los diez módulos encendidos— pero con topes de volumen: 10 personas, 500 clientes, 500 productos, 500 documentos al mes, una bodega y 2 GB de archivo. Son límites de cuánto, no de qué: ningún módulo está apagado y nada se borra al llegar al tope. Subir a Pro los levanta sin migrar nada.</p>
+        </details>
+        <details>
           <summary>¿Qué pasa con mi información si cambio de plan?</summary>
-          <p>Nada se migra ni se traspasa. Los módulos que todavía no te corresponden ya están construidos sobre las
-            mismas tablas: subir de plan los enciende, con tu información intacta, y bajar de plan los apaga sin
-            borrarlos. Lo que dejaste escrito sigue escrito.</p>
+          <p>Nada se migra ni se traspasa. Todo está construido sobre las mismas tablas: subir de plan levanta los límites y enciende lo que corresponda, con la información intacta, y bajar de plan vuelve a ponerlos sin borrar nada.</p>
         </details>
         <details>
           <summary>¿Cómo funciona el mes gratis?</summary>
-          <p>Quien pide acceso desde el sitio suma un mes sin costo sobre el plan que contrate, además del período de
-            prueba de 14 días con el que parten los planes de incorporación. Queda anotado en tu solicitud desde el
-            momento en que la envías, así que no depende de que alguien se acuerde después.</p>
+          <p>Quien pide acceso desde el sitio suma un mes sin costo sobre el plan que contrate, además del período de prueba de 14 días. Queda anotado en la solicitud desde el momento en que se envía, así que no depende de que alguien se acuerde después.</p>
         </details>
         <details>
           <summary>¿Puedo agregar add-ons a cualquier plan?</summary>
-          <p>No. Los add-ons y el desarrollo a medida se agregan sobre planes Pro o superiores. Studio Starter y Company
-            Básico son planes cerrados, y por eso cuestan lo que cuestan. Si necesitas colgar algo propio, el paso es
-            subir a Pro.</p>
+          <p>No. Los add-ons y el desarrollo a medida se agregan sobre planes Pro o superiores. Studio Starter y Company Básico son planes cerrados, y por eso cuestan lo que cuestan. El catálogo de add-ons está más arriba en esta misma página.</p>
+        </details>
+        <details>
+          <summary>¿Qué es la implementación e integración de datos?</summary>
+          <p>Cargar lo que ya tienes —clientes, catálogo, saldos, historial, esté en planillas o en otro sistema— y dejarlo conectado con lo que ya usas para facturar, vender o cobrar. Va incluida en Enterprise y se puede contratar como add-on sobre un plan Pro.</p>
         </details>
         <details>
           <summary>¿Por qué Enterprise no tiene precio publicado?</summary>
-          <p>Porque no es un plan más grande: es varias empresas y varios operadores bajo un mismo sistema, con el
-            alcance que cada caso necesite encima. Poner una cifra ahí sería inventarla. Se cotiza sobre lo que se
-            acuerde, y el resto del sistema se comporta igual.</p>
+          <p>Porque no es un plan más grande: es varias empresas y varios operadores bajo un mismo sistema, con tus datos ya migrados adentro y el alcance que cada caso necesite encima. Poner una cifra ahí sería inventarla.</p>
         </details>
         <details>
           <summary>¿En qué moneda se paga y qué pasa si estoy fuera de Chile?</summary>
-          <p>Los precios publicados están en pesos chilenos (CLP), por organización y al mes, con los impuestos que
-            correspondan aparte. Si facturas en otro país, la moneda y la forma de pago se acuerdan en la incorporación:
-            el sistema no cambia por eso.</p>
+          <p>Los precios publicados están en pesos chilenos (CLP), por organización y al mes, con los impuestos aparte. Si facturas en otro país, la moneda y la forma de pago se acuerdan en la incorporación: el sistema no cambia por eso.</p>
         </details>
         <details>
           <summary>¿Y si soy más gente de la que incluye mi plan?</summary>
-          <p>El cupo de personas es lo que viene incluido en el plan, no un tope del sistema. Sumar más gente se agrega
-            como add-on, con la misma regla: sobre planes Pro o superiores.</p>
+          <p>El cupo de personas es lo que viene incluido, no un tope del sistema. Sumar más gente se agrega como add-on, con la misma regla: sobre planes Pro o superiores.</p>
         </details>
       </div>
     </div>
@@ -539,8 +571,8 @@
     });
   </script>
   <!-- Datos estructurados: lo que Google y las redes leen del sitio sin
-       tener que interpretar el diseño. Si cambian los precios de arriba,
-       cambian aquí: una cifra distinta en cada sitio es peor que ninguna. -->
+       tener que interpretar el diseño. Se generan de la misma lista que
+       dibuja las preguntas de arriba, para que nunca digan cosas distintas. -->
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -580,10 +612,10 @@
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Navegador web",
       "url": "https://www.animatsc.com/planes.html#studio",
-      "description": "Para quien trabaja con su obra: proyectos por etapas, cotizaciones, abonos, clientes, finanzas del taller y portafolio.",
       "publisher": {
         "@id": "https://www.animatsc.com/#organizacion"
       },
+      "description": "Para quien trabaja con su obra: proyectos por etapas, cotizaciones, abonos, clientes, finanzas del taller y portafolio.",
       "offers": [
         {
           "@type": "Offer",
@@ -645,10 +677,10 @@
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Navegador web",
       "url": "https://www.animatsc.com/planes.html#company",
-      "description": "Para empresas con operación: clientes, pedidos, inventario por lotes, compras, reparto, procesos y cobranza, con aislamiento por row level security.",
       "publisher": {
         "@id": "https://www.animatsc.com/#organizacion"
       },
+      "description": "Para empresas con operación: clientes, pedidos, inventario por lotes, compras, reparto, procesos y cobranza, con aislamiento por row level security. Los tres planes traen los diez módulos base; cambia el volumen y lo que se les puede sumar encima.",
       "offers": [
         {
           "@type": "Offer",
@@ -656,7 +688,7 @@
           "price": "29990",
           "priceCurrency": "CLP",
           "url": "https://www.animatsc.com/planes.html#company-basico",
-          "description": "Hasta 10 personas. Clientes, Agenda, Core y Soporte.",
+          "description": "Hasta 10 personas. Los diez módulos base con límites de volumen: 500 clientes, 500 productos, 500 documentos al mes, 1 bodega y 2 GB de archivo. Sin add-ons.",
           "availability": "https://schema.org/InStock",
           "priceSpecification": {
             "@type": "UnitPriceSpecification",
@@ -673,7 +705,7 @@
           "price": "49990",
           "priceCurrency": "CLP",
           "url": "https://www.animatsc.com/planes.html#company-pro",
-          "description": "Hasta 25 personas. Suma Ventas, Finanzas, Taller, Operaciones, Reparto y Procesos. Admite add-ons y desarrollo a medida.",
+          "description": "Hasta 25 personas. Los diez módulos base sin límites, 20 GB de archivo, add-ons y desarrollo a medida.",
           "availability": "https://schema.org/InStock",
           "priceSpecification": {
             "@type": "UnitPriceSpecification",
@@ -691,10 +723,18 @@
       "mainEntity": [
         {
           "@type": "Question",
+          "name": "¿Qué significa que el plan Básico tenga límites?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Que trae el sistema completo —los diez módulos encendidos— pero con topes de volumen: 10 personas, 500 clientes, 500 productos, 500 documentos al mes, una bodega y 2 GB de archivo. Son límites de cuánto, no de qué: ningún módulo está apagado y nada se borra al llegar al tope. Subir a Pro los levanta sin migrar nada."
+          }
+        },
+        {
+          "@type": "Question",
           "name": "¿Qué pasa con mi información si cambio de plan?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Nada se migra ni se traspasa. Los módulos que todavía no corresponden ya están construidos sobre las mismas tablas: subir de plan los enciende con la información intacta, y bajar de plan los apaga sin borrarlos."
+            "text": "Nada se migra ni se traspasa. Todo está construido sobre las mismas tablas: subir de plan levanta los límites y enciende lo que corresponda, con la información intacta, y bajar de plan vuelve a ponerlos sin borrar nada."
           }
         },
         {
@@ -702,7 +742,7 @@
           "name": "¿Cómo funciona el mes gratis?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Quien pide acceso desde el sitio suma un mes sin costo sobre el plan que contrate, además del período de prueba de 14 días. Queda anotado en la solicitud desde el momento en que se envía."
+            "text": "Quien pide acceso desde el sitio suma un mes sin costo sobre el plan que contrate, además del período de prueba de 14 días. Queda anotado en la solicitud desde el momento en que se envía, así que no depende de que alguien se acuerde después."
           }
         },
         {
@@ -710,7 +750,15 @@
           "name": "¿Puedo agregar add-ons a cualquier plan?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "No. Los add-ons y el desarrollo a medida se agregan sobre planes Pro o superiores. Studio Starter y Company Básico son planes cerrados; para sumarlos hay que subir a Pro."
+            "text": "No. Los add-ons y el desarrollo a medida se agregan sobre planes Pro o superiores. Studio Starter y Company Básico son planes cerrados, y por eso cuestan lo que cuestan. El catálogo de add-ons está más arriba en esta misma página."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Qué es la implementación e integración de datos?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Cargar lo que ya tienes —clientes, catálogo, saldos, historial, esté en planillas o en otro sistema— y dejarlo conectado con lo que ya usas para facturar, vender o cobrar. Va incluida en Enterprise y se puede contratar como add-on sobre un plan Pro."
           }
         },
         {
@@ -718,7 +766,7 @@
           "name": "¿Por qué Enterprise no tiene precio publicado?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Porque no es un plan más grande: es varias empresas y varios operadores bajo un mismo sistema, con el alcance que cada caso necesite encima. Se cotiza sobre lo que se acuerde."
+            "text": "Porque no es un plan más grande: es varias empresas y varios operadores bajo un mismo sistema, con tus datos ya migrados adentro y el alcance que cada caso necesite encima. Poner una cifra ahí sería inventarla."
           }
         },
         {
@@ -726,7 +774,7 @@
           "name": "¿En qué moneda se paga y qué pasa si estoy fuera de Chile?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Los precios publicados están en pesos chilenos (CLP), por organización y al mes, con los impuestos aparte. Si se factura en otro país, la moneda y la forma de pago se acuerdan en la incorporación."
+            "text": "Los precios publicados están en pesos chilenos (CLP), por organización y al mes, con los impuestos aparte. Si facturas en otro país, la moneda y la forma de pago se acuerdan en la incorporación: el sistema no cambia por eso."
           }
         },
         {
