@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { Campo, Esquema, Fila, Opcion } from '@/core/datos/tipos';
+import { dinero } from '@/lib/formato';
 import { valor as leer } from '@/core/datos/tipos';
 import { Editor } from '@/components/datos/campos';
 import { Lineas } from '@/components/datos/Lineas';
@@ -203,7 +204,7 @@ function inicial(campos: Campo[], fila: Fila | null): Record<string, unknown> {
 
 function textoDe(c: Campo, x: unknown) {
   if (x == null) return '—';
-  if (c.tipo === 'moneda') return '$' + Math.round(Number(x)).toLocaleString('es-CL');
+  if (c.tipo === 'moneda') return dinero(x);
   return String(x);
 }
 

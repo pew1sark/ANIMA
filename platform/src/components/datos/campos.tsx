@@ -1,13 +1,16 @@
 import type { Campo, Opcion } from '@/core/datos/tipos';
+import { dinero, cantidad } from '@/lib/formato';
 
 /* Cómo se ve y cómo se escribe cada tipo de campo. Un solo lugar: si mañana
    las fechas se muestran distinto, cambian en toda la aplicación a la vez. */
 
+/* La moneda no viaja por props hasta cada celda: la fija el espacio de trabajo
+   al abrirse (ver lib/formato). Aquí solo se escribe. */
 export const money = (n: unknown) =>
-  n == null || n === '' ? '—' : '$' + Math.round(Number(n)).toLocaleString('es-CL');
+  n == null || n === '' ? '—' : dinero(n);
 
 export const numero = (n: unknown) =>
-  n == null || n === '' ? '—' : Number(n).toLocaleString('es-CL');
+  n == null || n === '' ? '—' : cantidad(n, 2);
 
 export const fecha = (v: unknown) => {
   if (!v) return '—';

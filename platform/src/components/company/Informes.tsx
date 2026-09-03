@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { dinero, cantidad } from '@/lib/formato';
 
 /* Los informes. Todo lo calcula `informe_ventas()` en la base, por la misma
    razón que los totales de un pedido: para que no haya dos respuestas a la
@@ -17,8 +18,10 @@ interface Informe {
   inventario: { lotes: number; valor: number; por_vencer: number };
 }
 
-const money = (n = 0) => '$' + Math.round(Number(n) || 0).toLocaleString('es-CL');
-const num = (n = 0) => Math.round(Number(n) || 0).toLocaleString('es-CL');
+/* En la moneda de la empresa, que la fija el espacio al abrirse. Antes esto
+   escribía pesos chilenos siempre, aunque la empresa facturara en otra. */
+const money = (n = 0) => dinero(n);
+const num = (n = 0) => cantidad(n);
 
 const PERIODOS = [
   { dias: 30,  nombre: '30 días' },

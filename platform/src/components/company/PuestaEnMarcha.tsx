@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useTenant } from '@/core/tenant/TenantContext';
+import { MONEDAS, dinero } from '@/lib/formato';
 
 /* Lo que hay que preguntar UNA vez para que la plataforma deje de ser genérica.
    Con esto los documentos salen con los datos de la empresa y las pantallas
@@ -18,16 +19,15 @@ interface Ficha {
   pie_documento?: string;
 }
 
-const MONEDAS = [
-  { v: 'CLP', n: 'Peso chileno (CLP)' }, { v: 'USD', n: 'Dólar (USD)' },
-  { v: 'EUR', n: 'Euro (EUR)' },         { v: 'ARS', n: 'Peso argentino (ARS)' },
-  { v: 'PEN', n: 'Sol (PEN)' },          { v: 'MXN', n: 'Peso mexicano (MXN)' },
-  { v: 'COP', n: 'Peso colombiano (COP)' }
-];
-
+/* Las zonas horarias donde hoy hay clientes o los habrá pronto. La lista
+   completa de la IANA son seiscientas y elegir en ella es peor que no elegir. */
 const ZONAS = [
-  'America/Santiago', 'America/Buenos_Aires', 'America/Lima',
-  'America/Bogota', 'America/Mexico_City', 'Europe/Madrid'
+  'America/Santiago', 'America/Buenos_Aires', 'America/Sao_Paulo', 'America/Lima',
+  'America/Bogota', 'America/Mexico_City', 'America/Guatemala', 'America/Santo_Domingo',
+  'America/La_Paz', 'America/Asuncion', 'America/Montevideo', 'America/Costa_Rica',
+  'America/New_York', 'America/Los_Angeles', 'America/Toronto',
+  'Europe/Madrid', 'Europe/London', 'Europe/Zurich', 'Asia/Tokyo', 'Asia/Shanghai',
+  'Australia/Sydney'
 ];
 
 /* Lo que hace falta para considerar la empresa puesta en marcha. No es
@@ -122,8 +122,17 @@ export function PuestaEnMarcha({ companyId, puedeEditar }:
             <span className="rotulo block mb-1.5">Moneda</span>
             <select className="campo" disabled={!puedeEditar} value={f.moneda ?? 'CLP'}
                     onChange={e => set('moneda', e.target.value)}>
-              {MONEDAS.map(m => <option key={m.v} value={m.v}>{m.n}</option>)}
+              {MONEDAS.map(m => (
+                <option key={m.codigo} value={m.codigo}>{m.nombre} ({m.codigo})</option>
+              ))}
             </select>
+            {/* Cambiar de moneda cambia cómo se escribe el dinero en toda la
+                plataforma, no convierte lo ya registrado. Decirlo aquí evita
+                que alguien lo descubra con sus cifras en pantalla. */}
+            <span className="block text-[11.5px] text-faint mt-1">
+              Así se verán tus cifras: <b className="tabular-nums">{dinero(1284500, f.moneda ?? 'CLP')}</b>.
+              No convierte los montos ya guardados.
+            </span>
           </label>
           <label>
             <span className="rotulo block mb-1.5">Zona horaria</span>
