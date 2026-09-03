@@ -335,7 +335,7 @@ function Solicitar({ volver }: { volver: () => void }) {
         Teléfono <span className="opcional">· opcional</span>
       </label>
       <input id="s-tel" type="tel" value={f.telefono} onChange={e => set('telefono', e.target.value)}
-             autoComplete="tel" inputMode="tel" placeholder="+56 9 …" className="campo mb-4" />
+             autoComplete="tel" inputMode="tel" placeholder="Con código de país" className="campo mb-4" />
 
       <label className="etiqueta" htmlFor="s-msg">
         Qué necesitas <span className="opcional">· opcional</span>
