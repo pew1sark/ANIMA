@@ -187,6 +187,25 @@ const Cloud = {
   async updateRow(table, id, patch){ const { error } = await _sb.from(table).update(patch).eq("id", id); if(error) throw error; },
   async deleteRow(table, id){ const { error } = await _sb.from(table).delete().eq("id", id); if(error) throw error; },
 
+  /* El perfil de la persona (no del Alma): nombre e idioma. Vive en
+     `profiles`, la misma tabla que usa la plataforma, para que el idioma que
+     alguien elige en COMPANY sea el que encuentra en STUDIO. */
+  async perfil(){
+    try{
+      const { data:{ user } } = await _sb.auth.getUser();
+      if(!user) return null;
+      const { data } = await _sb.from("profiles").select("id,email,full_name,locale").eq("id", user.id).maybeSingle();
+      return data || { id:user.id, email:user.email, full_name:null, locale:null };
+    }catch(e){ return null; }
+  },
+  async fijarIdioma(locale){
+    try{
+      const { data:{ user } } = await _sb.auth.getUser();
+      if(!user) return;
+      await _sb.from("profiles").update({ locale }).eq("id", user.id);
+    }catch(e){}
+  },
+
   /* Uso y tope de cada cuota del plan contratado. Lista vacía = sin topes,
      que es lo que tienen Pro, Max y Enterprise. Lo calcula la base. */
   async cuotas(){ try{ const { data, error } = await _sb.rpc("cuotas"); if(error) return []; return data||[]; }catch(e){ return []; } },

@@ -210,6 +210,22 @@ h1.rite{font-size:clamp(36px,8vw,76px);line-height:.94;letter-spacing:-.05em;mar
 .apop-item.danger{color:#b23b3b}
 .apop-sep{height:1px;background:var(--line);margin:4px 6px}
 
+/* La cabecera del menú de la cuenta: quién eres, antes de las acciones. Es la
+   misma pieza que en COMPANY, así que se escribe igual de sobria. */
+.apop-head{padding:9px 12px 7px;line-height:1.3}
+.apop-head b{display:block;font-size:13.5px;font-weight:800;letter-spacing:-.01em}
+.apop-head span{display:block;font-size:11.5px;color:var(--muted);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* El valor actual de un ajuste, a la derecha de su fila (el idioma elegido). */
+.apop-pista{margin-left:auto;font-size:11.5px;color:var(--muted);font-weight:400}
+/* Las opciones de un ajuste desplegado. Van sangradas para que se lea que
+   cuelgan de la fila de arriba y no son otra acción del menú. */
+.apop-sub{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;
+  font:inherit;font-size:12.5px;color:var(--ink);padding:6px 12px 6px 34px;border-radius:9px}
+.apop-sub:hover:not(:disabled){background:rgba(0,0,0,.05)}
+.apop-sub.on{font-weight:700}
+.apop-sub:disabled{opacity:.45;cursor:default}
+
 /* Tres accesos: Alma / Clan / Santuario */
 .entry-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .entry{position:relative;display:block;text-decoration:none;color:var(--ink);

@@ -11,6 +11,9 @@ import { PuestaEnMarcha } from '@/components/company/PuestaEnMarcha';
 import { Equipo } from '@/components/company/Equipo';
 import { Informes } from '@/components/company/Informes';
 import { Inicio } from '@/components/company/Inicio';
+import { MiEspacio } from '@/components/company/MiEspacio';
+import { MiPlan } from '@/components/company/MiPlan';
+import { MenuCuenta } from '@/components/MenuCuenta';
 import { ResumenModulo } from '@/components/company/ResumenModulo';
 import { Novedades } from '@/components/company/Novedades';
 import { AnalisisFinanciero } from '@/components/company/AnalisisFinanciero';
@@ -23,19 +26,19 @@ import type { ModuleSlug } from '@/types/core';
    sale de los módulos que su plan le permite. Dos empresas distintas ven
    menús distintos con el mismo código. */
 export function Espacio({ volver }: { volver?: () => void }) {
-  const { user, isPlatformAdmin, signOut } = useAuth();
+  const { isPlatformAdmin } = useAuth();
   const { memberships, current, select, version } = useTenant();
   const cid = current?.company.id;
   const marca = current?.company.branding ?? null;
 
   const [esp, setEsp] = useState<EspacioData | null>(null);
-  const [vista, setVista] = useState<string>('inicio');
+  const [vista, setVista] = useState<string>('miespacio');
   const [cargando, setCargando] = useState(true);
 
   /* Cambiar de organización sí devuelve a Inicio: la pestaña donde estabas
      era de la otra empresa. Recargar el mismo espacio —moneda, módulos— no,
      porque entonces cambiar algo en Configuración te sacaría de ahí. */
-  useEffect(() => { setVista('inicio'); }, [cid]);
+  useEffect(() => { setVista('miespacio'); }, [cid]);
 
   useEffect(() => {
     if (!cid) return;
@@ -62,7 +65,9 @@ export function Espacio({ volver }: { volver?: () => void }) {
 
   /* Cómo se llama lo que se está mirando. La cabecera lo dice, para que al
      volver de otra pestaña del navegador no haya que deducirlo del contenido. */
-  const titulo = vista === 'inicio' ? 'Inicio'
+  const titulo = vista === 'miespacio' ? 'Mi espacio'
+               : vista === 'inicio' ? 'Inicio'
+               : vista === 'miplan' ? 'Mi plan'
                : vista === 'informes' ? 'Informes'
                : vista === 'config' ? 'Configuración'
                : MODULES[vista as ModuleSlug]?.name ?? vista;
@@ -86,6 +91,7 @@ export function Espacio({ volver }: { volver?: () => void }) {
             solo estorbarían. */}
         <nav className="flex md:flex-col gap-1 md:gap-4 flex-1">
           <div className="flex md:flex-col gap-1">
+            <Item activo={vista==='miespacio'} onClick={() => setVista('miespacio')} label="Mi espacio" />
             <Item activo={vista==='inicio'} onClick={() => setVista('inicio')} label="Inicio" />
             <Item activo={vista==='informes'} onClick={() => setVista('informes')} label="Informes" />
           </div>
@@ -133,11 +139,10 @@ export function Espacio({ volver }: { volver?: () => void }) {
               {esp?.empresa.nombre} · {esp?.empresa.linea}
             </span>
           </span>
-          <span className="ml-auto text-[13px] text-muted hidden lg:block truncate max-w-[220px]">{user?.email}</span>
-          {isPlatformAdmin && (
-            <span className="marca marca-acento">Super Admin</span>
-          )}
-          <button onClick={signOut} className="b b-sec b-sm">Salir</button>
+          <span className="ml-auto" />
+          {isPlatformAdmin && <span className="marca marca-acento">Super Admin</span>}
+          <MenuCuenta irAMiEspacio={() => setVista('miespacio')}
+                      irAMiPlan={() => setVista('miplan')} />
         </header>
 
         {/* El ancho: las tablas y los gráficos del panel no caben en 4xl, y
@@ -171,11 +176,17 @@ export function Espacio({ volver }: { volver?: () => void }) {
             </>
           )}
 
+          {!cargando && esp && cid && vista === 'miespacio' && (
+            <MiEspacio esp={esp} irA={setVista} irAMiPlan={() => setVista('miplan')} />
+          )}
+
+          {!cargando && esp && vista === 'miplan' && <MiPlan esp={esp} />}
+
           {/* Todos los módulos los dibuja el motor de datos a partir de los
               esquemas declarados sobre las tablas de Bilagay. */}
           {!cargando && esp && cid && vista === 'informes' && <Informes companyId={cid} />}
 
-          {!cargando && esp && cid && vista !== 'inicio' && vista !== 'config' && vista !== 'informes' && (
+          {!cargando && esp && cid && !['inicio','config','informes','miespacio','miplan'].includes(vista) && (
             <Modulo slug={vista as ModuleSlug} companyId={cid}
                     nivel={esp.mi_rol?.nivel ?? 0} moneda={esp.empresa.moneda}
                     addons={esp.features.map(f => f.slug)} />

@@ -4727,21 +4727,55 @@ function openAuth(){ if(!Cloud.enabled){ alert("Conexión a la nube no disponibl
 function closeAuth(){ document.getElementById("authModal").classList.remove("open"); }
 
 /* ---------- Menú del Alma (cabecera, junto a LUMBRE) ---------- */
+/* El menú de la cuenta.
+   ---------------------------------------------------------------------------
+   Se abre pinchando tu nombre y es EL MISMO que el de COMPANY —mismo orden,
+   mismas cinco cosas al fondo: idioma, ayuda, mejorar plan, instalar y salir—.
+   Que coincidan no es capricho: quien usa las dos plataformas no tiene por qué
+   aprender dos veces dónde se cierra la sesión.
+
+   Lo de arriba sí cambia, porque cambia el lugar: aquí se entra a tu Alma, a
+   tu Clan y a tu Santuario; allá, al espacio de la empresa. */
+const IDIOMAS_ANIMA = [
+  { codigo:"es", nombre:"Español", listo:true },
+  { codigo:"en", nombre:"English", listo:false }
+];
+
 function renderAlmaMenu(){
   const pop=document.getElementById("almaPop"); if(!pop) return;
-  const items=[`<button class="apop-item" data-almago="mialma">✦ Mi Alma</button>`];
+  const a=me();
+  const perfil=state.perfil||null;
+  const nombre=(perfil&&perfil.full_name)||a.name||"Mi cuenta";
+  const correo=(perfil&&perfil.email)||a.email||"";
+  const idioma=IDIOMAS_ANIMA.find(i=>i.codigo===((perfil&&perfil.locale)||"es"))||IDIOMAS_ANIMA[0];
+
+  const items=[];
+  items.push(`<div class="apop-head"><b>${esc(nombre)}</b>${correo?`<span>${esc(correo)}</span>`:""}</div>`);
+  items.push(`<div class="apop-sep"></div>`);
+
+  /* Dónde entro */
+  items.push(`<button class="apop-item" data-almago="mialma">✦ Mi Alma</button>`);
   if(planAllows("clanpanel")) items.push(`<button class="apop-item" data-almago="clanpanel">❂ Mi Clan</button>`);
   if(planAllows("santuario")) items.push(`<button class="apop-item" data-almago="santuario">🜁 Santuario</button>`);
+  items.push(`<button class="apop-item" data-almago="miplan">❖ Mi plan</button>`);
+  items.push(`<a class="apop-item" href="planes.html" target="_blank" rel="noreferrer">↑ Mejorar plan</a>`);
   items.push(`<div class="apop-sep"></div>`);
-  // Volver al HOME principal de ANIMA (la morada de entrada).
-  items.push(`<a class="apop-item" href="home.html">⌂ Volver al HOME</a>`);
+
+  /* Ajustes de la cuenta — los mismos cinco que en COMPANY */
+  items.push(`<button class="apop-item" id="almaIdioma">🌐 Idioma<span class="apop-pista">${esc(idioma.nombre)}</span></button>`);
+  if(state.menuIdioma){
+    items.push(IDIOMAS_ANIMA.map(i=>
+      `<button class="apop-sub${i.codigo===idioma.codigo?" on":""}" data-idioma="${i.codigo}"${i.listo?"":" disabled"}>`+
+      `${i.nombre}${i.listo?"":" · aún no traducido"}${i.codigo===idioma.codigo?" ✓":""}</button>`).join(""));
+  }
+  items.push(`<button class="apop-item" id="almaAyuda">? Obtener ayuda</button>`);
+  items.push(`<button class="apop-item" id="almaInstall">⤓ Instalar aplicación</button>`);
   items.push(`<div class="apop-sep"></div>`);
-  // En móvil el menú lateral está oculto: sus acciones secundarias (tutorial,
-  // feedback y, para el Creador, Consola/Personalizar) viven aquí, en el menú
-  // del Alma, para mantener la app limpia sin perder el acceso.
+
+  /* En móvil el menú lateral está oculto: sus acciones secundarias viven aquí
+     para mantener la app limpia sin perder el acceso. */
   if(window.innerWidth<=960){
     items.push(`<button class="apop-item" id="almaTour">✦ Ver tutorial</button>`);
-    items.push(`<button class="apop-item" id="almaFeedback">✦ Enviar feedback</button>`);
     items.push(`<button class="apop-item" id="almaCodice">❏ El Códice</button>`);
     if(isCreator && !state.viewAs){
       items.push(`<button class="apop-item" data-almago="consola">⬡ Consola</button>`);
@@ -4749,16 +4783,30 @@ function renderAlmaMenu(){
     }
     items.push(`<div class="apop-sep"></div>`);
   }
-  // Cómo instalar ANIMA (siempre disponible en el menú del nombre).
-  items.push(`<button class="apop-item" id="almaInstall">⤓ Cómo instalar ANIMA</button>`);
-  if(me().live) items.push(`<button class="apop-item" id="almaPass">🔑 Cambiar contraseña</button>`);
+
+  items.push(`<a class="apop-item" href="home.html">⌂ Volver al HOME</a>`);
+  if(a.live) items.push(`<button class="apop-item" id="almaPass">🔑 Cambiar contraseña</button>`);
   items.push(`<button class="apop-item" id="almaSwitch">⤿ Cambiar de Alma</button>`);
   items.push(`<button class="apop-item danger" id="almaLogout">⏻ Cerrar sesión</button>`);
   pop.innerHTML=items.join("");
 }
+
+/* El perfil se pide una vez, al abrir el menú por primera vez. */
+async function loadPerfil(){
+  if(!Cloud.enabled || state.perfil) return;
+  try{ state.perfil = await Cloud.perfil(); renderAlmaMenu(); }catch(e){}
+}
+
+async function elegirIdiomaAlma(codigo){
+  state.perfil = Object.assign({}, state.perfil||{}, { locale:codigo });
+  state.menuIdioma = false;
+  renderAlmaMenu();
+  try{ await Cloud.fijarIdioma(codigo); }catch(e){}
+}
+
 function toggleAlmaMenu(){ const pop=document.getElementById("almaPop"); if(!pop) return;
   if(pop.classList.contains("open")){ pop.classList.remove("open"); return; }
-  renderAlmaMenu(); pop.classList.add("open"); }
+  state.menuIdioma=false; renderAlmaMenu(); loadPerfil(); pop.classList.add("open"); }
 function closeAlmaMenu(){ const pop=document.getElementById("almaPop"); if(pop) pop.classList.remove("open"); }
 
 /* ===========================================================
@@ -5315,6 +5363,9 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#almaTour")){ closeAlmaMenu(); startTour(); return; }
   if(e.target.closest("#almaFeedback")){ closeAlmaMenu(); openFeedback(); return; }
   if(e.target.closest("#almaCodice")){ closeAlmaMenu(); openCodice(); return; }
+  if(e.target.closest("#almaIdioma")){ state.menuIdioma=!state.menuIdioma; renderAlmaMenu(); return; }
+  if(e.target.closest("[data-idioma]")){ elegirIdiomaAlma(e.target.closest("[data-idioma]").dataset.idioma); return; }
+  if(e.target.closest("#almaAyuda")){ closeAlmaMenu(); openFeedback(); return; }
   if(e.target.closest("#almaInstall")){ closeAlmaMenu(); installApp(); return; }
   if(e.target.closest("#almaPass")){ closeAlmaMenu(); openChangePass(); return; }
   if(e.target.closest("#almaSwitch")){ closeAlmaMenu(); switchAlmaSession(); return; }
