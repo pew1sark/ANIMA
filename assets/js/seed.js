@@ -84,9 +84,9 @@ const SEED_CLANS = [
 
 /* --- Santuario --- */
 const SEED_SANCTUARY = {
-  name:"ANIMA — Founding Sanctuary",
+  name:"ANIMA — Santuario",
   emoji:"🜁",
-  desc:"El Santuario de ANIMA: todas las Almas reunidas en The Founding Era.",
+  desc:"El Santuario de ANIMA: todas las Almas reunidas.",
   clans:["blackink","aetherlab","wildhouse"],
   departments:[
     { t:"Arte & Muralismo", lead:"" },

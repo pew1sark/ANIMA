@@ -17,7 +17,7 @@
   var LS_ONBOARDING = "anima_onboarding_completed";
   var LS_SEEN = "anima_last_seen";
 
-  /* Código Alpha de la Founding Era */
+  /* El código de invitación con el que se despierta un Alma. */
   var ALPHA_CODE = "ANIMA-2026";
 
   /* --- Afinidades: la naturaleza creadora de cada Alma --- */
@@ -70,7 +70,7 @@
     markCompleted: function () { localStorage.setItem(LS_ONBOARDING, "true"); },
     reset: function () { localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_ONBOARDING); },
 
-    /* --- Código Alpha --- */
+    /* --- Código de invitación --- */
     checkAlphaCode: function (code) {
       return String(code || "").trim().toUpperCase() === ALPHA_CODE;
     },

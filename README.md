@@ -47,7 +47,6 @@ y [`docs/lineas-de-producto.md`](docs/lineas-de-producto.md).
 | `studio.html` | **La Alpha** — la app del Studio con las 10 Almas |
 | `arbol.html` | **Árbol de Almas** — mapa vivo por país, contador `X / 100`, Ecos de ANIMA y LUMBRE despertando |
 | `fundador.html` | **Panel del Fundador** — comunidad, activos, obras, feedback y estado (solo el Creador) |
-| `roadmap.html` | Master Roadmap V6 · The Founding Era |
 
 ### Arquitectura Alpha 2026
 
@@ -114,7 +113,6 @@ obligatoriamente de internet.*
 .
 ├── index.html              · Portada
 ├── studio.html             · App (Alpha)
-├── roadmap.html            · Roadmap V6
 └── assets/
     ├── css/
     │   ├── anima.css        · Sistema de diseño (paleta, marca, componentes)

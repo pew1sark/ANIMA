@@ -2,7 +2,7 @@
 #
 # Público hay tres páginas: la portada, los planes y el aviso legal. Todo lo
 # demás son pantallas de la aplicación —el Studio de la Alpha, el panel del
-# Fundador, el ingreso, el roadmap interno—: se sirven porque alguien con
+# Fundador, el ingreso—: se sirven porque alguien con
 # sesión las necesita, pero no tienen nada que hacer en un buscador.
 
 User-agent: *
@@ -16,7 +16,5 @@ Disallow: /recuperar.html
 Disallow: /portfolio.html
 Disallow: /arbol.html
 Disallow: /fundador.html
-Disallow: /roadmap.html
-Disallow: /index.legacy-umbral.html
 
 Sitemap: https://www.animatsc.com/sitemap.xml

@@ -1,5 +1,5 @@
 /* ===========================================================
-   ANIMA Studio — App logic (Beta · Founding Era)
+   ANIMA STUDIO — App logic
    Sistema vivo: Almas editables, módulos, LUMBRE,
    personalización y Cotizador. Local + nube (Supabase).
    =========================================================== */
@@ -4602,7 +4602,7 @@ function renderLumbreAdminBar(){
   if(!sub || !bar) return;
   const admin = (typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre();
   if(!admin){ sub.textContent="Motor agente · 100% local por defecto"; bar.style.display="none"; bar.innerHTML=""; return; }
-  sub.textContent="LUMBRE · ADMIN · Alpha";
+  sub.textContent="LUMBRE · ADMIN";
   const connected=(typeof ObsidianService!=="undefined") && ObsidianService.isConnected();
   bar.style.display="block";
   bar.innerHTML=`<button class="btn ghost sm" id="lumbreObsidianBtn">${connected?"✦ Vault conectado":"Conectar Vault de Obsidian"}</button>`;
