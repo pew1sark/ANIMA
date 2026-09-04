@@ -212,6 +212,14 @@ h1.rite{font-size:clamp(36px,8vw,76px);line-height:.94;letter-spacing:-.05em;mar
 
 /* La cabecera del menú de la cuenta: quién eres, antes de las acciones. Es la
    misma pieza que en COMPANY, así que se escribe igual de sobria. */
+/* Volver a elegir plataforma, al lado del nombre. Va discreto —no es lo que
+   se viene a hacer— pero visible: quien trabaja en las dos cruza varias veces
+   al día y no debería tener que abrir un menú para hacerlo. */
+.home-puertas{display:inline-flex;align-items:center;gap:6px;margin-right:10px;
+  padding:8px 13px;border-radius:999px;border:1px solid var(--line);
+  font-size:12.5px;font-weight:600;color:var(--muted);text-decoration:none;
+  transition:border-color .18s ease,color .18s ease,background-color .18s ease}
+.home-puertas:hover{color:var(--ink);border-color:var(--muted);background:rgba(0,0,0,.03)}
 .apop-head{padding:9px 12px 7px;line-height:1.3}
 .apop-head b{display:block;font-size:13.5px;font-weight:800;letter-spacing:-.01em}
 .apop-head span{display:block;font-size:11.5px;color:var(--muted);margin-top:1px;

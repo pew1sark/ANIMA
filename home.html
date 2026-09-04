@@ -32,7 +32,7 @@
     @media(max-width:680px){ .home-cta .cbtn{flex:1;text-align:center} }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/js/supabase.js?v=nucleo-v9"></script>
+  <script src="assets/js/supabase.js?v=nucleo-v11"></script>
   <script src="assets/js/anima-state.js?v=nucleo-v3"></script>
 </head>
 <body class="rite" style="display:block;align-items:stretch;justify-content:flex-start">
@@ -57,7 +57,12 @@
   var SLEPT = AnimaState.sleptText(AnimaState.lastSeen());
 
   var ctx = { signedIn: false, email: "", plan: "ALMA", isCreator: false,
-              perfil: null, verIdiomas: false };
+              perfil: null, verIdiomas: false, lineas: [] };
+
+  /* ¿Esta persona tiene más de una plataforma? Lo decide `mis_lineas()` en la
+     base —el mismo dato con el que el portal dibuja las puertas—, así que el
+     botón de cambiar aparece exactamente cuando hay a dónde ir. */
+  function variasPuertas(){ return (ctx.lineas || []).length > 1; }
 
   /* El menú de la cuenta es EL MISMO en las tres pantallas donde aparece: aquí,
      en el Taller (studio.html) y en COMPANY. Mismo orden y mismas filas al
@@ -101,6 +106,7 @@
     if (planAllows("SANTUARIO")) h.push('<a class="apop-item" href="studio.html#go=santuario">🜁 Santuario</a>');
     h.push('<a class="apop-item" href="studio.html#go=miplan">❖ Mi plan</a>');
     h.push('<a class="apop-item" href="planes.html">↑ Mejorar plan</a>');
+    if (variasPuertas()) h.push('<a class="apop-item" href="app/">⇄ Cambiar de plataforma</a>');
     h.push('<div class="apop-sep"></div>');
 
     /* Los cinco de siempre, en el mismo orden que en COMPANY */
@@ -131,7 +137,15 @@
      acá. */
   async function cargarPerfil(){
     if (ctx.perfil || typeof Cloud === "undefined" || !Cloud.enabled) return;
-    try { ctx.perfil = await Cloud.perfil(); pintarMenu(); } catch (e) {}
+    try {
+      var r = await Promise.all([Cloud.perfil(), Cloud.lineas()]);
+      ctx.perfil = r[0];
+      /* Si la consulta falla o vuelve vacía, se conserva lo que ya se sabía:
+         una respuesta a medias no debería hacer desaparecer el botón de
+         cambiar de plataforma delante de quien lo estaba mirando. */
+      if ((r[1] || []).length) ctx.lineas = r[1];
+      pintarMenu();
+    } catch (e) {}
   }
 
   async function instalarApp(){
@@ -151,7 +165,10 @@
     var s = AnimaState.get();
     var nameFirst = (s.name || "Alma").split(" ")[0];
     var right = ctx.signedIn
-      ? '<div class="alma-pill" id="almaPill"><span class="adot"></span>' + esc(nameFirst) +
+      ? (variasPuertas()
+          ? '<a class="home-puertas" href="app/" title="Volver a elegir plataforma">⇄ Plataformas</a>'
+          : '') +
+        '<div class="alma-pill" id="almaPill"><span class="adot"></span>' + esc(nameFirst) +
           '<span class="acaret">⌄</span><div class="alma-pop" id="almaPop">' + menuHTML() + '</div></div>'
       : '<a class="cbtn" href="app/" style="padding:10px 18px;font-size:13.5px">Entrar a mi Alma</a>';
     return '<div class="home-top">' +
@@ -162,8 +179,8 @@
 
   function foot(){
     return '<div class="home-foot">' +
-        '<strong>ANIMA TSC</strong> · The Founding Era<br>' +
-        '<a href="arbol.html">Árbol de Almas</a>·<a href="planes.html">Mi Plan</a>·<a href="legal.html#privacidad">Privacidad</a>' +
+        '<strong>ANIMA TSC</strong> · Technology System Connection<br>' +
+        '<a href="arbol.html">Árbol de Almas</a>·<a href="planes.html">Planes</a>·<a href="legal.html#privacidad">Privacidad</a>' +
       '</div>';
   }
 
@@ -294,6 +311,9 @@
           ctx.signedIn = true;
           ctx.email = (session.user && session.user.email || "").toLowerCase();
           ctx.isCreator = ctx.email === CREATOR_EMAIL;
+          /* Las puertas se piden acá y no al abrir el menú: el botón de
+             plataformas vive en la cabecera, y la cabecera se dibuja una vez. */
+          try { ctx.lineas = await Cloud.lineas(); } catch (e) {}
           var row = await Cloud.myAlma();
           if (row) {
             ctx.plan = row.plan || "ALMA";

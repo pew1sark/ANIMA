@@ -206,6 +206,15 @@ const Cloud = {
     }catch(e){}
   },
 
+  /* Qué plataformas abre el plan de esta persona: ['studio'], ['company'] o
+     las dos. Lo decide `mis_lineas()` en la base, no el navegador — el mismo
+     dato con el que el portal dibuja las puertas. Sirve para no ofrecer
+     "cambiar de plataforma" a quien solo tiene una. */
+  async lineas(){
+    try{ const { data, error } = await _sb.rpc("mis_lineas"); if(error) return []; return data||[]; }
+    catch(e){ return []; }
+  },
+
   /* Uso y tope de cada cuota del plan contratado. Lista vacía = sin topes,
      que es lo que tienen Pro, Max y Enterprise. Lo calcula la base. */
   async cuotas(){ try{ const { data, error } = await _sb.rpc("cuotas"); if(error) return []; return data||[]; }catch(e){ return []; } },

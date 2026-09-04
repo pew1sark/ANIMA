@@ -114,15 +114,18 @@ export function Espacio({ volver }: { volver?: () => void }) {
           )}
         </nav>
 
+        {/* Salir de aquí sin cerrar sesión: cambiar de organización o volver a
+            elegir plataforma. Antes eran dos enlaces de doce píxeles perdidos
+            al pie; ahora se ven y se pulsan. */}
         <div className="hidden md:grid gap-1.5">
           {memberships.length > 1 && (
-            <button onClick={() => select('')} className="text-[12px] text-muted hover:text-ink transition text-left px-3">
-              Cambiar de organización
+            <button onClick={() => select('')} className="b b-fan b-sm justify-start">
+              ⇆ Cambiar de organización
             </button>
           )}
           {volver && (
-            <button onClick={volver} className="text-[12px] text-muted hover:text-ink transition text-left px-3">
-              Cambiar de puerta
+            <button onClick={volver} className="b b-fan b-sm justify-start">
+              ← Volver a elegir plataforma
             </button>
           )}
           <PieAnima className="px-3 pt-3 mt-1 border-t border-line" />
@@ -142,7 +145,9 @@ export function Espacio({ volver }: { volver?: () => void }) {
           <span className="ml-auto" />
           {isPlatformAdmin && <span className="marca marca-acento">Super Admin</span>}
           <MenuCuenta irAMiEspacio={() => setVista('miespacio')}
-                      irAMiPlan={() => setVista('miplan')} />
+                      irAMiPlan={() => setVista('miplan')}
+                      cambiarDePlataforma={volver}
+                      cambiarDeOrganizacion={memberships.length > 1 ? () => select('') : undefined} />
         </header>
 
         {/* El ancho: las tablas y los gráficos del panel no caben en 4xl, y

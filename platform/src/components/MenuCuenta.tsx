@@ -15,9 +15,15 @@ import { env } from '@/config/env';
    de dónde está parado: en COMPANY, tu espacio y el plan de la empresa; en
    STUDIO, tu Alma y tu Forma. Por eso llegan como props y no van escritos
    aquí dentro. */
-export function MenuCuenta({ irAMiEspacio, irAMiPlan, nombreEspacio = 'Mi espacio' }: {
+export function MenuCuenta({ irAMiEspacio, irAMiPlan, cambiarDePlataforma, cambiarDeOrganizacion,
+                             nombreEspacio = 'Mi espacio' }: {
   irAMiEspacio?: () => void;
   irAMiPlan?: () => void;
+  /** Volver a elegir entre STUDIO, COMPANY y la consola. Solo llega cuando la
+   *  persona tiene más de una puerta: preguntar sin alternativa es ruido. */
+  cambiarDePlataforma?: () => void;
+  /** Volver a elegir organización, cuando pertenece a más de una. */
+  cambiarDeOrganizacion?: () => void;
   nombreEspacio?: string;
 }) {
   const { user, signOut } = useAuth();
@@ -90,6 +96,19 @@ export function MenuCuenta({ irAMiEspacio, irAMiPlan, nombreEspacio = 'Mi espaci
           <Fila onClick={() => window.open(env.sitio + 'planes.html', '_blank')} icono={<IcoSubir />}>
             Mejorar plan
           </Fila>
+
+          {/* Moverse entre plataformas sin pasar por cerrar sesión. Solo
+              aparece si de verdad hay a dónde ir. */}
+          {cambiarDeOrganizacion && (
+            <Fila onClick={() => { cerrar(); cambiarDeOrganizacion(); }} icono={<IcoCambio />}>
+              Cambiar de organización
+            </Fila>
+          )}
+          {cambiarDePlataforma && (
+            <Fila onClick={() => { cerrar(); cambiarDePlataforma(); }} icono={<IcoPuertas />}>
+              Cambiar de plataforma
+            </Fila>
+          )}
 
           <Linea />
 
@@ -175,4 +194,6 @@ const IcoSubir   = () => <svg {...ico}><path d="M12 19V5" /><path d="m5 12 7-7 7
 const IcoGlobo   = () => <svg {...ico}><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18" /></svg>;
 const IcoAyuda   = () => <svg {...ico}><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7" /><path d="M12 17h.01" /></svg>;
 const IcoBajar   = () => <svg {...ico}><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M4 21h16" /></svg>;
+const IcoCambio  = () => <svg {...ico}><path d="M4 8h13l-3-3M20 16H7l3 3" /></svg>;
+const IcoPuertas = () => <svg {...ico}><path d="M3 21h18" /><path d="M6 21V6a2 2 0 0 1 2-2h3v17" /><path d="M13 21V9a2 2 0 0 1 2-2h3v14" /></svg>;
 const IcoSalir   = () => <svg {...ico}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>;
