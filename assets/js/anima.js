@@ -4768,7 +4768,7 @@ function renderAlmaMenu(){
       `<button class="apop-sub${i.codigo===idioma.codigo?" on":""}" data-idioma="${i.codigo}"${i.listo?"":" disabled"}>`+
       `${i.nombre}${i.listo?"":" · aún no traducido"}${i.codigo===idioma.codigo?" ✓":""}</button>`).join(""));
   }
-  items.push(`<button class="apop-item" id="almaAyuda">? Obtener ayuda</button>`);
+  items.push(`<button class="apop-item" id="almaAyuda">✉ Obtener ayuda</button>`);
   items.push(`<button class="apop-item" id="almaInstall">⤓ Instalar aplicación</button>`);
   items.push(`<div class="apop-sep"></div>`);
 

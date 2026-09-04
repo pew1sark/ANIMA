@@ -56,7 +56,25 @@
   /* Tiempo que el Alma llevaba sin entrar (se lee ANTES de re-sellar la hora). */
   var SLEPT = AnimaState.sleptText(AnimaState.lastSeen());
 
-  var ctx = { signedIn: false, email: "", plan: "ALMA", isCreator: false };
+  var ctx = { signedIn: false, email: "", plan: "ALMA", isCreator: false,
+              perfil: null, verIdiomas: false };
+
+  /* El menú de la cuenta es EL MISMO en las tres pantallas donde aparece: aquí,
+     en el Taller (studio.html) y en COMPANY. Mismo orden y mismas filas al
+     fondo — idioma, ayuda, mejorar plan, instalar y salir—, porque quien usa
+     las dos plataformas no tiene por qué aprender dos veces dónde se cierra la
+     sesión. Lo único que cambia son los destinos de arriba. */
+  var IDIOMAS = [
+    { codigo: "es", nombre: "Español", listo: true },
+    { codigo: "en", nombre: "English", listo: false }
+  ];
+
+  /* El navegador ofrece el diálogo de instalación una sola vez y hay que
+     guardarlo en cuanto llega; si no, se pierde. Safari no lo dispara nunca,
+     y para ese caso se explica cómo hacerlo a mano. */
+  var promptInstalar = null;
+  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); promptInstalar = e; });
+  window.addEventListener("appinstalled", function () { promptInstalar = null; });
 
   function planAllows(level){
     if (ctx.isCreator) return true;
@@ -65,19 +83,76 @@
     return true;
   }
 
+  function menuHTML(){
+    var s = AnimaState.get();
+    var nombre = (ctx.perfil && ctx.perfil.full_name) || s.name || "Mi cuenta";
+    var correo = (ctx.perfil && ctx.perfil.email) || ctx.email || "";
+    var codigo = (ctx.perfil && ctx.perfil.locale) || "es";
+    var idioma = IDIOMAS.filter(function (i) { return i.codigo === codigo; })[0] || IDIOMAS[0];
+    var h = [];
+
+    h.push('<div class="apop-head"><b>' + esc(nombre) + '</b>' +
+           (correo ? '<span>' + esc(correo) + '</span>' : '') + '</div>');
+    h.push('<div class="apop-sep"></div>');
+
+    /* Dónde entro */
+    h.push('<a class="apop-item" href="app/">✦ Mi Alma</a>');
+    if (planAllows("CLAN"))      h.push('<a class="apop-item" href="studio.html#go=clanpanel">❂ Mi Clan</a>');
+    if (planAllows("SANTUARIO")) h.push('<a class="apop-item" href="studio.html#go=santuario">🜁 Santuario</a>');
+    h.push('<a class="apop-item" href="studio.html#go=miplan">❖ Mi plan</a>');
+    h.push('<a class="apop-item" href="planes.html">↑ Mejorar plan</a>');
+    h.push('<div class="apop-sep"></div>');
+
+    /* Los cinco de siempre, en el mismo orden que en COMPANY */
+    h.push('<button class="apop-item" id="almaIdioma">🌐 Idioma<span class="apop-pista">' +
+           esc(idioma.nombre) + '</span></button>');
+    if (ctx.verIdiomas) {
+      h.push(IDIOMAS.map(function (i) {
+        return '<button class="apop-sub' + (i.codigo === codigo ? ' on' : '') + '" data-idioma="' + i.codigo + '"' +
+               (i.listo ? '' : ' disabled') + '>' + i.nombre +
+               (i.listo ? '' : ' · aún no traducido') + (i.codigo === codigo ? ' ✓' : '') + '</button>';
+      }).join(''));
+    }
+    h.push('<a class="apop-item" href="mailto:tscanima@gmail.com?subject=' +
+           encodeURIComponent('ANIMA — necesito ayuda') + '">✉ Obtener ayuda</a>');
+    h.push('<button class="apop-item" id="almaInstall">⤓ Instalar aplicación</button>');
+    h.push('<div class="apop-sep"></div>');
+    h.push('<button class="apop-item danger" id="logoutAlma">⏻ Cerrar sesión</button>');
+    return h.join('');
+  }
+
+  function pintarMenu(){
+    var pop = document.getElementById("almaPop");
+    if (pop) pop.innerHTML = menuHTML();
+  }
+
+  /* El perfil (nombre e idioma) se pide una vez y se guarda en `profiles`, la
+     misma fila que usa COMPANY: el idioma elegido allá es el que se encuentra
+     acá. */
+  async function cargarPerfil(){
+    if (ctx.perfil || typeof Cloud === "undefined" || !Cloud.enabled) return;
+    try { ctx.perfil = await Cloud.perfil(); pintarMenu(); } catch (e) {}
+  }
+
+  async function instalarApp(){
+    if (promptInstalar) {
+      promptInstalar.prompt();
+      try { await promptInstalar.userChoice; } catch (e) {}
+      promptInstalar = null;
+      return;
+    }
+    alert("Cómo instalar ANIMA:\n\n• iPhone o iPad: Compartir → \"Añadir a pantalla de inicio\".\n" +
+          "• Android: menú del navegador → \"Instalar aplicación\".\n" +
+          "• Computador: el icono de instalar, al final de la barra de direcciones.");
+  }
+
   /* Cabecera común: marca + (menú del Alma | Entrar). */
   function topBar(){
     var s = AnimaState.get();
     var nameFirst = (s.name || "Alma").split(" ")[0];
     var right = ctx.signedIn
       ? '<div class="alma-pill" id="almaPill"><span class="adot"></span>' + esc(nameFirst) +
-          '<span class="acaret">⌄</span><div class="alma-pop" id="almaPop">' +
-            '<a class="apop-item" href="app/">✦ Entrar a Mi Alma</a>' +
-            (planAllows("CLAN") ? '<a class="apop-item" href="studio.html#go=clanpanel">❂ Mi Clan</a>' : '') +
-            (planAllows("SANTUARIO") ? '<a class="apop-item" href="studio.html#go=santuario">🜁 Santuario</a>' : '') +
-            '<div class="apop-sep"></div>' +
-            '<button class="apop-item danger" id="logoutAlma">⏻ Cerrar sesión</button>' +
-          '</div></div>'
+          '<span class="acaret">⌄</span><div class="alma-pop" id="almaPop">' + menuHTML() + '</div></div>'
       : '<a class="cbtn" href="app/" style="padding:10px 18px;font-size:13.5px">Entrar a mi Alma</a>';
     return '<div class="home-top">' +
         '<div class="home-brand"><span class="m">' + PEAK + '</span>ANIMA</div>' +
@@ -163,13 +238,34 @@
     var pill = document.getElementById("almaPill");
     if (!pill) return;
     var pop = document.getElementById("almaPop");
+
     pill.addEventListener("click", function (e) {
-      if (e.target.closest(".apop-item")) return;
+      /* Lo que está dentro del menú lo maneja el menú. */
+      if (e.target.closest(".apop-item") || e.target.closest(".apop-sub")) return;
+      var abriendo = !pop.classList.contains("open");
       pop.classList.toggle("open");
+      if (abriendo) { ctx.verIdiomas = false; pintarMenu(); cargarPerfil(); }
     });
     document.addEventListener("click", function (e) { if (!e.target.closest("#almaPill")) pop.classList.remove("open"); });
-    var lo = document.getElementById("logoutAlma");
-    if (lo) lo.addEventListener("click", async function () { try { await Cloud.signOut(); } catch (e) {} ctx.signedIn = false; render(); });
+
+    /* Las acciones del menú, por delegación: el contenido se repinta al elegir
+       idioma, así que enganchar botón por botón dejaría manejadores muertos. */
+    pop.addEventListener("click", async function (e) {
+      if (e.target.closest("#almaIdioma")) { ctx.verIdiomas = !ctx.verIdiomas; pintarMenu(); return; }
+      var idi = e.target.closest("[data-idioma]");
+      if (idi) {
+        var codigo = idi.getAttribute("data-idioma");
+        ctx.perfil = Object.assign({}, ctx.perfil || {}, { locale: codigo });
+        ctx.verIdiomas = false; pintarMenu();
+        try { await Cloud.fijarIdioma(codigo); } catch (err) {}
+        return;
+      }
+      if (e.target.closest("#almaInstall")) { pop.classList.remove("open"); instalarApp(); return; }
+      if (e.target.closest("#logoutAlma")) {
+        try { await Cloud.signOut(); } catch (err) {}
+        ctx.signedIn = false; render();
+      }
+    });
   }
 
   function render(){ if (ctx.signedIn) renderSignedIn(); else renderGuest(); }
