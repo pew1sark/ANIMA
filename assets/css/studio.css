@@ -984,8 +984,11 @@ a.nav-item{text-decoration:none;color:inherit}
    PROYECTOS — grid de tarjetas + detalle (panel dividido).
    =========================================================== */
 .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(244px,1fr));gap:14px}
-.proj-filters{display:grid;grid-template-columns:repeat(5,minmax(108px,1fr));gap:8px;margin-top:10px}
-.proj-filters select{width:100%;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.72);padding:9px 10px;font:inherit;font-size:12px;color:var(--text)}
+.proj-filters{display:grid;grid-template-columns:repeat(4,minmax(108px,1fr));gap:8px;margin-top:10px}
+.proj-filters select,.proj-filters .pf-date{width:100%;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.72);padding:9px 10px;font:inherit;font-size:12px;color:var(--text)}
+.proj-filters .pf-date{display:flex;align-items:center;gap:8px;padding:0 10px;min-width:0}
+.proj-filters .pf-date span{color:var(--muted);white-space:nowrap}
+.proj-filters .pf-date input{flex:1;min-width:0;border:0;background:transparent;padding:9px 0;font:inherit;font-size:12px;color:var(--text)}
 .proj-card{display:flex;flex-direction:column;gap:9px;text-align:left;border:1px solid var(--line);
   background:var(--card-solid,#fff);border-radius:16px;padding:16px;cursor:pointer;font:inherit;
   transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}

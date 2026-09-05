@@ -1152,7 +1152,56 @@ function projectSelectFilters(ps){
     <select data-projfilter2="responsible">${opt("Responsable",owners,d.responsible||"")}</select>
     <select data-projfilter2="comuna">${opt("Comuna",comunas,d.comuna||"")}</select>
     <select data-projfilter2="status">${opt("Estado",FLOW,d.status||"")}</select>
+    <select data-projfilter2="dateField">${PROJECT_DATE_FIELDS.map(f=>`<option value="${f.k}" ${projectDateField()===f.k?'selected':''}>Fecha · ${f.t}</option>`).join("")}</select>
+    <label class="pf-date"><span>Desde</span><input type="date" data-projfilter2="desde" value="${esc(d.desde||"")}"></label>
+    <label class="pf-date"><span>Hasta</span><input type="date" data-projfilter2="hasta" value="${esc(d.hasta||"")}"></label>
   </div>`;
+}
+/* Con qué fecha se mide una unidad. La de creación la tiene toda —nace con
+   ella—; inicio y entrega se escriben a mano y la mayoría quedan vacías, así
+   que filtrar por esas esconde justo lo que nadie llenó. Por eso creación es
+   la de partida y las otras dos se piden a propósito. */
+const PROJECT_DATE_FIELDS=[{k:"created",t:"Creación"},{k:"start",t:"Inicio"},{k:"due",t:"Entrega"}];
+function projectDateField(){ const k=(state.projDetailFilter||{}).dateField; return PROJECT_DATE_FIELDS.some(f=>f.k===k)?k:"created"; }
+/* Dos formas distintas de fecha conviven aquí y se tratan distinto a propósito:
+
+   · inicio y entrega son fechas sin hora ("2026-07-31"). Pasarlas por Date
+     las lee como medianoche UTC y en Chile retroceden un día: el 31 se
+     convierte en 30. Se cortan como texto y no se tocan.
+   · creación es un instante con hora y zona. Ahí sí hay que convertir: una
+     cotización guardada a las 22:15 en Chile queda como 01:15 UTC del día
+     siguiente, y sin convertir se iría al mes que no es. */
+function projectDate(p,campo){
+  const s=String((campo==="start"?p.start:campo==="due"?p.due:p.created)||"");
+  if(!s) return "";
+  if(!/[T ]\d{2}:/.test(s)) return s.slice(0,10);
+  const d=new Date(s.replace(" ","T"));
+  if(isNaN(d)) return s.slice(0,10);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+/* Se comparan textos ISO, no objetos Date: new Date("2026-07-01") se lee en
+   UTC y en Chile retrocede un día, así que el 1 se caía del rango que empieza
+   el 1. Como texto, "2026-07-01" >= "2026-07-01" y no hay huso que valga. */
+function projectInPeriod(p){
+  const f=state.projDetailFilter||{};
+  if(!f.desde && !f.hasta) return true;
+  const on=projectDate(p,projectDateField());
+  if(!on) return false;                       // sin esa fecha no puede caer en el tramo
+  if(f.desde && on<f.desde) return false;
+  if(f.hasta && on>f.hasta) return false;
+  return true;
+}
+function fechaCorta(d){ const x=String(d||"").slice(0,10).split("-"); return x.length===3?`${x[2]}-${x[1]}-${x[0]}`:String(d||""); }
+/* Con un tramo puesto, el resumen de arriba ya no habla de todo: que diga de
+   qué periodo habla, o las cifras mienten por omisión. */
+function projectPeriodLine(n){
+  const f=state.projDetailFilter||{}; if(!f.desde && !f.hasta) return "";
+  const campo=(PROJECT_DATE_FIELDS.find(x=>x.k===projectDateField())||PROJECT_DATE_FIELDS[0]).t.toLowerCase();
+  const tramo=f.desde&&f.hasta?`del ${fechaCorta(f.desde)} al ${fechaCorta(f.hasta)}`
+             :f.desde?`desde el ${fechaCorta(f.desde)}`:`hasta el ${fechaCorta(f.hasta)}`;
+  return `<div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(110,110,115,.06)">
+      <b style="font-size:13px">Resumen por fecha de ${esc(campo)} ${esc(tramo)}</b>
+      <small class="muted">${n} unidad${n===1?"":"es"} en el tramo</small></div>`;
 }
 function projectMatchesDetail(p){
   const f=state.projDetailFilter||{};
@@ -1161,6 +1210,7 @@ function projectMatchesDetail(p){
   if(f.responsible && (p.responsible||p.owner||"")!==f.responsible) return false;
   if(f.comuna && String(p.comuna||"").trim()!==f.comuna) return false;
   if(f.status && flowOf(p.st)!==f.status) return false;
+  if(!projectInPeriod(p)) return false;
   return true;
 }
 function projectMetaLine(a,p){
@@ -1319,7 +1369,7 @@ function vProyectos(a){
       <div class="seg">${segBtn("tarjetas","Tarjetas")}${segBtn("lista","Lista")}${segBtn("kanban","Kanban")}</div>
       <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}</span></div>
       <div class="seg" style="margin-top:12px;flex-wrap:wrap">${filterBtn("todos","Todos")}${filterBtn("personal","Mi Taller")}${filterBtn("clan","Clanes")}${filterBtn("cerrados","Cerrados")}${filterBtn("archivados","Archivados")}</div>
-      ${projectSelectFilters(all)}${cotInfo}</div>`;
+      ${projectSelectFilters(all)}${projectPeriodLine(ps.length)}${cotInfo}</div>`;
   if(!ps.length){
     const hasProjects=all.length>0;
     return `<div class="grid">${summaryCards}${head}<div class="card s12"><p class="muted">${hasProjects?"Hay proyectos guardados, pero el filtro actual no los muestra. Limpia filtros o revisa Cerrados y Archivados.":"No hay unidades todavía. Crea una nueva desde el botón ＋."}</p>${hasProjects?`<button class="btn sm secondary" data-projclear>Limpiar filtros</button>`:""}</div></div>${fab}`;
