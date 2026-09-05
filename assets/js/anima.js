@@ -1119,7 +1119,13 @@ const PROJECT_TEMPLATES={
 const PROJECT_TEMPLATE_OPTIONS=Object.entries(PROJECT_TEMPLATES).flatMap(([group,items])=>items.map(x=>`${group} · ${x}`));
 function projectContext(p){ return PROJECT_CONTEXTS.includes(p.context) ? p.context : (p.owner_type==="Clan"?"Clan":"Personal"); }
 function projectOwner(a,p){ const ctx=projectContext(p); return p.owner || (ctx==="Clan" ? (a.clan||"Clan") : ctx==="Santuario" ? (a.santuario||"Santuario") : "Mi Taller"); }
-function projectArchived(p){ return ["Archivado","Cerrado"].includes(p.archive||"") || flowOf(p.st)==="Cerrado"; }
+/* Cerrado es el final del flujo: el trabajo se entregó y se cerró. Vale la
+   pena distinguirlo de "Archivado" —guardar algo a mano, en cualquier etapa—
+   porque lo terminado se mira: es el historial de lo que ya se hizo. Los dos
+   siguen saliendo del tablero activo; lo que cambia es que ahora se pueden
+   pedir por separado. */
+function projectClosed(p){ return flowOf(p.st)==="Cerrado" || p.archive==="Cerrado"; }
+function projectArchived(p){ return p.archive==="Archivado" || projectClosed(p); }
 function projectContextBadge(a,p){
   const ctx=projectContext(p), owner=projectOwner(a,p);
   const label=ctx==="Personal"?"Mi Taller":ctx==="Clan"?owner:"Santuario";
@@ -1129,6 +1135,7 @@ function projectVisibleForFilter(a,p){
   const f=state.projFilter||"todos", ctx=projectContext(p), archived=projectArchived(p);
   if(f==="personal") return ctx==="Personal" && !archived;
   if(f==="clan") return ctx==="Clan" && !archived;
+  if(f==="cerrados") return projectClosed(p);
   if(f==="archivados") return archived;
   return !archived;
 }
@@ -1311,11 +1318,11 @@ function vProyectos(a){
   const head=`<div class="card s12"><div class="section-title"><h2>Unidades de Trabajo</h2><div class="spacer"></div>
       <div class="seg">${segBtn("tarjetas","Tarjetas")}${segBtn("lista","Lista")}${segBtn("kanban","Kanban")}</div>
       <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}</span></div>
-      <div class="seg" style="margin-top:12px;flex-wrap:wrap">${filterBtn("todos","Todos")}${filterBtn("personal","Mi Taller")}${filterBtn("clan","Clanes")}${filterBtn("archivados","Archivados")}</div>
+      <div class="seg" style="margin-top:12px;flex-wrap:wrap">${filterBtn("todos","Todos")}${filterBtn("personal","Mi Taller")}${filterBtn("clan","Clanes")}${filterBtn("cerrados","Cerrados")}${filterBtn("archivados","Archivados")}</div>
       ${projectSelectFilters(all)}${cotInfo}</div>`;
   if(!ps.length){
     const hasProjects=all.length>0;
-    return `<div class="grid">${summaryCards}${head}<div class="card s12"><p class="muted">${hasProjects?"Hay proyectos guardados, pero el filtro actual no los muestra. Limpia filtros o revisa Archivados.":"No hay unidades todavía. Crea una nueva desde el botón ＋."}</p>${hasProjects?`<button class="btn sm secondary" data-projclear>Limpiar filtros</button>`:""}</div></div>${fab}`;
+    return `<div class="grid">${summaryCards}${head}<div class="card s12"><p class="muted">${hasProjects?"Hay proyectos guardados, pero el filtro actual no los muestra. Limpia filtros o revisa Cerrados y Archivados.":"No hay unidades todavía. Crea una nueva desde el botón ＋."}</p>${hasProjects?`<button class="btn sm secondary" data-projclear>Limpiar filtros</button>`:""}</div></div>${fab}`;
   }
   const pct=p=>clampPct(p.pct);
   let body;
