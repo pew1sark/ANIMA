@@ -11,7 +11,8 @@ export type RoleSlug = keyof typeof ROLE_LEVEL;
 
 export type ModuleSlug =
   | 'core' | 'crm' | 'commerce' | 'operations' | 'delivery'
-  | 'food' | 'creator' | 'finance' | 'agenda' | 'support' | 'ai';
+  | 'food' | 'creator' | 'finance' | 'agenda' | 'support' | 'ai'
+  | 'capital';
 
 /** Las dos sub-plataformas de ANIMA. Una organización pertenece a una.
  *  Espejo de la tabla `product_lines` (migración 0067). */

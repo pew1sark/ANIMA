@@ -6,7 +6,10 @@ import { supabase } from '@/lib/supabase';
    cifras, series y listas sin saber si vienen de Clientes o de Reparto. Por eso
    agregar el resumen de un módulo nuevo es escribir SQL, no un componente. */
 
-export type Formato = 'dinero' | 'numero' | 'porcentaje' | 'fecha' | 'dias' | 'mes' | 'texto';
+/* `meses` lo agregó Capital Intelligence: payback, runway y punto de
+   equilibrio se responden en meses, no en días ni en un número pelado.
+   Es aditivo — ninguna respuesta existente lo emite. */
+export type Formato = 'dinero' | 'numero' | 'porcentaje' | 'fecha' | 'dias' | 'mes' | 'meses' | 'texto';
 export type Tono = 'ok' | 'aviso' | 'malo';
 
 export interface Cifra {

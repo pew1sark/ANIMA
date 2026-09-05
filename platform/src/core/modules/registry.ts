@@ -118,6 +118,20 @@ export const MODULES: Record<ModuleSlug, ModuleDefinition> = {
     slug: 'ai', name: 'IA', minLevel: 60, path: '/ia', lines: SOLO_COMPANY, zona: 'sistema',
     cubre: 'Asistencia sobre los datos de la empresa.',
     tablas: []
+  },
+
+  /* Capital Intelligence. Es el único módulo cuyo `minLevel` es 60 y no 40, y
+     no es un detalle: aquí viven valoraciones, rondas y modelos financieros.
+     Debajo de ese nivel se entra por invitación a UN proyecto —lo decide
+     `ci_project_members`, no el menú— y esa es toda la diferencia entre un
+     socio de la firma y un inversionista al que se le abrió una carpeta. */
+  capital: {
+    slug: 'capital', name: 'Capital Intelligence', minLevel: 60, path: '/capital',
+    lines: SOLO_COMPANY, zona: 'administracion',
+    cubre: 'Portafolios, proyectos, modelos financieros por escenario, presupuesto contra real y levantamiento de capital.',
+    tablas: ['ci_portfolios', 'ci_projects', 'ci_business_units', 'ci_project_members',
+             'ci_scenarios', 'ci_models', 'ci_model_lines', 'ci_model_periods',
+             'ci_actuals', 'ci_milestones', 'ci_exchange_rates', 'ci_thresholds']
   }
 };
 

@@ -703,6 +703,368 @@ export const AVISOS: Esquema = {
   orden: { campo: 'created_at', asc: false }
 };
 
+
+// ------------------------------------------------- capital intelligence
+
+/* Las entidades de Capital Intelligence. Todo lo que es una lista con ficha
+   —portafolios, proyectos, unidades, escenarios, hitos, ejecución, tipos de
+   cambio— se declara aquí y el motor lo dibuja. Lo único que necesita pantalla
+   propia es lo que el motor no sabe hacer: una matriz de meses, una comparación
+   entre escenarios y el detalle de cómo se calculó una cifra.
+
+   Los catálogos van como `Opcion[]` y no como enums de PostgreSQL a propósito:
+   el encargo pide que los tipos y los estados sean CONFIGURABLES, y agregar
+   "Proyecto personalizado" no puede exigir una migración. */
+
+const ESTADO_PROYECTO_CI: Opcion[] = [
+  { valor: 'borrador',             nombre: 'Borrador',              tono: 'neutro' },
+  { valor: 'evaluacion',           nombre: 'Evaluación',            tono: 'neutro' },
+  { valor: 'due_diligence',        nombre: 'Due diligence',         tono: 'aviso'  },
+  { valor: 'preparando',           nombre: 'Preparando levantamiento', tono: 'aviso' },
+  { valor: 'en_levantamiento',     nombre: 'En levantamiento',      tono: 'acento' },
+  { valor: 'comprometido_parcial', nombre: 'Capital parcial',       tono: 'acento' },
+  { valor: 'capital_cerrado',      nombre: 'Capital cerrado',       tono: 'ok'     },
+  { valor: 'ejecucion',            nombre: 'Ejecución',             tono: 'acento' },
+  { valor: 'validacion',           nombre: 'Validación',            tono: 'aviso'  },
+  { valor: 'escalamiento',         nombre: 'Escalamiento',          tono: 'ok'     },
+  { valor: 'pausado',              nombre: 'Pausado',               tono: 'malo'   },
+  { valor: 'cerrado',              nombre: 'Cerrado',               tono: 'neutro' },
+  { valor: 'rechazado',            nombre: 'Rechazado',             tono: 'malo'   }
+];
+
+const TIPO_PROYECTO: Opcion[] = [
+  { valor: 'nueva_unidad',       nombre: 'Nueva unidad de negocio' },
+  { valor: 'turnaround',         nombre: 'Turnaround' },
+  { valor: 'expansion',          nombre: 'Expansión' },
+  { valor: 'infraestructura',    nombre: 'Optimización de infraestructura' },
+  { valor: 'franquicia',         nombre: 'Franquicia' },
+  { valor: 'adquisicion',        nombre: 'Adquisición' },
+  { valor: 'inmobiliario',       nombre: 'Desarrollo inmobiliario' },
+  { valor: 'vehiculo_inversion', nombre: 'Vehículo de inversión' },
+  { valor: 'personalizado',      nombre: 'Personalizado' }
+];
+
+const RIESGO: Opcion[] = [
+  { valor: 'bajo',  nombre: 'Bajo',  tono: 'ok' },
+  { valor: 'medio', nombre: 'Medio', tono: 'aviso' },
+  { valor: 'alto',  nombre: 'Alto',  tono: 'malo' }
+];
+
+const TIPO_UNIDAD: Opcion[] = [
+  { valor: 'restaurante',   nombre: 'Restaurante' },
+  { valor: 'marca',         nombre: 'Marca' },
+  { valor: 'membresia',     nombre: 'Membresía' },
+  { valor: 'ghost_kitchen', nombre: 'Ghost kitchen' },
+  { valor: 'eventos',       nombre: 'Eventos' },
+  { valor: 'ecommerce',     nombre: 'E-commerce' },
+  { valor: 'franquicia',    nombre: 'Franquicia' },
+  { valor: 'canal',         nombre: 'Canal' },
+  { valor: 'otro',          nombre: 'Otro' }
+];
+
+const ESTADO_UNIDAD: Opcion[] = [
+  { valor: 'planificada', nombre: 'Planificada', tono: 'neutro' },
+  { valor: 'en_montaje',  nombre: 'En montaje',  tono: 'aviso'  },
+  { valor: 'operando',    nombre: 'Operando',    tono: 'ok'     },
+  { valor: 'pausada',     nombre: 'Pausada',     tono: 'malo'   },
+  { valor: 'cerrada',     nombre: 'Cerrada',     tono: 'neutro' }
+];
+
+const TIPO_ESCENARIO: Opcion[] = [
+  { valor: 'conservador',   nombre: 'Conservador',   tono: 'aviso'  },
+  { valor: 'base',          nombre: 'Base',          tono: 'acento' },
+  { valor: 'optimista',     nombre: 'Optimista',     tono: 'ok'     },
+  { valor: 'personalizado', nombre: 'Personalizado', tono: 'neutro' }
+];
+
+const ESTADO_HITO: Opcion[] = [
+  { valor: 'pendiente', nombre: 'Pendiente', tono: 'neutro' },
+  { valor: 'en_curso',  nombre: 'En curso',  tono: 'acento' },
+  { valor: 'hecho',     nombre: 'Hecho',     tono: 'ok'     },
+  { valor: 'atrasado',  nombre: 'Atrasado',  tono: 'malo'   }
+];
+
+/* Las cinco naturalezas de una línea. Son las mismas en el modelo y en la
+   ejecución real —por eso se comparan— y su orden es el del estado de
+   resultados: primero lo que entra, después lo que sale, al final lo que se
+   invierte. */
+export const NATURALEZA: Opcion[] = [
+  { valor: 'ingreso',         nombre: 'Ingreso',          tono: 'ok'     },
+  { valor: 'costo_directo',   nombre: 'Costo directo',    tono: 'aviso'  },
+  { valor: 'gasto_operativo', nombre: 'Gasto operativo',  tono: 'aviso'  },
+  { valor: 'depreciacion',    nombre: 'Depreciación',     tono: 'neutro' },
+  { valor: 'inversion',       nombre: 'Inversión',        tono: 'acento' }
+];
+
+
+const AREA_REQUISITO: Opcion[] = [
+  { valor: 'organizacion', nombre: 'La organización' },
+  { valor: 'financiera',   nombre: 'Financiera' },
+  { valor: 'comercial',    nombre: 'Comercial e inversión' },
+  { valor: 'legal',        nombre: 'Legal' },
+  { valor: 'tributaria',   nombre: 'Tributaria' },
+  { valor: 'operacional',  nombre: 'Operacional' },
+  { valor: 'laboral',      nombre: 'Laboral' },
+  { valor: 'tecnologica',  nombre: 'Tecnológica' },
+  { valor: 'pi',           nombre: 'Propiedad intelectual' },
+  { valor: 'gobierno',     nombre: 'Gobierno corporativo' },
+  { valor: 'riesgos',      nombre: 'Riesgos' }
+];
+
+const ESTADO_REQUISITO: Opcion[] = [
+  { valor: 'pendiente',   nombre: 'Pendiente',   tono: 'neutro' },
+  { valor: 'solicitado',  nombre: 'Solicitado',  tono: 'aviso'  },
+  { valor: 'recibido',    nombre: 'Recibido',    tono: 'acento' },
+  { valor: 'en_revision', nombre: 'En revisión', tono: 'acento' },
+  { valor: 'observado',   nombre: 'Observado',   tono: 'malo'   },
+  { valor: 'aprobado',    nombre: 'Aprobado',    tono: 'ok'     },
+  { valor: 'no_aplica',   nombre: 'No aplica',   tono: 'neutro' }
+];
+
+const PROPOSITO_REQUISITO: Opcion[] = [
+  { valor: 'puesta_en_marcha', nombre: 'Puesta en marcha' },
+  { valor: 'due_diligence',    nombre: 'Due diligence' }
+];
+
+const PRIORIDAD_REQUISITO: Opcion[] = [
+  { valor: 'alta',  nombre: 'Alta',  tono: 'malo'   },
+  { valor: 'media', nombre: 'Media', tono: 'aviso'  },
+  { valor: 'baja',  nombre: 'Baja',  tono: 'neutro' }
+];
+
+export const PORTAFOLIOS: Esquema = {
+  tabla: 'ci_portfolios',
+  titulo: 'Portafolios', singular: 'Portafolio', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Un portafolio agrupa proyectos que se miran juntos: una vertical, un cliente, un vehículo. Conviene empezar por aquí.',
+  campos: [
+    { key: 'name',          label: 'Portafolio',  tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'code',          label: 'Código',      tipo: 'texto', enTabla: true, enLinea: true, ancho: '110px' },
+    { key: 'manager',       label: 'Responsable', tipo: 'texto', enTabla: true, enLinea: true, ancho: '160px' },
+    { key: 'base_currency', label: 'Moneda de consolidación', tipo: 'texto', enTabla: true, enLinea: true, ancho: '110px',
+      porDefecto: 'USD', ayuda: 'En qué moneda se suman los proyectos de este portafolio.' },
+    { key: 'status',        label: 'Estado',      tipo: 'seleccion', opciones: ESTADO, enTabla: true, enLinea: true,
+      ancho: '120px', porDefecto: 'activo' },
+    { key: 'description',   label: 'Descripción', tipo: 'texto-largo' },
+    { key: 'notes',         label: 'Notas',       tipo: 'texto-largo' }
+  ],
+  orden: { campo: 'name', asc: true }
+};
+
+export const PROYECTOS_CAPITAL: Esquema = {
+  tabla: 'ci_projects',
+  titulo: 'Proyectos', singular: 'Proyecto', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Un proyecto es una oportunidad de inversión o de transformación. Todo lo demás —escenarios, modelo, ronda— cuelga de él.',
+  campos: [
+    { key: 'name',   label: 'Proyecto', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'code',   label: 'Código',   tipo: 'texto', soloLectura: true, enTabla: true, ancho: '130px',
+      ayuda: 'Lo pone el sistema al crear el proyecto.' },
+    { key: 'status', label: 'Estado',   tipo: 'seleccion', opciones: ESTADO_PROYECTO_CI,
+      enTabla: true, enLinea: true, ancho: '170px', porDefecto: 'borrador' },
+    { key: 'portfolio_id', label: 'Portafolio', tipo: 'relacion', enTabla: true, ancho: '160px',
+      relacion: { tabla: 'ci_portfolios', etiqueta: 'name' } },
+    { key: 'capital_required',  label: 'Capital requerido', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '140px', porDefecto: 0 },
+    { key: 'capital_committed', label: 'Capital captado',   tipo: 'moneda', enTabla: true, enLinea: true, ancho: '140px', porDefecto: 0 },
+    { key: 'risk_level', label: 'Riesgo', tipo: 'seleccion', opciones: RIESGO,
+      enTabla: true, enLinea: true, ancho: '110px', porDefecto: 'medio' },
+
+    { key: 'project_type', grupo: 'Identidad', label: 'Tipo de proyecto', tipo: 'seleccion',
+      opciones: TIPO_PROYECTO, porDefecto: 'nueva_unidad' },
+    { key: 'industry',     grupo: 'Identidad', label: 'Industria',   tipo: 'texto' },
+    { key: 'country',      grupo: 'Identidad', label: 'País',        tipo: 'texto', ayuda: 'Código de dos letras: CL, CO, CR, US.' },
+    { key: 'city',         grupo: 'Identidad', label: 'Ciudad',      tipo: 'texto' },
+    { key: 'owner',        grupo: 'Identidad', label: 'Responsable', tipo: 'texto' },
+    { key: 'stage',        grupo: 'Identidad', label: 'Etapa',       tipo: 'texto' },
+
+    { key: 'description',       grupo: 'La tesis', label: 'Descripción ejecutiva', tipo: 'texto-largo' },
+    { key: 'investment_thesis', grupo: 'La tesis', label: 'Tesis de inversión',    tipo: 'texto-largo' },
+    { key: 'problem',           grupo: 'La tesis', label: 'Problema u oportunidad', tipo: 'texto-largo' },
+    { key: 'business_model',    grupo: 'La tesis', label: 'Modelo de negocio',     tipo: 'texto-largo' },
+    { key: 'revenue_sources',   grupo: 'La tesis', label: 'Fuentes de ingreso',    tipo: 'texto' },
+
+    { key: 'start_date',     grupo: 'Horizonte', label: 'Fecha de inicio', tipo: 'fecha' },
+    { key: 'horizon_months', grupo: 'Horizonte', label: 'Horizonte (meses)', tipo: 'entero', porDefecto: 60 },
+    { key: 'currency',       grupo: 'Horizonte', label: 'Moneda principal', tipo: 'texto', porDefecto: 'USD',
+      ayuda: 'Los importes del proyecto se guardan en esta moneda y se convierten con los tipos de cambio de la organización.' },
+
+    { key: 'equity_offered_pct', grupo: 'Valoración', label: 'Participación ofrecida (%)', tipo: 'numero',
+      ayuda: 'Tiene que dar lo mismo que inversión ÷ post-money. Si no, el sistema avisa.' },
+    { key: 'pre_money',   grupo: 'Valoración', label: 'Valoración pre-money',  tipo: 'moneda' },
+    { key: 'post_money',  grupo: 'Valoración', label: 'Valoración post-money', tipo: 'moneda',
+      ayuda: 'Pre-money + inversión.' },
+    { key: 'instrument',  grupo: 'Valoración', label: 'Instrumento', tipo: 'texto',
+      ayuda: 'Equity, SAFE, nota convertible, deuda…' },
+
+    { key: 'notes', grupo: 'Notas y acuerdos', label: 'Notas y acuerdos', tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'created_at', asc: false }
+};
+
+export const UNIDADES_NEGOCIO: Esquema = {
+  tabla: 'ci_business_units',
+  titulo: 'Unidades de negocio', singular: 'Unidad', femenino: true, principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Marcas, locales, canales o conceptos dentro de un proyecto. Es lo que permite separar el ingreso de cada uno sobre una infraestructura compartida.',
+  campos: [
+    { key: 'name',       label: 'Unidad',   tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'project_id', label: 'Proyecto', tipo: 'relacion', requerido: true, enTabla: true, ancho: 'minmax(160px,1fr)',
+      relacion: { tabla: 'ci_projects', etiqueta: 'name' } },
+    { key: 'unit_type',  label: 'Tipo',     tipo: 'seleccion', opciones: TIPO_UNIDAD,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'marca' },
+    { key: 'status',     label: 'Estado',   tipo: 'seleccion', opciones: ESTADO_UNIDAD,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'planificada' },
+    { key: 'launch_date', label: 'Lanzamiento', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'capacity',      grupo: 'Capacidad', label: 'Capacidad instalada', tipo: 'numero',
+      ayuda: 'Metros, puestos, horas. Es lo que hace posible «ingreso por m²» sin que el sistema sepa de tu rubro.' },
+    { key: 'capacity_unit', grupo: 'Capacidad', label: 'Unidad de la capacidad', tipo: 'texto' },
+    { key: 'notes', label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'unit_type',
+  orden: { campo: 'name', asc: true }
+};
+
+export const ESCENARIOS: Esquema = {
+  tabla: 'ci_scenarios',
+  titulo: 'Escenarios', singular: 'Escenario', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Un escenario es un juego de supuestos. Sin al menos uno no hay modelo financiero que construir.',
+  campos: [
+    { key: 'name',       label: 'Escenario', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'project_id', label: 'Proyecto',  tipo: 'relacion', requerido: true, enTabla: true, ancho: 'minmax(160px,1fr)',
+      relacion: { tabla: 'ci_projects', etiqueta: 'name' } },
+    { key: 'kind',       label: 'Tipo',      tipo: 'seleccion', opciones: TIPO_ESCENARIO,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'base' },
+    { key: 'is_default', label: 'Por defecto', tipo: 'booleano', enTabla: true, enLinea: true, ancho: '110px',
+      ayuda: 'El que se usa cuando nadie elige otro.' },
+    { key: 'notes',      label: 'Supuestos en palabras', tipo: 'texto-largo',
+      ayuda: 'Los supuestos numéricos se editan en la pestaña Modelo; esto es para lo que no cabe en un número.' }
+  ],
+  tablero: 'kind',
+  orden: { campo: 'name', asc: true }
+};
+
+export const HITOS: Esquema = {
+  tabla: 'ci_milestones',
+  titulo: 'Hitos', singular: 'Hito', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Los hitos son lo que condiciona un tramo de capital o marca un avance. Sin fecha y responsable, no existen.',
+  campos: [
+    { key: 'name',       label: 'Hito',     tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'project_id', label: 'Proyecto', tipo: 'relacion', requerido: true, enTabla: true, ancho: 'minmax(160px,1fr)',
+      relacion: { tabla: 'ci_projects', etiqueta: 'name' } },
+    { key: 'due_date',   label: 'Fecha',    tipo: 'fecha', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'status',     label: 'Estado',   tipo: 'seleccion', opciones: ESTADO_HITO,
+      enTabla: true, enLinea: true, ancho: '130px', porDefecto: 'pendiente' },
+    { key: 'owner',      label: 'Responsable', tipo: 'texto', enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'amount_conditioned', label: 'Capital que libera', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'done_date',   grupo: 'Cierre', label: 'Cumplido el', tipo: 'fecha' },
+    { key: 'sort',        grupo: 'Cierre', label: 'Orden',       tipo: 'entero', porDefecto: 0 },
+    { key: 'description', label: 'Descripción', tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'due_date', asc: true }
+};
+
+/* La ejecución real. Vive separada de lo proyectado a propósito: mezclarlas en
+   la misma tabla es exactamente el error que este módulo existe para evitar.
+   Y guarda la moneda original CON su tasa y su fecha, porque cambiar la tasa
+   de hoy no puede mover una cifra de marzo. */
+export const EJECUCION: Esquema = {
+  tabla: 'ci_actuals',
+  titulo: 'Ejecución real', singular: 'Movimiento', principal: 'concept',
+  nivelEscritura: 60,
+  vacio: 'Aquí se carga lo que de verdad pasó, mes a mes. Es lo que se compara contra el presupuesto.',
+  campos: [
+    { key: 'concept',    label: 'Concepto', tipo: 'texto', enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'project_id', label: 'Proyecto', tipo: 'relacion', requerido: true, enTabla: true, ancho: 'minmax(150px,1fr)',
+      relacion: { tabla: 'ci_projects', etiqueta: 'name' } },
+    { key: 'period',   label: 'Mes',   tipo: 'fecha', requerido: true, enTabla: true, enLinea: true, ancho: '130px',
+      ayuda: 'Cualquier día del mes: se guarda como el día 1.' },
+    { key: 'kind',     label: 'Naturaleza', tipo: 'seleccion', opciones: NATURALEZA, requerido: true,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'gasto_operativo' },
+    { key: 'category', label: 'Categoría', tipo: 'texto', enTabla: true, enLinea: true, ancho: '130px', porDefecto: 'otros',
+      ayuda: 'Tiene que coincidir con la categoría de la línea del modelo para que se comparen.' },
+    { key: 'actual_amount',    label: 'Real',        tipo: 'moneda', enTabla: true, enLinea: true, ancho: '120px', porDefecto: 0 },
+    { key: 'committed_amount', label: 'Comprometido', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '130px', porDefecto: 0 },
+    { key: 'paid_amount',      label: 'Pagado',      tipo: 'moneda', enTabla: true, enLinea: true, ancho: '120px', porDefecto: 0 },
+
+    { key: 'business_unit_id', grupo: 'A qué pertenece', label: 'Unidad de negocio', tipo: 'relacion',
+      relacion: { tabla: 'ci_business_units', etiqueta: 'name' } },
+    { key: 'milestone_id',     grupo: 'A qué pertenece', label: 'Hito relacionado', tipo: 'relacion',
+      relacion: { tabla: 'ci_milestones', etiqueta: 'name' } },
+
+    { key: 'currency', grupo: 'Moneda', label: 'Moneda original', tipo: 'texto', porDefecto: 'USD' },
+    { key: 'fx_rate',  grupo: 'Moneda', label: 'Tipo de cambio',  tipo: 'numero',
+      ayuda: 'Obligatorio si la moneda no es la del modelo. Sin él, la cifra no se puede consolidar.' },
+    { key: 'fx_date',  grupo: 'Moneda', label: 'Fecha del tipo de cambio', tipo: 'fecha' },
+    { key: 'base_amount', grupo: 'Moneda', label: 'Valor convertido', tipo: 'moneda',
+      ayuda: 'Se guarda, no se recalcula: cambiar la tasa de hoy no debe mover una cifra de marzo.' },
+
+    { key: 'supplier',     grupo: 'Respaldo', label: 'Proveedor', tipo: 'texto' },
+    { key: 'evidence_url', grupo: 'Respaldo', label: 'Evidencia (enlace)', tipo: 'texto' },
+    { key: 'note',         grupo: 'Respaldo', label: 'Nota', tipo: 'texto-largo' }
+  ],
+  tablero: 'kind',
+  orden: { campo: 'period', asc: false }
+};
+
+export const TIPOS_DE_CAMBIO: Esquema = {
+  tabla: 'ci_exchange_rates',
+  titulo: 'Tipos de cambio', singular: 'Tipo de cambio', principal: 'base_currency',
+  nivelEscritura: 60,
+  vacio: 'Sin tipos de cambio, los proyectos en otra moneda no entran en el consolidado. Una fila por par y fecha.',
+  campos: [
+    { key: 'base_currency',  label: 'De',    tipo: 'texto', requerido: true, enTabla: true, ancho: '100px' },
+    { key: 'quote_currency', label: 'A',     tipo: 'texto', requerido: true, enTabla: true, ancho: '100px' },
+    { key: 'rate',           label: 'Tasa',  tipo: 'numero', requerido: true, enTabla: true, enLinea: true, ancho: '150px',
+      ayuda: '1 unidad de la moneda «De» equivale a esta cantidad de la moneda «A».' },
+    { key: 'rate_date',      label: 'Fecha', tipo: 'fecha', requerido: true, enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'source',         label: 'Fuente', tipo: 'texto', enTabla: true, enLinea: true, ancho: 'minmax(150px,1fr)' }
+  ],
+  orden: { campo: 'rate_date', asc: false }
+};
+
+
+/* Los requisitos también pasan por el motor, aunque la pestaña de
+   Levantamiento tenga su propia vista. No es duplicar: la vista sirve para
+   TRABAJAR la lista —marcar estado, pegar el enlace— y el motor para
+   administrarla: agregar un requisito que no estaba, cambiarle el área,
+   ponerle campos propios. Son dos usos distintos de la misma tabla. */
+export const REQUISITOS: Esquema = {
+  tabla: 'ci_requirements',
+  titulo: 'Requisitos', singular: 'Requisito', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Lo que hay que reunir para migrar y arrancar. La lista estándar se carga desde la pestaña Levantamiento.',
+  campos: [
+    { key: 'name',     label: 'Requisito', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(220px,2fr)' },
+    { key: 'area',     label: 'Área',      tipo: 'seleccion', opciones: AREA_REQUISITO,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'financiera' },
+    { key: 'status',   label: 'Estado',    tipo: 'seleccion', opciones: ESTADO_REQUISITO,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'pendiente' },
+    { key: 'required', label: 'Obligatorio', tipo: 'booleano', enTabla: true, enLinea: true, ancho: '110px' },
+    { key: 'owner',    label: 'Responsable', tipo: 'texto', enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'due_date', label: 'Fecha límite', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'project_id', label: 'Proyecto', tipo: 'relacion', enTabla: true, ancho: '160px',
+      relacion: { tabla: 'ci_projects', etiqueta: 'name' },
+      ayuda: 'Vacío = requisito de la organización entera.' },
+    { key: 'purpose',  grupo: 'Clasificación', label: 'Propósito', tipo: 'seleccion',
+      opciones: PROPOSITO_REQUISITO, porDefecto: 'puesta_en_marcha' },
+    { key: 'priority', grupo: 'Clasificación', label: 'Prioridad', tipo: 'seleccion',
+      opciones: PRIORIDAD_REQUISITO, porDefecto: 'media' },
+    { key: 'format',   grupo: 'Clasificación', label: 'Formato esperado', tipo: 'texto',
+      ayuda: 'XLSX, PDF, planilla, nota…' },
+    { key: 'why',      grupo: 'Para qué sirve', label: 'Para qué sirve', tipo: 'texto-largo' },
+    { key: 'description', grupo: 'Para qué sirve', label: 'Descripción', tipo: 'texto-largo' },
+    { key: 'link',     grupo: 'Respaldo', label: 'Enlace al archivo', tipo: 'texto' },
+    { key: 'comment',  grupo: 'Respaldo', label: 'Comentario', tipo: 'texto-largo' },
+    { key: 'sort',     grupo: 'Respaldo', label: 'Orden', tipo: 'entero', porDefecto: 0 }
+  ],
+  tablero: 'status',
+  orden: { campo: 'sort', asc: true }
+};
+
 /** Todo lo que el motor sabe dibujar, por módulo de la plataforma. */
 export const ESQUEMAS_POR_MODULO: Record<string, Esquema[]> = {
   crm:        [CLIENTES, DIRECCIONES, LISTAS_PRECIO],
@@ -713,5 +1075,7 @@ export const ESQUEMAS_POR_MODULO: Record<string, Esquema[]> = {
   food:       [PROCESOS, ESPECIES],
   agenda:     [COMPROMISOS, TAREAS],
   creator:    [PROYECTOS, COTIZACIONES],
-  support:    [AVISOS]
+  support:    [AVISOS],
+  capital:    [PROYECTOS_CAPITAL, PORTAFOLIOS, UNIDADES_NEGOCIO, ESCENARIOS,
+               HITOS, EJECUCION, REQUISITOS, TIPOS_DE_CAMBIO]
 };

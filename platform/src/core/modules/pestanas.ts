@@ -17,6 +17,11 @@ import type { ModuleSlug } from '@/types/core';
                  todas las empresas y por eso no pasa por el motor
      analisis  — el análisis financiero, que es un addon: aparece solo si la
                  empresa lo tiene encendido en `company_features`
+     capital   — las tres pantallas de Capital Intelligence que el motor no
+                 sabe dibujar: un panel con filtros, una MATRIZ de meses y una
+                 comparación presupuesto/real. El motor dibuja filas con ficha;
+                 estas tres son otra cosa, y forzarlas al motor habría sido
+                 deformar el motor para que cupieran
 
    Un módulo sin declaración cae en el comportamiento de siempre: una pestaña
    por entidad. Así, agregar una entidad nueva sigue sin obligar a tocar esto. */
@@ -25,7 +30,9 @@ export type Pestana =
   | { id: string; nombre: string; tipo: 'resumen' }
   | { id: string; nombre: string; tipo: 'datos'; esquema: Esquema }
   | { id: string; nombre: string; tipo: 'novedades' }
-  | { id: string; nombre: string; tipo: 'analisis' };
+  | { id: string; nombre: string; tipo: 'analisis' }
+  | { id: string; nombre: string; tipo: 'capital';
+      vista: 'levantamiento' | 'panel' | 'modelo' | 'presupuesto' };
 
 /** Los módulos cuyo resumen sabe calcular `resumen_modulo()`. */
 export const CON_RESUMEN = new Set<string>([
@@ -35,6 +42,10 @@ export const CON_RESUMEN = new Set<string>([
 /* Nombres cortos para la pestaña. El título del esquema es el de la pantalla
    —"Por cobrar (apertura)"— y en una fila de pestañas no cabe. */
 const CORTO: Record<string, string> = {
+  ci_business_units: 'Unidades',
+  ci_requirements: 'Requisitos',
+  ci_exchange_rates: 'Tipos de cambio',
+  ci_actuals: 'Ejecución',
   opening_receivables: 'Por cobrar',
   opening_payables: 'Por pagar',
   customer_addresses: 'Direcciones',
@@ -47,6 +58,25 @@ const CORTO: Record<string, string> = {
 export function pestanasDe(slug: ModuleSlug, addons: string[] = []): Pestana[] {
   const esquemas = ESQUEMAS_POR_MODULO[slug] ?? [];
   const salida: Pestana[] = [];
+
+  /* Capital Intelligence abre por el panel y no por una tabla. El orden es el
+     de una conversación: cómo va la cartera, de dónde salen esos números, y
+     al final dónde se cargan. Las entidades siguen siendo del motor. */
+  if (slug === 'capital') {
+    salida.push(
+      /* El levantamiento va PRIMERO mientras la organización se está poniendo
+         en marcha: es lo que hay que hacer antes de que el resto sirva de algo.
+         Cuando está completo se vuelve una pestaña de consulta y el Panel pasa
+         a ser lo que se abre todos los días. */
+      { id: 'levantamiento', nombre: 'Levantamiento',     tipo: 'capital', vista: 'levantamiento' },
+      { id: 'panel',       nombre: 'Panel',               tipo: 'capital', vista: 'panel' },
+      { id: 'modelo',      nombre: 'Modelo financiero',   tipo: 'capital', vista: 'modelo' },
+      { id: 'presupuesto', nombre: 'Presupuesto vs real', tipo: 'capital', vista: 'presupuesto' });
+    for (const e of esquemas) {
+      salida.push({ id: e.tabla, nombre: CORTO[e.tabla] ?? e.titulo, tipo: 'datos', esquema: e });
+    }
+    return salida;
+  }
 
   if (CON_RESUMEN.has(slug)) {
     salida.push({ id: 'resumen', nombre: 'Resumen', tipo: 'resumen' });

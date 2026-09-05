@@ -17,6 +17,10 @@ import { MenuCuenta } from '@/components/MenuCuenta';
 import { ResumenModulo } from '@/components/company/ResumenModulo';
 import { Novedades } from '@/components/company/Novedades';
 import { AnalisisFinanciero } from '@/components/company/AnalisisFinanciero';
+import { LevantamientoCapital } from '@/components/capital/Levantamiento';
+import { PanelCapital } from '@/components/capital/Panel';
+import { ModeloFinanciero } from '@/components/capital/Modelo';
+import { PresupuestoVsReal } from '@/components/capital/Presupuesto';
 import { pestanasDe } from '@/core/modules/pestanas';
 import { fijarMoneda } from '@/lib/formato';
 import { Vista } from '@/components/datos/Vista';
@@ -258,6 +262,24 @@ export function Modulo({ slug, companyId, nivel, moneda, addons = [] }:
 
       {activa.tipo === 'analisis' && (
         <AnalisisFinanciero companyId={companyId} moneda={moneda} />
+      )}
+
+      {/* Capital Intelligence trae tres pantallas propias porque son las tres
+          cosas que el motor de datos no sabe dibujar: un panel con filtros,
+          una matriz de meses y una comparación presupuesto/real. Todo lo
+          demás del módulo —proyectos, escenarios, hitos, ejecución— sigue
+          saliendo del motor, como cualquier otra entidad. */}
+      {activa.tipo === 'capital' && activa.vista === 'levantamiento' && (
+        <LevantamientoCapital companyId={companyId} puedeEditar={nivel >= 60} />
+      )}
+      {activa.tipo === 'capital' && activa.vista === 'panel' && (
+        <PanelCapital companyId={companyId} />
+      )}
+      {activa.tipo === 'capital' && activa.vista === 'modelo' && (
+        <ModeloFinanciero companyId={companyId} puedeEditar={nivel >= 60} />
+      )}
+      {activa.tipo === 'capital' && activa.vista === 'presupuesto' && (
+        <PresupuestoVsReal companyId={companyId} />
       )}
 
       {/* Cada entidad pide su nivel: pagos y compras exigen 60, el resto 40.
