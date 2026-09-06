@@ -236,9 +236,13 @@ export function Modulo({ slug, companyId, nivel, moneda, addons = [] }:
 
   return (
     <div className="grid gap-4">
+      {/* El nombre del módulo, y su descripción SOLO cuando no hay pestañas.
+          Con pestañas, cada una trae su propia cabecera y repetir la del
+          módulo encima empuja el contenido media pantalla hacia abajo sin
+          decir nada nuevo. */}
       <div className="aparece">
         <div className="rotulo">{def?.name ?? slug}</div>
-        {def?.cubre && <p className="subtitulo mt-1.5">{def.cubre}</p>}
+        {def?.cubre && pestanas.length <= 1 && <p className="subtitulo mt-1.5">{def.cubre}</p>}
       </div>
 
       {pestanas.length > 1 && (

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { cargarPanel, listarPortafolios, listarProyectos,
          type Panel as Datos, type Filtros,
          type PortafolioBreve, type ProyectoBreve } from '@/services/capital.service';
-import { TarjetaCifra, Avisos, Elige, escribe } from '@/components/capital/Cifra';
+import { TarjetaCifra, Avisos, Elige, Cabecera, escribe } from '@/components/capital/Cifra';
+import { Periodo, type Rango } from '@/components/capital/Periodo';
 import { Columnas } from '@/components/graficos/Columnas';
 import { dineroCorto, mesCorto, diaCorto } from '@/lib/formato';
 import type { Formato, ListaResumen, SerieResumen } from '@/services/resumen.service';
@@ -11,19 +12,24 @@ import type { Formato, ListaResumen, SerieResumen } from '@/services/resumen.ser
    ---------------------------------------------------------------------------
    Se lee en este orden, que es el orden en que se pregunta:
 
-     1 · qué está torcido           las alertas, antes que cualquier cifra
-     2 · el capital                 cuánto se pidió, cuánto hay, cuánto queda
-     3 · cómo va la operación       ingresos, EBITDA, desviación
-     4 · la curva                   proyectado contra real, mes a mes
-     5 · el detalle                 los proyectos y los hitos que vienen
+     1 · qué está torcido      las alertas, antes que cualquier cifra
+     2 · las cuatro que mandan  capital, resultado, desviación — en grande
+     3 · el resto del cuadro    compacto, para consultar
+     4 · la curva               proyectado contra real, mes a mes
+     5 · el detalle             los proyectos y los hitos que vienen
 
    Las alertas van PRIMERO y no al final. Un tablero que esconde el problema
    debajo de doce tarjetas verdes no está informando: está tranquilizando.
 
-   Cada tarjeta se abre y muestra su fórmula. Ninguna cifra se calcula aquí:
-   todas vienen de `ci_resumen()`, con su explicación pegada. */
+   Y las cifras tienen DOS PESOS. Con doce tarjetas idénticas hay que leerlas
+   todas para encontrar la que importa; con cuatro grandes y ocho compactas, la
+   pantalla se lee en dos segundos y el detalle sigue estando.
 
-const mesISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+   Ninguna cifra se calcula aquí: todas vienen de `ci_resumen()`, con su
+   fórmula pegada. */
+
+/* Las cuatro que responden «¿cómo vamos?» sin abrir nada más. */
+const HEROICAS = ['capital_comprometido', 'capital_pendiente', 'ebitda_real', 'desviacion'];
 
 export function PanelCapital({ companyId }: { companyId: string }) {
   const [filtros, setFiltros] = useState<Filtros>({});
@@ -52,13 +58,13 @@ export function PanelCapital({ companyId }: { companyId: string }) {
     return () => { vivo = false; };
   }, [companyId, JSON.stringify(filtros)]);
 
-  /* El país y la moneda salen de los proyectos que hay, no de un catálogo:
-     ofrecer veinte países cuando la firma opera en dos es ruido. */
+  /* Las monedas salen de los proyectos que hay, no de un catálogo: ofrecer
+     veinte cuando la firma opera en dos es ruido. */
   const monedas = useMemo(
     () => [...new Set(proyectos.map(p => p.currency))].sort(), [proyectos]);
 
-  const capital = d?.cifras.filter(c => c.clave.startsWith('capital_')) ?? [];
-  const operacion = d?.cifras.filter(c => !c.clave.startsWith('capital_')) ?? [];
+  const heroicas = d?.cifras.filter(c => HEROICAS.includes(c.clave)) ?? [];
+  const resto    = d?.cifras.filter(c => !HEROICAS.includes(c.clave)) ?? [];
 
   if (sinAcceso) {
     return (
@@ -74,7 +80,13 @@ export function PanelCapital({ companyId }: { companyId: string }) {
   }
 
   return (
-    <div className="grid gap-5 aparece">
+    <div className="grid gap-4 aparece">
+      <Cabecera
+        titulo="Panel ejecutivo"
+        nota={d ? `Cartera consolidada en ${d.moneda}. Los proyectos en otra moneda se convierten con los tipos de cambio de la organización.` : undefined}
+        marcas={d && <span className="marca marca-acento">{d.moneda}</span>}
+        acciones={<button className="b b-sec b-sm" onClick={() => window.print()}>Imprimir</button>} />
+
       <Filtrador filtros={filtros} setFiltros={setFiltros}
                  portafolios={portafolios} proyectos={proyectos} monedas={monedas} />
 
@@ -85,8 +97,8 @@ export function PanelCapital({ companyId }: { companyId: string }) {
 
       {cargando && (
         <div className="grid gap-4" aria-busy="true">
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            {[0, 1, 2, 3].map(i => <div key={i} className="tarjeta" style={{ height: 100 }} />)}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[0, 1, 2, 3].map(i => <div key={i} className="tarjeta" style={{ height: 108 }} />)}
           </div>
           <div className="tarjeta" style={{ height: 240 }} />
         </div>
@@ -96,8 +108,8 @@ export function PanelCapital({ companyId }: { companyId: string }) {
         <>
           <Avisos avisos={d.alertas} titulo={d.alertas.length ? 'Qué mirar primero' : undefined} />
 
-          {d.cifras.every(c => !Number(c.valor)) && (
-            <div className="tarjeta p-6">
+          {d.cifras.every(c => !Number(c.valor)) ? (
+            <div className="tarjeta p-8">
               <p className="titular" style={{ fontSize: 19 }}>Todavía no hay nada que consolidar</p>
               <p className="subtitulo mt-1.5 max-w-[62ch]">
                 El panel se llena a partir de los proyectos, sus modelos y la ejecución
@@ -105,85 +117,82 @@ export function PanelCapital({ companyId }: { companyId: string }) {
                 donde se mira.
               </p>
             </div>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {heroicas.map(c => <TarjetaCifra key={c.clave} ind={c} moneda={d.moneda} destacada />)}
+              </div>
+
+              <section className="grid gap-2.5">
+                <h2 className="rotulo rotulo-tenue">
+                  El resto del cuadro · {mesCorto(d.periodo.desde)} a {mesCorto(d.periodo.hasta)}
+                </h2>
+                <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                  {resto.map(c => <TarjetaCifra key={c.clave} ind={c} moneda={d.moneda} />)}
+                </div>
+              </section>
+
+              {d.series.map(s => <Grafico key={s.titulo} serie={s} moneda={d.moneda} />)}
+
+              <div className="grid gap-4">
+                {d.listas.map(l => <Lista key={l.titulo} lista={l} moneda={d.moneda} />)}
+              </div>
+            </>
           )}
-
-          <section className="grid gap-2.5">
-            <h2 className="rotulo">Capital · en {d.moneda}</h2>
-            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
-              {capital.map(c => <TarjetaCifra key={c.clave} ind={c} moneda={d.moneda} />)}
-            </div>
-          </section>
-
-          <section className="grid gap-2.5">
-            <h2 className="rotulo">
-              Operación · {mesCorto(d.periodo.desde.slice(0, 7))} a {mesCorto(d.periodo.hasta.slice(0, 7))}
-            </h2>
-            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-              {operacion.map(c => <TarjetaCifra key={c.clave} ind={c} moneda={d.moneda} />)}
-            </div>
-          </section>
-
-          {d.series.map(s => <Grafico key={s.titulo} serie={s} moneda={d.moneda} />)}
-
-          <div className="grid gap-4">
-            {d.listas.map(l => <Lista key={l.titulo} lista={l} moneda={d.moneda} />)}
-          </div>
         </>
       )}
     </div>
   );
 }
 
-/* Los filtros del encargo: organización (la que ya está abierta), portafolio,
-   proyecto, unidad, país, moneda, período y escenario. La unidad y el escenario
-   dependen del proyecto elegido y viven en la pantalla del modelo, que es
-   donde tienen sentido: filtrar la cartera entera por una unidad de un proyecto
-   no responde ninguna pregunta. */
+/* Los filtros del encargo: portafolio, proyecto, país, moneda, estado y
+   período. La unidad de negocio y el escenario dependen de un proyecto
+   concreto y viven en la pantalla del modelo, que es donde tienen sentido:
+   filtrar la cartera entera por una unidad de un proyecto no responde ninguna
+   pregunta.
+
+   Todo en una tira, no en una tarjeta con seis campos apilados. Un panel de
+   filtros que ocupa media pantalla compite con lo que vino a filtrarse. */
 function Filtrador({ filtros, setFiltros, portafolios, proyectos, monedas }: {
   filtros: Filtros; setFiltros: (f: Filtros) => void;
   portafolios: PortafolioBreve[]; proyectos: ProyectoBreve[]; monedas: string[];
 }) {
   const set = (k: keyof Filtros) => (v: string) => setFiltros({ ...filtros, [k]: v || undefined });
-  const hay = Object.values(filtros).some(Boolean);
+  const puestos = Object.entries(filtros).filter(([, v]) => v).length;
 
   const visibles = filtros.portafolio
     ? proyectos.filter(p => p.portfolio_id === filtros.portafolio)
     : proyectos;
 
-  const hoy = new Date();
-  const atras = new Date(hoy.getFullYear(), hoy.getMonth() - 11, 1);
-  const adelante = new Date(hoy.getFullYear(), hoy.getMonth() + 11, 1);
+  const rango: Rango = { desde: filtros.desde, hasta: filtros.hasta };
 
+  /* Todo en UNA tira. Dos cajas apiladas de filtros ocupan un tercio de la
+     pantalla antes de mostrar una sola cifra; con `flex-wrap` el período baja
+     solo a la segunda línea cuando no cabe. */
   return (
-    <section className="tarjeta p-4 grid gap-3">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section className="no-imprimir">
+      <div className="filtros">
         <Elige label="Portafolio" valor={filtros.portafolio ?? ''} onChange={set('portafolio')}
                opciones={portafolios} nombre={p => p.name} vacio="Todos" />
         <Elige label="Proyecto" valor={filtros.proyecto ?? ''} onChange={set('proyecto')}
                opciones={visibles} nombre={p => p.name} vacio="Todos" />
-        <Elige label="Moneda del proyecto" valor={filtros.moneda ?? ''} onChange={set('moneda')}
-               opciones={monedas.map(m => ({ id: m }))} nombre={m => m.id} vacio="Todas" />
-        <label className="grid gap-1">
+        <Elige label="Moneda" valor={filtros.moneda ?? ''} onChange={set('moneda')}
+               opciones={monedas.map(m => ({ id: m }))} nombre={m => m.id} vacio="Todas" ancho={110} />
+        <label style={{ width: 110, flex: 'none' }}>
           <span className="rotulo">País</span>
-          <input className="campo" value={filtros.pais ?? ''} placeholder="CL, CO, CR…"
+          <input className="campo" value={filtros.pais ?? ''} placeholder="CL, CO…"
                  onChange={e => set('pais')(e.target.value.toUpperCase())} />
         </label>
-        <label className="grid gap-1">
-          <span className="rotulo">Desde</span>
-          <input className="campo" type="month" value={(filtros.desde ?? mesISO(atras)).slice(0, 7)}
-                 onChange={e => set('desde')(e.target.value ? `${e.target.value}-01` : '')} />
-        </label>
-        <label className="grid gap-1">
-          <span className="rotulo">Hasta</span>
-          <input className="campo" type="month" value={(filtros.hasta ?? mesISO(adelante)).slice(0, 7)}
-                 onChange={e => set('hasta')(e.target.value ? `${e.target.value}-01` : '')} />
-        </label>
+        {puestos > 0 && (
+          <button type="button" onClick={() => setFiltros({})} className="b b-fan b-sm">
+            Quitar {puestos} filtro{puestos === 1 ? '' : 's'}
+          </button>
+        )}
+
+        <div className="w-full" style={{ borderTop: '1px solid var(--color-line)', paddingTop: 10, marginTop: 2 }}>
+          <Periodo valor={rango} onChange={r => setFiltros({ ...filtros, ...r })} />
+        </div>
       </div>
-      {hay && (
-        <button type="button" onClick={() => setFiltros({})} className="b b-sec b-sm justify-self-start">
-          Quitar filtros
-        </button>
-      )}
     </section>
   );
 }
@@ -193,7 +202,7 @@ function Grafico({ serie, moneda }: { serie: SerieResumen; moneda: string }) {
   return (
     <section className="tarjeta p-5">
       <h2 className="rotulo">{serie.titulo}</h2>
-      {serie.nota && <p className="mt-1 mb-3 text-[12.5px] text-faint">{serie.nota}</p>}
+      {serie.nota && <p className="mt-1 mb-3 text-[12.5px] text-faint max-w-[70ch]">{serie.nota}</p>}
       <Columnas
         columnas={serie.puntos.map(p => ({
           etiqueta: p.formato_x === 'mes' ? mesCorto(p.x) : p.x,
@@ -216,7 +225,7 @@ function Grafico({ serie, moneda }: { serie: SerieResumen; moneda: string }) {
 }
 
 /* Una celda de lista. El formato manda: `fecha` se escribe corta, lo numérico
-   pasa por el mismo `escribe` que las tarjetas —para que 1.284.500 se vea
+   pasa por el mismo `escribe` que las tarjetas —para que una cifra se vea
    igual en los dos sitios— y el resto es texto tal cual. */
 function celda(v: unknown, f: Formato | undefined, moneda: string): string {
   if (v == null || v === '') return '—';
@@ -229,7 +238,6 @@ const numerica = (f?: string) =>
   f === 'dinero' || f === 'numero' || f === 'porcentaje' || f === 'dias' || f === 'meses';
 
 function Lista({ lista, moneda }: { lista: ListaResumen; moneda: string }) {
-  const num = numerica;
   return (
     <section className="tarjeta p-5">
       <h2 className="rotulo">{lista.titulo}</h2>
@@ -241,7 +249,7 @@ function Lista({ lista, moneda }: { lista: ListaResumen; moneda: string }) {
               <thead>
                 <tr>
                   {lista.columnas.map((c, i) => (
-                    <th key={c.k} className={`${num(c.formato) ? 'num' : ''} ${i === 0 ? 'ancla' : ''}`}>{c.t}</th>
+                    <th key={c.k} className={`${numerica(c.formato) ? 'num' : ''} ${i === 0 ? 'ancla' : ''}`}>{c.t}</th>
                   ))}
                 </tr>
               </thead>
@@ -250,9 +258,10 @@ function Lista({ lista, moneda }: { lista: ListaResumen; moneda: string }) {
                   <tr key={i}>
                     {lista.columnas.map((c, j) => (
                       <td key={c.k}
-                          className={`${num(c.formato) ? 'num cifra' : ''} ${j === 0 ? 'ancla principal' : ''}`}
-                          style={{ whiteSpace: c.formato === 'fecha' ? 'nowrap' : undefined }}>
-                        {celda(f[c.k], c.formato, moneda)}
+                          className={`${numerica(c.formato) ? 'num cifra' : ''} ${j === 0 ? 'ancla principal' : ''}`}>
+                        {j === 0
+                          ? <span className="recorta" title={String(f[c.k] ?? '')}>{celda(f[c.k], c.formato, moneda)}</span>
+                          : celda(f[c.k], c.formato, moneda)}
                       </td>
                     ))}
                   </tr>

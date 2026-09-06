@@ -292,12 +292,33 @@ body {
 .grupo { display: inline-flex; border: 1px solid var(--color-line); border-radius: 12px; overflow: hidden; background: var(--color-surface); }
 .grupo > button { font-size: var(--texto-sm); font-weight: var(--peso-fuerte); padding: 8px 14px; color: var(--color-muted); transition: .18s; }
 .grupo > button:hover { color: var(--color-ink); }
-.grupo > button[aria-pressed="true"] { background: var(--color-ink); color: var(--color-bg); }
+.grupo > button[aria-pressed="true"],
+.grupo > button[aria-selected="true"] { background: var(--color-ink); color: var(--color-bg); }
+.grupo > button + button { border-left: 1px solid var(--color-line); }
+.grupo-lleno { display: flex; }
+.grupo-lleno > button { flex: 1; justify-content: center; }
 
-/* Pestaña suelta, para navegar entre secciones. */
-.pest { font-size: var(--texto-md); font-weight: var(--peso-fuerte); padding: 7px 14px; border-radius: 999px; color: var(--color-muted); transition: .18s; }
-.pest:hover { color: var(--color-ink); background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
-.pest[aria-selected="true"] { background: var(--color-ink); color: var(--color-bg); }
+/* Pestaña suelta, para navegar entre secciones. Es el PRIMER nivel de
+   navegación dentro de un módulo, y por eso pesa: fondo sólido cuando está
+   activa. El segundo nivel usa `.grupo`, que es un control segmentado y se
+   distingue de un vistazo. Dos niveles con la misma píldora negra obligan a
+   leer el texto para saber en cuál se está. */
+.pest {
+  font-size: var(--texto-md); font-weight: var(--peso-fuerte);
+  padding: 7px 15px; border-radius: 999px;
+  color: var(--color-muted); white-space: nowrap;
+  transition: background-color .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.pest:hover { color: var(--color-ink); background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+.pest[aria-selected="true"] {
+  background: var(--color-ink); color: var(--color-bg);
+  box-shadow: 0 1px 2px rgba(17,17,17,.16), 0 4px 12px rgba(17,17,17,.10);
+}
+/* Un contador dentro de la pestaña: cuánto llevas de esa sección. */
+.pest .cuenta {
+  margin-left: 7px; font-size: var(--texto-xs); font-weight: var(--peso-medio);
+  font-variant-numeric: tabular-nums; opacity: .55;
+}
 
 /* La marca de estado: la misma `.pill` de anima.css, en 850 y muy espaciada. */
 .marca {
@@ -394,12 +415,62 @@ body {
 .tabla tbody tr:first-child td { border-top: 0; }
 .tabla tbody tr:hover td { background: color-mix(in srgb, var(--color-accent) 6%, transparent); }
 .tabla .num, .tabla th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Una cifra partida en dos líneas deja de ser una cifra: "$22" arriba y "mil"
+   abajo se lee como dos cosas. Los números nunca se parten, y la columna se
+   ensancha lo que haga falta —para eso el contenedor se desliza. */
+.tabla td.num, .tabla th.num, .tabla td.cifra { white-space: nowrap; }
+.tabla th.num { min-width: 82px; }
+
+/* Densidad para las matrices largas: treinta y seis columnas con el padding
+   de una tabla de ocho filas ocupan tres pantallas de alto. */
+.tabla-densa thead th { padding: 7px 11px; }
+.tabla-densa tbody td { padding: 7px 11px; }
+
+/* La columna anclada tiene ancho propio y no se parte en tres líneas. El
+   nombre completo queda en el `title`. */
+.tabla .ancla { max-width: 280px; }
+.tabla td.ancla .recorta {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* El borde de la columna anclada se ve solo cuando hay algo desplazado detrás. */
+.tabla .ancla::after {
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 1px;
+  background: var(--color-line);
+}
+.tabla thead th.ancla { z-index: 2; }
+
+/* Una fila de subtotal: es el encabezado de su grupo, no una fila más. */
+.tabla tr.grupo-fila td { background: var(--color-sunk); font-weight: var(--peso-negro); }
+.tabla tr.grupo-fila:hover td { background: var(--color-sunk); }
+.tabla tr.grupo-fila td.ancla { background: var(--color-sunk); }
 .tabla .principal { font-weight: var(--peso-fuerte); }
 /* La primera columna aguanta el desplazamiento horizontal: sin ella, al correr
    una tabla ancha se pierde de vista de qué fila se está leyendo. */
 .tabla .ancla { position: sticky; left: 0; background: var(--color-surface); }
 .tabla tbody tr:hover .ancla { background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface)); }
-.desliza { overflow-x: auto; overscroll-behavior-x: contain; min-width: 0; }
+/* Se desliza, y se NOTA que se desliza. Las dos sombras de los bordes aparecen
+   solo cuando queda contenido de ese lado: es la única señal de que la tabla
+   sigue, y sin ella la gente asume que lo que ve es todo lo que hay.
+
+   El truco son cuatro fondos: dos tapas del color de la tarjeta que viajan con
+   el contenido (`local`) y dos sombras fijas al marco (`scroll`). Cuando la
+   tapa está en el borde, cubre la sombra. */
+.desliza {
+  overflow-x: auto; overscroll-behavior-x: contain; min-width: 0;
+  background:
+    linear-gradient(to right, var(--color-surface) 40%, transparent) 0 0 / 34px 100% no-repeat local,
+    linear-gradient(to left,  var(--color-surface) 40%, transparent) 100% 0 / 34px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%,   rgba(17,17,17,.12), transparent) 0 0 / 14px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(17,17,17,.12), transparent) 100% 0 / 14px 100% no-repeat scroll;
+}
+.desliza::-webkit-scrollbar { height: 11px; }
+.desliza::-webkit-scrollbar-track { background: transparent; }
+.desliza::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-faint) 55%, transparent);
+  border-radius: 999px; border: 3px solid transparent; background-clip: content-box;
+}
+.desliza::-webkit-scrollbar-thumb:hover { background-color: var(--color-muted); background-clip: content-box; }
 
 
 /* ---------------------------------------------------------------------------
@@ -504,4 +575,129 @@ body {
 @media (max-width: 640px) {
   .panel-fondo { padding: 0; place-items: end stretch; }
   .panel { max-height: 94vh; border-radius: 20px 20px 0 0; border-bottom: 0; }
+}
+
+/* ===========================================================================
+   Capital Intelligence · las piezas que le faltaban al sistema
+   ---------------------------------------------------------------------------
+   Tres cosas que no existían y que se estaban resolviendo a mano en cada
+   pantalla con clases sueltas de Tailwind: la tarjeta de cifra con dos pesos,
+   la fila de filtros, y el editor que no cabe en su celda.
+   =========================================================================== */
+
+/* LA TARJETA DE CIFRA.
+   Dieciséis tarjetas idénticas no son un panel, son una lista: el EBITDA acaba
+   pesando lo mismo que "Costo de ventas" y hay que leerlas todas para
+   encontrar la que importa. `.cifra-tarjeta-alta` es la versión heroica —tres
+   o cuatro por pantalla, no más—; el resto va compacto. */
+.cifra-tarjeta {
+  position: relative;
+  display: flex; flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  padding: 13px 15px 14px;
+  min-width: 0;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.cifra-tarjeta:has(> button:hover) {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-line));
+  box-shadow: 0 2px 10px rgba(17,17,17,.06);
+}
+.cifra-tarjeta[data-abierta="true"] {
+  border-color: color-mix(in srgb, var(--color-accent) 65%, var(--color-line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+.cifra-tarjeta-alta { padding: 17px 19px 19px; border-radius: 18px; }
+/* La etiqueta arriba y el valor abajo, pegado al fondo. Con etiquetas de una
+   y de tres líneas —"EBIT" junto a "Necesidad acumulada de capital"— las
+   cifras quedaban a alturas distintas y la fila dejaba de leerse de un
+   barrido. `margin-top: auto` las alinea sin reservar espacio de más. */
+.cifra-tarjeta > button:last-of-type { display: flex; flex-direction: column; flex: 1; }
+.cifra-tarjeta .valor {
+  font-weight: var(--peso-negro); letter-spacing: -.03em;
+  font-size: var(--texto-xl); line-height: 1.1; margin-top: auto; padding-top: 7px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.cifra-tarjeta-alta .valor { font-size: var(--texto-2xl); padding-top: 9px; }
+
+/* El botón que abre la fórmula. Discreto hasta que se necesita: un panel lleno
+   de signos de interrogación compite con las cifras, que es lo que se vino a
+   mirar. */
+.porque {
+  position: absolute; top: 10px; right: 11px;
+  width: 20px; height: 20px; border-radius: 999px;
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: var(--peso-negro);
+  color: var(--color-faint); background: transparent;
+  opacity: 0; transition: opacity .18s ease, background-color .18s ease, color .18s ease;
+}
+.cifra-tarjeta:hover .porque,
+.cifra-tarjeta:focus-within .porque,
+.cifra-tarjeta[data-abierta="true"] .porque { opacity: 1; }
+.porque:hover { background: var(--color-sunk); color: var(--color-ink); }
+.cifra-tarjeta[data-abierta="true"] .porque { background: var(--color-ink); color: var(--color-bg); }
+/* En pantalla táctil no hay hover: siempre visible, siempre tenue. */
+@media (hover: none) { .porque { opacity: .65; } }
+
+/* La caja de la fórmula, cuando se abre. */
+.formula {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px dashed var(--color-line);
+  display: grid; gap: 9px;
+}
+.formula p { font-size: var(--texto-sm); color: var(--color-muted); line-height: 1.45; }
+.formula dl { display: grid; gap: 5px; }
+.formula .insumo {
+  display: flex; align-items: baseline; gap: 10px;
+  font-size: var(--texto-sm);
+  padding: 3px 8px; border-radius: 8px; background: var(--color-sunk);
+}
+.formula .insumo dt { color: var(--color-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.formula .insumo dd { margin-left: auto; font-weight: var(--peso-fuerte); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* LA BARRA DE FILTROS. Una tira, no una tarjeta con seis campos apilados. */
+.filtros {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px;
+  background: var(--color-surface); border: 1px solid var(--color-line);
+  border-radius: 16px; padding: 12px 14px;
+}
+.filtros .campo { min-height: 36px; padding: 7px 11px; font-size: var(--texto-md); }
+.filtros label { display: grid; gap: 5px; min-width: 0; }
+.filtros label > .rotulo { font-size: 10px; color: var(--color-faint); }
+
+/* EL EDITOR EN LÍNEA.
+   Una celda de 110px no puede contener un desplegable de estados: se aplasta y
+   deja de leerse, que es justo lo que pasaba al escribir en la tabla. En vez
+   de encogerlo, se sale por encima de sus vecinas mientras dura la edición. */
+.celda-edita { position: relative; z-index: 30; }
+.celda-edita > * {
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  min-width: max(100%, 210px); z-index: 30;
+  box-shadow: 0 4px 18px rgba(17,17,17,.16);
+  border-radius: 10px;
+}
+
+/* La franja de estado de una fila: color y palabra, nunca color solo. */
+.semaforo { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+            font-size: var(--texto-xs); font-weight: var(--peso-negro);
+            text-transform: uppercase; letter-spacing: .04em; }
+.semaforo i { width: 7px; height: 7px; border-radius: 999px; flex: none; }
+
+/* El aviso de validación. */
+.aviso-caja {
+  display: flex; gap: 12px; align-items: flex-start;
+  border: 1px solid var(--color-line); border-radius: 14px;
+  padding: 12px 14px; background: var(--color-surface);
+}
+.aviso-caja[data-nivel="bloqueante"] {
+  border-color: color-mix(in srgb, var(--color-danger) 32%, var(--color-line));
+  background: color-mix(in srgb, var(--color-danger) 5%, var(--color-surface));
+}
+
+@media print {
+  .no-imprimir { display: none !important; }
+  .tarjeta, .cifra-tarjeta { break-inside: avoid; box-shadow: none; }
+  .desliza { overflow: visible; background: none; }
 }

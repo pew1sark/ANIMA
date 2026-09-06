@@ -86,6 +86,24 @@ export function dinero(v: unknown, moneda: string = ACTIVA) {
   catch { return `${n(v).toLocaleString(m.locale, { maximumFractionDigits: m.decimales })} ${m.codigo}`; }
 }
 
+/** Dinero sin los centavos que no existen.
+ *
+ *  `$1.543.668,00` tiene tres caracteres de ruido y un separador decimal que
+ *  invita a leer mal la magnitud; y en una tabla donde conviven `$0,00` y
+ *  `$1.040.040,00`, los ceros de relleno son lo único que se ve.
+ *
+ *  La regla es literal: si el importe NO tiene parte decimal, no se escribe
+ *  una. Si la tiene —un costo unitario de 0,32— se escribe entera, porque ahí
+ *  sí es información. En una moneda sin centavos se comporta igual que
+ *  `dinero`, que ya no los escribía. */
+export function dineroLlano(v: unknown, moneda: string = ACTIVA) {
+  const m = monedaDe(moneda);
+  const x = n(v);
+  if (m.decimales === 0 || Math.abs(x % 1) >= 0.005) return dinero(x, moneda);
+  try { return formateador(m, 0).format(x); }
+  catch { return `${Math.round(x).toLocaleString(m.locale)} ${m.codigo}`; }
+}
+
 /** Dinero abreviado, para ejes y cabeceras donde no cabe entero.
     1.284.500 → $1,3 M · 84.500 → $85 mil */
 export function dineroCorto(v: unknown, moneda: string = ACTIVA) {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { dinero, cantidad } from '@/lib/formato';
+import { dineroLlano, cantidad } from '@/lib/formato';
 import type { Indicador, Insumo, Formato, Aviso } from '@/services/capital.service';
 
 /* Una cifra que se puede abrir.
@@ -13,6 +13,10 @@ import type { Indicador, Insumo, Formato, Aviso } from '@/services/capital.servi
    quien la mira solo puede creerla o no. Con la fórmula a la vista, la
    conversación pasa a ser sobre el supuesto, que es donde debería estar.
 
+   DOS PESOS, no uno. `destacada` es la versión heroica: tres o cuatro por
+   pantalla. Dieciséis tarjetas idénticas no son un panel, son una lista, y
+   obligan a leerlas todas para encontrar la que importa.
+
    Un valor nulo no se dibuja como 0. «No se puede calcular» y «vale cero» son
    respuestas distintas, y confundirlas es justo el tipo de error que este
    módulo existe para no cometer. */
@@ -20,7 +24,7 @@ import type { Indicador, Insumo, Formato, Aviso } from '@/services/capital.servi
 export function escribe(v: number | null | undefined, f?: Formato, moneda?: string): string {
   if (v == null) return '—';
   switch (f) {
-    case 'dinero':     return dinero(v, moneda);
+    case 'dinero':     return dineroLlano(v, moneda);
     case 'porcentaje': return `${cantidad(v, 1)}%`;
     case 'numero':     return cantidad(v);
     case 'dias':       return `${cantidad(v)} días`;
@@ -29,53 +33,54 @@ export function escribe(v: number | null | undefined, f?: Formato, moneda?: stri
   }
 }
 
-const tono = (t?: string) =>
+export const colorTono = (t?: string) =>
   t === 'malo'  ? 'var(--color-danger)'
 : t === 'aviso' ? 'var(--color-aviso)'
 : t === 'ok'    ? 'var(--color-ok)'
 : undefined;
 
-export function TarjetaCifra({ ind, moneda, ancha }:
-  { ind: Indicador; moneda: string; ancha?: boolean }) {
+export function TarjetaCifra({ ind, moneda, destacada }:
+  { ind: Indicador; moneda: string; destacada?: boolean }) {
   const [abierta, setAbierta] = useState(false);
   const nulo = ind.valor == null;
 
   return (
-    <div className={`tarjeta p-4 ${ancha ? 'sm:col-span-2' : ''}`}>
+    <div className={`cifra-tarjeta ${destacada ? 'cifra-tarjeta-alta' : ''}`}
+         data-abierta={abierta ? 'true' : 'false'}>
       <button type="button" onClick={() => setAbierta(a => !a)}
-              aria-expanded={abierta}
-              className="w-full text-left"
-              title="Ver de dónde sale esta cifra">
-        <div className="flex items-baseline gap-2">
-          <span className="rotulo">{ind.etiqueta}</span>
-          <span className="ml-auto text-[11px] text-faint shrink-0" aria-hidden="true">
-            {abierta ? '−' : '?'}
-          </span>
-        </div>
-        <div className="cifra-grande mt-2"
-             style={{ color: nulo ? 'var(--color-faint)' : tono(ind.tono) }}>
+              aria-expanded={abierta} aria-label={`Ver cómo se calcula ${ind.etiqueta}`}
+              className="porque no-imprimir">
+        {abierta ? '×' : 'i'}
+      </button>
+
+      <button type="button" onClick={() => setAbierta(a => !a)}
+              className="w-full text-left block" aria-expanded={abierta}>
+        <span className="rotulo block pr-6" style={{ color: 'var(--color-muted)' }}>{ind.etiqueta}</span>
+        <span className="valor block"
+              style={{ color: nulo ? 'var(--color-faint)' : colorTono(ind.tono) }}
+              title={escribe(ind.valor, ind.formato, moneda)}>
           {escribe(ind.valor, ind.formato, moneda)}
-        </div>
-        {ind.nota && <div className="mt-1.5 text-[11.5px] text-faint">{ind.nota}</div>}
+        </span>
+        {ind.nota && (
+          <span className="block text-[11.5px] mt-1.5" style={{ color: 'var(--color-faint)' }}>{ind.nota}</span>
+        )}
       </button>
 
       {abierta && (
-        <div className="entra mt-3 pt-3 border-t border-line grid gap-2">
-          <p className="text-[12.5px] text-muted leading-snug">{ind.formula}</p>
+        <div className="formula entra">
+          <p>{ind.formula}</p>
           {ind.insumos.length > 0 && (
-            <dl className="grid gap-1">
+            <dl>
               {ind.insumos.map((i: Insumo, n) => (
-                <div key={`${i.etiqueta}-${n}`} className="flex items-baseline gap-2 text-[12.5px]">
-                  <dt className="text-faint truncate">{i.etiqueta}</dt>
-                  <dd className="ml-auto tabular-nums font-bold shrink-0">
-                    {escribe(i.valor, i.formato, moneda)}
-                  </dd>
+                <div key={`${i.etiqueta}-${n}`} className="insumo">
+                  <dt>{i.etiqueta}</dt>
+                  <dd>{escribe(i.valor, i.formato, moneda)}</dd>
                 </div>
               ))}
             </dl>
           )}
           {nulo && (
-            <p className="text-[12px] text-faint">
+            <p style={{ color: 'var(--color-faint)' }}>
               No se puede calcular con los datos que hay. No es cero: falta un dato.
             </p>
           )}
@@ -86,30 +91,36 @@ export function TarjetaCifra({ ind, moneda, ancha }:
 }
 
 /* Los avisos de validación. Los bloqueantes impiden marcar un modelo como
-   validado; los otros solo se ven. La diferencia se dice con el color y con la
-   palabra, no solo con el color. */
+   validado; los otros solo se ven. La diferencia se dice con el color Y con la
+   palabra: un tablero que solo habla en rojo y verde no se lee en gris. */
 export function Avisos({ avisos, titulo }: { avisos: Aviso[]; titulo?: string }) {
+  const [todos, setTodos] = useState(false);
   if (avisos.length === 0) return null;
+
   const bloq = avisos.filter(a => a.nivel === 'bloqueante');
+  /* Con más de tres, se muestran los bloqueantes y el resto se pide. Nueve
+     cajas de aviso apiladas empujan las cifras fuera de la pantalla, que es
+     justo lo contrario de avisar. */
+  const visibles = todos || avisos.length <= 3 ? avisos : [...bloq, ...avisos.filter(a => a.nivel !== 'bloqueante')].slice(0, 3);
+  const ocultos = avisos.length - visibles.length;
 
   return (
     <section className="grid gap-2 aparece">
       {titulo && (
-        <h2 className="rotulo">
-          {titulo}
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="rotulo">{titulo}</h2>
           {bloq.length > 0 && (
-            <span className="marca marca-malo ml-2">{bloq.length} bloquea{bloq.length === 1 ? '' : 'n'}</span>
+            <span className="marca marca-malo">
+              {bloq.length} {bloq.length === 1 ? 'bloquea' : 'bloquean'}
+            </span>
           )}
-        </h2>
+          {avisos.length > bloq.length && (
+            <span className="marca">{avisos.length - bloq.length} por revisar</span>
+          )}
+        </div>
       )}
-      {avisos.map((a, i) => (
-        <div key={`${a.clave}-${i}`}
-             className="rounded-xl border p-3.5 flex gap-3 items-start"
-             style={{
-               borderColor: a.nivel === 'bloqueante' ? 'var(--color-danger)' : 'var(--color-line)',
-               background: a.nivel === 'bloqueante' ? 'color-mix(in srgb, var(--color-danger) 7%, transparent)'
-                                                    : 'var(--color-surface)'
-             }}>
+      {visibles.map((a, i) => (
+        <div key={`${a.clave}-${i}`} className="aviso-caja" data-nivel={a.nivel}>
           <span className={`marca ${a.nivel === 'bloqueante' ? 'marca-malo' : 'marca-aviso'} shrink-0 mt-0.5`}>
             {a.nivel === 'bloqueante' ? 'Bloquea' : 'Aviso'}
           </span>
@@ -119,22 +130,48 @@ export function Avisos({ avisos, titulo }: { avisos: Aviso[]; titulo?: string })
           </div>
         </div>
       ))}
+      {ocultos > 0 && (
+        <button className="b b-fan b-sm justify-self-start no-imprimir" onClick={() => setTodos(true)}>
+          Ver {ocultos} aviso{ocultos === 1 ? '' : 's'} más
+        </button>
+      )}
     </section>
   );
 }
 
-/* Un desplegable con etiqueta. Se repite en las tres pantallas de capital y
+/* Un desplegable con etiqueta. Se repite en las cuatro pantallas de capital y
    nunca merece copiarse cuatro veces. */
-export function Elige<T extends { id: string }>({ label, valor, onChange, opciones, nombre, vacio }:
+export function Elige<T extends { id: string }>({ label, valor, onChange, opciones, nombre, vacio, ancho }:
   { label: string; valor: string; onChange: (v: string) => void;
-    opciones: T[]; nombre: (o: T) => string; vacio?: string }) {
+    opciones: T[]; nombre: (o: T) => string; vacio?: string; ancho?: number }) {
   return (
-    <label className="grid gap-1 min-w-0">
-      <span className="rotulo">{label}</span>
+    <label className="grid gap-1.5 min-w-0" style={{ width: ancho, flex: ancho ? 'none' : '1 1 190px' }}>
+      <span className="rotulo" style={{ fontSize: 10, color: 'var(--color-faint)' }}>{label}</span>
       <select className="campo" value={valor} onChange={e => onChange(e.target.value)}>
         {vacio !== undefined && <option value="">{vacio}</option>}
         {opciones.map(o => <option key={o.id} value={o.id}>{nombre(o)}</option>)}
       </select>
     </label>
+  );
+}
+
+/* La cabecera de una pantalla: qué estás mirando y qué puedes hacer con ello.
+   Existe para que las cuatro empiecen igual — antes cada una inventaba su
+   propia fila de título y las alturas no coincidían al cambiar de pestaña. */
+export function Cabecera({ titulo, nota, marcas, acciones }: {
+  titulo: string; nota?: string;
+  marcas?: React.ReactNode; acciones?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3 flex-wrap">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-[17px] font-extrabold tracking-tight">{titulo}</h1>
+          {marcas}
+        </div>
+        {nota && <p className="text-[12.5px] text-muted mt-1 max-w-[70ch]">{nota}</p>}
+      </div>
+      {acciones && <div className="ml-auto flex gap-2 flex-wrap no-imprimir">{acciones}</div>}
+    </div>
   );
 }

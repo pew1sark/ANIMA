@@ -858,8 +858,8 @@ export const PROYECTOS_CAPITAL: Esquema = {
   vacio: 'Un proyecto es una oportunidad de inversión o de transformación. Todo lo demás —escenarios, modelo, ronda— cuelga de él.',
   campos: [
     { key: 'name',   label: 'Proyecto', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
-    { key: 'code',   label: 'Código',   tipo: 'texto', soloLectura: true, enTabla: true, ancho: '130px',
-      ayuda: 'Lo pone el sistema al crear el proyecto.' },
+    { key: 'code', grupo: 'Identidad', label: 'Código', tipo: 'texto', soloLectura: true,
+      ayuda: 'Lo pone el sistema al crear el proyecto. Se busca por él aunque no salga en la tabla.' },
     { key: 'status', label: 'Estado',   tipo: 'seleccion', opciones: ESTADO_PROYECTO_CI,
       enTabla: true, enLinea: true, ancho: '170px', porDefecto: 'borrador' },
     { key: 'portfolio_id', label: 'Portafolio', tipo: 'relacion', enTabla: true, ancho: '160px',

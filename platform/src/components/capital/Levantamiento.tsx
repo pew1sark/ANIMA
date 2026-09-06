@@ -3,6 +3,7 @@ import { cargarLevantamiento, responder, cerrarLevantamiento,
          listarRequisitos, sembrarRequisitos, actualizarRequisito,
          type Levantamiento as Datos, type Pregunta, type Requisito,
          type EstadoRequisito } from '@/services/capital.service';
+import { Cabecera } from '@/components/capital/Cifra';
 import { diaCorto } from '@/lib/formato';
 
 /* LEVANTAMIENTO
@@ -53,19 +54,18 @@ export function LevantamientoCapital({ companyId, puedeEditar }:
 
   return (
     <div className="grid gap-4 aparece">
-      <div>
-        <div className="rotulo">Levantamiento</div>
-        <p className="subtitulo mt-1.5 max-w-[68ch]">
-          Lo que hace falta saber y reunir para migrar los proyectos y empezar a usar
-          la plataforma de verdad. Se responde una vez; después se consulta.
-        </p>
-      </div>
+      <Cabecera
+        titulo="Levantamiento"
+        nota="Lo que hace falta saber y reunir para migrar los proyectos y empezar a usar la plataforma de verdad. Se responde una vez; después se consulta." />
 
-      <div role="tablist" className="flex gap-1 flex-wrap border-b border-line pb-3">
+      {/* Segundo nivel de navegación. Va como control segmentado y no como
+          píldora suelta: con la misma píldora negra que las pestañas del
+          módulo hay que leer el texto para saber en qué nivel se está. */}
+      <div role="tablist" className="grupo self-start no-imprimir">
         {([['cuestionario', 'Cuestionario'], ['documentos', 'Documentos necesarios']] as const)
           .map(([id, nombre]) => (
             <button key={id} role="tab" aria-selected={solapa === id}
-                    onClick={() => setSolapa(id)} className="pest">{nombre}</button>
+                    onClick={() => setSolapa(id)}>{nombre}</button>
           ))}
       </div>
 
@@ -147,7 +147,7 @@ function Cuestionario({ companyId, puedeEditar }: { companyId: string; puedeEdit
               {enviado && <> · enviado el {diaCorto(String(d.sesion.enviado_en).slice(0, 10))}</>}
             </p>
           </div>
-          <div className="ml-auto flex gap-2 flex-wrap">
+          <div className="ml-auto flex gap-2 flex-wrap no-imprimir">
             <button className="b b-sec b-sm" onClick={() => setTodo(t => !t)}>
               {todo ? 'Ver por secciones' : 'Ver todo (para imprimir)'}
             </button>
@@ -183,14 +183,12 @@ function Cuestionario({ companyId, puedeEditar }: { companyId: string; puedeEdit
       )}
 
       {!todo && (
-        <div role="tablist" className="flex gap-1 flex-wrap">
+        <div role="tablist" className="flex gap-1 flex-wrap no-imprimir">
           {secciones.map((s, i) => (
             <button key={s.key} role="tab" aria-selected={i === seccion}
                     onClick={() => setSeccion(i)} className="pest">
               {s.short}
-              <span className="ml-1.5 text-[10.5px] text-faint">
-                {contarSeccion(s, d.respuestas)}
-              </span>
+              <span className="cuenta">{contarSeccion(s, d.respuestas)}</span>
             </button>
           ))}
         </div>
@@ -345,7 +343,7 @@ function Documentos({ companyId, puedeEditar }: { companyId: string; puedeEditar
                 </span>}
           </p>
         </div>
-        <div className="ml-auto flex gap-2 flex-wrap">
+        <div className="ml-auto flex gap-2 flex-wrap no-imprimir">
           <button className="b b-sec b-sm" onClick={() => setSoloFaltan(v => !v)}>
             {soloFaltan ? 'Ver todos' : 'Ver solo lo que falta'}
           </button>

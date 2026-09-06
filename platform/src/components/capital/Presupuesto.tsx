@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { cargarPresupuesto, listarModelos, listarProyectos,
          type Presupuesto as Datos, type FilaPresupuesto,
          type ModeloBreve, type ProyectoBreve, type Naturaleza } from '@/services/capital.service';
-import { Elige } from '@/components/capital/Cifra';
+import { Elige, Cabecera, TarjetaCifra } from '@/components/capital/Cifra';
+import { Periodo, type Rango } from '@/components/capital/Periodo';
 import { Columnas } from '@/components/graficos/Columnas';
-import { dinero, dineroCorto, cantidad, mesCorto } from '@/lib/formato';
+import { dineroLlano, dineroCorto, cantidad, mesCorto } from '@/lib/formato';
+import type { Indicador } from '@/services/capital.service';
 
 /* PRESUPUESTO CONTRA EJECUCIÓN REAL
    ---------------------------------------------------------------------------
-   Cuatro columnas de dinero y no dos, porque comparar solo presupuesto y real
+   Cinco columnas de dinero y no dos, porque comparar solo presupuesto y real
    esconde la mitad de la historia:
 
      original     lo que se aprobó (la versión 1 del escenario)
@@ -51,8 +53,7 @@ export function PresupuestoVsReal({ companyId }: { companyId: string }) {
   const [proyecto, setProyecto] = useState('');
   const [modelos, setModelos] = useState<ModeloBreve[]>([]);
   const [modelo, setModelo] = useState('');
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
+  const [rango, setRango] = useState<Rango>({});
   const [d, setD] = useState<Datos | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,14 +80,12 @@ export function PresupuestoVsReal({ companyId }: { companyId: string }) {
     if (!proyecto) { setD(null); return; }
     let vivo = true;
     setCargando(true); setError(null);
-    cargarPresupuesto(proyecto, modelo || undefined,
-                      desde ? `${desde}-01` : undefined,
-                      hasta ? `${hasta}-01` : undefined)
+    cargarPresupuesto(proyecto, modelo || undefined, rango.desde, rango.hasta)
       .then(r => vivo && setD(r))
       .catch(e => vivo && setError(e.message ?? 'No se pudo cargar la comparación.'))
       .finally(() => vivo && setCargando(false));
     return () => { vivo = false; };
-  }, [proyecto, modelo, desde, hasta]);
+  }, [proyecto, modelo, rango.desde, rango.hasta]);
 
   if (!cargando && proyectos.length === 0) {
     return (
@@ -101,7 +100,7 @@ export function PresupuestoVsReal({ companyId }: { companyId: string }) {
   }
 
   const moneda = d?.modelo.moneda ?? 'USD';
-  const plata = (v: number) => dinero(v, moneda);
+  const plata = (v: number) => dineroLlano(v, moneda);
 
   /* Las filas agrupadas por naturaleza, en el orden del estado de resultados.
      Sin agrupar, ingresos y CAPEX salen intercalados por orden alfabético de
@@ -110,22 +109,44 @@ export function PresupuestoVsReal({ companyId }: { companyId: string }) {
     .map(k => ({ kind: k, filas: (d?.filas ?? []).filter(f => f.kind === k) }))
     .filter(g => g.filas.length > 0);
 
+  const totales: Indicador[] = d ? [
+    tarjeta('original', 'Presupuesto original', d.totales.original,
+      'La versión 1 del escenario: lo que se aprobó antes de que la realidad opinara.',
+      [['Versión vigente', d.totales.vigente]]),
+    tarjeta('vigente', 'Presupuesto vigente', d.totales.vigente,
+      `Con lo que se trabaja hoy: versión ${d.modelo.version}${d.modelo.label ? ` — ${d.modelo.label}` : ''}.`,
+      [['Presupuesto original', d.totales.original]]),
+    tarjeta('real', 'Ejecución real', d.totales.real,
+      'Lo devengado en el período, cargado como movimientos reales.',
+      [['Comprometido', d.totales.comprometido], ['Pagado', d.totales.pagado]]),
+    { ...tarjeta('dif', 'Diferencia', d.totales.diferencia,
+        'Ejecución real − presupuesto vigente. Negativo es por debajo de lo previsto.',
+        [['Real', d.totales.real], ['Vigente', d.totales.vigente]]),
+      tono: d.totales.diferencia < 0 ? 'malo' : 'ok',
+      nota: d.totales.vigente
+        ? `${cantidad(d.totales.diferencia / Math.abs(d.totales.vigente) * 100, 1)}% sobre el vigente`
+        : undefined }
+  ] : [];
+
   return (
-    <div className="grid gap-5 aparece">
-      <section className="tarjeta p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Elige label="Proyecto" valor={proyecto} onChange={setProyecto}
-               opciones={proyectos} nombre={p => p.name} />
-        <Elige label="Presupuesto vigente" valor={modelo} onChange={setModelo}
-               opciones={modelos} vacio="El modelo vigente"
-               nombre={m => `${m.escenario} · v${m.version}${m.state === 'validado' ? ' ✓' : ''}`} />
-        <label className="grid gap-1">
-          <span className="rotulo">Desde</span>
-          <input className="campo" type="month" value={desde} onChange={e => setDesde(e.target.value)} />
-        </label>
-        <label className="grid gap-1">
-          <span className="rotulo">Hasta</span>
-          <input className="campo" type="month" value={hasta} onChange={e => setHasta(e.target.value)} />
-        </label>
+    <div className="grid gap-4 aparece">
+      <Cabecera
+        titulo="Presupuesto contra ejecución real"
+        nota={d ? `${mesCorto(d.desde)} a ${mesCorto(d.hasta)} · umbrales de esta organización: aviso desde ${cantidad(d.umbrales.aviso, 1)}%, crítico desde ${cantidad(d.umbrales.critico, 1)}%.` : undefined}
+        marcas={d && <span className="marca marca-acento">{d.modelo.moneda}</span>}
+        acciones={<button className="b b-sec b-sm" onClick={() => window.print()}>Imprimir</button>} />
+
+      <section className="no-imprimir">
+        <div className="filtros">
+          <Elige label="Proyecto" valor={proyecto} onChange={setProyecto}
+                 opciones={proyectos} nombre={p => p.name} />
+          <Elige label="Presupuesto vigente" valor={modelo} onChange={setModelo}
+                 opciones={modelos} vacio="El modelo vigente"
+                 nombre={m => `${m.escenario} · v${m.version}${m.state === 'validado' ? '  ✓' : ''}`} />
+          <div className="w-full" style={{ borderTop: '1px solid var(--color-line)', paddingTop: 10, marginTop: 2 }}>
+            <Periodo valor={rango} onChange={setRango} etiqueta="Período de la comparación" />
+          </div>
+        </div>
       </section>
 
       {error && (
@@ -147,30 +168,19 @@ export function PresupuestoVsReal({ companyId }: { companyId: string }) {
 
       {!cargando && d && (
         <>
-          <section className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Total etiqueta="Presupuesto original" valor={d.totales.original} plata={plata}
-                   nota={d.original_id === d.modelo.id ? 'es la versión con la que se trabaja' : 'versión 1'} />
-            <Total etiqueta="Presupuesto vigente" valor={d.totales.vigente} plata={plata}
-                   nota={`v${d.modelo.version}${d.modelo.label ? ` · ${d.modelo.label}` : ''}`} />
-            <Total etiqueta="Ejecución real" valor={d.totales.real} plata={plata}
-                   nota={`comprometido ${dineroCorto(d.totales.comprometido, moneda)} · pagado ${dineroCorto(d.totales.pagado, moneda)}`} />
-            <Total etiqueta="Diferencia" valor={d.totales.diferencia} plata={plata}
-                   color={d.totales.diferencia < 0 ? 'var(--color-danger)' : 'var(--color-ok)'}
-                   nota={d.totales.vigente
-                     ? `${cantidad(d.totales.diferencia / Math.abs(d.totales.vigente) * 100, 1)}% sobre el vigente`
-                     : undefined} />
-          </section>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {totales.map(t => <TarjetaCifra key={t.clave} ind={t} moneda={moneda} destacada />)}
+          </div>
 
           <section className="tarjeta p-5">
-            <h2 className="rotulo">Presupuesto vigente contra ejecución, mes a mes</h2>
+            <h2 className="rotulo">Mes a mes</h2>
             <p className="text-[12.5px] text-faint mt-1 mb-3">
-              {mesCorto(d.desde)} a {mesCorto(d.hasta)} · umbrales de esta organización:
-              aviso desde {cantidad(d.umbrales.aviso, 1)}%, crítico desde {cantidad(d.umbrales.critico, 1)}%.
+              El presupuesto vigente contra lo que se cargó como ejecución.
             </p>
             <Columnas
               columnas={d.meses.map(m => ({
                 etiqueta: mesCorto(m.periodo),
-                partes: { a: m.vigente, b: m.real }
+                partes: { a: m.vigente, b: m.real } as Record<string, number>
               }))}
               modo="agrupado"
               series={[{ clave: 'a', nombre: 'Presupuesto', color: 'var(--dato-1)' },
@@ -179,21 +189,29 @@ export function PresupuestoVsReal({ companyId }: { companyId: string }) {
           </section>
 
           <section className="tarjeta p-5">
-            <h2 className="rotulo">Por categoría</h2>
+            <div className="flex items-end gap-3 flex-wrap">
+              <div>
+                <h2 className="rotulo">Por categoría</h2>
+                <p className="text-[12.5px] text-faint mt-1">
+                  {d.filas.length} categoría{d.filas.length === 1 ? '' : 's'} ·
+                  la tabla se desliza en horizontal
+                </p>
+              </div>
+            </div>
             <div className="desliza -mx-5 px-5 mt-3">
-              <table className="tabla">
+              <table className="tabla tabla-densa">
                 <thead>
                   <tr>
-                    <th className="ancla">Categoría</th>
+                    <th className="ancla" style={{ minWidth: 190 }}>Categoría</th>
                     <th className="num">Original</th>
                     <th className="num">Vigente</th>
                     <th className="num">Comprometido</th>
                     <th className="num">Pagado</th>
                     <th className="num">Real</th>
                     <th className="num">Diferencia</th>
-                    <th className="num">% ejecutado</th>
-                    <th className="num">Proyección al cierre</th>
-                    <th>Semáforo</th>
+                    <th className="num">% ejec.</th>
+                    <th className="num">Al cierre</th>
+                    <th style={{ minWidth: 110 }}>Semáforo</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -210,17 +228,14 @@ export function PresupuestoVsReal({ companyId }: { companyId: string }) {
   );
 }
 
-function Total({ etiqueta, valor, plata, nota, color }: {
-  etiqueta: string; valor: number; plata: (v: number) => string;
-  nota?: string; color?: string;
-}) {
-  return (
-    <div className="tarjeta p-4">
-      <div className="rotulo">{etiqueta}</div>
-      <div className="cifra-grande mt-2" style={{ color }}>{plata(valor)}</div>
-      {nota && <div className="mt-1.5 text-[11.5px] text-faint">{nota}</div>}
-    </div>
-  );
+/* Un total con su explicación. Reusa la tarjeta trazable en vez de una propia:
+   así una cifra de aquí se abre igual que una del panel o del modelo. */
+function tarjeta(clave: string, etiqueta: string, valor: number,
+                 formula: string, insumos: [string, number][]): Indicador {
+  return {
+    clave, etiqueta, valor, formato: 'dinero', formula,
+    insumos: insumos.map(([e, v]) => ({ etiqueta: e, valor: v, formato: 'dinero' as const }))
+  };
 }
 
 function Grupo({ kind, filas, plata }: {
@@ -231,23 +246,25 @@ function Grupo({ kind, filas, plata }: {
 
   return (
     <>
-      <tr>
-        <td className="ancla principal" style={{ fontWeight: 800 }}>{NOMBRE[kind]}</td>
-        <td className="num cifra" style={{ fontWeight: 800 }}>{plata(suma('original'))}</td>
-        <td className="num cifra" style={{ fontWeight: 800 }}>{plata(suma('vigente'))}</td>
-        <td className="num cifra" style={{ fontWeight: 800 }}>{plata(suma('comprometido'))}</td>
-        <td className="num cifra" style={{ fontWeight: 800 }}>{plata(suma('pagado'))}</td>
-        <td className="num cifra" style={{ fontWeight: 800 }}>{plata(suma('real'))}</td>
-        <td className="num cifra" style={{ fontWeight: 800 }}>{plata(suma('diferencia'))}</td>
-        <td className="num cifra" style={{ fontWeight: 800 }}>
+      <tr className="grupo-fila">
+        <td className="ancla"><span className="recorta">{NOMBRE[kind]}</span></td>
+        <td className="num cifra">{plata(suma('original'))}</td>
+        <td className="num cifra">{plata(suma('vigente'))}</td>
+        <td className="num cifra">{plata(suma('comprometido'))}</td>
+        <td className="num cifra">{plata(suma('pagado'))}</td>
+        <td className="num cifra">{plata(suma('real'))}</td>
+        <td className="num cifra">{plata(suma('diferencia'))}</td>
+        <td className="num cifra">
           {suma('vigente') ? `${cantidad(suma('real') / suma('vigente') * 100, 1)}%` : '—'}
         </td>
-        <td className="num cifra" style={{ fontWeight: 800 }}>{plata(suma('proyeccion_cierre'))}</td>
+        <td className="num cifra">{plata(suma('proyeccion_cierre'))}</td>
         <td />
       </tr>
       {filas.map(f => (
         <tr key={`${f.kind}-${f.categoria}`}>
-          <td className="ancla" style={{ paddingLeft: 22 }}>{f.categoria}</td>
+          <td className="ancla" style={{ paddingLeft: 26 }}>
+            <span className="recorta" title={f.categoria}>{f.categoria}</span>
+          </td>
           <td className="num cifra">{plata(f.original)}</td>
           <td className="num cifra">{plata(f.vigente)}</td>
           <td className="num cifra">{plata(f.comprometido)}</td>
@@ -258,16 +275,15 @@ function Grupo({ kind, filas, plata }: {
           </td>
           <td className="num cifra">{f.pct_ejecutado == null ? '—' : `${cantidad(f.pct_ejecutado, 1)}%`}</td>
           <td className="num cifra">{plata(f.proyeccion_cierre)}</td>
-          <td style={{ whiteSpace: 'nowrap' }}>
-            <span className="inline-flex items-center gap-1.5 text-[11.5px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ background: SEMAFORO[f.semaforo]?.color }} />
+          <td>
+            <span className="semaforo" style={{ color: SEMAFORO[f.semaforo]?.color }}>
+              <i style={{ background: SEMAFORO[f.semaforo]?.color }} />
               {SEMAFORO[f.semaforo]?.texto ?? f.semaforo}
             </span>
           </td>
         </tr>
       ))}
-      <tr aria-hidden="true"><td colSpan={10} style={{ height: 6 }} /></tr>
+      <tr aria-hidden="true"><td colSpan={10} style={{ height: 8, borderTop: 0 }} /></tr>
     </>
   );
 }

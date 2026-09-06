@@ -212,8 +212,11 @@ function Tabla({ columnas, filas, opciones, puedeEditar, abrir, cambiar }: {
   const [editando, setEditando] = useState<{ id: string; key: string } | null>(null);
   const grid = { gridTemplateColumns: columnas.map(c => c.ancho ?? '1fr').join(' ') + ' 44px' };
 
+  /* La tabla se desliza, y se NOTA que se desliza: con seis columnas de dinero
+     la última queda fuera de la pantalla y sin la sombra del borde nadie sabe
+     que hay más. Es lo que hacía que una tabla pareciera incompleta. */
   return (
-    <div className="tarjeta overflow-x-auto">
+    <div className="tarjeta desliza">
       <div className="min-w-max">
         <div style={grid} className="grid bg-sunk border-b border-line sticky top-0 z-10">
           {columnas.map(c => (
@@ -232,7 +235,12 @@ function Tabla({ columnas, filas, opciones, puedeEditar, abrir, cambiar }: {
                 <div key={c.key}
                      onClick={() => editable && setEditando({ id: f.id, key: c.key })}
                      className={`px-3.5 py-2.5 text-[13.5px] flex items-center min-w-0
-                                 ${editable ? 'cursor-text' : ''}`}>
+                                 ${editable ? 'cursor-text' : ''} ${activa ? 'celda-edita' : ''}`}>
+                  {/* Al editar, el campo se SALE de la celda. Una columna de
+                      110px no puede contener un desplegable de estados: se
+                      aplastaba hasta dejar de leerse, que es exactamente lo
+                      que pasaba al escribir en la tabla. Ahora se monta por
+                      encima de sus vecinas mientras dura la edición. */}
                   {activa
                     ? <Editor campo={c} valor={leer(f, c)} opciones={opciones[c.key]} compacto
                               onChange={v => cambiar(f, c, v)}
