@@ -158,7 +158,11 @@ function Filtrador({ filtros, setFiltros, portafolios, proyectos, monedas }: {
   portafolios: PortafolioBreve[]; proyectos: ProyectoBreve[]; monedas: string[];
 }) {
   const set = (k: keyof Filtros) => (v: string) => setFiltros({ ...filtros, [k]: v || undefined });
-  const puestos = Object.entries(filtros).filter(([, v]) => v).length;
+  /* El período no cuenta como filtro: tiene su propio «Limpiar» y decir
+     «quitar 3 filtros» cuando dos de ellos son el mes de inicio y el de fin
+     hace que el botón prometa más de lo que hace. */
+  const puestos = Object.entries(filtros)
+    .filter(([k, v]) => v && k !== 'desde' && k !== 'hasta').length;
 
   const visibles = filtros.portafolio
     ? proyectos.filter(p => p.portfolio_id === filtros.portafolio)
@@ -184,7 +188,8 @@ function Filtrador({ filtros, setFiltros, portafolios, proyectos, monedas }: {
                  onChange={e => set('pais')(e.target.value.toUpperCase())} />
         </label>
         {puestos > 0 && (
-          <button type="button" onClick={() => setFiltros({})} className="b b-fan b-sm">
+          <button type="button" className="b b-fan b-sm"
+                  onClick={() => setFiltros({ desde: filtros.desde, hasta: filtros.hasta })}>
             Quitar {puestos} filtro{puestos === 1 ? '' : 's'}
           </button>
         )}

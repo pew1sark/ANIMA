@@ -3,26 +3,25 @@ import { mesCorto } from '@/lib/formato';
 
 /* EL PERÍODO
    ---------------------------------------------------------------------------
-   Un rango de meses con atajos y con modo personalizado.
+   Un rango de meses con atajos y con un calendario propio.
 
-   Antes eran dos campos `type="month"` sueltos. Funcionaban, y eran un mal
-   control por dos razones: vacíos se dibujan como «---------- de ----», que no
-   dice nada; y obligan a pensar en fechas cuando lo que uno quiere es «los
-   últimos seis meses». Los atajos responden esa pregunta directamente y el
-   personalizado sigue estando para cuando de verdad hace falta un rango raro.
+   Empezó con dos `<input type="month">`. Funcionaban en Chrome y en Safari no:
+   Safari NO implementa ese tipo y lo degrada a un campo de texto — sin icono,
+   sin calendario, sin nada que indique qué se espera escribir. Como la mitad
+   de quien va a usar esto trabaja en Mac, el control «personalizado» era en la
+   práctica un campo vacío que no se sabía llenar.
 
-   El estado vive fuera: este componente solo propone. Devuelve el día 1 de
-   cada mes en ISO, que es la forma en que la base guarda un período. */
+   Así que el calendario se dibuja aquí. Doce meses y un paso de año: no hace
+   falta más, porque la unidad de este módulo es el MES —los modelos, la
+   ejecución y el presupuesto se guardan por mes— y elegir días sería ofrecer
+   una precisión que ningún dato tiene.
+
+   Se elige por rango: el primer clic pone el inicio, el segundo el fin, y si
+   se hacen al revés se ordenan solos. Nadie tiene que acertar el orden. */
 
 export interface Rango { desde?: string; hasta?: string }
 
-type Atajo = {
-  id: string;
-  nombre: string;
-  /** Meses hacia atrás y hacia adelante desde el mes en curso. */
-  atras: number;
-  adelante: number;
-};
+type Atajo = { id: string; nombre: string; atras: number; adelante: number };
 
 const ATAJOS: Atajo[] = [
   { id: '3m',   nombre: '3 meses',   atras: 2,  adelante: 0 },
@@ -32,18 +31,21 @@ const ATAJOS: Atajo[] = [
   { id: 'todo', nombre: 'Todo',      atras: 11, adelante: 11 }
 ];
 
-const iso = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
+               'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+const iso = (a: number, m: number) => `${a}-${String(m + 1).padStart(2, '0')}-01`;
 
 const mesDesplazado = (n: number) => {
   const h = new Date();
-  return iso(new Date(h.getFullYear(), h.getMonth() + n, 1));
+  const d = new Date(h.getFullYear(), h.getMonth() + n, 1);
+  return iso(d.getFullYear(), d.getMonth());
 };
 
 function rangoDe(a: Atajo): Rango {
   if (a.id === 'ano') {
     const y = new Date().getFullYear();
-    return { desde: `${y}-01-01`, hasta: `${y}-12-01` };
+    return { desde: iso(y, 0), hasta: iso(y, 11) };
   }
   return { desde: mesDesplazado(-a.atras), hasta: mesDesplazado(a.adelante) };
 }
@@ -59,24 +61,40 @@ function atajoActivo(r: Rango): string | null {
   return null;
 }
 
+/** '2026-03-01' → 202603, para comparar meses sin construir fechas. */
+const orden = (s?: string) => s ? Number(s.slice(0, 4)) * 12 + Number(s.slice(5, 7)) - 1 : null;
+
 export function Periodo({ valor, onChange, etiqueta = 'Período' }:
   { valor: Rango; onChange: (r: Rango) => void; etiqueta?: string }) {
   const activo = atajoActivo(valor);
-  const [abierto, setAbierto] = useState(activo === null);
+  const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
 
-  /* Si el rango deja de coincidir con un atajo —porque alguien escribió una
-     fecha— el panel personalizado se queda abierto. Cerrarlo escondería lo
-     que la persona acaba de escribir. */
-  useEffect(() => { if (activo === null) setAbierto(true); }, [activo]);
+  /* Cerrar al pulsar fuera y con Escape. Un panel flotante que solo se cierra
+     con su propio botón se queda abierto tapando la pantalla en cuanto alguien
+     se distrae. */
+  useEffect(() => {
+    if (!abierto) return;
+    const fuera = (e: MouseEvent) => {
+      if (caja.current && !caja.current.contains(e.target as Node)) setAbierto(false);
+    };
+    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') setAbierto(false); };
+    document.addEventListener('mousedown', fuera);
+    document.addEventListener('keydown', tecla);
+    return () => {
+      document.removeEventListener('mousedown', fuera);
+      document.removeEventListener('keydown', tecla);
+    };
+  }, [abierto]);
 
-  const set = (k: keyof Rango) => (v: string) =>
-    onChange({ ...valor, [k]: v ? `${v}-01` : undefined });
+  const texto = valor.desde || valor.hasta
+    ? `${valor.desde ? mesCorto(valor.desde.slice(0, 7)) : '…'} → ${valor.hasta ? mesCorto(valor.hasta.slice(0, 7)) : '…'}`
+    : 'Elegir meses';
 
   return (
-    <div ref={caja} className="grid gap-2 min-w-0">
+    <div ref={caja} className="grid gap-2 min-w-0" style={{ position: 'relative' }}>
       <span className="rotulo" style={{ fontSize: 10, color: 'var(--color-faint)' }}>{etiqueta}</span>
-      <div className="flex items-center gap-1 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
         <div className="grupo">
           {ATAJOS.map(a => (
             <button key={a.id} type="button" aria-pressed={activo === a.id}
@@ -85,42 +103,126 @@ export function Periodo({ valor, onChange, etiqueta = 'Período' }:
             </button>
           ))}
           <button type="button" aria-pressed={activo === null}
+                  aria-expanded={abierto}
                   onClick={() => setAbierto(v => !v)}
-                  title="Elegir un mes de inicio y uno de fin">
+                  title="Elegir el mes de inicio y el de fin en un calendario">
             Personalizado
           </button>
         </div>
+
         {activo === null && (
-          <span className="text-[11.5px] text-faint tabular-nums">
-            {valor.desde ? mesCorto(valor.desde.slice(0, 7)) : '—'}
-            {' → '}
-            {valor.hasta ? mesCorto(valor.hasta.slice(0, 7)) : '—'}
-          </span>
+          <button type="button" onClick={() => setAbierto(v => !v)}
+                  className="b b-fan b-sm tabular-nums"
+                  title="Cambiar el rango">
+            {texto}
+          </button>
         )}
       </div>
 
       {abierto && (
-        <div className="entra flex items-end gap-2 flex-wrap">
-          <label className="grid gap-1">
-            <span className="rotulo" style={{ fontSize: 10, color: 'var(--color-faint)' }}>Desde</span>
-            <input className="campo" type="month" style={{ minHeight: 34, padding: '6px 10px', width: 150 }}
-                   value={(valor.desde ?? '').slice(0, 7)}
-                   onChange={e => set('desde')(e.target.value)} />
-          </label>
-          <label className="grid gap-1">
-            <span className="rotulo" style={{ fontSize: 10, color: 'var(--color-faint)' }}>Hasta</span>
-            <input className="campo" type="month" style={{ minHeight: 34, padding: '6px 10px', width: 150 }}
-                   value={(valor.hasta ?? '').slice(0, 7)}
-                   onChange={e => set('hasta')(e.target.value)} />
-          </label>
-          {(valor.desde || valor.hasta) && (
-            <button type="button" className="b b-fan b-sm"
-                    onClick={() => onChange({ desde: undefined, hasta: undefined })}>
-              Limpiar
-            </button>
-          )}
-        </div>
+        <Calendario valor={valor} onChange={onChange} cerrar={() => setAbierto(false)} />
       )}
+    </div>
+  );
+}
+
+/* El calendario de meses. Doce casillas en tres filas de cuatro, un paso de
+   año, y el rango pintado entre los dos extremos para que se vea qué se está
+   eligiendo antes de soltarlo. El mes en curso lleva un borde: es la
+   referencia con la que todo el mundo se orienta. */
+function Calendario({ valor, onChange, cerrar }:
+  { valor: Rango; onChange: (r: Rango) => void; cerrar: () => void }) {
+  const hoy = new Date();
+  const [ano, setAno] = useState(() => Number((valor.desde ?? iso(hoy.getFullYear(), 0)).slice(0, 4)));
+  /* Qué extremo se está eligiendo. Con los dos puestos, el siguiente clic
+     reinicia: es lo que espera quien vuelve a abrir para cambiar el rango. */
+  const [toca, setToca] = useState<'desde' | 'hasta'>(valor.desde && !valor.hasta ? 'hasta' : 'desde');
+
+  const d = orden(valor.desde), h = orden(valor.hasta);
+
+  function elegir(m: number) {
+    const v = iso(ano, m);
+    if (toca === 'desde') {
+      onChange({ desde: v, hasta: undefined });
+      setToca('hasta');
+      return;
+    }
+    /* Si el segundo clic cae antes del primero, se ordenan solos en vez de
+       rechazar el clic: la persona ya dijo qué dos meses quiere. */
+    const a = valor.desde!, b = v;
+    const [x, y] = (orden(a)! <= orden(b)!) ? [a, b] : [b, a];
+    onChange({ desde: x, hasta: y });
+    setToca('desde');
+    cerrar();
+  }
+
+  const estado = (m: number): 'extremo' | 'dentro' | 'fuera' => {
+    const n = ano * 12 + m;
+    if (n === d || n === h) return 'extremo';
+    if (d != null && h != null && n > d && n < h) return 'dentro';
+    return 'fuera';
+  };
+
+  return (
+    <div className="entra" role="dialog" aria-label="Elegir el período"
+         style={{
+           position: 'absolute', top: '100%', left: 0, marginTop: 8, zIndex: 60,
+           width: 292, padding: 14, borderRadius: 16,
+           background: 'var(--color-surface)', border: '1px solid var(--color-line)',
+           boxShadow: '0 12px 34px rgba(17,17,17,.17)'
+         }}>
+      <div className="flex items-center gap-2 mb-3">
+        <button type="button" className="b b-fan b-sm" style={{ minHeight: 28, padding: '3px 10px' }}
+                onClick={() => setAno(a => a - 1)} aria-label="Año anterior">‹</button>
+        <b className="text-[14px] font-extrabold tabular-nums mx-auto">{ano}</b>
+        <button type="button" className="b b-fan b-sm" style={{ minHeight: 28, padding: '3px 10px' }}
+                onClick={() => setAno(a => a + 1)} aria-label="Año siguiente">›</button>
+      </div>
+
+      <p className="text-[11.5px] mb-2.5" style={{ color: 'var(--color-muted)' }}>
+        {toca === 'desde'
+          ? 'Elige el mes en que empieza el período.'
+          : <>Ahora el mes en que termina. Empieza en <b>{mesCorto(valor.desde!.slice(0, 7))}</b>.</>}
+      </p>
+
+      <div className="grid grid-cols-4 gap-1.5">
+        {MESES.map((nombre, m) => {
+          const e = estado(m);
+          const esHoy = ano === hoy.getFullYear() && m === hoy.getMonth();
+          return (
+            <button key={nombre} type="button" onClick={() => elegir(m)}
+                    aria-pressed={e === 'extremo'}
+                    style={{
+                      padding: '8px 0', borderRadius: 10,
+                      fontSize: 'var(--texto-md)', fontWeight: e === 'fuera' ? 600 : 800,
+                      background: e === 'extremo' ? 'var(--color-ink)'
+                                : e === 'dentro'  ? 'color-mix(in srgb, var(--color-accent) 20%, transparent)'
+                                : 'transparent',
+                      color: e === 'extremo' ? 'var(--color-bg)' : 'var(--color-ink)',
+                      border: esHoy && e === 'fuera'
+                        ? '1px solid color-mix(in srgb, var(--color-accent) 60%, transparent)'
+                        : '1px solid transparent',
+                      transition: 'background-color .15s ease'
+                    }}
+                    title={esHoy ? 'El mes en curso' : undefined}>
+              {nombre}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--color-line)' }}>
+        <span className="text-[11.5px] tabular-nums" style={{ color: 'var(--color-faint)' }}>
+          {valor.desde ? mesCorto(valor.desde.slice(0, 7)) : '…'}
+          {' → '}
+          {valor.hasta ? mesCorto(valor.hasta.slice(0, 7)) : '…'}
+        </span>
+        <button type="button" className="b b-fan b-sm ml-auto"
+                onClick={() => { onChange({ desde: undefined, hasta: undefined }); setToca('desde'); }}>
+          Limpiar
+        </button>
+        <button type="button" className="b b-sec b-sm" onClick={cerrar}>Listo</button>
+      </div>
     </div>
   );
 }
