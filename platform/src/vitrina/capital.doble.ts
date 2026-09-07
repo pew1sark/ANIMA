@@ -446,7 +446,7 @@ export async function cargarRonda(): Promise<Ronda | null> {
   ];
   return espera({
     ronda: { id: 'r1', nombre: 'Serie semilla · sep 2026', moneda: 'USD', estado: 'abierta',
-             instrumento: 'SAFE post-money', responsable: 'Andrés',
+             instrumento: 'SAFE post-money', responsable: 'Dirección de inversiones',
              apertura: '2026-09-01', cierre_objetivo: '2027-01-31', cerrada_en: null,
              nota_uso_fondos: null, notas: null },
     proyecto: { id: 'a', nombre: '[DEMO] Club de membresía', moneda: 'USD' },
@@ -491,7 +491,7 @@ export async function cargarRonda(): Promise<Ronda | null> {
       potencial: pot, comprometido: inv, invertido: inv, probabilidad: pr,
       ponderado: Math.round(pot * pr / 100),
       ultimo_contacto: '2026-08-28', proxima_accion: 'Enviar el modelo actualizado',
-      proxima_fecha: '2026-09-20', responsable: 'Andrés'
+      proxima_fecha: '2026-09-20', responsable: 'Dirección de inversiones'
     })),
     uso_de_fondos: uof.map(([categoria, descripcion, presupuesto, utilizado], i) => ({
       id: `u${i}`, categoria, descripcion, presupuesto,
