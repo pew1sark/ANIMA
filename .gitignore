@@ -36,3 +36,10 @@ backups/
 
 # Artefactos de compilación
 *.tsbuildinfo
+
+# Datos de clientes (07-09-2026)
+# Este repositorio es PÚBLICO y se publica por GitHub Pages. Las cargas de
+# datos reales —valoraciones, EBITDA, rondas, nombres de personas— viven
+# aquí y NUNCA se versionan. El sitio donde esos datos pertenecen es la
+# base de Supabase, que es privada.
+supabase/datos-clientes/
