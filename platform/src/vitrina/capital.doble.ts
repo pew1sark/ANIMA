@@ -336,7 +336,7 @@ const SECCIONES = [
     blocks: [{ title: 'Identidad y alcance', questions: [
       { id: 'A1', q: 'Razón social y el nombre con el que trabajas',
         why: 'Encabeza los informes y da nombre a la organización',
-        example: 'Asesorías Andrés SAS / AC Capital', priority: 'bloqueante' },
+        example: 'Inversiones del Sur SAS · nombre comercial IDS Capital', priority: 'bloqueante' },
       { id: 'A2', q: '¿Administras proyectos propios o de tus clientes?',
         why: 'Define si la organización es operadora o asesora, y cómo se aíslan los datos',
         example: 'De clientes: cada uno con sus proyectos', priority: 'bloqueante' },
@@ -345,7 +345,7 @@ const SECCIONES = [
       { title: 'Quién entra', questions: [
       { id: 'A6', q: 'Personas que van a usar la plataforma: nombre, correo y qué debería poder hacer cada una',
         why: 'De aquí salen las invitaciones y los roles',
-        example: 'Andrés (todo) · analista (carga datos) · socio (solo mira)', priority: 'bloqueante' }] }] },
+        example: 'dirección (todo) · analista (carga y actualiza) · socio (solo mira)', priority: 'bloqueante' }] }] },
   { key: 'C', short: 'C. Modelo', title: 'C · EL MODELO FINANCIERO',
     intro: 'Cómo construyes hoy una proyección. Esto define cómo se traduce a la matriz mensual.',
     blocks: [{ title: 'Parámetros', questions: [
@@ -399,7 +399,7 @@ let REQS: Requisito[] = [
   ['gobierno', 'Cap table actual', 'Base para simular la dilución de una ronda antes de confirmarla.', 'XLSX', false, 'no_aplica']
 ].map(([area, name, why, format, required, status], i) => ({
   id: `r${i}`, area, name, why, format, required, status,
-  priority: required ? 'alta' : 'media', owner: i < 3 ? 'Andrés' : null,
+  priority: required ? 'alta' : 'media', owner: i < 3 ? 'Dirección de inversiones' : null,
   due_date: null, link: i === 0 ? 'https://drive.example/equipo' : null,
   comment: null, sort: i * 10
 })) as Requisito[];
