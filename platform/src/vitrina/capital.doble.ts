@@ -8,7 +8,7 @@
 
 import type {
   Panel, Filtros, Indicador, Aviso, ModeloCalculado, ModeloBreve, ProyectoBreve,
-  PortafolioBreve, Presupuesto, Levantamiento, Requisito
+  PortafolioBreve, Presupuesto, Levantamiento, Requisito, Ronda, RondaBreve, Dilucion
 } from '../services/capital.service';
 
 export type * from '../services/capital.service';
@@ -408,4 +408,135 @@ export const listarRequisitos = async (): Promise<Requisito[]> => espera(REQS);
 export const sembrarRequisitos = async () => espera(22);
 export async function actualizarRequisito(id: string, cambios: Partial<Requisito>) {
   REQS = REQS.map(r => r.id === id ? { ...r, ...cambios } : r);
+}
+
+// ------------------------------------------------------ rondas y capital
+
+export const ETAPAS: Record<string, string> = {
+  identificado: 'Identificado', contactado: 'Contactado', interesado: 'Interesado',
+  reunion: 'Reunión', informacion_enviada: 'Información enviada',
+  due_diligence: 'Due diligence', negociacion: 'Negociación',
+  comprometido: 'Comprometido', cerrado: 'Cerrado',
+  no_interesado: 'No interesado', en_pausa: 'En pausa'
+};
+
+export const listarRondas = async (): Promise<RondaBreve[]> => espera([
+  { id: 'r1', name: 'Serie semilla · sep 2026', status: 'abierta', currency: 'USD',
+    target_amount: 500000, project_id: 'a' }
+]);
+
+const PIPE: [string, string, number, number, number][] = [
+  ['Andes Capital',        'due_diligence', 150000, 70, 0],
+  ['Family office Rivera', 'negociacion',   120000, 60, 0],
+  ['Fondo Tapir',          'comprometido',  100000, 90, 100000],
+  ['Grupo Mesa',           'reunion',        80000, 30, 0],
+  ['Inversionista ángel',  'contactado',     50000, 15, 0]
+];
+
+export async function cargarRonda(): Promise<Ronda | null> {
+  const confirmado = 100000;
+  const objetivo = 500000;
+  const forecast = PIPE.reduce((s, [, , pot, pr]) => s + pot * pr / 100, 0);
+  const uof: [string, string, number, number][] = [
+    ['Desarrollo de plataforma', 'Construcción del producto.', 180000, 46000],
+    ['Marca y lanzamiento',      'Identidad y salida al mercado.', 90000, 27400],
+    ['Capital de trabajo',       'Colchón de los primeros meses.', 120000, 0],
+    ['Adquisición de miembros',  'CAC hasta el umbral de validación.', 80000, 12000],
+    ['Reserva',                  'Imprevistos.', 30000, 0]
+  ];
+  return espera({
+    ronda: { id: 'r1', nombre: 'Serie semilla · sep 2026', moneda: 'USD', estado: 'abierta',
+             instrumento: 'SAFE post-money', responsable: 'Andrés',
+             apertura: '2026-09-01', cierre_objetivo: '2027-01-31', cerrada_en: null,
+             nota_uso_fondos: null, notas: null },
+    proyecto: { id: 'a', nombre: '[DEMO] Club de membresía', moneda: 'USD' },
+    indicadores: [
+      ind('objetivo','Monto objetivo', objetivo,'dinero','Lo declarado en la ronda',
+        [['Inversionistas en la ronda', PIPE.length,'numero']]),
+      ind('confirmado','Capital confirmado', confirmado,'dinero',
+        'Suma, por inversionista, del mayor entre lo comprometido y lo ya invertido',
+        [['Ya invertido', 100000,'dinero'], ['Objetivo', objetivo,'dinero']]),
+      ind('pendiente','Capital pendiente', objetivo - confirmado,'dinero',
+        'Objetivo − capital confirmado',
+        [['Objetivo', objetivo,'dinero'], ['Confirmado', confirmado,'dinero']]),
+      ind('levantado','% levantado', 20,'porcentaje','Capital confirmado ÷ objetivo × 100',
+        [['Confirmado', confirmado,'dinero'], ['Objetivo', objetivo,'dinero']]),
+      ind('forecast','Forecast ponderado', forecast,'dinero',
+        'Σ (monto potencial × probabilidad de cierre) de cada inversionista del pipeline',
+        [['Potencial sin ponderar', 500000,'numero'], ['Inversionistas', PIPE.length,'numero']]),
+      ind('pre_money','Valoración pre-money', 2000000,'dinero',
+        'Lo que vale el proyecto antes de que entre este dinero', []),
+      ind('post_money','Valoración post-money', 2500000,'dinero','Pre-money + inversión',
+        [['Pre-money', 2000000,'dinero'], ['Objetivo', objetivo,'dinero']]),
+      ind('equity_implicito','Equity que compra el objetivo', 20,'porcentaje',
+        'Objetivo ÷ post-money × 100. Si no coincide con el equity ofrecido, uno de los dos está mal',
+        [['Equity ofrecido', 20,'porcentaje'], ['Post-money', 2500000,'dinero']]),
+      ind('uso_presupuestado','Uso de fondos presupuestado', 500000,'dinero',
+        'Suma de las categorías del uso de fondos. Tiene que cuadrar con el objetivo',
+        [['Objetivo', objetivo,'dinero'], ['Diferencia', 0,'dinero']]),
+      ind('uso_utilizado','Uso de fondos ejecutado', 85400,'dinero',
+        'Suma de lo ya gastado por categoría',
+        [['Comprometido', 85400,'dinero'], ['Presupuestado', 500000,'dinero']])
+    ],
+    pipeline: Object.entries(
+      PIPE.reduce((m, [, etapa, pot, pr]) => {
+        m[etapa] = m[etapa] ?? { n: 0, pot: 0, pond: 0 };
+        m[etapa]!.n++; m[etapa]!.pot += pot; m[etapa]!.pond += pot * pr / 100;
+        return m;
+      }, {} as Record<string, { n: number; pot: number; pond: number }>)
+    ).map(([etapa, v], i) => ({ etapa, orden: i + 1, inversionistas: v.n,
+        potencial: v.pot, comprometido: 0, ponderado: v.pond })),
+    inversionistas: PIPE.map(([nombre, etapa, pot, pr, inv], i) => ({
+      id: `c${i}`, nombre, tipo: 'fondo', pais: 'CO', etapa,
+      potencial: pot, comprometido: inv, invertido: inv, probabilidad: pr,
+      ponderado: Math.round(pot * pr / 100),
+      ultimo_contacto: '2026-08-28', proxima_accion: 'Enviar el modelo actualizado',
+      proxima_fecha: '2026-09-20', responsable: 'Andrés'
+    })),
+    uso_de_fondos: uof.map(([categoria, descripcion, presupuesto, utilizado], i) => ({
+      id: `u${i}`, categoria, descripcion, presupuesto,
+      pct: Math.round(presupuesto / objetivo * 1000) / 10,
+      comprometido: utilizado, utilizado, saldo: presupuesto - utilizado,
+      proveedor: null, evidencia: null, fecha: null
+    })),
+    avisos: [
+      { clave: 'sin_fecha_de_cierre', nivel: 'aviso',
+        titulo: 'Hay compromisos sin monto',
+        detalle: 'Un inversionista marcado como comprometido y con cero no suma al capital confirmado.' }
+    ]
+  } as Ronda);
+}
+
+export async function simularDilucion(_r: string, monto?: number): Promise<Dilucion> {
+  const pre = 2000000;
+  const m = monto ?? 100000;
+  const post = pre + m;
+  const factor = pre / post;
+  const socios = [
+    { socio: 'Fundadores', tipo: 'fundador', pct: 70, invertido: 0 },
+    { socio: 'Socio operador', tipo: 'fundador', pct: 20, invertido: 50000 },
+    { socio: 'Pool del equipo', tipo: 'equipo', pct: 10, invertido: 0 }
+  ];
+  return espera({
+    ronda: { id: 'r1', nombre: 'Serie semilla · sep 2026', moneda: 'USD' },
+    supuesto: { monto: m, origen: monto ? 'monto indicado a mano' : 'lo confirmado hasta hoy' },
+    indicadores: [
+      ind('pre_money','Pre-money', pre,'dinero','Lo que vale el proyecto antes de que entre el dinero', []),
+      ind('inversion','Inversión simulada', m,'dinero','El monto con el que se simula la entrada', []),
+      ind('post_money','Post-money', post,'dinero','Pre-money + inversión',
+        [['Pre-money', pre,'dinero'], ['Inversión', m,'dinero']]),
+      ind('entrante','% del nuevo inversionista', +(m / post * 100).toFixed(4),'porcentaje',
+        'Inversión ÷ post-money × 100', [['Inversión', m,'dinero'], ['Post-money', post,'dinero']]),
+      ind('factor','Factor de dilución', +(factor * 100).toFixed(2),'porcentaje',
+        'Pre-money ÷ post-money. Cada socio actual conserva este porcentaje de lo que tenía',
+        [['Pre-money', pre,'dinero'], ['Post-money', post,'dinero']])
+    ],
+    socios: socios.map(s => ({
+      socio: s.socio, tipo: s.tipo, antes: s.pct,
+      despues: +(s.pct * factor).toFixed(4),
+      dilucion: +(s.pct - s.pct * factor).toFixed(4),
+      invertido: s.invertido, derechos: null
+    })),
+    aviso: null
+  } as Dilucion);
 }

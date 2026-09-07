@@ -832,6 +832,91 @@ const PRIORIDAD_REQUISITO: Opcion[] = [
   { valor: 'baja',  nombre: 'Baja',  tono: 'neutro' }
 ];
 
+
+// ---- Fase 2 · capital ----
+
+const ESTADO_RONDA: Opcion[] = [
+  { valor: 'preparacion',          nombre: 'Preparación',      tono: 'neutro' },
+  { valor: 'abierta',              nombre: 'Abierta',          tono: 'acento' },
+  { valor: 'comprometida_parcial', nombre: 'Capital parcial',  tono: 'aviso'  },
+  { valor: 'cerrada',              nombre: 'Cerrada',          tono: 'ok'     },
+  { valor: 'pausada',              nombre: 'Pausada',          tono: 'malo'   },
+  { valor: 'cancelada',            nombre: 'Cancelada',        tono: 'malo'   }
+];
+
+/* El pipeline del encargo, en el orden en que ocurre. El orden importa más
+   que los nombres: es lo que hace que el tablero se lea de izquierda a
+   derecha como avanza una conversación. */
+const ETAPA_INVERSIONISTA: Opcion[] = [
+  { valor: 'identificado',        nombre: 'Identificado',        tono: 'neutro' },
+  { valor: 'contactado',          nombre: 'Contactado',          tono: 'neutro' },
+  { valor: 'interesado',          nombre: 'Interesado',          tono: 'acento' },
+  { valor: 'reunion',             nombre: 'Reunión',             tono: 'acento' },
+  { valor: 'informacion_enviada', nombre: 'Información enviada', tono: 'acento' },
+  { valor: 'due_diligence',       nombre: 'Due diligence',       tono: 'aviso'  },
+  { valor: 'negociacion',         nombre: 'Negociación',         tono: 'aviso'  },
+  { valor: 'comprometido',        nombre: 'Comprometido',        tono: 'ok'     },
+  { valor: 'cerrado',             nombre: 'Cerrado',             tono: 'ok'     },
+  { valor: 'no_interesado',       nombre: 'No interesado',       tono: 'malo'   },
+  { valor: 'en_pausa',            nombre: 'En pausa',            tono: 'neutro' }
+];
+
+const TIPO_INVERSIONISTA: Opcion[] = [
+  { valor: 'persona',      nombre: 'Persona' },
+  { valor: 'family_office',nombre: 'Family office' },
+  { valor: 'fondo',        nombre: 'Fondo' },
+  { valor: 'corporativo',  nombre: 'Corporativo' },
+  { valor: 'institucion',  nombre: 'Institución' },
+  { valor: 'club',         nombre: 'Club de inversión' },
+  { valor: 'otro',         nombre: 'Otro' }
+];
+
+const TIPO_SOCIO: Opcion[] = [
+  { valor: 'fundador',     nombre: 'Fundador' },
+  { valor: 'inversionista',nombre: 'Inversionista' },
+  { valor: 'equipo',       nombre: 'Equipo (pool)' },
+  { valor: 'asesor',       nombre: 'Asesor' },
+  { valor: 'otro',         nombre: 'Otro' }
+];
+
+const TIPO_INTERACCION: Opcion[] = [
+  { valor: 'reunion',  nombre: 'Reunión' },
+  { valor: 'llamada',  nombre: 'Llamada' },
+  { valor: 'correo',   nombre: 'Correo' },
+  { valor: 'envio',    nombre: 'Envío de información' },
+  { valor: 'visita',   nombre: 'Visita' },
+  { valor: 'otro',     nombre: 'Otro' }
+];
+
+const CATEGORIA_RIESGO: Opcion[] = [
+  { valor: 'financiero',  nombre: 'Financiero' },
+  { valor: 'operacional', nombre: 'Operacional' },
+  { valor: 'comercial',   nombre: 'Comercial' },
+  { valor: 'legal',       nombre: 'Legal' },
+  { valor: 'tributario',  nombre: 'Tributario' },
+  { valor: 'laboral',     nombre: 'Laboral' },
+  { valor: 'tecnologico', nombre: 'Tecnológico' },
+  { valor: 'reputacional',nombre: 'Reputacional' },
+  { valor: 'estrategico', nombre: 'Estratégico' },
+  { valor: 'gobierno',    nombre: 'Gobierno corporativo' }
+];
+
+const ESCALA_1_5: Opcion[] = [
+  { valor: '1', nombre: '1 · Muy baja',  tono: 'ok'     },
+  { valor: '2', nombre: '2 · Baja',      tono: 'ok'     },
+  { valor: '3', nombre: '3 · Media',     tono: 'aviso'  },
+  { valor: '4', nombre: '4 · Alta',      tono: 'malo'   },
+  { valor: '5', nombre: '5 · Muy alta',  tono: 'malo'   }
+];
+
+const ESTADO_RIESGO: Opcion[] = [
+  { valor: 'abierto',   nombre: 'Abierto',   tono: 'malo'   },
+  { valor: 'mitigando', nombre: 'Mitigando', tono: 'aviso'  },
+  { valor: 'controlado',nombre: 'Controlado',tono: 'ok'     },
+  { valor: 'cerrado',   nombre: 'Cerrado',   tono: 'neutro' },
+  { valor: 'aceptado',  nombre: 'Aceptado',  tono: 'neutro' }
+];
+
 export const PORTAFOLIOS: Esquema = {
   tabla: 'ci_portfolios',
   titulo: 'Portafolios', singular: 'Portafolio', principal: 'name',
@@ -1065,6 +1150,205 @@ export const REQUISITOS: Esquema = {
   orden: { campo: 'sort', asc: true }
 };
 
+
+// ------------------------------------------- capital · rondas e inversionistas
+
+export const RONDAS: Esquema = {
+  tabla: 'ci_capital_rounds',
+  titulo: 'Rondas', singular: 'Ronda', femenino: true, principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Una ronda es el proceso por el que entra el capital de un proyecto: monto, fechas, instrumento y quién se compromete.',
+  campos: [
+    { key: 'name',       label: 'Ronda',    tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(190px,2fr)' },
+    { key: 'project_id', label: 'Proyecto', tipo: 'relacion', requerido: true, enTabla: true, ancho: 'minmax(160px,1fr)',
+      relacion: { tabla: 'ci_projects', etiqueta: 'name' } },
+    { key: 'status',     label: 'Estado',   tipo: 'seleccion', opciones: ESTADO_RONDA,
+      enTabla: true, enLinea: true, ancho: '160px', porDefecto: 'preparacion' },
+    { key: 'target_amount', label: 'Objetivo', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '140px', porDefecto: 0 },
+    { key: 'target_close_date', label: 'Cierre objetivo', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '140px' },
+    { key: 'owner',      label: 'Responsable', tipo: 'texto', enTabla: true, enLinea: true, ancho: '140px' },
+
+    { key: 'currency',   grupo: 'Condiciones', label: 'Moneda', tipo: 'texto', porDefecto: 'USD' },
+    { key: 'instrument', grupo: 'Condiciones', label: 'Instrumento', tipo: 'texto',
+      ayuda: 'Equity, SAFE, nota convertible, deuda…' },
+    { key: 'equity_offered_pct', grupo: 'Valoración', label: 'Participación ofrecida (%)', tipo: 'numero',
+      ayuda: 'Tiene que dar lo mismo que objetivo ÷ post-money.' },
+    { key: 'pre_money',  grupo: 'Valoración', label: 'Pre-money',  tipo: 'moneda' },
+    { key: 'post_money', grupo: 'Valoración', label: 'Post-money', tipo: 'moneda',
+      ayuda: 'Pre-money + objetivo.' },
+    { key: 'open_date',  grupo: 'Fechas', label: 'Apertura',  tipo: 'fecha' },
+    { key: 'closed_date',grupo: 'Fechas', label: 'Cerrada el', tipo: 'fecha' },
+    { key: 'use_of_funds_note', grupo: 'Notas', label: 'Nota sobre el uso de fondos', tipo: 'texto-largo' },
+    { key: 'notes',      grupo: 'Notas', label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'created_at', asc: false }
+};
+
+export const USO_DE_FONDOS: Esquema = {
+  tabla: 'ci_use_of_funds',
+  titulo: 'Uso de fondos', singular: 'Partida', femenino: true, principal: 'category',
+  nivelEscritura: 60,
+  vacio: 'En qué se reparte el dinero de una ronda. Es la primera pregunta de cualquier inversionista.',
+  campos: [
+    { key: 'category',  label: 'Categoría', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(170px,2fr)' },
+    { key: 'round_id',  label: 'Ronda',     tipo: 'relacion', requerido: true, enTabla: true, ancho: 'minmax(150px,1fr)',
+      relacion: { tabla: 'ci_capital_rounds', etiqueta: 'name' } },
+    { key: 'budget_amount',    label: 'Presupuesto',  tipo: 'moneda', enTabla: true, enLinea: true, ancho: '130px', porDefecto: 0 },
+    { key: 'committed_amount', label: 'Comprometido', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '130px', porDefecto: 0 },
+    { key: 'used_amount',      label: 'Utilizado',    tipo: 'moneda', enTabla: true, enLinea: true, ancho: '130px', porDefecto: 0 },
+    { key: 'spent_at',  label: 'Fecha',     tipo: 'fecha', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'project_id', grupo: 'A qué pertenece', label: 'Proyecto', tipo: 'relacion', requerido: true,
+      relacion: { tabla: 'ci_projects', etiqueta: 'name' } },
+    { key: 'milestone_id', grupo: 'A qué pertenece', label: 'Hito relacionado', tipo: 'relacion',
+      relacion: { tabla: 'ci_milestones', etiqueta: 'name' } },
+    { key: 'supplier',     grupo: 'Respaldo', label: 'Proveedor', tipo: 'texto' },
+    { key: 'evidence_url', grupo: 'Respaldo', label: 'Evidencia (enlace)', tipo: 'texto' },
+    { key: 'description',  label: 'Descripción', tipo: 'texto-largo' },
+    { key: 'sort',         grupo: 'Respaldo', label: 'Orden', tipo: 'entero', porDefecto: 0 }
+  ],
+  orden: { campo: 'sort', asc: true }
+};
+
+/* Los inversionistas son de la ORGANIZACIÓN y no de un proyecto: el mismo
+   fondo puede mirar tres proyectos de la misma firma, y su tesis y su ticket
+   son los mismos en los tres. La etapa, en cambio, vive en el compromiso —
+   puede estar en due diligence de uno y sin contestar en otro. */
+export const INVERSIONISTAS: Esquema = {
+  tabla: 'ci_investors',
+  titulo: 'Inversionistas', singular: 'Inversionista', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'La libreta de contactos de la firma: quién invierte, en qué cree y de qué tamaño es su ticket.',
+  campos: [
+    { key: 'name',    label: 'Nombre', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'kind',    label: 'Tipo',   tipo: 'seleccion', opciones: TIPO_INVERSIONISTA,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'persona' },
+    { key: 'country', label: 'País',   tipo: 'texto', enTabla: true, enLinea: true, ancho: '100px' },
+    { key: 'ticket_min', label: 'Ticket mín.', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'ticket_max', label: 'Ticket máx.', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'owner',   label: 'Responsable', tipo: 'texto', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'contact_name', grupo: 'Contacto', label: 'Persona de contacto', tipo: 'texto' },
+    { key: 'email',   grupo: 'Contacto', label: 'Correo',   tipo: 'texto' },
+    { key: 'phone',   grupo: 'Contacto', label: 'Teléfono', tipo: 'texto' },
+    { key: 'thesis',  grupo: 'Qué busca', label: 'Tesis de inversión', tipo: 'texto-largo' },
+    { key: 'sectors', grupo: 'Qué busca', label: 'Sectores de interés', tipo: 'texto' },
+    { key: 'currency',grupo: 'Qué busca', label: 'Moneda del ticket', tipo: 'texto', porDefecto: 'USD' },
+    { key: 'status',  grupo: 'Qué busca', label: 'Estado', tipo: 'seleccion', opciones: ESTADO, porDefecto: 'activo' },
+    { key: 'notes',   label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'kind',
+  orden: { campo: 'name', asc: true }
+};
+
+export const PIPELINE_INVERSIONISTAS: Esquema = {
+  tabla: 'ci_investor_commitments',
+  titulo: 'Pipeline', singular: 'Compromiso', principal: 'stage',
+  nivelEscritura: 60,
+  vacio: 'Un inversionista dentro de una ronda: en qué etapa está, cuánto podría poner y con qué probabilidad. De aquí sale el forecast ponderado.',
+  campos: [
+    { key: 'investor_id', label: 'Inversionista', tipo: 'relacion', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)',
+      relacion: { tabla: 'ci_investors', etiqueta: 'name' } },
+    { key: 'stage',       label: 'Etapa', tipo: 'seleccion', opciones: ETAPA_INVERSIONISTA,
+      enTabla: true, enLinea: true, ancho: '170px', porDefecto: 'identificado' },
+    { key: 'round_id',    label: 'Ronda', tipo: 'relacion', enTabla: true, ancho: 'minmax(150px,1fr)',
+      relacion: { tabla: 'ci_capital_rounds', etiqueta: 'name' } },
+    { key: 'potential_amount', label: 'Potencial',   tipo: 'moneda', enTabla: true, enLinea: true, ancho: '130px', porDefecto: 0 },
+    { key: 'probability_pct',  label: 'Probabilidad %', tipo: 'numero', enTabla: true, enLinea: true, ancho: '130px', porDefecto: 0,
+      ayuda: 'El forecast ponderado es potencial × probabilidad.' },
+    { key: 'committed_amount', label: 'Comprometido', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '130px', porDefecto: 0 },
+    { key: 'next_action_date', label: 'Próxima acción', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '140px' },
+    { key: 'project_id',  grupo: 'A qué pertenece', label: 'Proyecto', tipo: 'relacion', requerido: true,
+      relacion: { tabla: 'ci_projects', etiqueta: 'name' } },
+    { key: 'invested_amount', grupo: 'Dinero', label: 'Ya invertido', tipo: 'moneda', porDefecto: 0 },
+    { key: 'currency',    grupo: 'Dinero', label: 'Moneda', tipo: 'texto', porDefecto: 'USD' },
+    { key: 'last_contact',grupo: 'Seguimiento', label: 'Último contacto', tipo: 'fecha' },
+    { key: 'next_action', grupo: 'Seguimiento', label: 'Qué sigue', tipo: 'texto' },
+    { key: 'owner',       grupo: 'Seguimiento', label: 'Responsable', tipo: 'texto' },
+    { key: 'notes',       label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'stage',
+  orden: { campo: 'potential_amount', asc: false }
+};
+
+export const INTERACCIONES: Esquema = {
+  tabla: 'ci_investor_interactions',
+  titulo: 'Bitácora', singular: 'Interacción', femenino: true, principal: 'summary',
+  nivelEscritura: 60,
+  vacio: 'Qué se habló, cuándo y qué sigue. Es lo que evita que una ronda se caiga por silencio.',
+  campos: [
+    { key: 'summary',     label: 'Qué pasó', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(220px,2fr)' },
+    { key: 'investor_id', label: 'Inversionista', tipo: 'relacion', requerido: true, enTabla: true, ancho: 'minmax(160px,1fr)',
+      relacion: { tabla: 'ci_investors', etiqueta: 'name' } },
+    { key: 'happened_at', label: 'Cuándo', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'kind',        label: 'Tipo',   tipo: 'seleccion', opciones: TIPO_INTERACCION,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'reunion' },
+    { key: 'next_action_date', label: 'Próxima', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'owner',       label: 'Responsable', tipo: 'texto', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'project_id',  grupo: 'Contexto', label: 'Proyecto', tipo: 'relacion',
+      relacion: { tabla: 'ci_projects', etiqueta: 'name' } },
+    { key: 'outcome',     grupo: 'Contexto', label: 'Resultado', tipo: 'texto-largo' },
+    { key: 'next_action', grupo: 'Contexto', label: 'Qué sigue', tipo: 'texto' }
+  ],
+  orden: { campo: 'happened_at', asc: false }
+};
+
+export const CAP_TABLE: Esquema = {
+  tabla: 'ci_shareholders',
+  titulo: 'Cap table', singular: 'Socio', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Quién tiene qué en el vehículo del proyecto, antes de la ronda. Es la base para simular la dilución.',
+  campos: [
+    { key: 'name',       label: 'Socio',    tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'project_id', label: 'Proyecto', tipo: 'relacion', requerido: true, enTabla: true, ancho: 'minmax(160px,1fr)',
+      relacion: { tabla: 'ci_projects', etiqueta: 'name' } },
+    { key: 'kind',       label: 'Tipo',     tipo: 'seleccion', opciones: TIPO_SOCIO,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'fundador' },
+    { key: 'pct',        label: 'Participación %', tipo: 'numero', enTabla: true, enLinea: true, ancho: '140px',
+      ayuda: 'La suma de todos debería dar 100.' },
+    { key: 'invested',   label: 'Inversión histórica', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '150px', porDefecto: 0 },
+    { key: 'joined_at',  label: 'Desde',    tipo: 'fecha', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'shares',     grupo: 'Detalle', label: 'Acciones o cuotas', tipo: 'numero' },
+    { key: 'currency',   grupo: 'Detalle', label: 'Moneda', tipo: 'texto', porDefecto: 'USD' },
+    { key: 'investor_id',grupo: 'Detalle', label: 'Inversionista del CRM', tipo: 'relacion',
+      relacion: { tabla: 'ci_investors', etiqueta: 'name' } },
+    { key: 'rights',     grupo: 'Detalle', label: 'Derechos especiales', tipo: 'texto-largo' },
+    { key: 'sort',       grupo: 'Detalle', label: 'Orden', tipo: 'entero', porDefecto: 0 },
+    { key: 'notes',      label: 'Notas', tipo: 'texto-largo' }
+  ],
+  orden: { campo: 'sort', asc: true }
+};
+
+/* El nivel de riesgo lo calcula la base (probabilidad × impacto) y por eso es
+   de solo lectura: una matriz donde el nivel se escribe a mano deja de ser una
+   matriz y pasa a ser una opinión con tabla. */
+export const RIESGOS: Esquema = {
+  tabla: 'ci_risks',
+  titulo: 'Riesgos', singular: 'Riesgo', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Qué puede salir mal, con qué probabilidad, con qué impacto y quién responde. Un inversionista lo pregunta siempre.',
+  campos: [
+    { key: 'name',       label: 'Riesgo',   tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(220px,2fr)' },
+    { key: 'project_id', label: 'Proyecto', tipo: 'relacion', requerido: true, enTabla: true, ancho: 'minmax(150px,1fr)',
+      relacion: { tabla: 'ci_projects', etiqueta: 'name' } },
+    { key: 'category',   label: 'Categoría', tipo: 'seleccion', opciones: CATEGORIA_RIESGO,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'operacional' },
+    { key: 'probability',label: 'Probabilidad', tipo: 'seleccion', opciones: ESCALA_1_5,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 3 },
+    { key: 'impact',     label: 'Impacto',  tipo: 'seleccion', opciones: ESCALA_1_5,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 3 },
+    { key: 'level',      label: 'Nivel',    tipo: 'entero', soloLectura: true, enTabla: true, ancho: '90px',
+      ayuda: 'Probabilidad × impacto. Lo calcula la base.' },
+    { key: 'status',     label: 'Estado',   tipo: 'seleccion', opciones: ESTADO_RIESGO,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'abierto' },
+    { key: 'owner',      label: 'Responsable', tipo: 'texto', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'review_date',grupo: 'Seguimiento', label: 'Próxima revisión', tipo: 'fecha' },
+    { key: 'mitigation', label: 'Plan de mitigación', tipo: 'texto-largo' },
+    { key: 'notes',      label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'level', asc: false }
+};
+
 /** Todo lo que el motor sabe dibujar, por módulo de la plataforma. */
 export const ESQUEMAS_POR_MODULO: Record<string, Esquema[]> = {
   crm:        [CLIENTES, DIRECCIONES, LISTAS_PRECIO],
@@ -1077,5 +1361,7 @@ export const ESQUEMAS_POR_MODULO: Record<string, Esquema[]> = {
   creator:    [PROYECTOS, COTIZACIONES],
   support:    [AVISOS],
   capital:    [PROYECTOS_CAPITAL, PORTAFOLIOS, UNIDADES_NEGOCIO, ESCENARIOS,
-               HITOS, EJECUCION, REQUISITOS, TIPOS_DE_CAMBIO]
+               HITOS, EJECUCION, RONDAS, USO_DE_FONDOS, INVERSIONISTAS,
+               PIPELINE_INVERSIONISTAS, INTERACCIONES, CAP_TABLE, RIESGOS,
+               REQUISITOS, TIPOS_DE_CAMBIO]
 };

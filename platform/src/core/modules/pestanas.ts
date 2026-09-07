@@ -32,7 +32,7 @@ export type Pestana =
   | { id: string; nombre: string; tipo: 'novedades' }
   | { id: string; nombre: string; tipo: 'analisis' }
   | { id: string; nombre: string; tipo: 'capital';
-      vista: 'levantamiento' | 'panel' | 'modelo' | 'presupuesto' };
+      vista: 'levantamiento' | 'panel' | 'modelo' | 'presupuesto' | 'ronda' };
 
 /** Los módulos cuyo resumen sabe calcular `resumen_modulo()`. */
 export const CON_RESUMEN = new Set<string>([
@@ -44,6 +44,13 @@ export const CON_RESUMEN = new Set<string>([
 const CORTO: Record<string, string> = {
   ci_business_units: 'Unidades',
   ci_requirements: 'Requisitos',
+  ci_capital_rounds: 'Rondas',
+  ci_use_of_funds: 'Uso de fondos',
+  ci_investors: 'Inversionistas',
+  ci_investor_commitments: 'Pipeline',
+  ci_investor_interactions: 'Bitácora',
+  ci_shareholders: 'Cap table',
+  ci_risks: 'Riesgos',
   ci_exchange_rates: 'Tipos de cambio',
   ci_actuals: 'Ejecución',
   opening_receivables: 'Por cobrar',
@@ -71,7 +78,8 @@ export function pestanasDe(slug: ModuleSlug, addons: string[] = []): Pestana[] {
       { id: 'levantamiento', nombre: 'Levantamiento',     tipo: 'capital', vista: 'levantamiento' },
       { id: 'panel',       nombre: 'Panel',               tipo: 'capital', vista: 'panel' },
       { id: 'modelo',      nombre: 'Modelo financiero',   tipo: 'capital', vista: 'modelo' },
-      { id: 'presupuesto', nombre: 'Presupuesto vs real', tipo: 'capital', vista: 'presupuesto' });
+      { id: 'presupuesto', nombre: 'Presupuesto vs real', tipo: 'capital', vista: 'presupuesto' },
+      { id: 'ronda',       nombre: 'Ronda de capital',    tipo: 'capital', vista: 'ronda' });
     for (const e of esquemas) {
       salida.push({ id: e.tabla, nombre: CORTO[e.tabla] ?? e.titulo, tipo: 'datos', esquema: e });
     }

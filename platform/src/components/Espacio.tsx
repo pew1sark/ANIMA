@@ -21,6 +21,7 @@ import { LevantamientoCapital } from '@/components/capital/Levantamiento';
 import { PanelCapital } from '@/components/capital/Panel';
 import { ModeloFinanciero } from '@/components/capital/Modelo';
 import { PresupuestoVsReal } from '@/components/capital/Presupuesto';
+import { RondaCapital } from '@/components/capital/Ronda';
 import { pestanasDe } from '@/core/modules/pestanas';
 import { fijarMoneda } from '@/lib/formato';
 import { Vista } from '@/components/datos/Vista';
@@ -284,6 +285,9 @@ export function Modulo({ slug, companyId, nivel, moneda, addons = [] }:
       )}
       {activa.tipo === 'capital' && activa.vista === 'presupuesto' && (
         <PresupuestoVsReal companyId={companyId} />
+      )}
+      {activa.tipo === 'capital' && activa.vista === 'ronda' && (
+        <RondaCapital companyId={companyId} puedeEditar={nivel >= 60} />
       )}
 
       {/* Cada entidad pide su nivel: pagos y compras exigen 60, el resto 40.

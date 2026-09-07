@@ -7,6 +7,7 @@ import { LevantamientoCapital } from '@/components/capital/Levantamiento';
 import { PanelCapital } from '@/components/capital/Panel';
 import { ModeloFinanciero } from '@/components/capital/Modelo';
 import { PresupuestoVsReal } from '@/components/capital/Presupuesto';
+import { RondaCapital } from '@/components/capital/Ronda';
 import { MODULES } from '@/core/modules/registry';
 
 /* La vitrina. Las cuatro pantallas de Capital Intelligence con datos falsos,
@@ -59,6 +60,7 @@ function Vitrina() {
           {activa.vista === 'panel' && <PanelCapital companyId="x" />}
           {activa.vista === 'modelo' && <ModeloFinanciero companyId="x" puedeEditar />}
           {activa.vista === 'presupuesto' && <PresupuestoVsReal companyId="x" />}
+          {activa.vista === 'ronda' && <RondaCapital companyId="x" puedeEditar />}
         </div>
       </main>
     </div>

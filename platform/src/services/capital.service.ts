@@ -204,6 +204,103 @@ export async function cargarPresupuesto(
 }
 
 
+
+// ------------------------------------------------------ rondas y capital
+
+/* La Fase 2. Todo lo que sigue calcula en la base, igual que la Fase 1: la
+   dilución de un socio no puede dar un número aquí y otro en el informe. */
+
+export interface EtapaPipeline {
+  etapa: string; orden: number;
+  inversionistas: number; potencial: number; comprometido: number; ponderado: number;
+}
+
+export interface InversionistaEnRonda {
+  id: string; nombre: string; tipo: string; pais: string | null;
+  etapa: string; potencial: number; comprometido: number; invertido: number;
+  probabilidad: number; ponderado: number;
+  ultimo_contacto: string | null; proxima_accion: string | null;
+  proxima_fecha: string | null; responsable: string | null;
+}
+
+export interface LineaUsoFondos {
+  id: string; categoria: string; descripcion: string | null;
+  presupuesto: number; pct: number | null;
+  comprometido: number; utilizado: number; saldo: number;
+  proveedor: string | null; evidencia: string | null; fecha: string | null;
+}
+
+export interface Ronda {
+  ronda: {
+    id: string; nombre: string; moneda: string; estado: string;
+    instrumento: string | null; responsable: string | null;
+    apertura: string | null; cierre_objetivo: string | null; cerrada_en: string | null;
+    nota_uso_fondos: string | null; notas: string | null;
+  };
+  proyecto: { id: string; nombre: string; moneda: string };
+  indicadores: Indicador[];
+  pipeline: EtapaPipeline[];
+  inversionistas: InversionistaEnRonda[];
+  uso_de_fondos: LineaUsoFondos[];
+  avisos: Aviso[];
+}
+
+export interface SocioDiluido {
+  socio: string; tipo: string;
+  antes: number; despues: number; dilucion: number;
+  invertido: number; derechos: string | null;
+}
+
+export interface Dilucion {
+  ronda?: { id: string; nombre: string; moneda: string };
+  supuesto?: { monto: number; origen: string };
+  indicadores?: Indicador[];
+  socios?: SocioDiluido[];
+  aviso?: string | null;
+  /** Cuando falta la pre-money no hay dilución que calcular, y se dice. */
+  error?: string;
+}
+
+export interface RondaBreve {
+  id: string; name: string; status: string; currency: string;
+  target_amount: number; project_id: string;
+}
+
+export async function listarRondas(projectId: string): Promise<RondaBreve[]> {
+  const { data, error } = await supabase
+    .from('ci_capital_rounds')
+    .select('id, name, status, currency, target_amount, project_id')
+    .eq('project_id', projectId)
+    .order('open_date', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as RondaBreve[];
+}
+
+export async function cargarRonda(roundId: string): Promise<Ronda | null> {
+  const { data, error } = await supabase.rpc('ci_ronda_calculada', { p_round: roundId });
+  if (error) throw error;
+  const d = data as Partial<Ronda> | null;
+  return d && d.ronda ? (d as Ronda) : null;
+}
+
+/** Sin monto, simula con lo confirmado; si no hay nada confirmado, con el
+ *  objetivo. Es la pregunta que se hace de verdad: «si cierro hoy, ¿cómo quedo?». */
+export async function simularDilucion(roundId: string, monto?: number): Promise<Dilucion> {
+  const { data, error } = await supabase.rpc('ci_simular_dilucion', {
+    p_round: roundId, p_monto: monto ?? null
+  });
+  if (error) throw error;
+  return (data ?? {}) as Dilucion;
+}
+
+export const ETAPAS: Record<string, string> = {
+  identificado: 'Identificado', contactado: 'Contactado', interesado: 'Interesado',
+  reunion: 'Reunión', informacion_enviada: 'Información enviada',
+  due_diligence: 'Due diligence', negociacion: 'Negociación',
+  comprometido: 'Comprometido', cerrado: 'Cerrado',
+  no_interesado: 'No interesado', en_pausa: 'En pausa'
+};
+
 // ------------------------------------------------- levantamiento y requisitos
 
 /* El cuestionario y la lista de documentos no inventan tablas: se apoyan en
