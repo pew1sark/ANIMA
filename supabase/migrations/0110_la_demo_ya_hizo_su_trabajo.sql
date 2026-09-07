@@ -1,0 +1,20 @@
+-- 0110 · La demo ya hizo su trabajo.
+--
+-- `[DEMO] Capital Intelligence` existió para dos cosas: comprobar que
+-- los cálculos daban, y ver fallar las validaciones a propósito. Las dos
+-- están hechas y verificadas. De aquí en adelante la base guarda
+-- proyectos reales de clientes reales, y cuatro proyectos inventados al
+-- lado de los suyos son una invitación a confundirse en la peor
+-- conversación posible.
+--
+-- Se va con todo lo suyo por cascada: 4 proyectos, 5 modelos, 1.393
+-- celdas, 48 movimientos reales, 22 requisitos, 1 cuestionario y 204
+-- líneas de auditoría. Ninguna otra organización la referencia.
+--
+-- Vuelve a existir replicando 0102, 0102b y 0103, que siguen en el
+-- repositorio y son idempotentes —el bloque de 0102 empieza borrando la
+-- organización si ya está—. Es la vía para volver a montarla cuando haya
+-- que enseñarle el producto a alguien.
+--
+-- Depende de 0109: sin ese arreglo, este DELETE falla.
+delete from public.companies where slug = 'demo-capital-intelligence';
