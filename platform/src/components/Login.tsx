@@ -4,11 +4,13 @@ import { Marca, Apex, ApexCompany } from '@/components/Marca';
 import { accesoService } from '@/services/acceso.service';
 import { env } from '@/config/env';
 
-type Vista = 'entrar' | 'recuperar' | 'solicitar' | 'pausa';
+type Vista = 'entrar' | 'activar' | 'recuperar' | 'solicitar' | 'pausa';
 
-/* La puerta de ANIMA TSC. Tres cosas se pueden hacer sin cuenta: entrar,
-   recuperar la contraseña y pedir acceso. Registrarse solo NO es una de ellas:
-   las cuentas se abren por invitación.
+/* La puerta de ANIMA TSC. Cuatro cosas se pueden hacer sin sesión: entrar,
+   activar una invitación, recuperar la contraseña y pedir acceso. Registrarse
+   por las buenas NO es una de ellas: las cuentas se abren por invitación, y
+   activar una no es lo mismo que crearse una —solo funciona si alguien ya te
+   dio de alta.
 
    La pantalla se parte en dos: a la izquierda ANIMA se presenta —fondo negro,
    el mismo del sitio, para que cruzar de animatsc.com a /app/ no se sienta
@@ -25,6 +27,7 @@ export function Login() {
         <div className="w-full max-w-[430px] aparece">
           <Tarjeta>
             {vista === 'entrar'    && <Entrar irA={setVista} />}
+            {vista === 'activar'   && <Activar volver={() => setVista('entrar')} irA={setVista} />}
             {vista === 'recuperar' && <Recuperar volver={() => setVista('entrar')} irA={setVista} />}
             {vista === 'solicitar' && <Solicitar volver={() => setVista('entrar')} />}
             {vista === 'pausa'     && <EnPausa volver={() => setVista('entrar')} />}
@@ -190,6 +193,14 @@ function Entrar({ irA }: { irA: (v: Vista) => void }) {
 
       <Enviar busy={busy} esperando="Entrando…">Entrar</Enviar>
 
+      <p className="text-[12.5px] text-muted text-center mt-4">
+        ¿Te invitaron y todavía no tienes contraseña?{' '}
+        <button type="button" onClick={() => irA('activar')}
+                className="font-bold text-ink hover:underline">
+          Activa tu cuenta
+        </button>
+      </p>
+
       <div className="h-px bg-line my-6" />
 
       <div className="rounded-2xl border border-accent/30 bg-accent/[.07] p-4">
@@ -218,6 +229,72 @@ const OjoCerrado = () => (
     <path d="M3 3l18 18M10.6 10.7a3 3 0 0 0 4.2 4.2M9.9 5.2A9.6 9.6 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.7A17 17 0 0 0 2 12s3.5 7 10 7a9.9 9.9 0 0 0 3.4-.6" />
   </svg>
 );
+
+// --------------------------------------------------------------- activar
+
+/* Activar una invitación.
+   ---------------------------------------------------------------------------
+   Una invitación da organización y rol; la CUENTA la crea la API de
+   administración de Supabase, con una clave que no puede vivir en el
+   navegador. Esta pantalla se lo pide a una función edge, que es quien la
+   tiene.
+
+   Contesta siempre lo mismo, exista la invitación o no. Es deliberado: si
+   dijera «no estás invitado» sería un buscador de quién sí lo está, y bastaría
+   con ir probando direcciones para averiguar quién trabaja con ANIMA. Por eso
+   el mensaje de confirmación está escrito en condicional. */
+function Activar({ volver, irA }: { volver: () => void; irA: (v: Vista) => void }) {
+  const [email, setEmail] = useState('');
+  const [enviado, setEnviado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true); setError(null);
+    try {
+      await accesoService.activarInvitacion(email);
+      setEnviado(true);
+    } catch {
+      setError('No se pudo procesar la solicitud. Inténtalo en unos minutos.');
+    } finally { setBusy(false); }
+  }
+
+  if (enviado) return (
+    <div className="aparece">
+      <Cabecera titulo="Revisa tu correo"
+        texto="Si esa dirección tiene una invitación, ya va en camino un correo para activar la cuenta. Desde ahí eliges tu contraseña y entras. Mira también en spam." />
+      <button onClick={volver} className="b b-pri b-lg b-blq">Volver a entrar</button>
+
+      <div className="mt-5 pt-4" style={{ borderTop: '1px solid var(--color-line)' }}>
+        <p className="subtitulo">
+          <b>¿No llega nada?</b> Puede que nadie te haya dado de alta todavía.
+          Aquí no se puede crear una cuenta desde cero.
+        </p>
+        <button type="button" onClick={() => irA('solicitar')} className="b b-acento b-sm mt-3">
+          Pedir acceso →
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <form onSubmit={submit}>
+      <Cabecera titulo="Activar tu cuenta"
+        texto="Si te invitaron a ANIMA, escribe el mismo correo al que te invitaron y te mandamos un enlace para elegir tu contraseña." />
+
+      <label className="etiqueta" htmlFor="correo-act">Correo</label>
+      <input id="correo-act" type="email" required autoFocus value={email}
+             onChange={e => setEmail(e.target.value)}
+             autoComplete="email" className="campo mb-5" />
+
+      {error && <Aviso tipo="mal">{error}</Aviso>}
+
+      <Enviar busy={busy} esperando="Enviando…">Enviar enlace</Enviar>
+      <button type="button" onClick={volver} className="b b-fan b-blq mt-2">Volver</button>
+    </form>
+  );
+}
 
 // ------------------------------------------------------------- recuperar
 

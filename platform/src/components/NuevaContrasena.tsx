@@ -1,11 +1,17 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '@/core/auth/AuthContext';
 import { Marca } from '@/components/Marca';
-import { accesoService } from '@/services/acceso.service';
+import { accesoService, vieneDeInvitacion, limpiarMarcaDeInvitacion } from '@/services/acceso.service';
 
 /* Se llega aquí solo desde el enlace del correo. Hay sesión, pero todavía no se
-   entra a ninguna parte: primero la contraseña nueva. */
+   entra a ninguna parte: primero la contraseña nueva.
+
+   Se llega por dos caminos distintos y conviene no confundirlos en la copia:
+   quien RECUPERA ya conocía ANIMA y perdió la llave; quien ACTIVA su
+   invitación está entrando por primera vez y no tiene ninguna contraseña que
+   «cambiar». Es la misma pantalla y el mismo paso, con otras palabras. */
 export function NuevaContrasena() {
+  const estrenando = vieneDeInvitacion();
   const { terminarRecuperacion, signOut } = useAuth();
   const [clave, setClave] = useState('');
   const [repetida, setRepetida] = useState('');
@@ -21,7 +27,7 @@ export function NuevaContrasena() {
       await accesoService.fijarContrasena(clave);
       /* Se limpia el hash del enlace para que recargar no vuelva a esta
          pantalla, y se sigue adentro con la sesión ya válida. */
-      history.replaceState(null, '', location.pathname + location.search);
+      history.replaceState(null, '', limpiarMarcaDeInvitacion());
       terminarRecuperacion();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar la contraseña.');
@@ -35,7 +41,9 @@ export function NuevaContrasena() {
         className="w-full max-w-[420px] aparece bg-surface border border-line rounded-3xl p-8
                    shadow-[0_18px_50px_rgba(0,0,0,.06)]">
         <Marca />
-        <h1 className="text-[22px] font-extrabold tracking-tight mt-7">Nueva contraseña</h1>
+        <h1 className="text-[22px] font-extrabold tracking-tight mt-7">
+          {estrenando ? 'Elige tu contraseña' : 'Nueva contraseña'}
+        </h1>
         <p className="text-[13px] text-muted mt-1.5 mb-6 leading-relaxed">
           Elige una que no uses en otra parte. Con esto entras a ANIMA TSC.
         </p>

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
+import { vieneDeInvitacion } from '@/services/acceso.service';
 import { supabase } from '@/lib/supabase';
 
 interface AuthValue {
@@ -20,7 +21,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
-  const [recuperando, setRecuperando] = useState(false);
+  /* Arranca en true si se viene del correo de invitación. Ese enlace abre una
+     sesión válida, así que sin esto la aplicación lo trataría como un ingreso
+     normal y la persona entraría SIN HABER PUESTO CONTRASEÑA: la próxima vez
+     no podría volver. Se lee de la query, que sobrevive a supabase-js. */
+  const [recuperando, setRecuperando] = useState(vieneDeInvitacion);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setLoading(false); });

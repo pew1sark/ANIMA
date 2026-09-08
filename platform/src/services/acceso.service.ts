@@ -1,8 +1,9 @@
 import { supabase } from '@/lib/supabase';
 import { env } from '@/config/env';
 
-/* Todo lo que ocurre antes de tener sesión: recuperar la contraseña y pedir
-   acceso. Son las dos únicas cosas que alguien sin cuenta puede hacer aquí. */
+/* Todo lo que ocurre antes de tener sesión: activar una invitación, recuperar
+   la contraseña y pedir acceso. Son las tres únicas cosas que alguien sin
+   sesión puede hacer aquí. */
 
 export interface Solicitud {
   email: string;
@@ -23,6 +24,21 @@ export const accesoService = {
   async pedirEnlace(email: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: location.origin + env.sitio + 'app/'
+    });
+    if (error) throw error;
+  },
+
+  /* Convierte una invitación en cuenta. La invitación ya existe —alguien dio
+     de alta a esta persona—; lo que falta es el usuario de `auth.users`, y eso
+     solo lo crea la API de administración, con una clave que no puede vivir en
+     el navegador. Por eso pasa por una función edge.
+
+     Nunca falla hacia fuera ni distingue casos: haya invitación o no, la
+     respuesta es la misma. Contestar distinto convertiría esta pantalla en un
+     buscador de quién trabaja con ANIMA. */
+  async activarInvitacion(email: string) {
+    const { error } = await supabase.functions.invoke('activar-invitacion', {
+      body: { email: email.trim().toLowerCase() }
     });
     if (error) throw error;
   },
@@ -58,4 +74,26 @@ export const accesoService = {
 export function vieneDeRecuperacion(): boolean {
   const h = location.hash || '';
   return /type=recovery/.test(h) || /access_token=/.test(h);
+}
+
+/* ¿Volvió del correo de invitación? La marca va en la QUERY y no en el hash a
+   propósito: supabase-js lee el fragmento del enlace al arrancar y lo borra,
+   así que cualquier marcador puesto ahí sería una carrera contra la carga de
+   la aplicación. La query sobrevive, y esto se puede leer cuando haga falta.
+
+   Importa acertar: el enlace de invitación abre una sesión de verdad. Sin esta
+   señal, alguien recién invitado entraría a ANIMA sin haber puesto nunca una
+   contraseña —y no podría volver a entrar nunca más. */
+export function vieneDeInvitacion(): boolean {
+  return new URLSearchParams(location.search).get('activar') === '1';
+}
+
+/* Se llama al terminar de fijar la contraseña. Sin esto, recargar volvería a
+   la misma pantalla porque la marca sigue en la barra de direcciones. */
+export function limpiarMarcaDeInvitacion() {
+  const q = new URLSearchParams(location.search);
+  if (!q.has('activar')) return location.pathname + location.search;
+  q.delete('activar');
+  const s = q.toString();
+  return location.pathname + (s ? '?' + s : '');
 }
