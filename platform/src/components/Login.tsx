@@ -25,7 +25,7 @@ export function Login() {
         <div className="w-full max-w-[430px] aparece">
           <Tarjeta>
             {vista === 'entrar'    && <Entrar irA={setVista} />}
-            {vista === 'recuperar' && <Recuperar volver={() => setVista('entrar')} />}
+            {vista === 'recuperar' && <Recuperar volver={() => setVista('entrar')} irA={setVista} />}
             {vista === 'solicitar' && <Solicitar volver={() => setVista('entrar')} />}
             {vista === 'pausa'     && <EnPausa volver={() => setVista('entrar')} />}
           </Tarjeta>
@@ -221,7 +221,16 @@ const OjoCerrado = () => (
 
 // ------------------------------------------------------------- recuperar
 
-function Recuperar({ volver }: { volver: () => void }) {
+/* Recuperar la contraseña tiene un final ciego, y hay que decirlo.
+   `resetPasswordForEmail` NO crea usuarios, y Supabase responde éxito aunque
+   el correo no exista —a propósito: si contestara distinto, cualquiera podría
+   averiguar quién está registrado—. Como aquí se entra solo por invitación,
+   quien todavía no tiene cuenta cae justo en ese hueco: pide el enlace, lee
+   "revisa tu correo", y espera algo que nunca se envió.
+
+   No se puede arreglar contestando distinto. Sí diciéndolo en la pantalla y
+   dejando a mano la puerta que sí le corresponde. */
+function Recuperar({ volver, irA }: { volver: () => void; irA: (v: Vista) => void }) {
   const [email, setEmail] = useState('');
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -243,6 +252,16 @@ function Recuperar({ volver }: { volver: () => void }) {
       <Cabecera titulo="Revisa tu correo"
         texto="Si esa dirección tiene una cuenta en ANIMA, le enviamos un enlace para cambiar la contraseña. Mira también en spam." />
       <button onClick={volver} className="b b-pri b-lg b-blq">Volver a entrar</button>
+
+      <div className="mt-5 pt-4" style={{ borderTop: '1px solid var(--color-line)' }}>
+        <p className="subtitulo">
+          <b>¿No llega nada?</b> Puede que todavía no tengas cuenta: en ANIMA se
+          entra por invitación, y este enlace solo sirve si ya la tienes.
+        </p>
+        <button type="button" onClick={() => irA('solicitar')} className="b b-acento b-sm mt-3">
+          Pedir acceso →
+        </button>
+      </div>
     </div>
   );
 
