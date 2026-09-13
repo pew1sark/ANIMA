@@ -55,7 +55,8 @@ returns int language sql stable set search_path = public, pg_temp as $$
     else (current_date - p_ingreso)
   end;
 $$;
-grant execute on function public.rei_dias_en_mercado(date, date, text) to authenticated;
+revoke execute on function public.rei_dias_en_mercado(date, date, text) from public, anon;
+grant  execute on function public.rei_dias_en_mercado(date, date, text) to authenticated;
 
 -- ---------- BANDA Y DECISIÓN ----------
 -- El corte de las bandas es producto, no configuración: cambiarlo por
@@ -83,8 +84,13 @@ returns text language sql immutable set search_path = public, pg_temp as $$
     when 'D' then 'No continuar'
   end;
 $$;
-grant execute on function public.rei_banda(numeric)  to authenticated;
-grant execute on function public.rei_decision(text)  to authenticated;
+-- El `revoke` antes del `grant` no es ceremonia: PostgreSQL concede
+-- EXECUTE a PUBLIC por defecto, así que sin él estas dos quedan
+-- abiertas a `anon` aunque el grant nombre solo a `authenticated`.
+revoke execute on function public.rei_banda(numeric) from public, anon;
+revoke execute on function public.rei_decision(text) from public, anon;
+grant  execute on function public.rei_banda(numeric)  to authenticated;
+grant  execute on function public.rei_decision(text)  to authenticated;
 
 -- ---------- CALIFICACIÓN DE UNA OPORTUNIDAD ----------
 -- Promedio ponderado sobre los criterios ACTIVOS que fueron

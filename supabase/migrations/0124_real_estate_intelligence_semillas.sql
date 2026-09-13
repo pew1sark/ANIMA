@@ -16,13 +16,24 @@
 -- firma puede no estar de acuerdo, y para eso son editables, pero el
 -- número de partida existe.
 --
--- Las cifras que dependen del país —costo de obra por m², tarifas
--- notariales, renta, ICA— se siembran CON VALOR solo si la
--- organización está en Colombia, que es la jurisdicción de la que
--- vienen. Para cualquier otro país se crea la fila con su nombre y su
--- unidad, y el valor queda VACÍO. Sembrar una tarifa colombiana en una
--- empresa chilena sería peor que no sembrar nada: el número se vería
--- correcto y nadie tendría motivo para revisarlo.
+-- Lo demás se ata a DOS condiciones distintas, y la diferencia importa:
+--
+--   · Las tarifas tributarias y transaccionales son PORCENTAJES de una
+--     jurisdicción. Se siembran si el país es Colombia, sin importar en
+--     qué moneda consolide la organización: un 35% de renta es 35% se
+--     lleve la contabilidad en pesos o en dólares.
+--
+--   · Los costos de obra por m² son MONTOS, y un monto sin su moneda no
+--     significa nada. $2.200.000 por m² es un costo gremial razonable en
+--     pesos colombianos y un disparate en dólares. Se siembran solo si la
+--     organización consolida en COP.
+--
+-- Atar las dos cosas al país habría metido cifras en pesos en una firma
+-- colombiana que consolida en dólares —que es un caso real, no
+-- hipotético— y el número se habría visto correcto sin que nadie tuviera
+-- motivo para revisarlo. Cuando la condición no se cumple, la fila se
+-- crea con su nombre y su unidad y el valor queda VACÍO, que es lo que
+-- hace que alguien la llene.
 --
 -- Todas llevan en `source` de dónde salen y que hay que validarlas.
 -- Ninguna de estas cifras es asesoría tributaria.
@@ -49,90 +60,98 @@ create or replace function public.rei_sembrar_base_interno(
   p_company uuid, p_creado_por uuid default null)
 returns jsonb language plpgsql security definer set search_path = public, pg_temp as $$
 declare
-  v_pais text; v_co boolean; v_par int; v_cri int; v_eta int;
+  v_pais text; v_moneda text; v_co boolean; v_cop boolean;
+  v_par int; v_cri int; v_eta int;
 begin
-  select upper(coalesce(country, '')) into v_pais from public.companies where id = p_company;
+  select upper(coalesce(country, '')), upper(coalesce(currency, ''))
+    into v_pais, v_moneda
+    from public.companies where id = p_company;
   if v_pais is null then raise exception 'La organización no existe'; end if;
-  v_co := (v_pais = 'CO');
+  v_co  := (v_pais = 'CO');      -- decide las tarifas, que son porcentajes
+  v_cop := (v_moneda = 'COP');   -- decide los montos, que van en una moneda
 
   -- ---------- SUPUESTOS ----------
   insert into public.rei_parameters
     (company_id, slug, category, name, value, unit, source, notes, sort, created_by)
   select p_company, x.slug, x.categoria, x.nombre,
-         case when x.solo_co and not v_co then null else x.valor end,
+         case x.condicion
+           when 'pais_co'    then case when v_co  then x.valor end
+           when 'moneda_cop' then case when v_cop then x.valor end
+           else x.valor
+         end,
          x.unidad, x.fuente, x.nota, x.orden, p_creado_por
     from (values
       -- ---- estructuración financiera (criterio de industria) ----
-      ('wacc', 'financiero', 'Tasa de descuento / WACC objetivo', 16.0, 'pct', false,
+      ('wacc', 'financiero', 'Tasa de descuento / WACC objetivo', 16.0, 'pct', 'siempre',
        'Rango típico del sector inmobiliario 14%-20% EA según riesgo del proyecto',
        'Es la tasa con la que se descuenta el flujo para el VAN. Súbela cuando el proyecto sea más riesgoso que el promedio de la cartera.', 10),
-      ('tir_minima', 'financiero', 'TIR mínima exigida al proyecto', 20.0, 'pct', false,
+      ('tir_minima', 'financiero', 'TIR mínima exigida al proyecto', 20.0, 'pct', 'siempre',
        'Piso interno de aprobación',
        'Por debajo de esto el proyecto no pasa a estructuración, aunque el VAN sea positivo.', 20),
-      ('margen_minimo', 'financiero', 'Margen mínimo sobre ventas', 20.0, 'pct', false,
+      ('margen_minimo', 'financiero', 'Margen mínimo sobre ventas', 20.0, 'pct', 'siempre',
        'Estándar de la industria: 20%-25%',
        'Utilidad ÷ ingresos por ventas.', 30),
-      ('equilibrio_maximo', 'financiero', 'Punto de equilibrio máximo aceptable', 65.0, 'pct', false,
+      ('equilibrio_maximo', 'financiero', 'Punto de equilibrio máximo aceptable', 65.0, 'pct', 'siempre',
        'Prácticas fiduciarias',
        '% de unidades que hay que tener vendidas para iniciar obra. Cuanto más alto, más tarde arranca el proyecto.', 40),
-      ('preventas_minimas', 'financiero', 'Preventas mínimas para el punto de equilibrio', 70.0, 'pct', false,
+      ('preventas_minimas', 'financiero', 'Preventas mínimas para el punto de equilibrio', 70.0, 'pct', 'siempre',
        'Los recursos de los compradores quedan en fiducia hasta el punto de equilibrio técnico-financiero',
        'Es el % que usa la prefactibilidad para calcular cuántas unidades hay que preventar.', 50),
-      ('dscr_minimo', 'financiero', 'Cobertura mínima exigida por la banca', 1.3, 'numero', false,
+      ('dscr_minimo', 'financiero', 'Cobertura mínima exigida por la banca', 1.3, 'numero', 'siempre',
        'Cobertura de servicio de deuda típica de crédito constructor',
        'El módulo calcula un proxy de cobertura sobre el flujo. Un DSCR formal necesita el calendario de la deuda.', 60),
-      ('apalancamiento_maximo', 'financiero', 'Apalancamiento máximo (deuda / costo total)', 60.0, 'pct', false,
+      ('apalancamiento_maximo', 'financiero', 'Apalancamiento máximo (deuda / costo total)', 60.0, 'pct', 'siempre',
        'El crédito constructor suele financiar 50%-70% del costo directo',
        'Tope de deuda sobre el costo total del proyecto.', 70),
 
       -- ---- costos de obra (dependen del país y del mercado local) ----
-      ('costo_directo_vis', 'obra', 'Costo directo de construcción · VIS', 2200000.0, 'dinero_m2', true,
+      ('costo_directo_vis', 'obra', 'Costo directo de construcción · VIS', 2200000.0, 'dinero_m2', 'moneda_cop',
        'Estimado gremial Colombia — actualizar con cotización local',
        'Por m² construido. Es el insumo del que sale el costo directo de cualquier prefactibilidad de producto VIS.', 100),
-      ('costo_directo_no_vis', 'obra', 'Costo directo de construcción · No VIS', 2800000.0, 'dinero_m2', true,
+      ('costo_directo_no_vis', 'obra', 'Costo directo de construcción · No VIS', 2800000.0, 'dinero_m2', 'moneda_cop',
        'Estimado gremial Colombia — actualizar con presupuesto de obra real',
        'Por m² construido, para producto distinto de VIS.', 110),
-      ('costos_indirectos_pct', 'obra', 'Costos indirectos (% sobre costo directo)', 25.0, 'pct', false,
+      ('costos_indirectos_pct', 'obra', 'Costos indirectos (% sobre costo directo)', 25.0, 'pct', 'siempre',
        'Práctica de la industria',
        'Diseño, licencias, interventoría y administración de obra.', 120),
-      ('gastos_financieros_pct', 'obra', 'Gastos financieros (% sobre costo)', 8.0, 'pct', false,
+      ('gastos_financieros_pct', 'obra', 'Gastos financieros (% sobre costo)', 8.0, 'pct', 'siempre',
        'Práctica de la industria',
        'Intereses y comisiones de estructuración durante la construcción.', 130),
-      ('gastos_comerciales_pct', 'obra', 'Gastos comerciales (% sobre ingresos)', 6.0, 'pct', false,
+      ('gastos_comerciales_pct', 'obra', 'Gastos comerciales (% sobre ingresos)', 6.0, 'pct', 'siempre',
        'Práctica de la industria',
        'Comisiones de venta y mercadeo del proyecto.', 140),
 
       -- ---- comercial ----
-      ('comision_intermediacion', 'comercial', 'Comisión de intermediación', 3.0, 'pct', false,
+      ('comision_intermediacion', 'comercial', 'Comisión de intermediación', 3.0, 'pct', 'siempre',
        'Comisión estándar de corretaje sobre el precio de venta',
        'Con esto el panel estima el ingreso por comisión de lo vendido en el tramo.', 200),
-      ('adelanto_canon_pct', 'comercial', 'Descuento del adelanto de cánones', 15.0, 'pct', false,
+      ('adelanto_canon_pct', 'comercial', 'Descuento del adelanto de cánones', 15.0, 'pct', 'siempre',
        'Punto de partida — validar con jurídico antes de lanzar el producto',
        'Descuento implícito sobre el flujo de renta cedido. Debe cubrir el costo de fondeo, la vacancia estimada y el seguro.', 210),
 
       -- ---- tributario y transaccional (Colombia) ----
-      ('renta_sociedades', 'tributario', 'Impuesto de renta · sociedades', 35.0, 'pct', true,
+      ('renta_sociedades', 'tributario', 'Impuesto de renta · sociedades', 35.0, 'pct', 'pais_co',
        'Tarifa general — verificar vigencia y régimen aplicable',
        'No es asesoría tributaria: confirmar con el contador antes de estructurar.', 300),
-      ('retencion_venta_inmueble', 'tributario', 'Retención en la fuente por venta de inmuebles', 1.0, 'pct', true,
+      ('retencion_venta_inmueble', 'tributario', 'Retención en la fuente por venta de inmuebles', 1.0, 'pct', 'pais_co',
        'Sobre el mayor valor entre precio de venta y avalúo catastral',
        'Ajustar según UVT y notaría.', 310),
-      ('iva_construccion_vivienda', 'tributario', 'IVA a la construcción de vivienda', 0.0, 'pct', true,
+      ('iva_construccion_vivienda', 'tributario', 'IVA a la construcción de vivienda', 0.0, 'pct', 'pais_co',
        'La vivienda nueva está excluida o exenta según normativa vigente',
        'Confirmar el tratamiento para producto no VIS y comercial.', 320),
-      ('notariales_registro', 'tributario', 'Gastos notariales y de registro', 1.5, 'pct', true,
+      ('notariales_registro', 'tributario', 'Gastos notariales y de registro', 1.5, 'pct', 'pais_co',
        'Estimado combinado notaría + registro + beneficencia',
        'Sobre el valor de la escritura. Validar tarifas del departamento.', 330),
-      ('ica_municipal', 'tributario', 'Industria y comercio (ICA) municipal', 0.7, 'pct', true,
+      ('ica_municipal', 'tributario', 'Industria y comercio (ICA) municipal', 0.7, 'pct', 'pais_co',
        'Tarifa estimada para actividad inmobiliaria',
        'Confirmar la tarifa vigente del municipio.', 340),
-      ('delineacion_urbana', 'tributario', 'Delineación urbana / licencia de construcción', 1.0, 'pct', true,
+      ('delineacion_urbana', 'tributario', 'Delineación urbana / licencia de construcción', 1.0, 'pct', 'pais_co',
        'Varía por curaduría y municipio',
        'Sobre el presupuesto de obra. Presupuestar por proyecto.', 350),
-      ('comision_fiduciaria', 'tributario', 'Comisión fiduciaria de estructuración', 1.5, 'pct', true,
+      ('comision_fiduciaria', 'tributario', 'Comisión fiduciaria de estructuración', 1.5, 'pct', 'pais_co',
        'Estimado — cotizar con las fiduciarias aliadas',
        'Sobre el valor del patrimonio autónomo.', 360)
-    ) as x(slug, categoria, nombre, valor, unidad, solo_co, fuente, nota, orden)
+    ) as x(slug, categoria, nombre, valor, unidad, condicion, fuente, nota, orden)
   on conflict (company_id, slug) do nothing;
   get diagnostics v_par = row_count;
 
@@ -202,7 +221,8 @@ begin
   get diagnostics v_eta = row_count;
 
   return jsonb_build_object(
-    'pais', v_pais, 'jurisdiccion_conocida', v_co,
+    'pais', v_pais, 'moneda', v_moneda,
+    'tarifas_sembradas', v_co, 'montos_sembrados', v_cop,
     'supuestos', v_par, 'criterios', v_cri, 'etapas', v_eta);
 end $$;
 comment on function public.rei_sembrar_base_interno(uuid, uuid) is

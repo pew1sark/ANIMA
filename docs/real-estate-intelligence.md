@@ -177,15 +177,23 @@ completa lo que falte y no pisa lo ajustado, así que se puede volver a llamar
 sin pensarlo. La pantalla la ofrece desde el Panel cuando detecta que no hay
 criterios.
 
-**Qué se siembra con valor y qué se siembra vacío.** Los porcentajes de práctica
-—WACC objetivo, TIR mínima, margen mínimo, cobertura, reparto de indirectos—
-son criterio de industria y se siembran en cualquier jurisdicción. Las cifras
-que dependen del país —costo de obra por m², tarifas notariales, renta, ICA— se
-siembran **solo si la organización está en Colombia**, que es la jurisdicción de
-la que vienen. Para cualquier otro país se crea la fila con su nombre y su
-unidad, y el valor queda vacío: sembrar una tarifa colombiana en una empresa
-chilena sería peor que no sembrar nada, porque el número se vería correcto y
-nadie tendría motivo para revisarlo.
+**Qué se siembra con valor y qué se siembra vacío.** Tres condiciones, y la
+diferencia entre las dos últimas importa más de lo que parece:
+
+| Qué | Condición | Por qué |
+|---|---|---|
+| Porcentajes de práctica — WACC, TIR mínima, margen mínimo, cobertura, reparto de indirectos, comisión | **siempre** | Son criterio de industria, no de jurisdicción. |
+| Tarifas tributarias y transaccionales — renta, retención, ICA, notariales, delineación, fiduciaria | **país = CO** | Son porcentajes de una jurisdicción: un 35% de renta es 35% se consolide en pesos o en dólares. |
+| Costos de obra por m² — VIS y No VIS | **moneda = COP** | Son **montos**, y un monto sin su moneda no significa nada. $2.200.000 por m² es razonable en pesos colombianos y un disparate en dólares. |
+
+Atar las dos últimas al país habría metido cifras en pesos en una firma
+colombiana que consolida en dólares —que es un caso real, no hipotético— y el
+número se habría visto correcto sin que nadie tuviera motivo para revisarlo.
+
+Cuando la condición no se cumple, la fila se crea con su nombre y su unidad y el
+valor queda vacío. No es un hueco: es lo que hace que alguien la llene, y la
+prefactibilidad lo dice como alerta **bloqueante** («No hay costo de obra por
+m²») en vez de dictaminar sobre un supuesto que no existe.
 
 Todas llevan en `source` de dónde salen. **Ninguna de estas cifras es asesoría
 tributaria ni financiera.**
