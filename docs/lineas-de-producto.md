@@ -40,7 +40,7 @@ Desde la 0077 manda el plan: un trigger sobre `subscriptions` mantiene
 | **COMPANY** | Starter | 2 | core · crm · agenda · support |
 | | Pro | 8 | + commerce · creator · finance |
 | | Business | 25 | + operations · delivery · food |
-| | Enterprise | — | + ai |
+| | Enterprise | — | + ai · capital · realestate |
 
 **Los precios de Studio están en cero a propósito.** La estructura está lista;
 falta la decisión comercial.
@@ -53,6 +53,13 @@ empresa también arma portafolio y cotiza.
 
 Cuatro son por ahora solo de Company: `operations`, `delivery`, `food`, `ai`. Son
 los de operación física y escala.
+
+Dos más son solo de Company y solo de Enterprise: `capital` y `realestate`. Son
+los que analizan y estructuran, mientras el resto de la plataforma opera, y por
+eso son los únicos con `minLevel` 60. Van a la par —mismo plan, mismo umbral— y
+se tocan en un punto: un desarrollo inmobiliario puede apuntar a un proyecto de
+Capital Intelligence y quedarse con su modelo, su ronda y su cap table. Ver
+[`real-estate-intelligence.md`](real-estate-intelligence.md).
 
 Esa lista vive en `platform/src/core/modules/registry.ts` como campo `lines`, y es
 **informativa**: sirve para agrupar el menú. Quién ve qué lo deciden

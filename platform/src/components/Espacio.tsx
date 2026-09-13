@@ -22,6 +22,9 @@ import { PanelCapital } from '@/components/capital/Panel';
 import { ModeloFinanciero } from '@/components/capital/Modelo';
 import { PresupuestoVsReal } from '@/components/capital/Presupuesto';
 import { RondaCapital } from '@/components/capital/Ronda';
+import { PanelInmobiliario } from '@/components/inmobiliaria/Panel';
+import { CalificacionOportunidades } from '@/components/inmobiliaria/Calificacion';
+import { PrefactibilidadProyecto } from '@/components/inmobiliaria/Prefactibilidad';
 import { pestanasDe } from '@/core/modules/pestanas';
 import { fijarMoneda } from '@/lib/formato';
 import { Vista } from '@/components/datos/Vista';
@@ -288,6 +291,21 @@ export function Modulo({ slug, companyId, nivel, moneda, addons = [] }:
       )}
       {activa.tipo === 'capital' && activa.vista === 'ronda' && (
         <RondaCapital companyId={companyId} puedeEditar={nivel >= 60} />
+      )}
+
+      {/* Real Estate Intelligence trae tres propias por el mismo motivo que su
+          hermano: un panel con filtros, una MATRIZ de oportunidades por
+          criterios y una hoja de prefactibilidad con su flujo de caja. El
+          resto del módulo —desarrollos, oportunidades, inventario, demanda,
+          vehículos— sale del motor como cualquier otra entidad. */}
+      {activa.tipo === 'inmobiliaria' && activa.vista === 'panel' && (
+        <PanelInmobiliario companyId={companyId} puedeEditar={nivel >= 60} />
+      )}
+      {activa.tipo === 'inmobiliaria' && activa.vista === 'calificacion' && (
+        <CalificacionOportunidades companyId={companyId} puedeEditar={nivel >= 60} />
+      )}
+      {activa.tipo === 'inmobiliaria' && activa.vista === 'prefactibilidad' && (
+        <PrefactibilidadProyecto companyId={companyId} puedeEditar={nivel >= 60} />
       )}
 
       {/* Cada entidad pide su nivel: pagos y compras exigen 60, el resto 40.

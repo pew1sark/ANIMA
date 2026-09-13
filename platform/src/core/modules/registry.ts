@@ -132,6 +132,25 @@ export const MODULES: Record<ModuleSlug, ModuleDefinition> = {
     tablas: ['ci_portfolios', 'ci_projects', 'ci_business_units', 'ci_project_members',
              'ci_scenarios', 'ci_models', 'ci_model_lines', 'ci_model_periods',
              'ci_actuals', 'ci_milestones', 'ci_exchange_rates', 'ci_thresholds']
+  },
+
+  /* Real Estate Intelligence. El hermano de `capital`, y por eso comparte su
+     `minLevel` de 60 y su plan: los dos analizan y estructuran, mientras el
+     resto de la plataforma opera.
+
+     La diferencia con `capital` es la pregunta que responde. Allá: cuánto
+     capital hace falta, de dónde sale y cómo va contra lo prometido. Aquí: qué
+     se desarrolla, sobre qué predio, con qué demanda detrás y si el proyecto
+     se sostiene. Se tocan en un punto —un desarrollo puede apuntar a un
+     proyecto de CI— y ese puente es opcional en los dos sentidos. */
+  realestate: {
+    slug: 'realestate', name: 'Real Estate Intelligence', minLevel: 60, path: '/inmobiliaria',
+    lines: SOLO_COMPANY, zona: 'administracion',
+    cubre: 'Originación de suelo, calificación ponderada de oportunidades, prefactibilidad con TIR y VAN, estructura fiduciaria y el cruce entre la oferta en inventario y la demanda registrada.',
+    tablas: ['rei_parameters', 'rei_properties', 'rei_buyers', 'rei_opportunities',
+             'rei_criteria', 'rei_opportunity_scores', 'rei_stages', 'rei_vehicles',
+             'rei_developments', 'rei_milestones', 'rei_feasibility',
+             'rei_cashflow_periods', 'rei_rental_advances']
   }
 };
 
