@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="description" content="Cuestionario de levantamiento para la tienda web de un vivero.">
+<title>Levantamiento del vivero</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F6F8F5; --surface:#FFFFFF; --sunk:#EEF2EC; --campo:#FFFFFF;
+  --ink:#171C18; --muted:#5C655E; --faint:#8C948D;
+  --line:#DDE3DC; --line-fuerte:#C3CDC2;
+  --acento:#2F7A43; --acento-suave:#E4F0E6;
+  --clave:#A8541C; --clave-suave:#F7EBE1;
+  --serif:"Newsreader",Georgia,serif;
+  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#131614; --surface:#1A1E1B; --sunk:#20251F; --campo:#101311;
+  --ink:#E8EDE7; --muted:#A2ADA3; --faint:#78827A;
+  --line:#2C332D; --line-fuerte:#3D453E;
+  --acento:#6FBF85; --acento-suave:#1E2C21;
+  --clave:#D98A4E; --clave-suave:#2C2018;
+}}
+:root[data-theme="dark"]{
+  --ground:#131614; --surface:#1A1E1B; --sunk:#20251F; --campo:#101311;
+  --ink:#E8EDE7; --muted:#A2ADA3; --faint:#78827A;
+  --line:#2C332D; --line-fuerte:#3D453E;
+  --acento:#6FBF85; --acento-suave:#1E2C21;
+  --clave:#D98A4E; --clave-suave:#2C2018;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font:400 16px/1.6 var(--sans); -webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0; text-wrap:balance}
+p{margin:0}
+button{font:inherit; cursor:pointer}
+
+/* ---- barra de avance, pegada arriba ---- */
+.barra{position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--line)}
+.barra-in{max-width:880px; margin-inline:auto; padding:11px 20px; display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px}
+.avance{display:flex; align-items:baseline; gap:8px; font:500 13px/1 var(--mono); color:var(--muted)}
+.avance b{font-size:16px; color:var(--ink)}
+.riel{flex:1 1 130px; min-width:110px; height:5px; border-radius:99px; background:var(--sunk); overflow:hidden}
+.riel span{display:block; height:100%; width:0%; background:var(--acento); border-radius:99px; transition:width .25s ease}
+.guardado{font:400 12px/1 var(--mono); color:var(--faint); margin-left:auto; white-space:nowrap}
+.guardado.on{color:var(--acento)}
+.acciones{display:flex; gap:8px; flex-wrap:wrap}
+.btn{border:1px solid var(--line-fuerte); background:var(--surface); color:var(--ink); border-radius:3px; padding:7px 13px; font-size:13.5px; font-weight:500}
+.btn:hover{border-color:var(--acento); color:var(--acento)}
+.btn.fuerte{background:var(--acento); border-color:var(--acento); color:#fff}
+.btn.fuerte:hover{filter:brightness(1.08); color:#fff}
+.btn:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--acento); outline-offset:2px}
+
+.hoja{max-width:880px; margin-inline:auto; padding-inline:20px; padding-block:44px 90px}
+
+/* ---- portada ---- */
+header.tapa{display:flex; flex-direction:column; gap:18px; padding-bottom:30px; border-bottom:2px solid var(--line-fuerte)}
+.eyebrow{font:500 11px/1 var(--mono); letter-spacing:.15em; text-transform:uppercase; color:var(--acento)}
+h1{font:500 clamp(31px,5vw,45px)/1.1 var(--serif); letter-spacing:-.02em}
+.dek{color:var(--muted); font-size:17px; max-width:62ch}
+.comollenar{background:var(--sunk); border-left:3px solid var(--line-fuerte); border-radius:3px; padding:16px 18px; display:flex; flex-direction:column; gap:8px; max-width:68ch}
+.comollenar h3{font:600 15px/1.3 var(--sans)}
+.comollenar p{font-size:14.5px; color:var(--muted)}
+.quien{display:flex; flex-wrap:wrap; gap:14px}
+.quien label{display:flex; flex-direction:column; gap:5px; flex:1 1 210px}
+.quien span{font:500 11px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+.quien input{font:inherit; color:var(--ink); background:var(--campo); border:1px solid var(--line-fuerte); border-radius:3px; padding:9px 11px}
+
+/* ---- secciones ---- */
+section{padding-top:46px; display:flex; flex-direction:column; gap:16px; scroll-margin-top:70px}
+.sec-tit{display:flex; flex-direction:column; gap:7px; padding-bottom:4px; border-bottom:1px solid var(--line)}
+.sec-tit h2{font:500 clamp(23px,3.2vw,30px)/1.15 var(--serif); letter-spacing:-.013em}
+.sec-tit .letra{font:500 11px/1 var(--mono); letter-spacing:.15em; text-transform:uppercase; color:var(--acento)}
+.sec-tit p{color:var(--muted); font-size:15px; max-width:64ch}
+
+/* ---- preguntas ---- */
+.preguntas{display:flex; flex-direction:column; gap:12px}
+.p{background:var(--surface); border:1px solid var(--line); border-radius:3px; padding:16px 18px; display:flex; flex-direction:column; gap:9px}
+.p.lista{border-left:3px solid var(--acento)}
+.p-tit{display:flex; gap:9px; align-items:baseline; flex-wrap:wrap}
+.p-id{font:500 12px/1.5 var(--mono); color:var(--faint); flex:0 0 auto}
+.p-tit h3{font:600 15.5px/1.4 var(--sans); flex:1 1 240px}
+.pill{display:inline-block; font:500 10px/1.6 var(--mono); letter-spacing:.08em; text-transform:uppercase; padding:1px 8px; border-radius:99px; background:var(--clave-suave); color:var(--clave); white-space:nowrap}
+.why{font-size:13.5px; color:var(--muted)}
+.ej{font-size:13px; color:var(--faint); font-style:italic}
+textarea{
+  font:inherit; font-size:15px; color:var(--ink); background:var(--campo);
+  border:1px solid var(--line-fuerte); border-radius:3px; padding:10px 12px;
+  width:100%; min-height:52px; resize:vertical; overflow:hidden; line-height:1.5;
+}
+textarea::placeholder{color:var(--faint)}
+.p.hecha{border-color:var(--line-fuerte)}
+.p.hecha .p-id{color:var(--acento)}
+
+/* ---- insumos ---- */
+.insumo{background:var(--surface); border:1px solid var(--line); border-radius:3px; padding:15px 18px; display:flex; flex-wrap:wrap; gap:11px 18px; align-items:flex-start}
+.insumo-txt{flex:1 1 300px; display:flex; flex-direction:column; gap:4px}
+.insumo-txt h3{font:600 15px/1.35 var(--sans)}
+.opciones{display:flex; gap:6px; flex-wrap:wrap; flex:0 0 auto}
+.opciones label{position:relative}
+.opciones input{position:absolute; opacity:0; width:0; height:0}
+.opciones span{
+  display:inline-block; font-size:12.5px; padding:5px 11px; border-radius:99px;
+  border:1px solid var(--line-fuerte); color:var(--muted); background:var(--surface); white-space:nowrap;
+}
+.opciones input:checked+span{background:var(--acento-suave); border-color:var(--acento); color:var(--acento); font-weight:500}
+.opciones input:focus-visible+span{outline:2px solid var(--acento); outline-offset:2px}
+
+.cierre{margin-top:46px; background:var(--acento-suave); border-radius:3px; padding:22px 24px; display:flex; flex-direction:column; gap:13px}
+.cierre h2{font:500 24px/1.2 var(--serif)}
+.cierre p{color:var(--muted); font-size:15px; max-width:62ch}
+.cierre .acciones{margin-top:5px}
+footer{margin-top:40px; padding-top:22px; border-top:1px solid var(--line); color:var(--faint); font-size:13px; max-width:64ch}
+
+@media (max-width:560px){
+  .hoja{padding-block:32px 70px}
+  .barra-in{padding:8px 16px; gap:7px 12px}
+  /* En pantalla chica la barra fija no puede comerse media vista: el aviso de
+     guardado solo aparece cuando tiene algo que decir. */
+  .guardado{margin-left:auto; order:2; flex:0 0 auto; display:none}
+  .guardado.on{display:block}
+  .acciones{width:100%; order:5}
+  .btn{flex:1 1 auto; text-align:center}
+  .avance{font-size:12px}
+}
+@media print{
+  .barra,.acciones,.cierre{display:none!important}
+  body{background:#fff; color:#000; font-size:11.5pt}
+  .p,.insumo{break-inside:avoid; border-color:#bbb}
+  textarea{border-color:#bbb; min-height:auto}
+  section{padding-top:22px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="barra">
+  <div class="barra-in">
+    <div class="avance"><b id="n-hechas">0</b><span id="n-total">de 52</span></div>
+    <div class="riel"><span id="riel-fill"></span></div>
+    <div class="avance" style="font-size:12px"><span id="n-claves">0 de 33 imprescindibles</span></div>
+    <div class="acciones">
+      <button class="btn" id="btn-imprimir" type="button">Imprimir o PDF</button>
+      <button class="btn fuerte" id="btn-copiar" type="button">Copiar respuestas</button>
+    </div>
+    <span class="guardado" id="guardado">Se guarda solo en este navegador</span>
+  </div>
+</div>
+
+<div class="hoja">
+<header class="tapa">
+  <p class="eyebrow">Levantamiento · Tienda web</p>
+  <h1>Antes de armar tu tienda, cuéntanos cómo funciona el vivero</h1>
+  <p class="dek">Son 52 preguntas en 8 secciones. Cada una dice para qué sirve la respuesta, así se
+  entiende cuáles importan y cuáles puedes saltarte. Al final hay una lista de lo que vamos a
+  necesitar recibir.</p>
+  <div class="comollenar">
+    <h3>Cómo llenarlo</h3>
+    <p>No hace falta responderlo entero de una sentada ni en orden. <b>Lo que escribas se guarda solo
+    en este navegador</b>, así que puedes cerrar y volver después desde el mismo equipo. Lo marcado
+    como <span class="pill">imprescindible</span> es lo mínimo para que la tienda pueda abrir.</p>
+    <p>Donde no sepas, escribe «no sé»: también es una respuesta útil. Cuando termines —o cuando
+    quieras mandar un avance— aprieta <b>Copiar respuestas</b> arriba y pégalas en un correo o
+    WhatsApp.</p>
+  </div>
+  <div class="quien">
+    <label><span>Quién responde</span><input type="text" id="meta-quien" placeholder="Nombre y cargo"></label>
+    <label><span>Vivero</span><input type="text" id="meta-vivero" placeholder="Nombre del vivero"></label>
+    <label><span>Fecha</span><input type="text" id="meta-fecha" placeholder="13-09-2026"></label>
+  </div>
+</header>
+
+<main id="cuerpo"></main>
+
+<div class="cierre">
+  <h2>Listo, ¿y ahora?</h2>
+  <p>Aprieta <b>Copiar respuestas</b> y pégalas en un correo o un WhatsApp. Se copia todo lo escrito,
+  marcando lo que quedó en blanco, para que se vea de un vistazo qué falta. Si prefieres mandarlo en
+  papel o PDF, usa <b>Imprimir o PDF</b>.</p>
+  <div class="acciones">
+    <button class="btn fuerte" id="btn-copiar-2" type="button">Copiar respuestas</button>
+    <button class="btn" id="btn-imprimir-2" type="button">Imprimir o PDF</button>
+  </div>
+</div>
+
+<footer>
+  <p>Lo que escribes queda únicamente en este navegador hasta que lo copies y lo envíes: no se manda
+  a ninguna parte por su cuenta. Si borras los datos del navegador o abres el enlace en otro equipo,
+  empieza en blanco.</p>
+</footer>
+</div>
+<script>
+const SECCIONES=[{"l":"A","t":"EL NEGOCIO","i":"Configura la empresa, quién entra a administrar y a qué tipo de comprador le vendes.","p":[{"id":"A1","t":"Razón social, RUT y el nombre con el que te conoce la gente","w":"Encabeza la tienda, las boletas y los correos al cliente","e":"Comercial Las Araucarias SpA / Vivero Las Araucarias","k":true},{"id":"A2","t":"Dirección del vivero, comuna y región","w":"Define el punto de retiro y desde dónde se calculan los despachos","e":"Camino El Alba 1200, Colina, RM","k":true},{"id":"A3","t":"Horario de atención y teléfono o WhatsApp de contacto","w":"Va en la ficha de contacto y en la ventana de retiro","e":"Lu a Sá 9:00–18:30 · +56 9 …","k":true},{"id":"A4","t":"¿Vendes solo a público, o también a paisajistas, jardineros, municipios o empresas?","w":"Decide si hay una sola lista de precios o varias, y si hace falta un acceso mayorista","e":"Público, y unos 15 paisajistas con precio especial","k":true},{"id":"A5","t":"¿Cómo vendes hoy fuera del local? ¿WhatsApp, Instagram, Facebook, marketplace?","w":"Ese canal no se apaga el día uno: la tienda tiene que convivir con él","e":"Instagram y WhatsApp, unos 20 pedidos por semana","k":false},{"id":"A6","t":"¿Cuántos pedidos a la semana manejas hoy y de cuánto es el ticket promedio?","w":"Dimensiona la operación: no es lo mismo preparar 5 pedidos que 200","e":"20 pedidos, ticket $35.000","k":false},{"id":"A7","t":"Personas que van a administrar la tienda: nombre, correo y qué debería poder hacer cada una","w":"De aquí salen las invitaciones y los roles: no todos deben poder cambiar precios","e":"Dueña (todo) · vendedor (ve pedidos y prepara) · contador (solo mira)","k":true}]},{"l":"B","t":"EL CATÁLOGO","i":"Es la parte más larga y la que más decide. Una planta no se comporta como un producto de tienda normal.","p":[{"id":"B1","t":"Familias de productos que quieres vender online","w":"Son las categorías del menú de la tienda","e":"plantas de interior · plantas de exterior · suculentas y cactus · árboles frutales · maceteros · tierras y sustratos · fertilizantes · herramientas · riego","k":true},{"id":"B2","t":"¿Cuántos productos distintos tienes y cuántos quieres publicar para abrir?","w":"Publicar 60 productos bien hechos vende más que 400 a medias. Fija el alcance de la carga inicial","e":"unos 300 en total, abrir con 80","k":true},{"id":"B3","t":"¿Hay productos que NO quieres vender por la web?","w":"Se cargan igual para el control de stock, pero no se publican","e":"árboles sobre 2 m y palmeras: se cotizan aparte","k":false},{"id":"B4","t":"¿Cómo nombras las plantas: nombre común, científico, o los dos?","w":"Es como te va a buscar el cliente. Mucha gente busca «costilla de Adán» y no «Monstera deliciosa»","e":"Los dos, común primero","k":true},{"id":"B5","t":"¿La misma planta se vende en varios tamaños o formatos de macetero?","w":"Es la decisión técnica más cara de cambiar después: define si cada tamaño es un producto aparte o una variante del mismo","e":"Sí: Monstera en macetero 12, 20 y 30 cm, a distinto precio","k":true},{"id":"B6","t":"¿El cliente se lleva exactamente la planta de la foto, o «una similar»?","w":"Es la promesa que hace la tienda. De aquí salen los reclamos si no queda escrita","e":"Similar en tamaño y forma; la foto es referencial","k":true},{"id":"B7","t":"Tierras y sustratos: ¿en qué unidad los vendes?","w":"Litros, kilos o saco cambian el precio, el stock y sobre todo el costo de despacho","e":"sacos de 20 y 50 litros; compost por saco de 25 kg","k":true},{"id":"B8","t":"Maceteros: ¿qué datos importan para elegir uno?","w":"Son los filtros y la ficha del producto","e":"material, alto y diámetro, color, con o sin plato, si trae drenaje","k":false},{"id":"B9","t":"¿Qué le quieres contar al cliente de cada planta?","w":"Es lo que hace que compre sin preguntar por WhatsApp, y lo que más te diferencia de un marketplace","e":"luz que necesita · cada cuánto regar · interior o exterior · tamaño que alcanza · si es tóxica para gatos y perros · dificultad · si florece y cuándo","k":true},{"id":"B10","t":"¿Tienes fotos de los productos? ¿Cuántas por producto y de qué calidad?","w":"Es el cuello de botella real de toda tienda de plantas: sin fotos no hay catálogo, y una sesión de fotos toma más que programar la web","e":"Fotos de Instagram, una por planta, con fondo desordenado","k":true},{"id":"B11","t":"Estacionalidad: ¿qué productos aparecen y desaparecen según el mes?","w":"Define qué se despublica solo y qué se avisa como «vuelve en primavera»","e":"frutales a raíz desnuda solo de junio a agosto","k":false}]},{"l":"C","t":"PRECIOS, BOLETAS E IMPUESTOS","i":"Un error de IVA en el catálogo se arrastra a todos los pedidos.","p":[{"id":"C1","t":"Los precios que me vas a pasar, ¿vienen con IVA incluido o sin IVA?","w":"Define cómo se carga y cómo se muestra el precio en la tienda","e":"Con IVA incluido, como se ven en el local","k":true},{"id":"C2","t":"¿El precio de la web es el mismo del local?","w":"Si son distintos hay que decidir quién manda cuando cambian","e":"El mismo","k":false},{"id":"C3","t":"¿Precio distinto para mayoristas? ¿Desde qué cantidad o para quién?","w":"Configura las listas de precio y los precios especiales por cliente","e":"−20% a paisajistas registrados, sobre 10 unidades","k":false},{"id":"C4","t":"¿Quieres cupones, descuentos por volumen o promociones por temporada?","w":"Decide si hace falta el motor de descuentos desde el día uno","e":"Un cupón de bienvenida y 3x2 en suculentas","k":false},{"id":"C5","t":"¿Emites boleta o factura? ¿Con qué sistema lo haces hoy?","w":"Define si la tienda tiene que conectarse a facturación electrónica o si se emite a mano","e":"Boleta electrónica por el portal del SII; factura si la piden","k":true}]},{"l":"D","t":"STOCK","i":"Vender algo que ya no existe es el peor primer día posible.","p":[{"id":"D1","t":"¿Llevas control de stock hoy? ¿En qué?","w":"Marca el punto de partida: pasar de papel a stock en línea es un cambio de hábito, no solo de software","e":"En un cuaderno, y de memoria","k":true},{"id":"D2","t":"¿Quieres que la web descuente el stock sola al vender?","w":"Si nadie va a mantener el stock al día, es mejor no mostrarlo que mostrarlo mal","e":"Sí, pero avisando cuando queden menos de 3","k":true},{"id":"D3","t":"Si se vende algo que ya no hay, ¿qué prefieres que pase?","w":"Es una política, no un detalle técnico: define el correo que recibe el cliente","e":"Llamar y ofrecer otra parecida; si no, devolver el dinero","k":true},{"id":"D4","t":"¿El stock está en un solo lugar o hay bodega, segundo local o invernadero aparte?","w":"Define si hay que separar existencias por ubicación","e":"Vivero y un invernadero de propagación","k":false},{"id":"D5","t":"¿Quién va a actualizar el stock y cada cuánto?","w":"Sin una persona con nombre y una frecuencia, el stock se desactualiza en dos semanas","e":"El encargado de patio, todos los lunes","k":true}]},{"l":"E","t":"DESPACHO Y RETIRO","i":"Para un vivero esto decide el negocio: las plantas son frágiles y la tierra pesa. Un despacho mal cobrado se come el margen.","p":[{"id":"E1","t":"¿El cliente puede comprar online y retirar en el vivero?","w":"Suele ser la opción más usada y la más barata de operar","e":"Sí, al día siguiente, de 10 a 18","k":true},{"id":"E2","t":"¿A qué comunas o hasta qué radio despachas?","w":"Es la lista de zonas de despacho. Fuera de ellas la tienda no deja comprar","e":"Colina, Chicureo, Lo Barnechea, Vitacura, Las Condes","k":true},{"id":"E3","t":"¿Cómo cobras el despacho?","w":"Es la regla que más plata mueve. Si es por peso hay que cargar el peso de cada producto","e":"$5.000 en Colina, $9.000 el resto, gratis sobre $60.000","k":true},{"id":"E4","t":"¿Repartes tú o usas courier? ¿Cuál?","w":"Casi ningún courier se hace responsable de plantas vivas: eso cambia lo que se puede vender a regiones","e":"Camioneta propia en la RM; Starken solo para maceteros y semillas","k":true},{"id":"E5","t":"¿Qué productos no se pueden despachar, o solo en ciertas zonas?","w":"Evita el pedido imposible: un saco de 50 litros a otra región cuesta más el flete que el producto","e":"Árboles sobre 1,5 m y sacos de tierra: solo reparto propio","k":true},{"id":"E6","t":"¿Qué días y en qué horarios entregas?","w":"Son las ventanas que elige el cliente al comprar","e":"Martes y viernes, mañana o tarde","k":false},{"id":"E7","t":"¿Cuánto te demoras entre que entra el pedido y sale?","w":"Es el plazo que promete la tienda","e":"48 horas hábiles","k":false}]},{"l":"F","t":"PAGOS","i":"Sin medio de pago habilitado no hay tienda. Es el trámite más lento: conviene empezarlo ya.","p":[{"id":"F1","t":"¿Con qué quieres cobrar en línea?","w":"Define la integración. Cada uno tiene su comisión, su trámite y sus tiempos de depósito","e":"Webpay (Transbank), y transferencia para montos altos","k":true},{"id":"F2","t":"¿Ya tienes cuenta de comercio con alguno? ¿A nombre de qué RUT?","w":"Si no la tienes, el trámite puede tomar semanas y es lo que bloquea la salida a producción","e":"Tenemos máquina Transbank en el local, pero no Webpay web","k":true},{"id":"F3","t":"¿Aceptas transferencia con comprobante, o pago contra entrega?","w":"Son flujos manuales: alguien tiene que confirmar cada pago a mano","e":"Transferencia sí; contra entrega solo en reparto propio","k":false},{"id":"F4","t":"¿Quieres ofrecer cuotas sin interés?","w":"Se configura con el medio de pago y tiene costo para el comercio","e":"3 cuotas sobre $80.000","k":false},{"id":"F5","t":"¿Qué garantía das si la planta llega dañada o se muere?","w":"Es la política de devoluciones y va escrita en la tienda. En plantas es la duda número uno del comprador","e":"Cambio si avisa con foto dentro de 7 días","k":true}]},{"l":"G","t":"MARCA, DOMINIO Y CONTENIDO","i":"Lo que se ve. Es lo que el cliente juzga en los primeros tres segundos.","p":[{"id":"G1","t":"¿Tienes logo? ¿En qué formato?","w":"Un logo en JPG bajado de Instagram se ve mal en pantalla grande. Hace falta el original","e":"Sí, lo hizo una diseñadora, debe estar el archivo original","k":true},{"id":"G2","t":"Colores y tipografía de la marca, si están definidos","w":"Es la base visual de la tienda","e":"Verde oscuro y crudo; no hay tipografía definida","k":false},{"id":"G3","t":"¿Tienes dominio? ¿Cuál y quién lo controla?","w":"Sin acceso al dominio la tienda no se puede publicar en su dirección definitiva","e":"viverolasaraucarias.cl, lo compró un sobrino en NIC Chile","k":true},{"id":"G4","t":"¿Cómo quieres que suene? ¿Cercano, técnico, premium?","w":"Define los textos y hasta el tamaño de las fotos","e":"Cercano y que enseñe, sin parecer manual de jardinería","k":false},{"id":"G5","t":"¿Quién escribe los textos de los productos?","w":"Es el segundo cuello de botella después de las fotos. Conviene decidirlo antes, no al final","e":"Los escribo yo y me los corriges","k":true},{"id":"G6","t":"Además de la tienda, ¿qué páginas quieres?","w":"Define el mapa del sitio","e":"Quiénes somos · cómo cuidar tu planta · preguntas frecuentes · contacto con mapa","k":false},{"id":"G7","t":"¿Prestas servicios además de vender productos?","w":"Un servicio no se vende con carrito: se cotiza. Define si hace falta un formulario aparte","e":"Paisajismo y mantención mensual de jardines","k":false}]},{"l":"H","t":"OPERACIÓN, POSVENTA Y ÉXITO","i":"Qué pasa después del «pagado». Es donde las tiendas nuevas se caen.","p":[{"id":"H1","t":"Cuando entra un pedido, ¿quién se entera y cómo?","w":"Define los avisos. Un pedido que nadie ve es un cliente perdido","e":"Que llegue al WhatsApp de la dueña y al correo del vendedor","k":true},{"id":"H2","t":"Describe el camino real del pedido, desde que entra hasta que se entrega","w":"De aquí salen los estados del pedido. Tienen que calzar con lo que pasa de verdad en el patio","e":"Se imprime, el de patio junta las plantas, se revisa, se carga, sale a reparto","k":true},{"id":"H3","t":"¿Quién responde las consultas de los clientes y por dónde?","w":"Define si se integra WhatsApp o un formulario","e":"Por WhatsApp, la misma dueña","k":false},{"id":"H4","t":"¿Quieres correos automáticos al cliente?","w":"Confirmación, despacho y entrega bajan mucho las consultas","e":"Sí, confirmación y aviso de que va en camino","k":false},{"id":"H5","t":"Si en tres meses la tienda fuera un éxito, ¿en qué lo notarías?","w":"Es contra lo que se mide el trabajo. Sin esto, «terminado» es una opinión","e":"30 pedidos web al mes sin dejar de atender el local","k":true}]}];
+const INSUMOS=[{"n":"Planilla de productos","w":"Una fila por producto: nombre, categoría, tamaño o variante, precio, unidad, stock actual. Te mando la plantilla ya armada para que solo se rellene","p":"Es la carga inicial del catálogo","o":"Sí"},{"n":"Fotos de los productos","w":"Mínimo una por producto, de frente y con fondo limpio. Si no existen, hay que agendar una sesión: es lo que más demora de todo el proyecto","p":"Sin foto un producto no se vende","o":"Sí"},{"n":"Cuenta de comercio del medio de pago","w":"Webpay, Flow, Mercado Pago o el que se elija, ya aprobada y a nombre del RUT de la empresa","p":"Es lo único que no se puede apurar desde acá: el trámite lo hace el banco o la pasarela","o":"Sí"},{"n":"Acceso al dominio","w":"Usuario y clave de donde está comprado, o que quien lo controla apunte los registros que le pase","p":"Publicar la tienda en su dirección definitiva","o":"Sí"},{"n":"Datos legales de la empresa","w":"Razón social, RUT, giro, dirección comercial, teléfono y correo de contacto","p":"Van en la boleta, en los términos y en el pie del sitio","o":"Sí"},{"n":"Logo en su archivo original","w":"SVG, AI, EPS o PDF vectorial. Un PNG grande sirve; un pantallazo de Instagram no","p":"Encabezado, favicon, boletas y correos","o":"Sí"},{"n":"Comunas de despacho con su tarifa","w":"Una lista: comuna, precio, y desde qué monto es gratis si aplica","p":"Es la regla que cobra el flete en el carrito","o":"Sí"},{"n":"Política de despacho, cambios y garantía","w":"En texto simple. Si no existe, la redacto y ustedes la aprueban","p":"Obligatoria por ley del consumidor y evita reclamos","o":"Sí"},{"n":"Personas que administran, con su correo","w":"Nombre, correo y qué puede hacer cada una","p":"Son las invitaciones y los roles","o":"Sí"},{"n":"Fichas de cuidado de las plantas","w":"Luz, riego, interior o exterior, tamaño adulto, toxicidad para mascotas","p":"Es lo que diferencia la tienda de un marketplace y baja las consultas","o":"No"},{"n":"Textos de las páginas","w":"Quiénes somos, preguntas frecuentes, historia del vivero","p":"Dan confianza a quien no conoce el local","o":"No"},{"n":"Fotos del vivero y del equipo","w":"Ambiente, invernaderos, gente trabajando","p":"Portada y página de quiénes somos","o":"No"},{"n":"Listas de precio mayorista","w":"Quiénes son y qué descuento tiene cada uno","p":"Solo si se vende a paisajistas o empresas","o":"Si aplica"},{"n":"Datos de facturación electrónica","w":"Certificado digital y folios, o el sistema que usan hoy","p":"Solo si la tienda va a emitir boleta automática","o":"Si aplica"},{"n":"Convenio con courier","w":"Número de cliente y tarifas negociadas","p":"Solo si se despacha fuera del reparto propio","o":"Si aplica"},{"n":"Accesos a Google y redes","w":"Perfil de Google Business, Instagram, Facebook","p":"Aparecer en el mapa y enlazar la tienda","o":"No"}];
+
+const CLAVE_LS = 'levantamiento-vivero-v1';
+const TOTAL = SECCIONES.reduce((n,s)=>n+s.p.length,0);
+const TOTAL_CLAVES = SECCIONES.reduce((n,s)=>n+s.p.filter(q=>q.k).length,0);
+
+/* El almacenamiento del navegador puede fallar o estar bloqueado (ventana
+   privada, datos borrados). Nada de esto debe impedir usar el formulario. */
+let estado = {meta:{}, r:{}, ins:{}};
+try{
+  const crudo = localStorage.getItem(CLAVE_LS);
+  if(crudo){ const p = JSON.parse(crudo); if(p && typeof p==='object'){
+    estado = {meta:p.meta||{}, r:p.r||{}, ins:p.ins||{}};
+  }}
+}catch(e){ /* se sigue con el estado vacío */ }
+
+let hayAlmacen = true;
+try{ localStorage.setItem(CLAVE_LS+'-test','1'); localStorage.removeItem(CLAVE_LS+'-test'); }
+catch(e){ hayAlmacen = false; }
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s??'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let guardarTimer = null;
+function guardar(){
+  clearTimeout(guardarTimer);
+  guardarTimer = setTimeout(()=>{
+    if(!hayAlmacen){ marcarGuardado('No se puede guardar en este navegador'); return; }
+    try{
+      localStorage.setItem(CLAVE_LS, JSON.stringify(estado));
+      marcarGuardado('Guardado');
+    }catch(e){ marcarGuardado('No se pudo guardar'); }
+  }, 400);
+}
+let guardadoTimer = null;
+function marcarGuardado(txt){
+  const el = $('#guardado');
+  el.textContent = txt;
+  el.classList.toggle('on', txt === 'Guardado');
+  clearTimeout(guardadoTimer);
+  guardadoTimer = setTimeout(()=>{
+    el.classList.remove('on');
+    el.textContent = hayAlmacen ? 'Se guarda solo en este navegador' : 'No se puede guardar aquí';
+  }, 2200);
+}
+
+function crecer(ta){ ta.style.height='auto'; ta.style.height = Math.max(52, ta.scrollHeight+2) + 'px'; }
+
+function avance(){
+  const hechas = SECCIONES.flatMap(s=>s.p).filter(q => (estado.r[q.id]||'').trim()).length;
+  const clavesHechas = SECCIONES.flatMap(s=>s.p).filter(q => q.k && (estado.r[q.id]||'').trim()).length;
+  $('#n-hechas').textContent = hechas;
+  $('#n-total').textContent = 'de ' + TOTAL;
+  $('#n-claves').textContent = clavesHechas + ' de ' + TOTAL_CLAVES + ' imprescindibles';
+  $('#riel-fill').style.width = (TOTAL ? (hechas/TOTAL*100) : 0) + '%';
+}
+
+/* ---------- pintar ---------- */
+const cuerpo = $('#cuerpo');
+const trozos = [];
+for(const s of SECCIONES){
+  const qs = s.p.map(q => `
+    <div class="p${q.k?' lista':''}" id="p-${q.id}">
+      <div class="p-tit">
+        <span class="p-id">${esc(q.id)}</span>
+        <h3><label for="q-${q.id}">${esc(q.t)}</label></h3>
+        ${q.k?'<span class="pill">imprescindible</span>':''}
+      </div>
+      <p class="why">${esc(q.w)}</p>
+      ${q.e?`<p class="ej">Por ejemplo: ${esc(q.e)}</p>`:''}
+      <textarea id="q-${q.id}" data-q="${esc(q.id)}" rows="2" placeholder="Tu respuesta"></textarea>
+    </div>`).join('');
+  trozos.push(`
+    <section id="sec-${s.l}">
+      <div class="sec-tit">
+        <span class="letra">${esc(s.l)}</span>
+        <h2>${esc(s.t.charAt(0)+s.t.slice(1).toLowerCase())}</h2>
+        <p>${esc(s.i)}</p>
+      </div>
+      <div class="preguntas">${qs}</div>
+    </section>`);
+}
+
+const filasIns = INSUMOS.map((it,i) => {
+  const ops = [['tengo','Lo tengo'],['consigo','Lo consigo'],['naplica','No aplica']].map(([v,txt]) => `
+    <label><input type="radio" name="ins-${i}" id="ins-${i}-${v}" value="${v}"><span>${txt}</span></label>`).join('');
+  return `
+    <div class="insumo">
+      <div class="insumo-txt">
+        <h3>${esc(it.n)} ${it.o==='Sí'?'<span class="pill">imprescindible</span>':''}</h3>
+        <p class="why">${esc(it.w)}</p>
+        <p class="ej">${esc(it.p)}</p>
+      </div>
+      <div class="opciones">${ops}</div>
+    </div>`;
+}).join('');
+
+trozos.push(`
+  <section id="sec-insumos">
+    <div class="sec-tit">
+      <span class="letra">Parte 2</span>
+      <h2>Lo que vamos a necesitar recibir</h2>
+      <p>No hay que mandarlo ahora. Marca qué tienes a mano y qué habría que conseguir: con eso
+      sabemos por dónde partir y qué va a demorar.</p>
+    </div>
+    <div class="preguntas">${filasIns}</div>
+  </section>`);
+
+cuerpo.innerHTML = trozos.join('');
+
+/* ---------- rellenar con lo guardado y escuchar ---------- */
+for(const campo of ['quien','vivero','fecha']){
+  const el = document.getElementById('meta-'+campo);
+  el.value = estado.meta[campo] || '';
+  el.addEventListener('input', () => { estado.meta[campo] = el.value; guardar(); });
+}
+
+cuerpo.querySelectorAll('textarea[data-q]').forEach(ta => {
+  const id = ta.dataset.q;
+  ta.value = estado.r[id] || '';
+  crecer(ta);
+  ta.closest('.p').classList.toggle('hecha', !!ta.value.trim());
+  ta.addEventListener('input', () => {
+    estado.r[id] = ta.value;
+    crecer(ta);
+    ta.closest('.p').classList.toggle('hecha', !!ta.value.trim());
+    avance(); guardar();
+  });
+});
+
+cuerpo.querySelectorAll('.opciones input[type=radio]').forEach(r => {
+  const i = r.name.slice(4);
+  if(estado.ins[i] === r.value) r.checked = true;
+  r.addEventListener('change', () => { estado.ins[i] = r.value; guardar(); });
+});
+
+avance();
+if(!hayAlmacen) marcarGuardado('No se puede guardar aquí');
+
+/* ---------- copiar ---------- */
+function texto(){
+  const L = [];
+  L.push('LEVANTAMIENTO · TIENDA WEB DE VIVERO');
+  const m = estado.meta;
+  L.push('Responde: ' + [(m.quien||'—'), (m.vivero||'—'), (m.fecha||'—')].join(' · '));
+  const hechas = SECCIONES.flatMap(s=>s.p).filter(q => (estado.r[q.id]||'').trim()).length;
+  const ch = SECCIONES.flatMap(s=>s.p).filter(q => q.k && (estado.r[q.id]||'').trim()).length;
+  L.push(`Avance: ${hechas} de ${TOTAL} respondidas · ${ch} de ${TOTAL_CLAVES} imprescindibles`);
+  for(const s of SECCIONES){
+    L.push('', '── ' + s.l + ' · ' + s.t + ' ──');
+    for(const q of s.p){
+      const v = (estado.r[q.id]||'').trim();
+      L.push('', q.id + '. ' + q.t + (q.k ? '  [imprescindible]' : ''));
+      L.push(v ? v.split('\n').map(x=>'   '+x).join('\n') : '   — sin responder —');
+    }
+  }
+  L.push('', '── PARTE 2 · LO QUE HAY QUE RECIBIR ──');
+  const et = {tengo:'LO TENGO', consigo:'LO CONSIGO', naplica:'NO APLICA'};
+  INSUMOS.forEach((it,i) => {
+    L.push('· ' + it.n + (it.o==='Sí'?' [imprescindible]':'') + ' → ' + (et[estado.ins[i]] || 'sin marcar'));
+  });
+  return L.join('\n');
+}
+
+async function copiar(btn){
+  const t = texto();
+  const ok = () => { const p = btn.textContent; btn.textContent = 'Copiado'; setTimeout(()=>btn.textContent=p, 1800); };
+  try{
+    await navigator.clipboard.writeText(t);
+    ok(); return;
+  }catch(e){ /* sigue al plan B */ }
+  const ta = document.createElement('textarea');
+  ta.value = t;
+  ta.setAttribute('readonly','');
+  ta.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;top:auto;height:36vh;z-index:99;font:13px/1.45 var(--mono);padding:12px;border:2px solid var(--acento);border-radius:4px;background:var(--surface);color:var(--ink)';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  let copiado = false;
+  try{ copiado = document.execCommand('copy'); }catch(e){ copiado = false; }
+  if(copiado){ ta.remove(); ok(); }
+  else{
+    btn.textContent = 'Copia con Ctrl+C';
+    ta.addEventListener('blur', () => { ta.remove(); btn.textContent = 'Copiar respuestas'; }, {once:true});
+  }
+}
+
+$('#btn-copiar').addEventListener('click', e => copiar(e.currentTarget));
+$('#btn-copiar-2').addEventListener('click', e => copiar(e.currentTarget));
+$('#btn-imprimir').addEventListener('click', () => window.print());
+$('#btn-imprimir-2').addEventListener('click', () => window.print());
+</script>
+</body>
+</html>
