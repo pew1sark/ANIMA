@@ -1349,6 +1349,492 @@ export const RIESGOS: Esquema = {
   orden: { campo: 'level', asc: false }
 };
 
+/* ---------------------------------------------------------------------------
+   REAL ESTATE INTELLIGENCE
+   ---------------------------------------------------------------------------
+   Las entidades del módulo hermano de Capital Intelligence. Mismo criterio que
+   allá con los catálogos: van como `Opcion[]` y no como enums de PostgreSQL
+   porque una inmobiliaria vende lotes y cabañas y otra vende bodegas, y
+   agregar una tipología no puede exigir una migración.
+
+   Tres cosas NO están aquí y es a propósito: la prefactibilidad, su flujo de
+   caja y la matriz de calificación. El motor dibuja filas con ficha, y esas
+   tres son otra cosa —una hoja de cálculo, una curva y una matriz—; tienen su
+   propia pantalla, igual que el modelo financiero de CI. */
+
+const TIPO_INMUEBLE: Opcion[] = [
+  { valor: 'apartamento',    nombre: 'Apartamento' },
+  { valor: 'casa',           nombre: 'Casa' },
+  { valor: 'lote',           nombre: 'Lote' },
+  { valor: 'local',          nombre: 'Local' },
+  { valor: 'oficina',        nombre: 'Oficina' },
+  { valor: 'bodega',         nombre: 'Bodega' },
+  { valor: 'apartaestudio',  nombre: 'Apartaestudio' },
+  { valor: 'duplex',         nombre: 'Dúplex' },
+  { valor: 'cabana',         nombre: 'Cabaña' },
+  { valor: 'finca',          nombre: 'Finca' },
+  { valor: 'parcela',        nombre: 'Parcela' },
+  { valor: 'otro',           nombre: 'Otro' }
+];
+
+/* El estado comercial decide la tasa de cierre y la brecha: solo «disponible»
+   y «vendido» entran en ella, y los intermedios no cuentan para ninguno de los
+   dos lados. Por eso importan los valores y no solo los nombres. */
+const ESTADO_COMERCIAL: Opcion[] = [
+  { valor: 'disponible',     nombre: 'Disponible',     tono: 'ok'     },
+  { valor: 'reservado',      nombre: 'Reservado',      tono: 'acento' },
+  { valor: 'en_negociacion', nombre: 'En negociación', tono: 'acento' },
+  { valor: 'vendido',        nombre: 'Vendido',        tono: 'neutro' },
+  { valor: 'arrendado',      nombre: 'Arrendado',      tono: 'neutro' },
+  { valor: 'retirado',       nombre: 'Retirado',       tono: 'malo'   }
+];
+
+const ESTADO_LEGAL_INMUEBLE: Opcion[] = [
+  { valor: 'papeles_al_dia',  nombre: 'Papeles al día',    tono: 'ok'     },
+  { valor: 'en_proceso',      nombre: 'En proceso',        tono: 'aviso'  },
+  { valor: 'sucesion',        nombre: 'En sucesión',       tono: 'aviso'  },
+  { valor: 'hipotecado',      nombre: 'Con hipoteca',      tono: 'aviso'  },
+  { valor: 'falsa_tradicion', nombre: 'Falsa tradición',   tono: 'malo'   },
+  { valor: 'sin_escriturar',  nombre: 'Sin escriturar',    tono: 'malo'   },
+  { valor: 'por_verificar',   nombre: 'Por verificar',     tono: 'neutro' }
+];
+
+const FORMA_PAGO_INMUEBLE: Opcion[] = [
+  { valor: 'efectivo',         nombre: 'Efectivo' },
+  { valor: 'credito',          nombre: 'Crédito' },
+  { valor: 'efectivo_credito', nombre: 'Efectivo y crédito' },
+  { valor: 'permuta',          nombre: 'Permuta' },
+  { valor: 'subsidio',         nombre: 'Subsidio' },
+  { valor: 'leasing',          nombre: 'Leasing' },
+  { valor: 'mixto',            nombre: 'Mixto' }
+];
+
+const ESTADO_COMPRADOR: Opcion[] = [
+  { valor: 'activo',        nombre: 'Activo',        tono: 'ok'     },
+  { valor: 'ya_compro',     nombre: 'Ya compró',     tono: 'neutro' },
+  { valor: 'en_pausa',      nombre: 'En pausa',      tono: 'aviso'  },
+  { valor: 'no_interesado', nombre: 'No interesado', tono: 'malo'   },
+  { valor: 'sin_dato',      nombre: 'Sin dato',      tono: 'neutro' }
+];
+
+const PROCESO_COMPRADOR: Opcion[] = [
+  { valor: 'pendiente',     nombre: 'Pendiente de contactar', tono: 'neutro' },
+  { valor: 'en_busqueda',   nombre: 'En búsqueda',            tono: 'acento' },
+  { valor: 'visitas',       nombre: 'Visitando inmuebles',    tono: 'acento' },
+  { valor: 'preaprobacion', nombre: 'Preaprobación de crédito', tono: 'aviso' },
+  { valor: 'oferta',        nombre: 'Oferta presentada',      tono: 'aviso'  },
+  { valor: 'promesa',       nombre: 'Promesa firmada',        tono: 'ok'     },
+  { valor: 'escritura',     nombre: 'En escrituración',       tono: 'ok'     },
+  { valor: 'cerrado',       nombre: 'Cerrado',                tono: 'neutro' }
+];
+
+const SUBSIDIO: Opcion[] = [
+  { valor: 'no_aplica',           nombre: 'No aplica' },
+  { valor: 'mi_casa_ya',          nombre: 'Mi Casa Ya' },
+  { valor: 'jovenes_propietarios',nombre: 'Jóvenes Propietarios' },
+  { valor: 'caja_compensacion',   nombre: 'Caja de compensación' },
+  { valor: 'fna',                 nombre: 'Fondo Nacional del Ahorro' },
+  { valor: 'concurrente',         nombre: 'Subsidio concurrente' },
+  { valor: 'otro',                nombre: 'Otro' }
+];
+
+const ESTADO_OPORTUNIDAD: Opcion[] = [
+  { valor: 'identificada',  nombre: 'Identificada',   tono: 'neutro' },
+  { valor: 'evaluacion',    nombre: 'En evaluación',  tono: 'acento' },
+  { valor: 'due_diligence', nombre: 'Due diligence',  tono: 'aviso'  },
+  { valor: 'aprobada',      nombre: 'Aprobada',       tono: 'ok'     },
+  { valor: 'en_desarrollo', nombre: 'En desarrollo',  tono: 'ok'     },
+  { valor: 'en_pausa',      nombre: 'En pausa',       tono: 'aviso'  },
+  { valor: 'descartada',    nombre: 'Descartada',     tono: 'malo'   }
+];
+
+const ESTADO_TITULOS: Opcion[] = [
+  { valor: 'saneado',             nombre: 'Saneado',              tono: 'ok'     },
+  { valor: 'tramites_pendientes', nombre: 'Trámites pendientes',  tono: 'aviso'  },
+  { valor: 'gravamenes',          nombre: 'Con gravámenes',       tono: 'aviso'  },
+  { valor: 'litigio',             nombre: 'En litigio',           tono: 'malo'   },
+  { valor: 'falsa_tradicion',     nombre: 'Falsa tradición',      tono: 'malo'   },
+  { valor: 'por_verificar',       nombre: 'Por verificar',        tono: 'neutro' }
+];
+
+/* Las fases agrupan las etapas. No deciden nada —el % de avance lo da la
+   posición de la etapa— pero permiten leer el pipeline por bloques en vez de
+   por trece casillas. */
+const FASE_ETAPA: Opcion[] = [
+  { valor: 'originacion',    nombre: 'Originación',    tono: 'neutro' },
+  { valor: 'estructuracion', nombre: 'Estructuración', tono: 'acento' },
+  { valor: 'financiacion',   nombre: 'Financiación',   tono: 'aviso'  },
+  { valor: 'ejecucion',      nombre: 'Ejecución',      tono: 'ok'     },
+  { valor: 'salida',         nombre: 'Cierre',         tono: 'neutro' }
+];
+
+const TIPO_VEHICULO: Opcion[] = [
+  { valor: 'holding',                nombre: 'Matriz / holding' },
+  { valor: 'spe',                    nombre: 'Sociedad de propósito especial' },
+  { valor: 'patrimonio_autonomo',    nombre: 'Patrimonio autónomo' },
+  { valor: 'fiducia_recaudo',        nombre: 'Fiducia de recaudo' },
+  { valor: 'cuentas_participacion',  nombre: 'Cuentas en participación' },
+  { valor: 'consorcio',              nombre: 'Consorcio o unión temporal' },
+  { valor: 'otro',                   nombre: 'Otro' }
+];
+
+const ESTADO_VEHICULO: Opcion[] = [
+  { valor: 'en_constitucion', nombre: 'En constitución', tono: 'aviso'  },
+  { valor: 'constituido',     nombre: 'Constituido',     tono: 'acento' },
+  { valor: 'operando',        nombre: 'Operando',        tono: 'ok'     },
+  { valor: 'en_liquidacion',  nombre: 'En liquidación',  tono: 'aviso'  },
+  { valor: 'liquidado',       nombre: 'Liquidado',       tono: 'neutro' }
+];
+
+/* El producto decide qué costo de obra por m² usa la prefactibilidad: `vis`
+   toma el parámetro de VIS y todo lo demás el de No VIS. */
+const PRODUCTO_INMOBILIARIO: Opcion[] = [
+  { valor: 'vis',       nombre: 'VIS' },
+  { valor: 'vip',       nombre: 'VIP' },
+  { valor: 'no_vis',    nombre: 'No VIS' },
+  { valor: 'comercial', nombre: 'Comercial' },
+  { valor: 'oficinas',  nombre: 'Oficinas' },
+  { valor: 'lotes',     nombre: 'Lotes urbanizados' },
+  { valor: 'turistico', nombre: 'Turístico' },
+  { valor: 'otro',      nombre: 'Otro' }
+];
+
+const ESTADO_DESARROLLO: Opcion[] = [
+  { valor: 'activo',    nombre: 'Activo',    tono: 'ok'     },
+  { valor: 'en_pausa',  nombre: 'En pausa',  tono: 'aviso'  },
+  { valor: 'terminado', nombre: 'Terminado', tono: 'neutro' },
+  { valor: 'cancelado', nombre: 'Cancelado', tono: 'malo'   }
+];
+
+const CATEGORIA_PARAMETRO: Opcion[] = [
+  { valor: 'financiero', nombre: 'Estructuración financiera' },
+  { valor: 'obra',       nombre: 'Costos de obra' },
+  { valor: 'comercial',  nombre: 'Comercial' },
+  { valor: 'tributario', nombre: 'Tributario y transaccional' }
+];
+
+const UNIDAD_PARAMETRO: Opcion[] = [
+  { valor: 'pct',       nombre: '% (16 = 16%)' },
+  { valor: 'dinero',    nombre: 'Monto' },
+  { valor: 'dinero_m2', nombre: 'Monto por m²' },
+  { valor: 'numero',    nombre: 'Número' },
+  { valor: 'meses',     nombre: 'Meses' }
+];
+
+const ESTADO_ADELANTO: Opcion[] = [
+  { valor: 'solicitado',   nombre: 'Solicitado',   tono: 'neutro' },
+  { valor: 'en_estudio',   nombre: 'En estudio',   tono: 'acento' },
+  { valor: 'aprobado',     nombre: 'Aprobado',     tono: 'ok'     },
+  { valor: 'desembolsado', nombre: 'Desembolsado', tono: 'ok'     },
+  { valor: 'en_curso',     nombre: 'En curso',     tono: 'acento' },
+  { valor: 'liquidado',    nombre: 'Liquidado',    tono: 'neutro' },
+  { valor: 'rechazado',    nombre: 'Rechazado',    tono: 'malo'   },
+  { valor: 'cancelado',    nombre: 'Cancelado',    tono: 'malo'   }
+];
+
+/* Fondear un adelanto con dinero del público es captación masiva no
+   autorizada. Las opciones son las tres formas legales y nada más: que el
+   campo sea una lista cerrada y no texto libre es la mitad del control. */
+const FUENTE_FONDEO: Opcion[] = [
+  { valor: 'recursos_propios',       nombre: 'Recursos propios de la sociedad',  tono: 'ok'     },
+  { valor: 'cuentas_participacion',  nombre: 'Cuentas en participación',         tono: 'acento' },
+  { valor: 'inversionista_calificado', nombre: 'Inversionista calificado',       tono: 'acento' },
+  { valor: 'credito_bancario',       nombre: 'Crédito bancario',                 tono: 'neutro' }
+];
+
+const ESTADO_SEGURO: Opcion[] = [
+  { valor: 'sin_poliza', nombre: 'Sin póliza', tono: 'malo'   },
+  { valor: 'en_tramite', nombre: 'En trámite', tono: 'aviso'  },
+  { valor: 'vigente',    nombre: 'Vigente',    tono: 'ok'     },
+  { valor: 'vencida',    nombre: 'Vencida',    tono: 'malo'   }
+];
+
+export const SUPUESTOS: Esquema = {
+  tabla: 'rei_parameters',
+  titulo: 'Supuestos', singular: 'Supuesto', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Los supuestos son de dónde sale cada cifra del módulo: costo de obra por m², WACC, margen mínimo, tarifas. Ninguna fórmula lleva un número escrito adentro. Usa «Poner en marcha» en el Panel para cargar los de referencia.',
+  campos: [
+    { key: 'name',     label: 'Supuesto', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(240px,2fr)' },
+    { key: 'value',    label: 'Valor',    tipo: 'numero', enTabla: true, enLinea: true, ancho: '130px',
+      ayuda: 'Los porcentajes van en puntos: 16 significa 16%, no 0,16.' },
+    { key: 'unit',     label: 'Unidad',   tipo: 'seleccion', opciones: UNIDAD_PARAMETRO,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'pct' },
+    { key: 'category', label: 'Categoría', tipo: 'seleccion', opciones: CATEGORIA_PARAMETRO,
+      enTabla: true, enLinea: true, ancho: '180px', porDefecto: 'financiero' },
+    { key: 'slug',     grupo: 'Identidad', label: 'Llave', tipo: 'texto', requerido: true,
+      ayuda: 'Con esta llave lo busca el cálculo. Cambiarla en un supuesto que el módulo usa —wacc, costo_directo_vis, comision_intermediacion— hace que deje de encontrarlo.' },
+    { key: 'sort',     grupo: 'Identidad', label: 'Orden', tipo: 'entero', porDefecto: 0 },
+    { key: 'source',   label: 'De dónde sale', tipo: 'texto-largo',
+      ayuda: 'Ninguna de estas cifras es asesoría tributaria ni financiera: escribe aquí la fuente y quién la validó.' },
+    { key: 'notes',    label: 'Notas', tipo: 'texto-largo' }
+  ],
+  orden: { campo: 'sort', asc: true }
+};
+
+export const INVENTARIO: Esquema = {
+  tabla: 'rei_properties',
+  titulo: 'Inventario', singular: 'Inmueble', principal: 'owner_name',
+  nivelEscritura: 40,
+  vacio: 'El inventario es la base madre: de aquí salen los comparables de precio por m², la tasa de cierre y la efectividad de cada canal. Sin él, el precio de un proyecto nuevo se fija a ojo.',
+  campos: [
+    { key: 'owner_name',    label: 'Propietario', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'code',          grupo: 'Identidad', label: 'Código', tipo: 'texto', soloLectura: true,
+      ayuda: 'Lo pone el sistema al crear el inmueble.' },
+    { key: 'property_type', label: 'Tipo', tipo: 'seleccion', opciones: TIPO_INMUEBLE,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'casa' },
+    { key: 'city',          label: 'Ciudad',  tipo: 'texto', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'neighborhood',  label: 'Barrio',  tipo: 'texto', enTabla: true, enLinea: true, ancho: '140px' },
+    { key: 'area_m2',       label: 'Área m²', tipo: 'numero', enTabla: true, enLinea: true, ancho: '100px' },
+    { key: 'list_price',    label: 'Precio publicado', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'price_m2',      label: 'Precio / m²', tipo: 'moneda', enTabla: true, soloLectura: true, ancho: '140px',
+      ayuda: 'Precio publicado ÷ área. Lo calcula la base y por eso no puede quedar viejo.' },
+    { key: 'commercial_status', label: 'Estado', tipo: 'seleccion', opciones: ESTADO_COMERCIAL,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'disponible' },
+
+    { key: 'contact',    grupo: 'Contacto', label: 'Teléfono o correo', tipo: 'texto' },
+    { key: 'entry_date', grupo: 'Contacto', label: 'Fecha de ingreso', tipo: 'fecha',
+      ayuda: 'Desde aquí se cuentan los días en mercado. Sin ella, el inmueble no entra en ese promedio ni en la curva de captación.' },
+    { key: 'channel',    grupo: 'Contacto', label: 'Canal de captación', tipo: 'texto',
+      ayuda: 'Facebook, voz a voz, valla, página web… Con esto el panel mide qué canal trae y cuál cierra.' },
+
+    { key: 'appraisal',     grupo: 'Valor', label: 'Avalúo comercial', tipo: 'moneda' },
+    { key: 'legal_status',  grupo: 'Valor', label: 'Situación legal', tipo: 'seleccion', opciones: ESTADO_LEGAL_INMUEBLE },
+    { key: 'payment_terms', grupo: 'Valor', label: 'Forma de pago aceptada', tipo: 'seleccion', opciones: FORMA_PAGO_INMUEBLE },
+
+    { key: 'sale_date',  grupo: 'Cierre', label: 'Fecha de venta', tipo: 'fecha',
+      ayuda: 'Obligatoria de hecho: un inmueble marcado vendido sin esta fecha no entra en la curva mensual ni en la comisión del tramo, y el panel lo avisa.' },
+    { key: 'sale_price', grupo: 'Cierre', label: 'Precio de venta', tipo: 'moneda',
+      ayuda: 'Si no se registra, el panel usa el precio publicado para el ticket promedio.' },
+    { key: 'notes', label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'commercial_status',
+  orden: { campo: 'created_at', asc: false }
+};
+
+export const DEMANDA: Esquema = {
+  tabla: 'rei_buyers',
+  titulo: 'Demanda', singular: 'Comprador', principal: 'name',
+  nivelEscritura: 40,
+  vacio: 'La otra mitad del cruce. Lo que hace útil esta base no es el teléfono: es la tipología que busca y el presupuesto, porque de ahí sale la brecha que dice qué hay que salir a captar.',
+  campos: [
+    { key: 'name',    label: 'Comprador', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'code',    grupo: 'Identidad', label: 'Código', tipo: 'texto', soloLectura: true },
+    { key: 'wanted_type', label: 'Busca', tipo: 'seleccion', opciones: TIPO_INMUEBLE,
+      enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'sector',  label: 'Sector de interés', tipo: 'texto', enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'budget',  label: 'Presupuesto', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'client_status', label: 'Estado', tipo: 'seleccion', opciones: ESTADO_COMPRADOR,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'activo' },
+    { key: 'process_status', label: 'Proceso', tipo: 'seleccion', opciones: PROCESO_COMPRADOR,
+      enTabla: true, enLinea: true, ancho: '180px' },
+
+    { key: 'contact',       grupo: 'Contacto', label: 'Teléfono o correo', tipo: 'texto' },
+    { key: 'registered_at', grupo: 'Contacto', label: 'Fecha de registro', tipo: 'fecha' },
+    { key: 'city',          grupo: 'Contacto', label: 'Ciudad', tipo: 'texto' },
+    { key: 'payment_terms', grupo: 'Financiación', label: 'Forma de pago', tipo: 'seleccion', opciones: FORMA_PAGO_INMUEBLE },
+    { key: 'subsidy_type',  grupo: 'Financiación', label: 'Subsidio', tipo: 'seleccion', opciones: SUBSIDIO,
+      porDefecto: 'no_aplica' },
+    { key: 'notes', label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'process_status',
+  orden: { campo: 'created_at', asc: false }
+};
+
+export const OPORTUNIDADES: Esquema = {
+  tabla: 'rei_opportunities',
+  titulo: 'Oportunidades', singular: 'Oportunidad', femenino: true, principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Un predio que podría convertirse en un desarrollo. Se carga aquí, se califica en Calificación y, si pasa, se convierte en un desarrollo.',
+  campos: [
+    { key: 'name',         label: 'Oportunidad', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'code',         grupo: 'Identidad', label: 'Código', tipo: 'texto', soloLectura: true },
+    { key: 'municipality', label: 'Municipio', tipo: 'texto', enTabla: true, enLinea: true, ancho: '140px' },
+    { key: 'area_m2',      label: 'Área m²', tipo: 'numero', enTabla: true, enLinea: true, ancho: '110px' },
+    { key: 'asking_price', label: 'Precio pedido', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'price_m2',     label: 'Precio / m²', tipo: 'moneda', enTabla: true, soloLectura: true, ancho: '130px',
+      ayuda: 'Precio pedido ÷ área. Lo calcula la base.' },
+    { key: 'status',       label: 'Estado', tipo: 'seleccion', opciones: ESTADO_OPORTUNIDAD,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'identificada' },
+
+    { key: 'address',       grupo: 'Predio', label: 'Dirección o ubicación', tipo: 'texto' },
+    { key: 'owner_contact', grupo: 'Predio', label: 'Contacto del propietario', tipo: 'texto' },
+    { key: 'source',        grupo: 'Predio', label: 'Cómo llegó', tipo: 'texto' },
+
+    { key: 'land_use',           grupo: 'Ficha normativa', label: 'Uso del suelo', tipo: 'texto',
+      ayuda: 'Lo que permite el plan de ordenamiento del municipio.' },
+    { key: 'occupancy_index',    grupo: 'Ficha normativa', label: 'Índice de ocupación', tipo: 'numero',
+      ayuda: 'Fracción del lote que se puede ocupar en planta, de 0 a 1.' },
+    { key: 'construction_index', grupo: 'Ficha normativa', label: 'Índice de construcción', tipo: 'numero',
+      ayuda: 'Múltiplo del área del lote que se puede construir. Puede pasar de 1.' },
+    { key: 'max_height',         grupo: 'Ficha normativa', label: 'Altura máxima (pisos)', tipo: 'entero' },
+
+    { key: 'registration_number', grupo: 'Situación jurídica', label: 'Matrícula inmobiliaria', tipo: 'texto',
+      ayuda: 'Es lo que identifica el predio de verdad. La dirección se repite.' },
+    { key: 'title_status',        grupo: 'Situación jurídica', label: 'Estado de títulos', tipo: 'seleccion',
+      opciones: ESTADO_TITULOS, porDefecto: 'por_verificar' },
+    { key: 'encumbrances',        grupo: 'Situación jurídica', label: 'Gravámenes y afectaciones', tipo: 'texto-largo',
+      ayuda: 'Hipotecas, embargos, servidumbres, afectaciones viales, patrimonio de familia.' },
+    { key: 'notes', label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'created_at', asc: false }
+};
+
+export const CRITERIOS: Esquema = {
+  tabla: 'rei_criteria',
+  titulo: 'Criterios', singular: 'Criterio', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Con qué se decide qué oportunidad se estructura primero, y cuánto pesa cada cosa. Deberían sumar 100%.',
+  campos: [
+    { key: 'name',       label: 'Criterio', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(220px,2fr)' },
+    { key: 'weight_pct', label: 'Peso %', tipo: 'numero', enTabla: true, enLinea: true, ancho: '110px', porDefecto: 0,
+      ayuda: 'La suma de los criterios activos debería dar 100. Si no, las notas salen igual pero dos oportunidades calificadas con repartos distintos no se pueden comparar.' },
+    { key: 'sort',       label: 'Orden', tipo: 'entero', enTabla: true, enLinea: true, ancho: '90px', porDefecto: 0 },
+    { key: 'active',     label: 'Activo', tipo: 'booleano', enTabla: true, enLinea: true, ancho: '90px', porDefecto: true,
+      ayuda: 'Un criterio apagado deja de contar en la nota, y las calificaciones que ya tenía se conservan.' },
+    { key: 'measures',   label: 'Qué mide', tipo: 'texto-largo' },
+    { key: 'level_low',  grupo: 'La escala', label: 'Cómo se ve un 1', tipo: 'texto-largo' },
+    { key: 'level_mid',  grupo: 'La escala', label: 'Cómo se ve un 3', tipo: 'texto-largo' },
+    { key: 'level_high', grupo: 'La escala', label: 'Cómo se ve un 5', tipo: 'texto-largo' }
+  ],
+  orden: { campo: 'sort', asc: true }
+};
+
+export const ETAPAS: Esquema = {
+  tabla: 'rei_stages',
+  titulo: 'Etapas', singular: 'Etapa', femenino: true, principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Las etapas por las que pasa un desarrollo, de Terreno a Cierre. Su cantidad decide el % de avance: quitar una no rompe nada, la última sigue siendo el 100%.',
+  campos: [
+    { key: 'name',   label: 'Etapa', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(220px,2fr)' },
+    { key: 'phase',  label: 'Fase',  tipo: 'seleccion', opciones: FASE_ETAPA,
+      enTabla: true, enLinea: true, ancho: '170px', porDefecto: 'originacion' },
+    { key: 'sort',   label: 'Orden', tipo: 'entero', enTabla: true, enLinea: true, ancho: '90px', porDefecto: 0,
+      ayuda: 'El orden ES el proceso: de él sale el % de avance de cada desarrollo.' },
+    { key: 'active', label: 'Activa', tipo: 'booleano', enTabla: true, enLinea: true, ancho: '90px', porDefecto: true }
+  ],
+  tablero: 'phase',
+  orden: { campo: 'sort', asc: true }
+};
+
+export const VEHICULOS: Esquema = {
+  tabla: 'rei_vehicles',
+  titulo: 'Vehículos', singular: 'Vehículo', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'La SPE, el patrimonio autónomo, la fiducia de recaudo. Es lo que hace que el aislamiento de riesgo entre proyectos deje de ser una nota en un documento.',
+  campos: [
+    { key: 'name',         label: 'Vehículo', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'vehicle_type', label: 'Tipo', tipo: 'seleccion', opciones: TIPO_VEHICULO,
+      enTabla: true, enLinea: true, ancho: '210px', porDefecto: 'spe' },
+    { key: 'trustee',      label: 'Fiduciaria', tipo: 'texto', enTabla: true, enLinea: true, ancho: '160px' },
+    { key: 'status',       label: 'Estado', tipo: 'seleccion', opciones: ESTADO_VEHICULO,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'en_constitucion' },
+    { key: 'tax_id',        grupo: 'Identidad', label: 'NIT o identificación tributaria', tipo: 'texto' },
+    { key: 'trust_account', grupo: 'Identidad', label: 'Patrimonio autónomo o encargo', tipo: 'texto' },
+    { key: 'equilibrium_pct',  grupo: 'Punto de equilibrio', label: '% exigido para liberar recursos', tipo: 'numero',
+      ayuda: 'Lo exige el vehículo, no el proyecto: hasta alcanzarlo, el dinero de las preventas no baja a la obra.' },
+    { key: 'equilibrium_date', grupo: 'Punto de equilibrio', label: 'Fecha en que se alcanzó', tipo: 'fecha' },
+    { key: 'notes', label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'vehicle_type',
+  orden: { campo: 'name', asc: true }
+};
+
+export const DESARROLLOS: Esquema = {
+  tabla: 'rei_developments',
+  titulo: 'Desarrollos', singular: 'Desarrollo', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'La oportunidad que se aprobó y ya camina. Lo que la diferencia es que tiene etapa, responsable y fecha: dejó de ser una evaluación y pasó a ser trabajo.',
+  campos: [
+    { key: 'name',         label: 'Desarrollo', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'code',         grupo: 'Identidad', label: 'Código', tipo: 'texto', soloLectura: true },
+    { key: 'stage_id',     label: 'Etapa', tipo: 'relacion', enTabla: true, ancho: 'minmax(150px,1fr)',
+      relacion: { tabla: 'rei_stages', etiqueta: 'name' } },
+    { key: 'municipality', label: 'Municipio', tipo: 'texto', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'product',      label: 'Producto', tipo: 'seleccion', opciones: PRODUCTO_INMOBILIARIO,
+      enTabla: true, enLinea: true, ancho: '130px', porDefecto: 'vis' },
+    { key: 'units',        label: 'Unidades', tipo: 'entero', enTabla: true, enLinea: true, ancho: '100px' },
+    { key: 'manager',      label: 'Responsable', tipo: 'texto', enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'status',       label: 'Estado', tipo: 'seleccion', opciones: ESTADO_DESARROLLO,
+      enTabla: true, enLinea: true, ancho: '130px', porDefecto: 'activo' },
+
+    { key: 'opportunity_id', grupo: 'De dónde sale', label: 'Oportunidad', tipo: 'relacion',
+      relacion: { tabla: 'rei_opportunities', etiqueta: 'name' },
+      ayuda: 'El predio del que nació, con su ficha normativa y su calificación.' },
+    { key: 'vehicle_id',     grupo: 'De dónde sale', label: 'Vehículo', tipo: 'relacion',
+      relacion: { tabla: 'rei_vehicles', etiqueta: 'name' } },
+    { key: 'ci_project_id',  grupo: 'De dónde sale', label: 'Proyecto en Capital Intelligence', tipo: 'relacion',
+      relacion: { tabla: 'ci_projects', etiqueta: 'name' },
+      ayuda: 'El puente entre los dos módulos. Cuando está, el mismo desarrollo tiene allá su modelo financiero, su ronda y su cap table.' },
+
+    { key: 'start_date',     grupo: 'Calendario', label: 'Inicio', tipo: 'fecha' },
+    { key: 'target_date',    grupo: 'Calendario', label: 'Fecha objetivo', tipo: 'fecha' },
+    { key: 'next_milestone', grupo: 'Calendario', label: 'Próximo hito', tipo: 'texto-largo' },
+    { key: 'notes', label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'created_at', asc: false }
+};
+
+export const HITOS_DESARROLLO: Esquema = {
+  tabla: 'rei_milestones',
+  titulo: 'Hitos', singular: 'Hito', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Lo que tiene que pasar y cuándo. Un tramo que se libera al obtener la licencia es un hito con monto, no una nota al pie.',
+  campos: [
+    { key: 'name',           label: 'Hito', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'development_id', label: 'Desarrollo', tipo: 'relacion', requerido: true, enTabla: true, ancho: 'minmax(160px,1fr)',
+      relacion: { tabla: 'rei_developments', etiqueta: 'name' } },
+    { key: 'due_date',       label: 'Fecha', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'status',         label: 'Estado', tipo: 'seleccion', opciones: ESTADO_HITO,
+      enTabla: true, enLinea: true, ancho: '130px', porDefecto: 'pendiente' },
+    { key: 'owner',          label: 'Responsable', tipo: 'texto', enTabla: true, enLinea: true, ancho: '140px' },
+    { key: 'amount_conditioned', label: 'Monto que condiciona', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'done_date',   grupo: 'Seguimiento', label: 'Fecha en que se cumplió', tipo: 'fecha' },
+    { key: 'sort',        grupo: 'Seguimiento', label: 'Orden', tipo: 'entero', porDefecto: 0 },
+    { key: 'description', label: 'Descripción', tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'due_date', asc: true }
+};
+
+export const ADELANTOS_RENTA: Esquema = {
+  tabla: 'rei_rental_advances',
+  titulo: 'Adelanto de renta', singular: 'Adelanto', principal: 'owner_name',
+  nivelEscritura: 60,
+  vacio: 'El propietario cede los cánones de varios meses y recibe hoy su valor, menos el descuento por riesgo y la comisión. Solo se fondea con recursos propios o cuentas en participación: con dinero del público sería captación masiva no autorizada.',
+  campos: [
+    { key: 'owner_name',   label: 'Propietario', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'code',         grupo: 'Identidad', label: 'Código', tipo: 'texto', soloLectura: true },
+    { key: 'property_id',  label: 'Inmueble', tipo: 'relacion', enTabla: true, ancho: 'minmax(150px,1fr)',
+      relacion: { tabla: 'rei_properties', etiqueta: 'owner_name' } },
+    { key: 'monthly_rent', label: 'Canon mensual', tipo: 'moneda', requerido: true, enTabla: true, enLinea: true, ancho: '140px' },
+    { key: 'months',       label: 'Meses', tipo: 'entero', requerido: true, enTabla: true, enLinea: true, ancho: '90px', porDefecto: 12 },
+    { key: 'discount_pct', label: 'Descuento %', tipo: 'numero', enTabla: true, enLinea: true, ancho: '120px', porDefecto: 0,
+      ayuda: 'Tiene que cubrir el costo de fondeo, la vacancia estimada y el seguro. Descuento y comisión juntos no pueden llegar a 100%.' },
+    { key: 'admin_fee_pct',label: 'Comisión %', tipo: 'numero', enTabla: true, enLinea: true, ancho: '110px', porDefecto: 0 },
+    { key: 'advanced_amount', label: 'Se entrega hoy', tipo: 'moneda', enTabla: true, soloLectura: true, ancho: '150px',
+      ayuda: 'Canon × meses, menos el descuento y la comisión. Lo calcula la base: es la cifra que se firma y no puede quedar vieja.' },
+    { key: 'status',       label: 'Estado', tipo: 'seleccion', opciones: ESTADO_ADELANTO,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'solicitado' },
+
+    { key: 'funding_source', grupo: 'Con qué se fondea', label: 'Fuente de los recursos', tipo: 'seleccion',
+      opciones: FUENTE_FONDEO, porDefecto: 'recursos_propios',
+      ayuda: 'Captar dinero del público para fondear adelantos es captación masiva no autorizada. Esta lista son las formas legales; que quede escrito es parte del control.' },
+    { key: 'insurance_status', grupo: 'Garantías', label: 'Póliza de arrendamiento', tipo: 'seleccion',
+      opciones: ESTADO_SEGURO, porDefecto: 'sin_poliza',
+      ayuda: 'Cubre la mora del inquilino, que es el riesgo que de verdad corre quien adelanta.' },
+    { key: 'promissory_note', grupo: 'Garantías', label: 'Pagaré con carta de instrucciones', tipo: 'booleano',
+      porDefecto: false,
+      ayuda: 'Respalda la restitución si hay vacancia o el contrato se termina antes.' },
+    { key: 'start_date', grupo: 'Garantías', label: 'Inicio del adelanto', tipo: 'fecha' },
+    { key: 'notes', label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'created_at', asc: false }
+};
+
 /** Todo lo que el motor sabe dibujar, por módulo de la plataforma. */
 export const ESQUEMAS_POR_MODULO: Record<string, Esquema[]> = {
   crm:        [CLIENTES, DIRECCIONES, LISTAS_PRECIO],
@@ -1363,5 +1849,7 @@ export const ESQUEMAS_POR_MODULO: Record<string, Esquema[]> = {
   capital:    [PROYECTOS_CAPITAL, PORTAFOLIOS, UNIDADES_NEGOCIO, ESCENARIOS,
                HITOS, EJECUCION, RONDAS, USO_DE_FONDOS, INVERSIONISTAS,
                PIPELINE_INVERSIONISTAS, INTERACCIONES, CAP_TABLE, RIESGOS,
-               REQUISITOS, TIPOS_DE_CAMBIO]
+               REQUISITOS, TIPOS_DE_CAMBIO],
+  realestate: [DESARROLLOS, OPORTUNIDADES, INVENTARIO, DEMANDA, HITOS_DESARROLLO,
+               VEHICULOS, ADELANTOS_RENTA, CRITERIOS, ETAPAS, SUPUESTOS]
 };

@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { cargarPanel, listarPortafolios, listarProyectos,
          type Panel as Datos, type Filtros,
          type PortafolioBreve, type ProyectoBreve } from '@/services/capital.service';
-import { TarjetaCifra, Avisos, Elige, Cabecera, escribe } from '@/components/capital/Cifra';
+import { TarjetaCifra, Avisos, Elige, Cabecera } from '@/components/capital/Cifra';
 import { Periodo, type Rango } from '@/components/capital/Periodo';
-import { Columnas } from '@/components/graficos/Columnas';
-import { dineroCorto, mesCorto, diaCorto } from '@/lib/formato';
-import type { Formato, ListaResumen, SerieResumen } from '@/services/resumen.service';
+/* La curva y la tabla las comparte con el panel de Real Estate Intelligence:
+   los dos resúmenes devuelven la misma forma desde la base, así que dibujarla
+   dos veces solo habría servido para que empezaran a diferir. */
+import { Grafico, Lista } from '@/components/panel/Cuadro';
+import { mesCorto } from '@/lib/formato';
 
 /* EL PANEL EJECUTIVO
    ---------------------------------------------------------------------------
@@ -198,82 +200,6 @@ function Filtrador({ filtros, setFiltros, portafolios, proyectos, monedas }: {
           <Periodo valor={rango} onChange={r => setFiltros({ ...filtros, ...r })} />
         </div>
       </div>
-    </section>
-  );
-}
-
-function Grafico({ serie, moneda }: { serie: SerieResumen; moneda: string }) {
-  const dos = (serie.leyenda?.length ?? 1) > 1;
-  return (
-    <section className="tarjeta p-5">
-      <h2 className="rotulo">{serie.titulo}</h2>
-      {serie.nota && <p className="mt-1 mb-3 text-[12.5px] text-faint max-w-[70ch]">{serie.nota}</p>}
-      <Columnas
-        columnas={serie.puntos.map(p => ({
-          etiqueta: p.formato_x === 'mes' ? mesCorto(p.x) : p.x,
-          /* El tipo se afirma porque las dos ramas del ternario no unifican
-             solas en un Record<string, number>. Es el mismo trato que hace
-             `ResumenModulo` con la misma forma. */
-          partes: (dos
-            ? { a: Number(p.y) || 0, b: Number(p.y2) || 0 }
-            : { a: Number(p.y) || 0 }) as Record<string, number>
-        }))}
-        /* Proyectado y real no se apilan: su suma no es ninguna cifra. */
-        modo="agrupado"
-        series={dos
-          ? [{ clave: 'a', nombre: serie.leyenda![0]!, color: 'var(--dato-1)' },
-             { clave: 'b', nombre: serie.leyenda![1]!, color: 'var(--dato-2)' }]
-          : [{ clave: 'a', nombre: serie.titulo, color: 'var(--dato-1)' }]}
-        formato={v => dineroCorto(v, moneda)} />
-    </section>
-  );
-}
-
-/* Una celda de lista. El formato manda: `fecha` se escribe corta, lo numérico
-   pasa por el mismo `escribe` que las tarjetas —para que una cifra se vea
-   igual en los dos sitios— y el resto es texto tal cual. */
-function celda(v: unknown, f: Formato | undefined, moneda: string): string {
-  if (v == null || v === '') return '—';
-  if (f === 'fecha') return diaCorto(String(v).slice(0, 10));
-  if (numerica(f)) return escribe(Number(v), f, moneda);
-  return String(v);
-}
-
-const numerica = (f?: string) =>
-  f === 'dinero' || f === 'numero' || f === 'porcentaje' || f === 'dias' || f === 'meses';
-
-function Lista({ lista, moneda }: { lista: ListaResumen; moneda: string }) {
-  return (
-    <section className="tarjeta p-5">
-      <h2 className="rotulo">{lista.titulo}</h2>
-      {lista.nota && <p className="mt-1 text-[12.5px] text-faint">{lista.nota}</p>}
-      {lista.filas.length === 0
-        ? <p className="mt-3 text-[13px] text-muted">Sin datos todavía.</p>
-        : <div className="desliza -mx-5 px-5 mt-3">
-            <table className="tabla">
-              <thead>
-                <tr>
-                  {lista.columnas.map((c, i) => (
-                    <th key={c.k} className={`${numerica(c.formato) ? 'num' : ''} ${i === 0 ? 'ancla' : ''}`}>{c.t}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {lista.filas.map((f, i) => (
-                  <tr key={i}>
-                    {lista.columnas.map((c, j) => (
-                      <td key={c.k}
-                          className={`${numerica(c.formato) ? 'num cifra' : ''} ${j === 0 ? 'ancla principal' : ''}`}>
-                        {j === 0
-                          ? <span className="recorta" title={String(f[c.k] ?? '')}>{celda(f[c.k], c.formato, moneda)}</span>
-                          : celda(f[c.k], c.formato, moneda)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>}
     </section>
   );
 }

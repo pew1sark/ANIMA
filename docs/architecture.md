@@ -102,6 +102,13 @@ distintas a propósito.
   (20 tablas, 56 funciones, 12 vistas, 9 Edge Functions, 2 cron)
 - ✅ **`tenant_type` operator/advisor** (migración 0068). Con esto el núcleo de la
   Fase 2 queda completo. La capa de datos del asesor es la Fase 6.
+- ✅ **Capital Intelligence** (migraciones 0095-0119): proyectos de inversión,
+  modelos por escenario, presupuesto contra real, rondas y cap table.
+- ✅ **Real Estate Intelligence** (migraciones 0120-0124): originación de suelo,
+  calificación ponderada, prefactibilidad con TIR y VAN, estructura fiduciaria y
+  el cruce oferta/demanda. Va a la par de `capital` —mismo plan, mismo umbral de
+  rol— y se enlaza con él por `rei_developments.ci_project_id`. Ver
+  [`real-estate-intelligence.md`](real-estate-intelligence.md).
 - ⏳ Consola de plataforma (todos los clientes, suscripciones, consumo)
 - 🔴 Deuda de seguridad: 47 funciones heredadas ejecutables por `anon`
 

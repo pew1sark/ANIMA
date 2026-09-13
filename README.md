@@ -25,14 +25,18 @@ Dos cosas distintas, con un mismo Supabase (`jwxeowowuxmijuexdrua`) detrás:
 | **El sitio** | La portada pública (`index.html`) y el mundo de STUDIO: el Studio de las Almas, el Árbol, la comunidad. Estático, sin build. Es lo que sirve GitHub Pages desde la raíz. | raíz + `assets/` |
 | **La plataforma** | El SaaS multiempresa: **ANIMA STUDIO** y **ANIMA COMPANY**. React 19 + Vite. | `platform/` |
 | **La base** | Migraciones versionadas, funciones y semillas. | `supabase/` |
-| **La documentación** | Arquitectura, multi-tenancy, seguridad, líneas de producto. | `docs/` |
+| **La documentación** | Arquitectura, multi-tenancy, seguridad, líneas de producto y los dos módulos de análisis. | `docs/` |
 
 **No mezclar los dos primeros.** La raíz está en producción y la sirve Pages tal cual;
 mover un archivo de ahí rompe el sitio. La plataforma compila desde `platform/` hacia
 `app/`, que sí se versiona — ver [`docs/deployment.md`](docs/deployment.md).
 
 Para entender la plataforma, partir por [`docs/architecture.md`](docs/architecture.md)
-y [`docs/lineas-de-producto.md`](docs/lineas-de-producto.md).
+y [`docs/lineas-de-producto.md`](docs/lineas-de-producto.md). Los dos módulos del
+plan Enterprise tienen el suyo:
+[Real Estate Intelligence](docs/real-estate-intelligence.md) —originación de
+suelo, calificación de oportunidades y prefactibilidad— va a la par de Capital
+Intelligence y se enlaza con él.
 
 ---
 
