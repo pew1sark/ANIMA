@@ -142,14 +142,16 @@ lee como «no hubo actividad» cuando lo que falta es una casilla.
 ## Dos apartes deliberados del instrumento de origen
 
 El módulo reproduce el modelo de prefactibilidad que la firma ya usaba. Dos
-cosas se calculan distinto, y las dos hacen que el resultado sea **más
-conservador**, no menos:
+cosas se calculan distinto, y conviene saber hacia dónde mueve cada una el
+resultado, porque no es hacia el mismo lado:
 
-**La tasa del periodo.** El instrumento descontaba con `WACC / 4`. La
-equivalencia correcta de una tasa efectiva anual a un trimestre es
-`(1 + r)^(1/4) − 1`, no `r / 4`. Con un WACC de 16% la diferencia es de casi
-medio punto por periodo, y sobre ocho periodos deja de ser un detalle. El VAN
-que sale aquí es por eso distinto del de la planilla.
+**La tasa del periodo.** El instrumento descontaba con `WACC / 4`, que trata el
+WACC como tasa nominal: cuatro trimestres al 4% componen 16.99% anual, no 16%.
+La equivalencia correcta de una tasa efectiva anual a un trimestre es
+`(1 + r)^(1/4) − 1` —3.78% con un WACC de 16%—, así que la planilla descontaba
+de más y su VAN salía por debajo. En el piloto de 30 unidades la diferencia son
+46 millones sobre nueve periodos: el VAN pasa de 1.070 a 1.117 millones. Es la
+cifra correcta, no la conservadora.
 
 **El suelo entra al costo.** El instrumento armaba el costo con obra,
 indirectos, financieros y comerciales, y dejaba el lote fuera. Un proyecto que
