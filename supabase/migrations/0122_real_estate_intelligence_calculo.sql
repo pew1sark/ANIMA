@@ -230,10 +230,13 @@ grant  execute on function public.rei_avance_etapa(uuid) to authenticated;
 -- que viene este módulo, y por qué:
 --
 --   1 · LA TASA DEL PERIODO. La planilla descontaba con `WACC / 4`.
---       Eso subestima el descuento: la equivalencia correcta de una
---       tasa efectiva anual a un trimestre es (1+r)^(1/4)−1, no r/4.
---       Con un WACC de 16% la diferencia es de casi medio punto por
---       periodo, y sobre ocho periodos deja de ser un detalle.
+--       Eso trata el WACC como tasa nominal: cuatro trimestres al 4%
+--       componen 16.99% anual, no 16%. La equivalencia correcta de una
+--       tasa efectiva anual a un trimestre es (1+r)^(1/4)−1 —3.78% con
+--       un WACC de 16%—, así que la planilla descontaba de más y su VAN
+--       salía por debajo. En el piloto de 30 unidades la diferencia son
+--       46 millones sobre nueve periodos: el VAN pasa de 1.070 a 1.117
+--       millones. Es la cifra correcta, no la conservadora.
 --
 --   2 · EL SUELO ENTRA AL COSTO. La planilla armaba el costo con obra,
 --       indirectos, financieros y comerciales, y dejaba el lote fuera.

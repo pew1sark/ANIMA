@@ -1386,7 +1386,8 @@ const ESTADO_COMERCIAL: Opcion[] = [
   { valor: 'en_negociacion', nombre: 'En negociación', tono: 'acento' },
   { valor: 'vendido',        nombre: 'Vendido',        tono: 'neutro' },
   { valor: 'arrendado',      nombre: 'Arrendado',      tono: 'neutro' },
-  { valor: 'retirado',       nombre: 'Retirado',       tono: 'malo'   }
+  { valor: 'retirado',       nombre: 'Retirado',       tono: 'malo'   },
+  { valor: 'sin_dato',       nombre: 'Sin dato',       tono: 'neutro' }
 ];
 
 const ESTADO_LEGAL_INMUEBLE: Opcion[] = [
@@ -1394,19 +1395,21 @@ const ESTADO_LEGAL_INMUEBLE: Opcion[] = [
   { valor: 'en_proceso',      nombre: 'En proceso',        tono: 'aviso'  },
   { valor: 'sucesion',        nombre: 'En sucesión',       tono: 'aviso'  },
   { valor: 'hipotecado',      nombre: 'Con hipoteca',      tono: 'aviso'  },
+  { valor: 'embargo',         nombre: 'Con embargo',       tono: 'malo'   },
   { valor: 'falsa_tradicion', nombre: 'Falsa tradición',   tono: 'malo'   },
   { valor: 'sin_escriturar',  nombre: 'Sin escriturar',    tono: 'malo'   },
   { valor: 'por_verificar',   nombre: 'Por verificar',     tono: 'neutro' }
 ];
 
 const FORMA_PAGO_INMUEBLE: Opcion[] = [
-  { valor: 'efectivo',         nombre: 'Efectivo' },
-  { valor: 'credito',          nombre: 'Crédito' },
-  { valor: 'efectivo_credito', nombre: 'Efectivo y crédito' },
-  { valor: 'permuta',          nombre: 'Permuta' },
-  { valor: 'subsidio',         nombre: 'Subsidio' },
-  { valor: 'leasing',          nombre: 'Leasing' },
-  { valor: 'mixto',            nombre: 'Mixto' }
+  { valor: 'efectivo',          nombre: 'Efectivo' },
+  { valor: 'credito',           nombre: 'Crédito' },
+  { valor: 'efectivo_credito',  nombre: 'Efectivo y crédito' },
+  { valor: 'permuta',           nombre: 'Permuta' },
+  { valor: 'subsidio',          nombre: 'Subsidio' },
+  { valor: 'efectivo_subsidio', nombre: 'Efectivo y subsidio' },
+  { valor: 'leasing',           nombre: 'Leasing' },
+  { valor: 'mixto',             nombre: 'Mixto' }
 ];
 
 const ESTADO_COMPRADOR: Opcion[] = [
