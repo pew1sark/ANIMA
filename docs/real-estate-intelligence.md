@@ -275,6 +275,34 @@ Tres reglas, y las tres importan:
 
 Correrla dos veces no crea un cliente de más.
 
+## Una venta cerrada es un pedido
+
+`rei_sincronizar_ventas()` convierte cada inmueble vendido en un pedido del
+módulo Ventas, y enlaza los dos por `rei_properties.order_id`.
+
+Hay **una** decisión aquí que decide si las cifras de Ventas significan algo:
+
+> **El total del pedido es la COMISIÓN, no el precio del inmueble.**
+
+La firma intermedia; no compra ni vende por cuenta propia. De una venta de 100
+millones recibe su comisión —el supuesto `comision_intermediacion`—, no los 100
+millones. Poner el precio del inmueble en `orders.total` haría que «Ventas 30
+días», el ticket medio y el panel de Inicio mostraran un dinero que nunca entró
+a la empresa, justo en los lugares donde alguien lee cuánto factura.
+
+El precio no se pierde: va en `custom` del pedido, con el código del inmueble,
+la tipología, el municipio y el área.
+
+**El cliente es el propietario, no el comprador.** No es una aproximación: la
+planilla de origen no tiene columna de comprador, y quien encarga el servicio de
+intermediación es el dueño que entrega el inmueble. Inventar una contraparte
+para llenar la casilla habría sido fabricar un dato.
+
+**Los vendidos sin fecha de venta quedan fuera.** `orders.order_date` no admite
+nulos, y ponerles la fecha de captación —o la de hoy— metería una venta en un
+mes en que no ocurrió. El panel ya avisa cuántos son, y se convierten solos en
+cuanto alguien complete la fecha y se vuelva a correr la función.
+
 ## Migraciones
 
 | | Qué trae |
@@ -285,9 +313,12 @@ Correrla dos veces no crea un cliente de más.
 | `0123_real_estate_intelligence_panel.sql` | `rei_resumen()`. |
 | `0124_real_estate_intelligence_semillas.sql` | `rei_sembrar_base()`. |
 | `0126_los_compradores_y_los_propietarios_son_clientes.sql` | El puente con el CRM: `rei_sincronizar_crm()`. |
+| `0127_una_venta_cerrada_es_un_pedido.sql` | El puente con Ventas: `rei_sincronizar_ventas()`. |
 
-Todas son aditivas. La única que toca una tabla de fuera del módulo es `0126`,
-y solo para agregarle un índice a `customers`.
+Todas son aditivas y ninguna toca una tabla de fuera del módulo, salvo para
+agregarle un índice a `customers` (`0126`). Los pedidos y el producto de
+intermediación que crea `0127` los escribe la función cuando se la llama, no la
+migración.
 
 ## Lo que falta
 
