@@ -70,12 +70,6 @@ export const accesoService = {
   }
 };
 
-/* ¿Volvió del correo de recuperación? Supabase deja la sesión en el hash. */
-export function vieneDeRecuperacion(): boolean {
-  const h = location.hash || '';
-  return /type=recovery/.test(h) || /access_token=/.test(h);
-}
-
 /* ¿Volvió del correo de invitación? La marca va en la QUERY y no en el hash a
    propósito: supabase-js lee el fragmento del enlace al arrancar y lo borra,
    así que cualquier marcador puesto ahí sería una carrera contra la carga de
@@ -88,12 +82,40 @@ export function vieneDeInvitacion(): boolean {
   return new URLSearchParams(location.search).get('activar') === '1';
 }
 
+/* Lo mismo para quien vuelve del correo de RECUPERACIÓN. Son dos marcas y no
+   una porque la pantalla dice cosas distintas —«elige tu contraseña» a quien
+   estrena, «nueva contraseña» a quien la perdió— pero llevan al mismo paso.
+
+   Mira DOS señales, y el orden importa:
+
+     1 · `?recuperar=1`, que pone la portada al reenviar el enlace. Sobrevive a
+         supabase-js y es la que se puede leer cuando haga falta.
+     2 · el hash del propio enlace, por si alguien llega derecho a /app/ sin
+         pasar por la portada.
+
+   La segunda sola no basta, y eso costó un bucle en producción: supabase-js
+   procesa el enlace —y BORRA el hash— al crearse el cliente, que es al importar
+   el módulo, antes de que React monte nada. Quien perdía esa carrera entraba
+   con sesión válida sin pasar por la pantalla de contraseña, y acababa
+   probando una que nunca había puesto. */
+export function vieneDeRecuperacion(): boolean {
+  if (new URLSearchParams(location.search).get('recuperar') === '1') return true;
+  const h = location.hash || '';
+  return /[#&]type=recovery/.test(h);
+}
+
+/** Vuelve del correo, por cualquiera de los dos caminos. */
+export function vieneDelCorreo(): boolean {
+  return vieneDeInvitacion() || vieneDeRecuperacion();
+}
+
 /* Se llama al terminar de fijar la contraseña. Sin esto, recargar volvería a
    la misma pantalla porque la marca sigue en la barra de direcciones. */
 export function limpiarMarcaDeInvitacion() {
   const q = new URLSearchParams(location.search);
-  if (!q.has('activar')) return location.pathname + location.search;
+  if (!q.has('activar') && !q.has('recuperar')) return location.pathname + location.search;
   q.delete('activar');
+  q.delete('recuperar');
   const s = q.toString();
   return location.pathname + (s ? '?' + s : '');
 }
