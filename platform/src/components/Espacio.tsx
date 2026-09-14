@@ -26,6 +26,7 @@ import { PanelInmobiliario } from '@/components/inmobiliaria/Panel';
 import { CalificacionOportunidades } from '@/components/inmobiliaria/Calificacion';
 import { PrefactibilidadProyecto } from '@/components/inmobiliaria/Prefactibilidad';
 import { pestanasDe } from '@/core/modules/pestanas';
+import { localizarEsquema } from '@/core/datos/pais';
 import { fijarMoneda } from '@/lib/formato';
 import { Vista } from '@/components/datos/Vista';
 import type { ModuleSlug } from '@/types/core';
@@ -168,7 +169,8 @@ export function Espacio({ volver }: { volver?: () => void }) {
           {!cargando && esp && cid && vista === 'inicio' && (
             <>
               <Inicio companyId={cid} moneda={esp.empresa.moneda}
-                      empresa={esp.empresa.nombre} linea={esp.empresa.linea} />
+                      empresa={esp.empresa.nombre} linea={esp.empresa.linea}
+                      pais={esp.empresa.pais} />
 
               {esp.features.length > 0 && (
                 <section className="grid gap-3">
@@ -202,6 +204,7 @@ export function Espacio({ volver }: { volver?: () => void }) {
           {!cargando && esp && cid && !['inicio','config','informes','miespacio','miplan'].includes(vista) && (
             <Modulo slug={vista as ModuleSlug} companyId={cid}
                     nivel={esp.mi_rol?.nivel ?? 0} moneda={esp.empresa.moneda}
+                    pais={esp.empresa.pais}
                     addons={esp.features.map(f => f.slug)} />
           )}
 
@@ -224,8 +227,13 @@ export function Espacio({ volver }: { volver?: () => void }) {
    carga. Qué pestañas tiene lo declara `pestanasDe()`; aquí solo se dibujan.
 
    Un módulo sin nada declarado dice con honestidad qué falta. */
-export function Modulo({ slug, companyId, nivel, moneda, addons = [] }:
+export function Modulo({ slug, companyId, nivel, moneda, pais, addons = [] }:
   { slug: ModuleSlug; companyId: string; nivel: number; moneda: string;
+    /** El país de la empresa. Decide cómo se llaman el número tributario y la
+     *  unidad territorial: RUT y comuna en Chile, NIT y municipio en Colombia.
+     *  Sin esto la ficha de cliente le pide el RUT a una inmobiliaria de
+     *  Pamplona, y una casilla que no se entiende se queda vacía. */
+    pais?: string | null;
     /** Los addons encendidos para esta empresa. Un addon puede agregar una
      *  pestaña a un módulo; el módulo no sabe cuál ni tiene que saberlo. */
     addons?: string[] }) {
@@ -311,7 +319,8 @@ export function Modulo({ slug, companyId, nivel, moneda, addons = [] }:
       {/* Cada entidad pide su nivel: pagos y compras exigen 60, el resto 40.
           Es el mismo umbral que aplica RLS, dicho también en pantalla. */}
       {activa.tipo === 'datos' && (
-        <Vista key={activa.esquema.tabla} esquema={activa.esquema} companyId={companyId}
+        <Vista key={activa.esquema.tabla} esquema={localizarEsquema(activa.esquema, pais)}
+               companyId={companyId}
                puedeEditar={nivel >= (activa.esquema.nivelEscritura ?? 40)} />
       )}
     </div>

@@ -4,6 +4,8 @@ import { Serie } from '@/components/graficos/Serie';
 import { Columnas } from '@/components/graficos/Columnas';
 import { Tramos } from '@/components/graficos/Tramos';
 import { MapaChile } from '@/components/mapa/MapaChile';
+import { ListaLugares } from '@/components/mapa/ListaLugares';
+import { hayMapa, vocabulario } from '@/core/datos/pais';
 import { dinero, dineroCorto, cantidad, variacion, mesCorto, diaCorto, cuando } from '@/lib/formato';
 import { Cuotas } from '@/components/company/Cuotas';
 
@@ -24,9 +26,12 @@ import { Cuotas } from '@/components/company/Cuotas';
 
    Nada de esto se calcula aquí: viene entero de `panel_inicio()`. */
 
-interface Props { companyId: string; moneda: string; empresa: string; linea: string | null }
+interface Props { companyId: string; moneda: string; empresa: string; linea: string | null;
+                 pais?: string | null }
 
-export function Inicio({ companyId, moneda, empresa, linea }: Props) {
+export function Inicio({ companyId, moneda, empresa, linea, pais }: Props) {
+  /* Cómo se llaman por aquí la unidad territorial y la que la agrupa. */
+  const voc = vocabulario(pais);
   const [p, setP] = useState<Panel | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -295,10 +300,20 @@ export function Inicio({ companyId, moneda, empresa, linea }: Props) {
         </Bloque>
       </div>
 
-      {/* ------------------------------------------------------------------ mapa */}
+      {/* ------------------------------------------------------------------ mapa
+          El mapa dibuja las regiones de Chile, y solo las de Chile. A una
+          empresa colombiana enseñarle a Chile no le dice nada —y peor: sus
+          departamentos no calzan con ninguna región, así que saldría en
+          blanco—. Donde no hay mapa va la lista ordenada, que es la que lleva
+          los números de todas formas: el propio componente lo dice. */}
       <Bloque titulo="Dónde vendes"
-              nota="Clientes activos por región, y las comunas con más venta en 180 días.">
-        <MapaChile comunas={p.mapa.comunas} total={p.mapa.total} formato={plata} />
+              nota={hayMapa(pais)
+                ? `Clientes activos por ${voc.divisionMayor.toLowerCase()}, y ${voc.division.toLowerCase()}s con más venta en 180 días.`
+                : `${voc.division}s con más venta en 180 días.`}>
+        {hayMapa(pais)
+          ? <MapaChile comunas={p.mapa.comunas} total={p.mapa.total} formato={plata} />
+          : <ListaLugares filas={p.mapa.comunas} total={p.mapa.total}
+                          formato={plata} division={voc.division} />}
       </Bloque>
 
       <p style={{ fontSize: 11, color: 'var(--color-faint)' }}>
