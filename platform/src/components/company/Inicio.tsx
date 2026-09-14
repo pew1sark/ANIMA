@@ -4,6 +4,7 @@ import { Serie } from '@/components/graficos/Serie';
 import { Columnas } from '@/components/graficos/Columnas';
 import { Tramos } from '@/components/graficos/Tramos';
 import { MapaChile } from '@/components/mapa/MapaChile';
+import { MapaColombia } from '@/components/mapa/MapaColombia';
 import { ListaLugares } from '@/components/mapa/ListaLugares';
 import { hayMapa, vocabulario } from '@/core/datos/pais';
 import { dinero, dineroCorto, cantidad, variacion, mesCorto, diaCorto, cuando } from '@/lib/formato';
@@ -310,8 +311,15 @@ export function Inicio({ companyId, moneda, empresa, linea, pais }: Props) {
               nota={hayMapa(pais)
                 ? `Clientes activos por ${voc.divisionMayor.toLowerCase()}, y ${voc.division.toLowerCase()}s con más venta en 180 días.`
                 : `${voc.division}s con más venta en 180 días.`}>
-        {hayMapa(pais)
+        {pais === 'CL'
           ? <MapaChile comunas={p.mapa.comunas} total={p.mapa.total} formato={plata} />
+          : pais === 'CO'
+          ? <MapaColombia metrica="clientes" total={p.mapa.total}
+              puntos={p.mapa.comunas.map(c => ({
+                lugar: c.comuna, departamento: c.region, valor: c.clientes,
+                detalle: Number(c.ventas) > 0
+                  ? [{ etiqueta: 'en 180 días', valor: plata(Number(c.ventas)) }] : []
+              }))} />
           : <ListaLugares filas={p.mapa.comunas} total={p.mapa.total}
                           formato={plata} division={voc.division} />}
       </Bloque>
