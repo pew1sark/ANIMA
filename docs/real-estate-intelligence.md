@@ -243,6 +243,38 @@ En la prefactibilidad, un modelo **validado** no se edita: se duplica. El modelo
 con el que se aprobó un proyecto tiene que seguir diciendo dentro de un año lo
 que decía ese día.
 
+## El puente con el CRM de la plataforma
+
+El módulo tiene su propio CRM —`rei_buyers` para la demanda,
+`rei_properties.owner_name` para la oferta— y eso es correcto: son fichas de un
+negocio inmobiliario, con presupuesto, subsidio y estado del proceso de crédito,
+y no caben en la ficha de cliente genérica sin deformar una de las dos.
+
+Pero **la persona es la misma**. Quien registra un apartamento para vender y
+quien pregunta por uno para comprar son clientes de la firma. Por eso
+`rei_sincronizar_crm()` da de alta a unos y otros en `customers` y deja el
+enlace puesto: `rei_buyers.customer_id` y `rei_properties.owner_customer_id`.
+
+**No copia: enlaza, y una sola vez por persona.** Lo que identifica a alguien es
+el teléfono, no el nombre. En la base de Casa Click 222 inmuebles tienen 105
+propietarios —el mismo dueño lista varias propiedades y escribe su nombre
+distinto cada vez— y tres personas aparecen en los dos lados a la vez: venden
+para comprar. Deduplicar por nombre habría producido 222 fichas; por teléfono
+produce las que hay.
+
+Tres reglas, y las tres importan:
+
+- **Dos teléfonos en una casilla.** Veinte dígitos son dos móviles escritos
+  juntos y manda el primero. Los de nueve u once dígitos no se tocan: son
+  errores de digitación, y adivinar qué dígito sobra sería inventar un teléfono.
+- **Nunca pisa.** Si la ficha ya existe se enlaza y se rellenan solo los campos
+  en blanco. Una corrección hecha a mano en el CRM gana siempre.
+- **Sin nombre no hay ficha.** «Sin nombre» repetido cuatro veces no es
+  información, y si además falta el teléfono no se distingue del siguiente.
+  Esas filas se cuentan y se informan en `sin_enlazar`.
+
+Correrla dos veces no crea un cliente de más.
+
 ## Migraciones
 
 | | Qué trae |
@@ -252,8 +284,10 @@ que decía ese día.
 | `0122_real_estate_intelligence_calculo.sql` | Scoring, prefactibilidad, curva S y avance de etapa. |
 | `0123_real_estate_intelligence_panel.sql` | `rei_resumen()`. |
 | `0124_real_estate_intelligence_semillas.sql` | `rei_sembrar_base()`. |
+| `0126_los_compradores_y_los_propietarios_son_clientes.sql` | El puente con el CRM: `rei_sincronizar_crm()`. |
 
-Las cinco son aditivas: no tocan ni una tabla existente.
+Todas son aditivas. La única que toca una tabla de fuera del módulo es `0126`,
+y solo para agregarle un índice a `customers`.
 
 ## Lo que falta
 

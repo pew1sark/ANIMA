@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useTenant } from '@/core/tenant/TenantContext';
 import { MONEDAS, dinero } from '@/lib/formato';
+import { vocabulario } from '@/core/datos/pais';
 
 /* Lo que hay que preguntar UNA vez para que la plataforma deje de ser genérica.
    Con esto los documentos salen con los datos de la empresa y las pantallas
@@ -60,6 +61,10 @@ export function PuestaEnMarcha({ companyId, puedeEditar }:
   const faltan = ESENCIALES.filter(k => !(f[k] ?? '').toString().trim());
   const completo = faltan.length === 0;
 
+  /* Cómo se llaman aquí el número tributario y la unidad territorial. El país
+     lo trae la propia ficha, así que las etiquetas cambian solas al cambiarlo. */
+  const voc = vocabulario(f.pais);
+
   async function guardar(e: FormEvent) {
     e.preventDefault();
     setGuardando(true); setError(null); setListo(false);
@@ -97,7 +102,7 @@ export function PuestaEnMarcha({ companyId, puedeEditar }:
                  valor={f.nombre} onChange={v => set('nombre', v)} requerido editable={puedeEditar} />
           <Campo label="Razón social" ayuda="El nombre legal completo"
                  valor={f.razon_social} onChange={v => set('razon_social', v)} requerido editable={puedeEditar} />
-          <Campo label="RUT" marcador="76.123.456-7"
+          <Campo label={voc.identificador} marcador={voc.ejemplo}
                  valor={f.rut} onChange={v => set('rut', v)} requerido editable={puedeEditar} />
           <Campo label="Giro" ayuda="A qué se dedica" marcador="Venta al por mayor de alimentos"
                  valor={f.giro} onChange={v => set('giro', v)} requerido editable={puedeEditar} />
@@ -106,9 +111,10 @@ export function PuestaEnMarcha({ companyId, puedeEditar }:
         <Grupo titulo="Dónde está" nota="Aparece en pedidos, entregas y documentos.">
           <Campo label="Dirección" valor={f.direccion} onChange={v => set('direccion', v)}
                  requerido editable={puedeEditar} ancho />
-          <Campo label="Comuna" valor={f.comuna} onChange={v => set('comuna', v)}
+          <Campo label={voc.division} valor={f.comuna} onChange={v => set('comuna', v)}
                  requerido editable={puedeEditar} />
-          <Campo label="Región" valor={f.region} onChange={v => set('region', v)} editable={puedeEditar} />
+          <Campo label={voc.divisionMayor} valor={f.region} onChange={v => set('region', v)}
+                 editable={puedeEditar} />
         </Grupo>
 
         <Grupo titulo="Cómo contactarla">
