@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { cargarPanel, opcionesDeFiltro, ponerEnMarcha,
-         type PanelREI, type FiltrosREI, type OpcionesFiltro } from '@/services/inmobiliaria.service';
+import { cargarPanel, cargarMapa, opcionesDeFiltro, ponerEnMarcha,
+         type PanelREI, type FiltrosREI, type OpcionesFiltro,
+         type MapaREI } from '@/services/inmobiliaria.service';
 import { TarjetaCifra, Avisos, Elige, Cabecera } from '@/components/capital/Cifra';
 import { Periodo, type Rango } from '@/components/capital/Periodo';
 import { Grafico, Lista } from '@/components/panel/Cuadro';
+import { MapaMunicipios } from '@/components/inmobiliaria/Mapa';
 import { mesCorto } from '@/lib/formato';
 
 /* EL PANEL INMOBILIARIO
@@ -16,6 +18,7 @@ import { mesCorto } from '@/lib/formato';
      3 · el resto del cuadro    compacto, para consultar
      4 · las curvas             captación y ventas, mes a mes
      5 · el detalle             brecha por tipología, canales, pipeline
+     6 · dónde                  el inventario y la demanda sobre el mapa
 
    Las alertas van PRIMERO, y aquí eso importa más que en el otro panel. La
    mitad de lo que se avisa son huecos de dato —ventas sin fecha, inmuebles sin
@@ -33,6 +36,7 @@ export function PanelInmobiliario({ companyId, puedeEditar }:
   const [filtros, setFiltros] = useState<FiltrosREI>({});
   const [d, setD] = useState<PanelREI | null>(null);
   const [opciones, setOpciones] = useState<OpcionesFiltro>({ municipios: [], tipos: [], canales: [] });
+  const [mapa, setMapa] = useState<MapaREI | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sinAcceso, setSinAcceso] = useState(false);
@@ -42,6 +46,16 @@ export function PanelInmobiliario({ companyId, puedeEditar }:
   useEffect(() => {
     let vivo = true;
     opcionesDeFiltro(companyId).then(o => vivo && setOpciones(o)).catch(() => {});
+    return () => { vivo = false; };
+  }, [companyId, recarga]);
+
+  /* El mapa no depende de los filtros: es el recuento completo por municipio,
+     y es donde se elige el municipio, no donde se sufre el ya elegido. Si
+     falla, cae en silencio —el panel entero no se cae por una tarjeta— y
+     `MapaMunicipios` dibuja su propio vacío. */
+  useEffect(() => {
+    let vivo = true;
+    cargarMapa(companyId).then(m => vivo && setMapa(m)).catch(() => {});
     return () => { vivo = false; };
   }, [companyId, recarga]);
 
@@ -167,6 +181,12 @@ export function PanelInmobiliario({ companyId, puedeEditar }:
               <div className="grid gap-4">
                 {d.listas.map(l => <Lista key={l.titulo} lista={l} moneda={d.moneda} />)}
               </div>
+
+              {/* Dónde. Va al final porque contesta la última pregunta: con el
+                  cuadro ya leído, en qué municipios está lo que se acaba de
+                  ver. No lo filtra el Filtrador —el mapa ES el filtro por
+                  municipio, y recortarlo a uno lo dejaría sin nada que decir. */}
+              <MapaMunicipios mapa={mapa} />
             </>
           )}
         </>

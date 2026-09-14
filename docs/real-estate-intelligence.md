@@ -303,6 +303,38 @@ nulos, y ponerles la fecha de captación —o la de hoy— metería una venta en
 mes en que no ocurrió. El panel ya avisa cuántos son, y se convierten solos en
 cuanto alguien complete la fecha y se vuelva a correr la función.
 
+## Dónde está el negocio: el mapa
+
+El panel cierra con el inventario y la demanda sobre el mapa real de Colombia.
+Tres capas —inventario, disponibles, demanda— que se alternan; la que se mira
+manda el tamaño de la burbuja y al pasar por encima el globo enseña las otras.
+
+**Una burbuja por municipio, no un departamento pintado.** Colombia tiene 1.122
+municipios: a la escala del país uno mide menos de un píxel, así que colorearlo
+no se vería. Y colorear el departamento respondería otra pregunta — una firma
+de Pamplona con todo su inventario en un municipio pintaría Norte de Santander
+entero, que es cuarenta veces más grande que su mercado. La burbuja está en el
+sitio exacto y su **área** —no su radio— es la cantidad: un círculo del doble de
+radio parece cuatro veces más, y sería mentir por cuatro.
+
+**La geometría es real y va embebida.** DANE, Marco Geoestadístico Nacional
+2018, vía `@john-guerra/geo-colombia` (MIT). Los 32 departamentos continentales
+como polígono, simplificados con Douglas-Peucker a 4 km preservando topología
+—0,41% de desvío de superficie contra la cifra oficial—; los 1.122 municipios
+como punto, en el centroide que el propio MGN publica. Son 54 KB en el paquete
+y ninguna descarga en tiempo de ejecución: el GeoJSON de municipios pesa 2,4 MB
+y no cambia nunca.
+
+**Del texto de la ficha al municipio que existe.** El municipio se escribe a
+mano, así que `ubicarMunicipio()` normaliza acentos y puntuación, acepta el
+nombre de uso —nadie escribe «San José de Cúcuta»— y **desambigua por
+departamento**, que no es un lujo: 153 municipios comparten nombre con otro, hay
+cuatro «La Unión» y cuatro «Villanueva». Lo que no hace es parecidos: una
+distancia de edición pondría un cliente en un municipio en que no está, y un
+punto en el mapa es una afirmación sobre dónde opera la empresa. Lo que no se
+puede ubicar se cuenta y se dice —un barrio o un corregimiento no son
+municipios—, nunca se coloca a ojo.
+
 ## Migraciones
 
 | | Qué trae |
@@ -314,6 +346,7 @@ cuanto alguien complete la fecha y se vuelva a correr la función.
 | `0124_real_estate_intelligence_semillas.sql` | `rei_sembrar_base()`. |
 | `0126_los_compradores_y_los_propietarios_son_clientes.sql` | El puente con el CRM: `rei_sincronizar_crm()`. |
 | `0127_una_venta_cerrada_es_un_pedido.sql` | El puente con Ventas: `rei_sincronizar_ventas()`. |
+| `0128_el_panel_inmobiliario_dice_donde.sql` | `rei_mapa()`: inventario y demanda por municipio. |
 
 Todas son aditivas y ninguna toca una tabla de fuera del módulo, salvo para
 agregarle un índice a `customers` (`0126`). Los pedidos y el producto de

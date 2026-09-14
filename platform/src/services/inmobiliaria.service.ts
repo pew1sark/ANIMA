@@ -50,6 +50,34 @@ export async function cargarPanel(companyId: string, filtros: FiltrosREI): Promi
   return d as PanelREI;
 }
 
+/* El inventario y la demanda por municipio, para el mapa.
+   ---------------------------------------------------------------------------
+   Va aparte de `cargarPanel` a propósito. El panel es una llamada porque es
+   una pantalla; el mapa es otra cosa —se dibuja o no según el país— y meterlo
+   en `rei_resumen()` habría hecho que toda empresa pague el recuento por
+   municipio para no usarlo. */
+export interface MunicipioREI {
+  municipio: string;
+  inmuebles: number; disponibles: number; vendidos: number;
+  compradores: number; compradores_activos: number;
+}
+
+export interface MapaREI {
+  /** El departamento de la empresa. Desata homónimos: hay cuatro «La Unión». */
+  departamento: string | null;
+  municipios: MunicipioREI[];
+  total_inmuebles: number;
+  total_compradores: number;
+}
+
+export async function cargarMapa(companyId: string): Promise<MapaREI | null> {
+  const { data, error } = await supabase.rpc('rei_mapa', { p_company: companyId });
+  if (error) throw error;
+  const d = data as Partial<MapaREI> | null;
+  if (!d || !d.municipios) return null;
+  return d as MapaREI;
+}
+
 /** Pone en marcha el módulo: supuestos, criterios y etapas de referencia.
  *  Es idempotente —completa lo que falte y no pisa lo ajustado—, así que se
  *  puede volver a llamar sin pensarlo. */

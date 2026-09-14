@@ -61,10 +61,12 @@ const SEGUN_PAIS: Record<string, keyof Vocabulario> = {
   region: 'divisionMayor'
 };
 
-/* Mapea un país a los países que el mapa del panel sabe dibujar. Hoy solo
-   Chile tiene sus regiones dibujadas; para el resto el panel muestra la lista
-   ordenada, que es la que lleva los números de todas formas. */
-export const PAISES_CON_MAPA = new Set(['CL']);
+/* Los países cuya geometría está dibujada. Chile por regiones, Colombia por
+   departamentos con los municipios en burbuja; para el resto el panel muestra
+   la lista ordenada, que es la que lleva los números de todas formas.
+
+   Agregar un país es agregar su archivo de geometría y su código aquí. */
+export const PAISES_CON_MAPA = new Set(['CL', 'CO']);
 export const hayMapa = (pais?: string | null) =>
   PAISES_CON_MAPA.has((pais ?? '').toUpperCase());
 
