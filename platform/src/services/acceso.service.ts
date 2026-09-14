@@ -109,6 +109,25 @@ export function vieneDelCorreo(): boolean {
   return vieneDeInvitacion() || vieneDeRecuperacion();
 }
 
+/* Un enlace que abre DIRECTO el formulario de recuperar, con el correo puesto.
+   ---------------------------------------------------------------------------
+   Existe por un caso concreto y repetido: alguien no puede entrar, y por correo
+   o por teléfono hay que explicarle «anda a la aplicación, pulsa ¿la olvidaste?,
+   escribe tu correo». Son tres pasos donde se pierde gente, y el más fácil de
+   equivocar es el último —el correo con el que está dado de alta no siempre es
+   el que usa a diario—.
+
+   Con `?clave=alguien@dominio.com` la pantalla abre en el formulario correcto y
+   con la dirección correcta. NO envía nada sola: enviar al cargar convertiría
+   cualquier recarga —y cualquiera que tenga el enlace— en un correo más a una
+   bandeja ajena. Queda a un clic, que es lo que se quería ahorrar. */
+export function correoParaRecuperar(): string | null {
+  const v = new URLSearchParams(location.search).get('clave');
+  if (!v) return null;
+  const limpio = v.trim();
+  return limpio.includes('@') ? limpio : '';
+}
+
 /* Se llama al terminar de fijar la contraseña. Sin esto, recargar volvería a
    la misma pantalla porque la marca sigue en la barra de direcciones. */
 export function limpiarMarcaDeInvitacion() {

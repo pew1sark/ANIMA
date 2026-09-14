@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useAuth } from '@/core/auth/AuthContext';
 import { Marca, Apex, ApexCompany } from '@/components/Marca';
-import { accesoService } from '@/services/acceso.service';
+import { accesoService, correoParaRecuperar } from '@/services/acceso.service';
 import { env } from '@/config/env';
 
 type Vista = 'entrar' | 'activar' | 'recuperar' | 'solicitar' | 'pausa';
@@ -17,7 +17,11 @@ type Vista = 'entrar' | 'activar' | 'recuperar' | 'solicitar' | 'pausa';
    como cambiar de empresa—, y a la derecha se trabaja. En un teléfono el lado
    oscuro desaparece: ahí lo único que importa es el formulario. */
 export function Login() {
-  const [vista, setVista] = useState<Vista>('entrar');
+  /* `?clave=correo` abre directo en recuperar, con la dirección puesta. Es el
+     enlace que se le pasa a quien no puede entrar, para no tener que explicarle
+     tres pasos por teléfono. */
+  const correo = correoParaRecuperar();
+  const [vista, setVista] = useState<Vista>(correo === null ? 'entrar' : 'recuperar');
 
   return (
     <div className="min-h-full grid lg:grid-cols-[1.04fr_.96fr]">
@@ -28,7 +32,8 @@ export function Login() {
           <Tarjeta>
             {vista === 'entrar'    && <Entrar irA={setVista} />}
             {vista === 'activar'   && <Activar volver={() => setVista('entrar')} irA={setVista} />}
-            {vista === 'recuperar' && <Recuperar volver={() => setVista('entrar')} irA={setVista} />}
+            {vista === 'recuperar' && <Recuperar volver={() => setVista('entrar')} irA={setVista}
+                                                   correoInicial={correo ?? ''} />}
             {vista === 'solicitar' && <Solicitar volver={() => setVista('entrar')} />}
             {vista === 'pausa'     && <EnPausa volver={() => setVista('entrar')} />}
           </Tarjeta>
@@ -307,8 +312,9 @@ function Activar({ volver, irA }: { volver: () => void; irA: (v: Vista) => void 
 
    No se puede arreglar contestando distinto. Sí diciéndolo en la pantalla y
    dejando a mano la puerta que sí le corresponde. */
-function Recuperar({ volver, irA }: { volver: () => void; irA: (v: Vista) => void }) {
-  const [email, setEmail] = useState('');
+function Recuperar({ volver, irA, correoInicial = '' }:
+  { volver: () => void; irA: (v: Vista) => void; correoInicial?: string }) {
+  const [email, setEmail] = useState(correoInicial);
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
