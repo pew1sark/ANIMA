@@ -253,6 +253,43 @@
       .glow,.scroll-hint,.apex-mark,.hero .chip,.hero h1,.hero .sub,.hero-cta{animation:none;opacity:1}
     }
   </style>
+
+  <!-- ===================================================================
+       Los correos de Supabase caen aquí, y aquí no hay quien los atienda.
+       ===================================================================
+       Un enlace de invitación o de recuperación trae el token en el hash y
+       necesita una página con supabase-js que lo consuma. Cuando el «Site URL»
+       del proyecto apunta a la raíz del sitio —como estuvo apuntando—, el
+       enlace aterriza en esta portada, que es HTML estático: el token no lo
+       recoge nadie, la sesión nunca se abre, y la persona vuelve al formulario
+       de ingreso a probar una contraseña que todavía no ha puesto. Ese es el
+       bucle: el enlace se gasta en el primer clic y el segundo ya dice
+       «inválido o expirado».
+
+       Esto lo reenvía a la aplicación, que sí sabe qué hacer con él. Vale para
+       las dos plataformas: STUDIO y COMPANY entran por la misma puerta y es
+       `mis_lineas()` quien decide a dónde va cada quien.
+
+       El tipo de enlace viaja como parámetro y NO como hash, a propósito:
+       supabase-js limpia el hash en cuanto se carga —antes de que React monte—
+       y entonces la aplicación ya no sabría que la persona viene a poner una
+       contraseña. El parámetro sobrevive.
+
+       Va aquí arriba, antes de cualquier recurso, para que el reenvío ocurra
+       sin llegar a pintar la portada. =================================== -->
+  <script>
+    (function () {
+      var h = location.hash || '', q = location.search || '';
+      if (!/[#&](access_token|refresh_token|error_code|error_description|error)=/.test(h)
+          && !/[?&]code=/.test(q)) return;
+
+      var tipo = (h.match(/[#&]type=([a-z_]+)/) || [])[1] || '';
+      var marca = tipo === 'recovery' ? 'recuperar=1'
+                : (tipo === 'invite' || tipo === 'signup') ? 'activar=1' : '';
+      var busca = marca ? (q ? q + '&' + marca : '?' + marca) : q;
+      location.replace('app/' + busca + h);
+    })();
+  </script>
 </head>
 <body>
   <!-- NAV -->

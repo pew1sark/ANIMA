@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { vieneDeInvitacion } from '@/services/acceso.service';
+import { vieneDelCorreo } from '@/services/acceso.service';
 import { supabase } from '@/lib/supabase';
 
 interface AuthValue {
@@ -21,11 +21,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
-  /* Arranca en true si se viene del correo de invitación. Ese enlace abre una
-     sesión válida, así que sin esto la aplicación lo trataría como un ingreso
-     normal y la persona entraría SIN HABER PUESTO CONTRASEÑA: la próxima vez
-     no podría volver. Se lee de la query, que sobrevive a supabase-js. */
-  const [recuperando, setRecuperando] = useState(vieneDeInvitacion);
+  /* Arranca en true si se viene del correo —de invitación o de recuperación—.
+     Ese enlace abre una sesión válida, así que sin esto la aplicación lo
+     trataría como un ingreso normal y la persona entraría SIN HABER PUESTO
+     CONTRASEÑA: la próxima vez no podría volver.
+
+     Se lee de la query y no del hash, que sobrevive a supabase-js, y NO se
+     confía solo en el evento `PASSWORD_RECOVERY`: ese llega cuando el cliente
+     procesa el enlace, que es al importar el módulo, y para entonces el
+     `useEffect` de abajo todavía no se ha suscrito. Perder esa carrera es
+     exactamente el bucle que se vio en producción. */
+  const [recuperando, setRecuperando] = useState(vieneDelCorreo);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setLoading(false); });
