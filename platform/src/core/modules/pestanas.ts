@@ -22,10 +22,9 @@ import type { ModuleSlug } from '@/types/core';
                  comparación presupuesto/real. El motor dibuja filas con ficha;
                  estas son otra cosa, y forzarlas al motor habría sido
                  deformar el motor para que cupieran
-     inmobiliaria — lo mismo en Real Estate Intelligence: el panel comercial,
-                 el panel de desarrollo, la matriz de calificación
-                 (oportunidades × criterios) y la hoja de prefactibilidad con
-                 su flujo de caja
+     inmobiliaria — lo mismo en Real Estate Intelligence: el panel, la matriz
+                 de calificación (oportunidades × criterios), la hoja de
+                 prefactibilidad con su flujo de caja y el panel comercial
 
    Un módulo sin declaración cae en el comportamiento de siempre: una pestaña
    por entidad. Así, agregar una entidad nueva sigue sin obligar a tocar esto. */
@@ -110,24 +109,22 @@ export function pestanasDe(slug: ModuleSlug, addons: string[] = []): Pestana[] {
 
   /* Real Estate Intelligence abre por el panel, igual que su hermano, y por
      el mismo motivo: la pregunta del día es cómo va la comercialización, no
-     qué hay en la tabla de inmuebles.
+     qué hay en la tabla de inmuebles. Después vienen las dos pantallas de
+     decisión —calificar y dictaminar— y recién entonces las entidades, que es
+     donde se carga.
 
-     Son DOS paneles y no uno, y el orden entre ellos no es casual. Comercial
-     va primero porque es la pantalla de todos los días: cómo va el mes contra
-     la meta, qué hay que hacer hoy, qué se está cayendo. Mercado —el que ya
-     existía— responde la pregunta de más arriba: cómo está el inventario, la
-     demanda y el pipeline de desarrollo, que se mira una vez por semana.
-     Meterlas en una sola pantalla habría obligado a hacer scroll para llegar
-     a lo urgente.
-
-     Después vienen las dos pantallas de decisión —calificar y dictaminar— y
-     recién entonces las entidades, que es donde se carga. */
+     El panel comercial se agrega DESPUÉS de esas tres y no antes, y el Panel
+     conserva su nombre. Se probó al revés —Comercial primero, el otro
+     renombrado a «Mercado»— y estaba mal: cambia de sitio y de nombre una
+     pantalla que la gente ya usa todos los días, y mueve la portada del
+     módulo por una decisión que no le toca tomar a quien agrega una
+     pestaña. Lo nuevo se suma al final; lo que ya funciona no se desplaza. */
   if (slug === 'realestate') {
     salida.push(
-      { id: 'comercial',       nombre: 'Comercial',       tipo: 'inmobiliaria', vista: 'comercial' },
-      { id: 'panel',           nombre: 'Mercado',         tipo: 'inmobiliaria', vista: 'panel' },
+      { id: 'panel',           nombre: 'Panel',           tipo: 'inmobiliaria', vista: 'panel' },
       { id: 'calificacion',    nombre: 'Calificación',    tipo: 'inmobiliaria', vista: 'calificacion' },
-      { id: 'prefactibilidad', nombre: 'Prefactibilidad', tipo: 'inmobiliaria', vista: 'prefactibilidad' });
+      { id: 'prefactibilidad', nombre: 'Prefactibilidad', tipo: 'inmobiliaria', vista: 'prefactibilidad' },
+      { id: 'comercial',       nombre: 'Comercial',       tipo: 'inmobiliaria', vista: 'comercial' });
     for (const e of esquemas) {
       salida.push({ id: e.tabla, nombre: CORTO[e.tabla] ?? e.titulo, tipo: 'datos', esquema: e });
     }

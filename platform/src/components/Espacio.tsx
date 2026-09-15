@@ -70,11 +70,21 @@ export function Espacio({ volver }: { volver?: () => void }) {
   /* Cuál de los dos paneles es la portada. Se decide con `disponible` —lo
      contratado Y encendido—, que es el mismo criterio con el que se arma el
      menú: no puede abrir por una pantalla que después no aparece en la
-     barra lateral. El razonamiento largo está junto al render. */
+     barra lateral. El razonamiento largo está junto al render.
+
+     La condición es SOLO el módulo inmobiliario. Se escribió primero como
+     «inmobiliaria y además sin Ventas», con el argumento de que quien
+     despacha mercadería tiene pedidos más urgentes que un forecast. Mirando
+     los datos, esa regla no se cumplía para nadie: Ventas está encendido en
+     todas las organizaciones, y en una inmobiliaria lo está justamente por
+     el módulo inmobiliario —0127 convierte cada inmueble vendido en un
+     pedido con su comisión—. La condición se leía razonable y era código
+     muerto: dejaba la portada de la inmobiliaria en el panel de una empresa
+     que mueve mercadería, que es el problema que venía a resolver. */
   const tieneModulo = (slug: string) =>
     (esp?.modulos ?? []).some(m => m.slug === slug && m.disponible);
   const portada: 'comercial' | 'operativo' =
-    tieneModulo('realestate') && !tieneModulo('commerce') ? 'comercial' : 'operativo';
+    tieneModulo('realestate') ? 'comercial' : 'operativo';
 
   /* El menú por zonas. Un grupo sin módulos no se dibuja: encabezar una lista
      vacía es peor que no encabezar nada. */
@@ -194,11 +204,16 @@ export function Espacio({ volver }: { volver?: () => void }) {
                   parte.
 
                   Así que la portada la decide lo que la organización tiene
-                  contratado, no una constante. Con el módulo inmobiliario
-                  encendido y sin Ventas, entrar abre el panel comercial. Con
-                  los dos, manda el operativo: una empresa que además vende
-                  mercadería tiene pedidos que despachar hoy, y eso es más
-                  urgente que un forecast.
+                  contratado, no una constante: con el módulo inmobiliario
+                  encendido, entrar abre el panel comercial.
+
+                  No se mira si además tiene Ventas. Se intentó —«inmobiliaria
+                  y sin Ventas»— y era código muerto: Ventas está encendido en
+                  todas, y en una inmobiliaria lo está POR el módulo
+                  inmobiliario, porque una venta cerrada se convierte en un
+                  pedido con su comisión. Esa condición dejaba a la
+                  inmobiliaria abriendo por el panel de la mercadería, que es
+                  exactamente lo que había que arreglar.
 
                   No es un caso especial escondido en un `if`: es la misma
                   regla de todo el registro de módulos —la empresa ve lo que

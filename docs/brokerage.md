@@ -174,14 +174,32 @@ mercadería: pedidos que salen hoy, stock bajo mínimo, lotes que vencen esta
 semana. Es el correcto para quien vende cosas y no le dice nada a una
 inmobiliaria: sus siete bloques quedan en cero permanente.
 
-Así que la portada la decide lo contratado, no una constante. Con el módulo
-inmobiliario encendido y **sin** Ventas, entrar abre el panel comercial. Con
-los dos, manda el operativo: una empresa que además vende mercadería tiene
-pedidos que despachar hoy, y eso es más urgente que un forecast.
+Así que la portada la decide lo contratado, no una constante: **con el módulo
+inmobiliario encendido, entrar abre el panel comercial**.
+
+No se mira si además tiene Ventas. Se intentó —«inmobiliaria y sin Ventas», con
+el argumento de que quien despacha mercadería tiene pedidos más urgentes que un
+forecast— y era **código muerto**: Ventas está encendido en todas las
+organizaciones, y en una inmobiliaria lo está justamente *por* el módulo
+inmobiliario, porque `0127` convierte cada inmueble vendido en un pedido con su
+comisión. Esa condición dejaba a la inmobiliaria abriendo por el panel de la
+mercadería, que es exactamente lo que venía a arreglar.
 
 La regla vive en `Espacio.tsx` y usa `disponible` —contratado **y**
 encendido—, que es el mismo criterio con el que se arma el menú: la portada no
 puede ser una pantalla que después no aparece en la barra lateral.
+
+## Dónde se enchufa, sin mover nada
+
+El panel comercial es la **cuarta** pestaña del módulo, detrás de Panel,
+Calificación y Prefactibilidad, y las seis entidades comerciales van **después**
+de las diez de originación y desarrollo, que conservan su orden.
+
+No es indiferencia por el orden: es que las de arriba ya se usan. Reordenarlas
+para hacerle sitio a lo nuevo mueve pestañas que la gente tiene aprendidas y
+cambia por qué pantalla abre el módulo, que es una decisión de quien lo opera y
+no de quien agrega una pestaña. Cuando el brokerage esté rodado se puede
+discutir el orden con datos de uso.
 
 ## El puente con el resto de la plataforma
 

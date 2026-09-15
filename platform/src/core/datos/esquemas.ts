@@ -2194,13 +2194,13 @@ export const ESQUEMAS_POR_MODULO: Record<string, Esquema[]> = {
                HITOS, EJECUCION, RONDAS, USO_DE_FONDOS, INVERSIONISTAS,
                PIPELINE_INVERSIONISTAS, INTERACCIONES, CAP_TABLE, RIESGOS,
                REQUISITOS, TIPOS_DE_CAMBIO],
-  /* El orden ES el proceso comercial, y por eso lo comercial va primero: se
-     entra a este módulo a trabajar leads y negociaciones muchas más veces que
-     a revisar un vehículo fiduciario. Lo de originación y desarrollo queda
-     después, y los catálogos —criterios, etapas, supuestos— al final, que es
-     donde se configuran una vez y no se vuelven a tocar. */
-  realestate: [LEADS, NEGOCIACIONES, VISITAS, ACTIVIDADES, CONTRATOS, METAS,
-               INVENTARIO, DEMANDA,
-               DESARROLLOS, OPORTUNIDADES, HITOS_DESARROLLO,
-               VEHICULOS, ADELANTOS_RENTA, CRITERIOS, ETAPAS, SUPUESTOS]
+  /* Las diez de originación y desarrollo van primero y EN SU ORDEN ORIGINAL:
+     son las que ya se usan, y reordenarlas para hacerle sitio a lo nuevo
+     habría movido de lugar pestañas que la gente ya tiene aprendidas. Las
+     seis comerciales se agregan al final, que es lo que corresponde a lo que
+     todavía no existe en la operación. Cuando el brokerage esté rodado se
+     puede discutir el orden; hacerlo ahora es decidirlo por quien lo usa. */
+  realestate: [DESARROLLOS, OPORTUNIDADES, INVENTARIO, DEMANDA, HITOS_DESARROLLO,
+               VEHICULOS, ADELANTOS_RENTA, CRITERIOS, ETAPAS, SUPUESTOS,
+               LEADS, NEGOCIACIONES, VISITAS, ACTIVIDADES, CONTRATOS, METAS]
 };
