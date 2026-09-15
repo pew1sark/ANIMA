@@ -23,6 +23,106 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <noscript>
+      <div style="max-width:34rem;margin:15vh auto;padding:0 1.5rem;font:15px/1.55 system-ui,sans-serif">
+        <h1 style="font-size:19px;margin:0 0 .5rem">Hace falta JavaScript</h1>
+        <p style="color:#5f5f66;margin:0">ANIMA COMPANY es una aplicación: sin JavaScript no hay nada que mostrar.</p>
+      </div>
+    </noscript>
+
+    <!-- RED DE SEGURIDAD
+         =====================================================================
+         Si el bundle no carga, esta pantalla queda en blanco y no dice por
+         qué. Ha pasado dos veces (#79 y #87) y las dos veces costó varias
+         rondas averiguarlo, porque desde fuera una página en blanco y una
+         página que aún no cargó son indistinguibles.
+
+         La causa es casi siempre la misma: el nombre del bundle lleva un
+         hash, cada publicación lo renombra, y un index.html guardado en
+         caché queda pidiendo un archivo que ya no existe.
+
+         Esto no lo previene —eso es cosa del service worker y de la caché—,
+         hace lo otro: lo VUELVE VISIBLE, y le da a quien lo sufre el botón
+         que lo arregla sin tener que saber qué es un service worker.
+
+         Va inline y sin dependencias a propósito: es el código que tiene que
+         funcionar justo cuando lo demás no cargó. -->
+    <script>
+      (function () {
+        var fallos = [];
+        var mostrado = false;
+
+        function reparar() {
+          var tareas = [];
+          try {
+            if (navigator.serviceWorker) {
+              tareas.push(navigator.serviceWorker.getRegistrations()
+                .then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+            }
+            if (window.caches) {
+              tareas.push(caches.keys()
+                .then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }));
+            }
+          } catch (e) { /* si algo de esto no existe, se recarga igual */ }
+          Promise.all(tareas)['catch'](function () {}).then(function () {
+            location.replace(location.pathname + '?v=' + Date.now());
+          });
+        }
+
+        function mostrar(motivo) {
+          if (mostrado) return;
+          mostrado = true;
+          var raiz = document.getElementById('root');
+          if (!raiz) return;
+          raiz.innerHTML =
+            '<div style="max-width:36rem;margin:12vh auto;padding:0 1.5rem;font:15px/1.55 system-ui,-apple-system,sans-serif;color:#1d1d1f">' +
+              '<h1 style="font-size:20px;font-weight:800;letter-spacing:-.01em;margin:0 0 .6rem">La aplicación no pudo cargarse</h1>' +
+              '<p style="color:#5f5f66;margin:0 0 1rem">' + motivo + '</p>' +
+              (fallos.length
+                ? '<p style="margin:0 0 1rem;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#8a8a90;word-break:break-all">'
+                    + fallos.join('<br>') + '</p>'
+                : '') +
+              '<button id="anima-reparar" style="appearance:none;border:0;border-radius:10px;padding:.65rem 1.1rem;' +
+                'background:#1d1d1f;color:#fff;font:600 14px system-ui,sans-serif;cursor:pointer">Reparar y recargar</button>' +
+              '<p style="color:#8a8a90;margin:1rem 0 0;font-size:12.5px">' +
+                'Borra la copia guardada en este navegador y vuelve a pedir la versión publicada. ' +
+                'No toca ningún dato: todo vive en el servidor.</p>' +
+            '</div>';
+          var b = document.getElementById('anima-reparar');
+          if (b) b.addEventListener('click', reparar);
+        }
+
+        /* Un <script> o un <link> que no carga no dispara window.onerror:
+           hay que escucharlo en fase de captura. Es justo el caso del bundle
+           renombrado. */
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (!t || (t.tagName !== 'SCRIPT' && t.tagName !== 'LINK')) return;
+          var url = t.src || t.href || '';
+
+          /* SOLO lo nuestro. La tipografía viene de un CDN y puede fallar por
+             mil motivos ajenos —una red corporativa, un bloqueador— sin que
+             la aplicación tenga nada de malo: se dibuja igual con la fuente
+             del sistema. Acusar de «no pudo cargarse» a una pantalla que
+             funciona sería peor que no avisar. */
+          if (url.indexOf(location.origin) !== 0) return;
+
+          fallos.push(url.replace(location.origin, ''));
+          mostrar('No se pudo descargar uno de sus archivos. Lo más probable es que este navegador tenga guardada una versión anterior que ya no existe en el servidor.');
+        }, true);
+
+        /* Y el caso en que todo descarga pero la aplicación no llega a
+           dibujar: diez segundos con la raíz vacía no es lentitud. */
+        setTimeout(function () {
+          var raiz = document.getElementById('root');
+          if (raiz && raiz.children.length === 0) {
+            mostrar('Se descargó todo, pero la aplicación no llegó a dibujarse. Suele ser una copia incompleta guardada en el navegador.');
+          }
+        }, 10000);
+      })();
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
