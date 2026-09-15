@@ -354,7 +354,21 @@ export async function cargarComercial(
   const { data, error } = await supabase.rpc('rei_comercial', {
     p_company: companyId, p_filtros: limpiar(filtros)
   });
-  if (error) throw error;
+  if (error) {
+    /* El bundle se publica desde el repositorio y las migraciones se aplican
+       aparte: entre una cosa y la otra hay una ventana en la que la pantalla
+       existe y la función todavía no. 42883 es «la función no existe» en
+       PostgreSQL, y sin esto la pestaña muestra un error de base de datos en
+       crudo a quien no puede hacer nada con él. Se dice qué falta y quién
+       tiene que hacerlo. */
+    if (error.code === '42883' || /rei_comercial/.test(error.message ?? '')) {
+      throw new Error(
+        'El panel comercial todavía no está disponible en esta base: falta aplicar ' +
+        'las migraciones del módulo (0129 a 0131). El resto del módulo inmobiliario ' +
+        'funciona con normalidad.');
+    }
+    throw error;
+  }
   const d = data as Partial<PanelComercial> | null;
   if (!d || !d.cifras) return null;
   return d as PanelComercial;
