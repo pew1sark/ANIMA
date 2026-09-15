@@ -29,13 +29,34 @@ function exigirVariables(mode: string) {
   }
 }
 
+/* El sello de la versión.
+   ---------------------------------------------------------------------------
+   Una copia vieja guardada en el navegador carga igual de bien que la nueva:
+   no falla nada, no hay 404, y por dentro las dos son un `<div id="root">`
+   vacío. Sin una marca no hay forma de responder «¿qué versión estás viendo?»,
+   y sin esa respuesta el diagnóstico se hace a ciegas — que es exactamente lo
+   que pasó cuando el bundle cambió de nombre y /app/ parecía no actualizarse.
+
+   La marca es la fecha y hora del build. No pretende ser un identificador
+   criptográfico: pretende que dos personas mirando la misma pantalla puedan
+   decir si están viendo lo mismo. */
+function sello() {
+  const marca = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  return {
+    name: 'anima-sello',
+    transformIndexHtml(html: string) {
+      return html.replace('__ANIMA_BUILD__', marca);
+    }
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   /* Solo al compilar. En `dev` el servidor arranca y la pantalla muestra el
      error de `required()`, que ahí sí se lee. */
   if (command === 'build') exigirVariables(mode);
 
   return {
-  plugins: [react(), tailwind()],
+  plugins: [react(), tailwind(), sello()],
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
   server: { port: 5180 },
 

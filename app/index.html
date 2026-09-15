@@ -8,6 +8,11 @@
     <meta name="description" content="ANIMA TSC — Technology System Connection. ANIMA STUDIO para quien crea, ANIMA COMPANY para quien opera." />
     <link rel="icon" href="/assets/img/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/assets/img/icon.svg" />
+    <!-- Qué versión es esta. Una copia vieja guardada en el navegador carga
+         igual de bien que la nueva y por dentro no se distingue; esto es lo
+         único que permite decir «estás viendo la de antes». Lo sella el
+         plugin `sello` de vite.config.ts en cada build. -->
+    <meta name="anima-build" content="2026-09-15 20:52 UTC" />
 
     <!-- Inter, la misma de STUDIO y de la portada. Va el eje variable completo
          (100..900) y no seis pesos sueltos: el sistema de STUDIO está escrito
@@ -88,11 +93,37 @@
               '<button id="anima-reparar" style="appearance:none;border:0;border-radius:10px;padding:.65rem 1.1rem;' +
                 'background:#1d1d1f;color:#fff;font:600 14px system-ui,sans-serif;cursor:pointer">Reparar y recargar</button>' +
               '<p style="color:#8a8a90;margin:1rem 0 0;font-size:12.5px">' +
+                'Versión de esta copia: <b>' + sello() + '</b>. ' +
                 'Borra la copia guardada en este navegador y vuelve a pedir la versión publicada. ' +
                 'No toca ningún dato: todo vive en el servidor.</p>' +
             '</div>';
           var b = document.getElementById('anima-reparar');
           if (b) b.addEventListener('click', reparar);
+        }
+
+        function sello() {
+          var m = document.querySelector('meta[name="anima-build"]');
+          return (m && m.getAttribute('content')) || 'desconocida';
+        }
+
+        /* Una copia vieja COMPLETA carga sin fallar nada: no hay 404, no hay
+           pantalla en blanco, y no salta nada de lo de abajo — simplemente
+           enseña la versión anterior sin decirlo. Desde dentro no hay forma
+           de detectarlo, así que hay una puerta explícita: /app/?reparar
+           limpia y recarga. Es el enlace que se le pasa a alguien que dice
+           «no veo lo nuevo». */
+        if (location.search.indexOf('reparar') !== -1) {
+          document.addEventListener('DOMContentLoaded', function () {
+            var raiz = document.getElementById('root');
+            if (raiz) raiz.innerHTML =
+              '<div style="max-width:32rem;margin:15vh auto;padding:0 1.5rem;' +
+              'font:15px/1.55 system-ui,sans-serif;color:#1d1d1f">' +
+              '<h1 style="font-size:19px;font-weight:800;margin:0 0 .5rem">Actualizando…</h1>' +
+              '<p style="color:#5f5f66;margin:0">Borrando la copia guardada en este ' +
+              'navegador y pidiendo la versión publicada.</p></div>';
+          });
+          reparar();
+          return;
         }
 
         /* Un <script> o un <link> que no carga no dispara window.onerror:
