@@ -305,8 +305,89 @@ export async function sembrarCurva(modelo: string): Promise<number> {
 
 // ------------------------------------------------------------------ utilidades
 
-const limpiar = (f: FiltrosREI) =>
+/* Un filtro vacío no es lo mismo que un filtro puesto en blanco: la base
+   trata `''` como un valor y devolvería cero filas. Sirve a los dos paneles
+   —el de mercado y el comercial— y por eso toma cualquier juego de claves. */
+const limpiar = <T extends object>(f: T) =>
   Object.fromEntries(Object.entries(f).filter(([, v]) => v != null && v !== ''));
 
 const unicos = (xs: (string | null)[]) =>
   [...new Set(xs.map(x => (x ?? '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+
+// ------------------------------------------------------------- brokerage
+
+/* EL PANEL COMERCIAL
+   ---------------------------------------------------------------------------
+   La otra mitad del módulo: la operación del día, no el análisis de un predio.
+   Mismo criterio que arriba —aquí no se suma nada— y por el mismo motivo: la
+   comisión del mes tiene que dar lo mismo en el panel, en la lista de metas y
+   en el informe que se lleva a la reunión del lunes.
+
+   `embudo` va aparte de `listas` porque se dibuja distinto: es una escalera
+   que se lee de un vistazo, no una tabla que se recorre. */
+
+export interface FiltrosComercial {
+  ciudad?: string;
+  /** El uuid del responsable. Vacío = toda la oficina. */
+  broker?: string;
+  desde?: string;
+  hasta?: string;
+}
+
+export interface PeldanoEmbudo { etapa: string; orden: number; cantidad: number }
+
+export interface PanelComercial {
+  moneda: string;
+  periodo: { desde: string; hasta: string };
+  cifras: Indicador[];
+  embudo: PeldanoEmbudo[];
+  series: SerieResumen[];
+  listas: ListaResumen[];
+  alertas: Aviso[];
+}
+
+/** Null cuando el nivel no llega al módulo: la base responde `{}` en vez de
+ *  fallar, igual que `rei_resumen()`. */
+export async function cargarComercial(
+  companyId: string, filtros: FiltrosComercial
+): Promise<PanelComercial | null> {
+  const { data, error } = await supabase.rpc('rei_comercial', {
+    p_company: companyId, p_filtros: limpiar(filtros)
+  });
+  if (error) {
+    /* El bundle se publica desde el repositorio y las migraciones se aplican
+       aparte: entre una cosa y la otra hay una ventana en la que la pantalla
+       existe y la función todavía no. 42883 es «la función no existe» en
+       PostgreSQL, y sin esto la pestaña muestra un error de base de datos en
+       crudo a quien no puede hacer nada con él. Se dice qué falta y quién
+       tiene que hacerlo. */
+    if (error.code === '42883' || /rei_comercial/.test(error.message ?? '')) {
+      throw new Error(
+        'El panel comercial todavía no está disponible en esta base: falta aplicar ' +
+        'las migraciones del módulo (0129 a 0131). El resto del módulo inmobiliario ' +
+        'funciona con normalidad.');
+    }
+    throw error;
+  }
+  const d = data as Partial<PanelComercial> | null;
+  if (!d || !d.cifras) return null;
+  return d as PanelComercial;
+}
+
+export interface Corredor { id: string; nombre: string }
+
+/* Quién puede ser responsable. Sale de `company_members`, no de un catálogo:
+   con texto libre «Juan», «juan» y «J. Pérez» son tres corredores y ninguna
+   meta se puede comparar contra ningún resultado. */
+export async function corredores(companyId: string): Promise<Corredor[]> {
+  const { data, error } = await supabase.rpc('rei_corredores', { p_company: companyId });
+  if (error) throw error;
+  return (data ?? []) as Corredor[];
+}
+
+/** Carga los cuatro umbrales del seguimiento comercial. Idempotente. */
+export async function sembrarUmbrales(companyId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('rei_sembrar_umbrales', { p_company: companyId });
+  if (error) throw error;
+  return (data ?? 0) as number;
+}

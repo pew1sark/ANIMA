@@ -1838,6 +1838,347 @@ export const ADELANTOS_RENTA: Esquema = {
   orden: { campo: 'created_at', asc: false }
 };
 
+/* ---------------------------------------------------------------------------
+   BROKERAGE — la operación comercial del día
+   ---------------------------------------------------------------------------
+   Lo que produce los datos que después analiza todo lo de arriba. El módulo
+   nació por el lado del desarrollo —un predio, su calificación, su
+   prefactibilidad— y le faltaba la mitad de antes: alguien llama, se le
+   muestra un inmueble, hace una oferta, se firma.
+
+   Las etapas van como `Opcion[]` y no como enum de PostgreSQL por lo mismo que
+   las tipologías: una oficina que arrienda no tiene «escrituración», y agregar
+   o quitar un peldaño no puede exigir una migración. Los VALORES sí están
+   fijados en un check de la base, porque de ellos cuelgan las fechas que
+   estampa el trigger y el recuento del embudo. */
+
+const OPERACION_LEAD: Opcion[] = [
+  { valor: 'compra',       nombre: 'Busca comprar' },
+  { valor: 'arriendo',     nombre: 'Busca arrendar' },
+  { valor: 'venta',        nombre: 'Quiere vender' },
+  { valor: 'consignacion', nombre: 'Quiere consignar' }
+];
+
+/* El orden de la lista ES el embudo: la pantalla de tablero pinta las columnas
+   en este orden y no en el alfabético. */
+const ETAPA_LEAD: Opcion[] = [
+  { valor: 'nuevo',           nombre: 'Nuevo',            tono: 'neutro' },
+  { valor: 'contactado',      nombre: 'Contactado',       tono: 'acento' },
+  { valor: 'calificado',      nombre: 'Calificado',       tono: 'acento' },
+  { valor: 'con_inmueble',    nombre: 'Con inmueble',     tono: 'acento' },
+  { valor: 'visita_agendada', nombre: 'Visita agendada',  tono: 'aviso'  },
+  { valor: 'visita_hecha',    nombre: 'Visita hecha',     tono: 'aviso'  },
+  { valor: 'oferta',          nombre: 'Oferta',           tono: 'aviso'  },
+  { valor: 'negociacion',     nombre: 'En negociación',   tono: 'aviso'  },
+  { valor: 'ganado',          nombre: 'Ganado',           tono: 'ok'     },
+  { valor: 'perdido',         nombre: 'Perdido',          tono: 'malo'   }
+];
+
+const TIPO_NEGOCIACION: Opcion[] = [
+  { valor: 'venta',          nombre: 'Venta' },
+  { valor: 'arriendo',       nombre: 'Arriendo' },
+  { valor: 'administracion', nombre: 'Administración' },
+  { valor: 'consignacion',   nombre: 'Consignación' },
+  { valor: 'permuta',        nombre: 'Permuta' },
+  { valor: 'otro',           nombre: 'Otro' }
+];
+
+const ETAPA_NEGOCIACION: Opcion[] = [
+  { valor: 'apertura',      nombre: 'Apertura',      tono: 'neutro' },
+  { valor: 'propuesta',     nombre: 'Propuesta',     tono: 'acento' },
+  { valor: 'negociacion',   nombre: 'Negociación',   tono: 'acento' },
+  { valor: 'promesa',       nombre: 'Promesa',       tono: 'aviso'  },
+  { valor: 'escrituracion', nombre: 'Escrituración', tono: 'aviso'  },
+  { valor: 'ganado',        nombre: 'Ganada',        tono: 'ok'     },
+  { valor: 'perdido',       nombre: 'Perdida',       tono: 'malo'   }
+];
+
+const ESTADO_VISITA: Opcion[] = [
+  { valor: 'agendada',     nombre: 'Agendada',      tono: 'neutro' },
+  { valor: 'confirmada',   nombre: 'Confirmada',    tono: 'acento' },
+  { valor: 'realizada',    nombre: 'Realizada',     tono: 'ok'     },
+  { valor: 'no_asistio',   nombre: 'No asistió',    tono: 'malo'   },
+  { valor: 'cancelada',    nombre: 'Cancelada',     tono: 'malo'   },
+  { valor: 'reprogramada', nombre: 'Reprogramada',  tono: 'aviso'  }
+];
+
+const INTERES: Opcion[] = [
+  { valor: '1', nombre: '1 · No le gustó',       tono: 'malo'   },
+  { valor: '2', nombre: '2 · Tibio',             tono: 'aviso'  },
+  { valor: '3', nombre: '3 · Lo está pensando',  tono: 'neutro' },
+  { valor: '4', nombre: '4 · Interesado',        tono: 'acento' },
+  { valor: '5', nombre: '5 · Quiere ofertar',    tono: 'ok'     }
+];
+
+const TIPO_ACTIVIDAD: Opcion[] = [
+  { valor: 'llamada',     nombre: 'Llamada' },
+  { valor: 'whatsapp',    nombre: 'WhatsApp' },
+  { valor: 'email',       nombre: 'Correo' },
+  { valor: 'reunion',     nombre: 'Reunión' },
+  { valor: 'visita',      nombre: 'Visita' },
+  { valor: 'tarea',       nombre: 'Tarea' },
+  { valor: 'nota',        nombre: 'Nota' },
+  { valor: 'documento',   nombre: 'Documento' },
+  { valor: 'seguimiento', nombre: 'Seguimiento' }
+];
+
+const TIPO_CONTRATO: Opcion[] = [
+  { valor: 'arriendo',       nombre: 'Arriendo' },
+  { valor: 'mandato',        nombre: 'Mandato de venta' },
+  { valor: 'administracion', nombre: 'Administración' },
+  { valor: 'corretaje',      nombre: 'Corretaje' },
+  { valor: 'promesa',        nombre: 'Promesa de compraventa' },
+  { valor: 'otro',           nombre: 'Otro' }
+];
+
+const ESTADO_CONTRATO: Opcion[] = [
+  { valor: 'borrador',   nombre: 'Borrador',    tono: 'neutro' },
+  { valor: 'vigente',    nombre: 'Vigente',     tono: 'ok'     },
+  { valor: 'renovado',   nombre: 'Renovado',    tono: 'ok'     },
+  { valor: 'terminado',  nombre: 'Terminado',   tono: 'neutro' },
+  { valor: 'incumplido', nombre: 'Incumplido',  tono: 'malo'   },
+  { valor: 'cancelado',  nombre: 'Cancelado',   tono: 'malo'   }
+];
+
+const METRICA_META: Opcion[] = [
+  { valor: 'comision',    nombre: 'Comisión' },
+  { valor: 'cierres',     nombre: 'Cierres' },
+  { valor: 'captaciones', nombre: 'Captaciones' },
+  { valor: 'leads',       nombre: 'Leads' },
+  { valor: 'visitas',     nombre: 'Visitas' },
+  { valor: 'contratos',   nombre: 'Contratos' },
+  { valor: 'ingresos',    nombre: 'Ingresos' }
+];
+
+/* El responsable sale de la vista `rei_brokers` —miembros activos con nombre
+   legible— y no de un campo de texto. Con texto libre, «Juan», «juan» y
+   «J. Pérez» son tres corredores distintos y ninguna meta se puede comparar
+   contra ningún resultado. */
+const RESPONSABLE = { tabla: 'rei_brokers', etiqueta: 'name' };
+
+export const LEADS: Esquema = {
+  tabla: 'rei_leads',
+  titulo: 'Leads', singular: 'Lead', principal: 'name',
+  nivelEscritura: 40,
+  vacio: 'Un lead es alguien que preguntó. Se anota con el nombre y el teléfono y nada más: pedir una ficha completa para registrar una llamada es la forma segura de que las llamadas no se registren.',
+  campos: [
+    { key: 'name',     label: 'Nombre',   tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(170px,2fr)' },
+    { key: 'code',     grupo: 'Identidad', label: 'Código', tipo: 'texto', soloLectura: true },
+    { key: 'stage',    label: 'Etapa',    tipo: 'seleccion', opciones: ETAPA_LEAD,
+      enTabla: true, enLinea: true, ancho: '160px', porDefecto: 'nuevo',
+      ayuda: 'Al cambiarla, la base estampa la fecha de esa etapa. Volver atrás no borra la fecha que ya estaba: la primera vez que se llegó es el dato que sirve.' },
+    { key: 'contact',  label: 'Teléfono o correo', tipo: 'texto', enTabla: true, enLinea: true, ancho: '140px' },
+    { key: 'operation',label: 'Qué busca', tipo: 'seleccion', opciones: OPERACION_LEAD,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'compra' },
+    { key: 'city',     label: 'Ciudad',   tipo: 'texto', enTabla: true, enLinea: true, ancho: '120px' },
+    { key: 'broker_id',label: 'Responsable', tipo: 'relacion', relacion: RESPONSABLE,
+      enTabla: true, ancho: '150px' },
+    { key: 'next_action_date', label: 'Próxima acción', tipo: 'fecha',
+      enTabla: true, enLinea: true, ancho: '140px',
+      ayuda: 'Un lead abierto sin esta fecha es un lead que nadie va a volver a tocar. El panel los cuenta.' },
+
+    { key: 'next_action', grupo: 'Qué sigue', label: 'Qué hay que hacer', tipo: 'texto' },
+    { key: 'source',   grupo: 'De dónde vino', label: 'Canal', tipo: 'texto',
+      ayuda: 'Portal, valla, voz a voz, Facebook. Con esto el panel mide qué canal trae y cuál cierra.' },
+    { key: 'campaign', grupo: 'De dónde vino', label: 'Campaña', tipo: 'texto' },
+    { key: 'budget',   grupo: 'Qué busca', label: 'Presupuesto', tipo: 'moneda' },
+    { key: 'customer_id', grupo: 'A quién apunta', label: 'Ficha de cliente', tipo: 'relacion',
+      relacion: { tabla: 'customers', etiqueta: 'name' },
+      ayuda: 'La misma persona en el CRM. Se enlaza cuando la hay; no hace falta para crear el lead.' },
+    { key: 'buyer_id', grupo: 'A quién apunta', label: 'Perfil de demanda', tipo: 'relacion',
+      relacion: { tabla: 'rei_buyers', etiqueta: 'name' } },
+    { key: 'property_id', grupo: 'A quién apunta', label: 'Inmueble de interés', tipo: 'relacion',
+      relacion: { tabla: 'rei_properties', etiqueta: 'owner_name' } },
+    { key: 'lost_reason', grupo: 'Si se pierde', label: 'Por qué se perdió', tipo: 'texto-largo',
+      ayuda: 'Es la única forma de saber si se pierde por precio, por inventario o por demora.' },
+    { key: 'notes',    label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'stage',
+  orden: { campo: 'created_at', asc: false }
+};
+
+export const NEGOCIACIONES: Esquema = {
+  tabla: 'rei_deals',
+  titulo: 'Negociaciones', singular: 'Negociación', femenino: true, principal: 'name',
+  nivelEscritura: 40,
+  vacio: 'Donde se cruzan cliente, inmueble y corredor. Es la única tabla de la que sale un forecast: un lead no tiene monto y un inmueble no sabe con quién se está negociando.',
+  campos: [
+    { key: 'name',      label: 'Negociación', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(190px,2fr)' },
+    { key: 'code',      grupo: 'Identidad', label: 'Código', tipo: 'texto', soloLectura: true },
+    { key: 'stage',     label: 'Etapa', tipo: 'seleccion', opciones: ETAPA_NEGOCIACION,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'apertura',
+      ayuda: 'Al darla por ganada o perdida, la base pone la fecha de cierre y lleva la probabilidad a 100 o a 0: una negociación cerrada al 40% sería un fantasma en el forecast.' },
+    { key: 'deal_type', label: 'Tipo', tipo: 'seleccion', opciones: TIPO_NEGOCIACION,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'venta' },
+    { key: 'property_value', label: 'Valor del inmueble', tipo: 'moneda',
+      enTabla: true, enLinea: true, ancho: '150px' },
+    { key: 'commission_pct', label: 'Comisión %', tipo: 'numero',
+      enTabla: true, enLinea: true, ancho: '110px',
+      ayuda: 'En puntos: 3 significa 3%.' },
+    { key: 'expected_revenue', label: 'Ingreso esperado', tipo: 'moneda',
+      enTabla: true, soloLectura: true, ancho: '150px',
+      ayuda: 'La COMISIÓN de la firma, no el precio del inmueble: se intermedia, no se compra. Lo calcula la base.' },
+    { key: 'probability_pct', label: 'Probabilidad %', tipo: 'numero',
+      enTabla: true, enLinea: true, ancho: '130px', porDefecto: 0 },
+    { key: 'broker_id', label: 'Responsable', tipo: 'relacion', relacion: RESPONSABLE,
+      enTabla: true, ancho: '150px' },
+    { key: 'next_action_date', label: 'Próxima acción', tipo: 'fecha',
+      enTabla: true, enLinea: true, ancho: '140px' },
+
+    { key: 'weighted_revenue', grupo: 'Forecast', label: 'Ponderado', tipo: 'moneda', soloLectura: true,
+      ayuda: 'Ingreso esperado × probabilidad. Es lo que suma el pipeline del panel.' },
+    { key: 'commission_amount', grupo: 'Forecast', label: 'Comisión pactada en firme', tipo: 'moneda',
+      ayuda: 'Cuando la comisión es un monto fijo y no un porcentaje. Si está, manda sobre el cálculo.' },
+    { key: 'expected_close_date', grupo: 'Calendario', label: 'Cierre estimado', tipo: 'fecha' },
+    { key: 'next_action', grupo: 'Qué sigue', label: 'Qué hay que hacer', tipo: 'texto' },
+    { key: 'lead_id',     grupo: 'De dónde sale', label: 'Lead', tipo: 'relacion',
+      relacion: { tabla: 'rei_leads', etiqueta: 'name' } },
+    { key: 'customer_id', grupo: 'De dónde sale', label: 'Cliente', tipo: 'relacion',
+      relacion: { tabla: 'customers', etiqueta: 'name' } },
+    { key: 'property_id', grupo: 'De dónde sale', label: 'Inmueble', tipo: 'relacion',
+      relacion: { tabla: 'rei_properties', etiqueta: 'owner_name' } },
+    { key: 'city',        grupo: 'De dónde sale', label: 'Ciudad', tipo: 'texto' },
+    { key: 'lost_reason', grupo: 'Si se pierde', label: 'Por qué se perdió', tipo: 'texto-largo' },
+    { key: 'notes',       label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'stage',
+  orden: { campo: 'expected_close_date', asc: true }
+};
+
+export const VISITAS: Esquema = {
+  tabla: 'rei_visits',
+  titulo: 'Visitas', singular: 'Visita', femenino: true, principal: 'code',
+  nivelEscritura: 40,
+  vacio: 'La visita es el hecho que más información produce de todo el proceso. Veinte visitas con interés bajo sobre el mismo inmueble no son un problema del corredor: son el precio.',
+  campos: [
+    { key: 'code',        label: 'Código', tipo: 'texto', soloLectura: true, enTabla: true, ancho: '150px' },
+    { key: 'property_id', label: 'Inmueble', tipo: 'relacion', requerido: true,
+      relacion: { tabla: 'rei_properties', etiqueta: 'owner_name' },
+      enTabla: true, ancho: 'minmax(160px,2fr)' },
+    { key: 'scheduled_at',label: 'Cuándo', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '140px' },
+    { key: 'status',      label: 'Estado', tipo: 'seleccion', opciones: ESTADO_VISITA,
+      enTabla: true, enLinea: true, ancho: '150px', porDefecto: 'agendada',
+      ayuda: 'Al marcarla realizada, la base pone la fecha en que ocurrió.' },
+    { key: 'interest_level', label: 'Interés', tipo: 'seleccion', opciones: INTERES,
+      enTabla: true, enLinea: true, ancho: '170px',
+      ayuda: 'Un segundo al salir de la visita. Es lo que después explica una curva.' },
+    { key: 'broker_id',   label: 'Responsable', tipo: 'relacion', relacion: RESPONSABLE,
+      enTabla: true, ancho: '150px' },
+    { key: 'lead_id',     grupo: 'A quién', label: 'Lead', tipo: 'relacion',
+      relacion: { tabla: 'rei_leads', etiqueta: 'name' } },
+    { key: 'deal_id',     grupo: 'A quién', label: 'Negociación', tipo: 'relacion',
+      relacion: { tabla: 'rei_deals', etiqueta: 'name' } },
+    { key: 'customer_id', grupo: 'A quién', label: 'Cliente', tipo: 'relacion',
+      relacion: { tabla: 'customers', etiqueta: 'name' } },
+    { key: 'done_at',     grupo: 'Resultado', label: 'Realizada el', tipo: 'fecha', soloLectura: true },
+    { key: 'feedback',    grupo: 'Resultado', label: 'Qué dijo', tipo: 'texto-largo' },
+    { key: 'next_action', grupo: 'Qué sigue', label: 'Qué hay que hacer', tipo: 'texto' },
+    { key: 'next_action_date', grupo: 'Qué sigue', label: 'Para cuándo', tipo: 'fecha' },
+    { key: 'notes',       label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'scheduled_at', asc: false }
+};
+
+export const ACTIVIDADES: Esquema = {
+  tabla: 'rei_activities',
+  titulo: 'Bitácora', singular: 'Actividad', femenino: true, principal: 'subject',
+  nivelEscritura: 40,
+  vacio: 'Llamadas, mensajes, reuniones y notas. Con fecha límite y sin marcar como hecha, la misma fila ES una tarea pendiente: al anotar no hay que decidir si «llamar el martes» es una nota o una tarea, porque es las dos.',
+  campos: [
+    { key: 'subject',     label: 'Qué pasó', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(200px,2fr)' },
+    { key: 'kind',        label: 'Tipo', tipo: 'seleccion', opciones: TIPO_ACTIVIDAD,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'nota' },
+    { key: 'happened_at', label: 'Cuándo', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'due_date',    label: 'Fecha límite', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '130px',
+      ayuda: 'Con fecha y sin «hecha el», aparece en los pendientes del panel.' },
+    { key: 'done_at',     label: 'Hecha el', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '130px' },
+    { key: 'owner_id',    label: 'Responsable', tipo: 'relacion', relacion: RESPONSABLE,
+      enTabla: true, ancho: '150px' },
+    { key: 'lead_id',     grupo: 'De qué cuelga', label: 'Lead', tipo: 'relacion',
+      relacion: { tabla: 'rei_leads', etiqueta: 'name' } },
+    { key: 'deal_id',     grupo: 'De qué cuelga', label: 'Negociación', tipo: 'relacion',
+      relacion: { tabla: 'rei_deals', etiqueta: 'name' } },
+    { key: 'customer_id', grupo: 'De qué cuelga', label: 'Cliente', tipo: 'relacion',
+      relacion: { tabla: 'customers', etiqueta: 'name' } },
+    { key: 'property_id', grupo: 'De qué cuelga', label: 'Inmueble', tipo: 'relacion',
+      relacion: { tabla: 'rei_properties', etiqueta: 'owner_name' } },
+    { key: 'opportunity_id', grupo: 'De qué cuelga', label: 'Oportunidad', tipo: 'relacion',
+      relacion: { tabla: 'rei_opportunities', etiqueta: 'name' } },
+    { key: 'development_id', grupo: 'De qué cuelga', label: 'Desarrollo', tipo: 'relacion',
+      relacion: { tabla: 'rei_developments', etiqueta: 'name' } },
+    { key: 'detail',      label: 'Detalle', tipo: 'texto-largo' }
+  ],
+  tablero: 'kind',
+  orden: { campo: 'happened_at', asc: false }
+};
+
+export const CONTRATOS: Esquema = {
+  tabla: 'rei_contracts',
+  titulo: 'Contratos', singular: 'Contrato', principal: 'name',
+  nivelEscritura: 60,
+  vacio: 'Arriendos, mandatos y administraciones. Esta tabla existe por una sola columna: la fecha de fin. Un vencimiento que nadie ve es ingreso que se cae del mes siguiente.',
+  campos: [
+    { key: 'name',          label: 'Contrato', tipo: 'texto', requerido: true, enTabla: true, ancho: 'minmax(180px,2fr)' },
+    { key: 'code',          grupo: 'Identidad', label: 'Código', tipo: 'texto', soloLectura: true },
+    { key: 'contract_type', label: 'Tipo', tipo: 'seleccion', opciones: TIPO_CONTRATO,
+      enTabla: true, enLinea: true, ancho: '170px', porDefecto: 'arriendo' },
+    { key: 'property_id',   label: 'Inmueble', tipo: 'relacion',
+      relacion: { tabla: 'rei_properties', etiqueta: 'owner_name' },
+      enTabla: true, ancho: 'minmax(150px,1fr)' },
+    { key: 'end_date',      label: 'Vence', tipo: 'fecha', enTabla: true, enLinea: true, ancho: '130px',
+      ayuda: 'De aquí sale la lista de vencimientos del panel, por tramos de urgencia.' },
+    { key: 'monthly_amount',label: 'Canon mensual', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '140px' },
+    { key: 'status',        label: 'Estado', tipo: 'seleccion', opciones: ESTADO_CONTRATO,
+      enTabla: true, enLinea: true, ancho: '140px', porDefecto: 'vigente' },
+    { key: 'broker_id',     label: 'Responsable', tipo: 'relacion', relacion: RESPONSABLE,
+      enTabla: true, ancho: '150px' },
+
+    { key: 'start_date',  grupo: 'Vigencia', label: 'Desde', tipo: 'fecha' },
+    { key: 'notice_days', grupo: 'Vigencia', label: 'Días de preaviso', tipo: 'entero', porDefecto: 30,
+      ayuda: 'Con cuánta anticipación hay que avisar. Es lo que convierte «vence el 30» en «hay que decidir antes del 30 menos esto».' },
+    { key: 'customer_id',       grupo: 'Las partes', label: 'Arrendatario o comprador', tipo: 'relacion',
+      relacion: { tabla: 'customers', etiqueta: 'name' } },
+    { key: 'owner_customer_id', grupo: 'Las partes', label: 'Propietario', tipo: 'relacion',
+      relacion: { tabla: 'customers', etiqueta: 'name' } },
+    { key: 'deal_id',     grupo: 'Las partes', label: 'Negociación', tipo: 'relacion',
+      relacion: { tabla: 'rei_deals', etiqueta: 'name' } },
+    { key: 'city',        grupo: 'Las partes', label: 'Ciudad', tipo: 'texto' },
+    { key: 'admin_fee_pct', grupo: 'Dinero', label: 'Comisión de administración %', tipo: 'numero' },
+    { key: 'deposit',       grupo: 'Dinero', label: 'Depósito', tipo: 'moneda' },
+    { key: 'next_action',      grupo: 'Qué sigue', label: 'Qué hay que hacer', tipo: 'texto' },
+    { key: 'next_action_date', grupo: 'Qué sigue', label: 'Para cuándo', tipo: 'fecha' },
+    { key: 'notes',       label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'status',
+  orden: { campo: 'end_date', asc: true }
+};
+
+export const METAS: Esquema = {
+  tabla: 'rei_targets',
+  titulo: 'Metas', singular: 'Meta', femenino: true, principal: 'metric',
+  nivelEscritura: 60,
+  vacio: 'Cuánto tiene que hacer alguien de algo en un mes. Sin persona, la meta es de la ciudad; sin ciudad, de la empresa entera: los cuatro niveles salen del mismo modelo. Sin metas cargadas el panel puede decir cuánto se hizo, pero no si alcanza.',
+  campos: [
+    { key: 'metric',       label: 'Métrica', tipo: 'seleccion', opciones: METRICA_META, requerido: true,
+      enTabla: true, enLinea: true, ancho: '160px', porDefecto: 'comision' },
+    { key: 'period_month', label: 'Mes', tipo: 'fecha', requerido: true,
+      enTabla: true, enLinea: true, ancho: '140px',
+      ayuda: 'Cualquier día del mes sirve: la base lo lleva al día 1. Una meta cargada el 17 es la meta de ese mes, no una que empieza el 17.' },
+    { key: 'user_id',      label: 'Persona', tipo: 'relacion', relacion: RESPONSABLE,
+      enTabla: true, ancho: '160px',
+      ayuda: 'Vacío = meta de la oficina, no de nadie en particular.' },
+    { key: 'city',         label: 'Ciudad', tipo: 'texto', enTabla: true, enLinea: true, ancho: '140px',
+      ayuda: 'Vacío = toda la empresa.' },
+    { key: 'target_value', label: 'Meta', tipo: 'moneda', enTabla: true, enLinea: true, ancho: '150px',
+      porDefecto: 0,
+      ayuda: 'En las métricas de conteo —cierres, visitas, leads— es un número y no dinero.' },
+    { key: 'notes',        label: 'Notas', tipo: 'texto-largo' }
+  ],
+  tablero: 'metric',
+  orden: { campo: 'period_month', asc: false }
+};
+
 /** Todo lo que el motor sabe dibujar, por módulo de la plataforma. */
 export const ESQUEMAS_POR_MODULO: Record<string, Esquema[]> = {
   crm:        [CLIENTES, DIRECCIONES, LISTAS_PRECIO],
@@ -1853,6 +2194,13 @@ export const ESQUEMAS_POR_MODULO: Record<string, Esquema[]> = {
                HITOS, EJECUCION, RONDAS, USO_DE_FONDOS, INVERSIONISTAS,
                PIPELINE_INVERSIONISTAS, INTERACCIONES, CAP_TABLE, RIESGOS,
                REQUISITOS, TIPOS_DE_CAMBIO],
+  /* Las diez de originación y desarrollo van primero y EN SU ORDEN ORIGINAL:
+     son las que ya se usan, y reordenarlas para hacerle sitio a lo nuevo
+     habría movido de lugar pestañas que la gente ya tiene aprendidas. Las
+     seis comerciales se agregan al final, que es lo que corresponde a lo que
+     todavía no existe en la operación. Cuando el brokerage esté rodado se
+     puede discutir el orden; hacerlo ahora es decidirlo por quien lo usa. */
   realestate: [DESARROLLOS, OPORTUNIDADES, INVENTARIO, DEMANDA, HITOS_DESARROLLO,
-               VEHICULOS, ADELANTOS_RENTA, CRITERIOS, ETAPAS, SUPUESTOS]
+               VEHICULOS, ADELANTOS_RENTA, CRITERIOS, ETAPAS, SUPUESTOS,
+               LEADS, NEGOCIACIONES, VISITAS, ACTIVIDADES, CONTRATOS, METAS]
 };

@@ -23,8 +23,8 @@ import type { ModuleSlug } from '@/types/core';
                  estas son otra cosa, y forzarlas al motor habría sido
                  deformar el motor para que cupieran
      inmobiliaria — lo mismo en Real Estate Intelligence: el panel, la matriz
-                 de calificación (oportunidades × criterios) y la hoja de
-                 prefactibilidad con su flujo de caja
+                 de calificación (oportunidades × criterios), la hoja de
+                 prefactibilidad con su flujo de caja y el panel comercial
 
    Un módulo sin declaración cae en el comportamiento de siempre: una pestaña
    por entidad. Así, agregar una entidad nueva sigue sin obligar a tocar esto. */
@@ -37,7 +37,7 @@ export type Pestana =
   | { id: string; nombre: string; tipo: 'capital';
       vista: 'levantamiento' | 'panel' | 'modelo' | 'presupuesto' | 'ronda' }
   | { id: string; nombre: string; tipo: 'inmobiliaria';
-      vista: 'panel' | 'calificacion' | 'prefactibilidad' };
+      vista: 'comercial' | 'panel' | 'calificacion' | 'prefactibilidad' };
 
 /** Los módulos cuyo resumen sabe calcular `resumen_modulo()`. */
 export const CON_RESUMEN = new Set<string>([
@@ -47,6 +47,12 @@ export const CON_RESUMEN = new Set<string>([
 /* Nombres cortos para la pestaña. El título del esquema es el de la pantalla
    —"Por cobrar (apertura)"— y en una fila de pestañas no cabe. */
 const CORTO: Record<string, string> = {
+  rei_leads:            'Leads',
+  rei_deals:            'Negociaciones',
+  rei_visits:           'Visitas',
+  rei_activities:       'Bitácora',
+  rei_contracts:        'Contratos',
+  rei_targets:          'Metas',
   rei_developments:     'Desarrollos',
   rei_opportunities:    'Oportunidades',
   rei_properties:       'Inventario',
@@ -105,12 +111,20 @@ export function pestanasDe(slug: ModuleSlug, addons: string[] = []): Pestana[] {
      el mismo motivo: la pregunta del día es cómo va la comercialización, no
      qué hay en la tabla de inmuebles. Después vienen las dos pantallas de
      decisión —calificar y dictaminar— y recién entonces las entidades, que es
-     donde se carga. */
+     donde se carga.
+
+     El panel comercial se agrega DESPUÉS de esas tres y no antes, y el Panel
+     conserva su nombre. Se probó al revés —Comercial primero, el otro
+     renombrado a «Mercado»— y estaba mal: cambia de sitio y de nombre una
+     pantalla que la gente ya usa todos los días, y mueve la portada del
+     módulo por una decisión que no le toca tomar a quien agrega una
+     pestaña. Lo nuevo se suma al final; lo que ya funciona no se desplaza. */
   if (slug === 'realestate') {
     salida.push(
       { id: 'panel',           nombre: 'Panel',           tipo: 'inmobiliaria', vista: 'panel' },
       { id: 'calificacion',    nombre: 'Calificación',    tipo: 'inmobiliaria', vista: 'calificacion' },
-      { id: 'prefactibilidad', nombre: 'Prefactibilidad', tipo: 'inmobiliaria', vista: 'prefactibilidad' });
+      { id: 'prefactibilidad', nombre: 'Prefactibilidad', tipo: 'inmobiliaria', vista: 'prefactibilidad' },
+      { id: 'comercial',       nombre: 'Comercial',       tipo: 'inmobiliaria', vista: 'comercial' });
     for (const e of esquemas) {
       salida.push({ id: e.tabla, nombre: CORTO[e.tabla] ?? e.titulo, tipo: 'datos', esquema: e });
     }

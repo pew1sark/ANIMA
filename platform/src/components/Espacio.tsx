@@ -11,6 +11,7 @@ import { PuestaEnMarcha } from '@/components/company/PuestaEnMarcha';
 import { Equipo } from '@/components/company/Equipo';
 import { Informes } from '@/components/company/Informes';
 import { Inicio } from '@/components/company/Inicio';
+import { Cuotas } from '@/components/company/Cuotas';
 import { MiEspacio } from '@/components/company/MiEspacio';
 import { MiPlan } from '@/components/company/MiPlan';
 import { MenuCuenta } from '@/components/MenuCuenta';
@@ -23,6 +24,7 @@ import { ModeloFinanciero } from '@/components/capital/Modelo';
 import { PresupuestoVsReal } from '@/components/capital/Presupuesto';
 import { RondaCapital } from '@/components/capital/Ronda';
 import { PanelInmobiliario } from '@/components/inmobiliaria/Panel';
+import { PanelComercialInmobiliario } from '@/components/inmobiliaria/Comercial';
 import { CalificacionOportunidades } from '@/components/inmobiliaria/Calificacion';
 import { PrefactibilidadProyecto } from '@/components/inmobiliaria/Prefactibilidad';
 import { pestanasDe } from '@/core/modules/pestanas';
@@ -64,6 +66,25 @@ export function Espacio({ volver }: { volver?: () => void }) {
     m.slug !== 'core' && (MOSTRAR_TODOS_LOS_MODULOS || m.disponible));
   const bloqueados  = (esp?.modulos ?? []).filter(m => m.encendido && !m.disponible);
   const esAdmin = (esp?.mi_rol?.nivel ?? 0) >= 80;
+
+  /* Cuál de los dos paneles es la portada. Se decide con `disponible` —lo
+     contratado Y encendido—, que es el mismo criterio con el que se arma el
+     menú: no puede abrir por una pantalla que después no aparece en la
+     barra lateral. El razonamiento largo está junto al render.
+
+     La condición es SOLO el módulo inmobiliario. Se escribió primero como
+     «inmobiliaria y además sin Ventas», con el argumento de que quien
+     despacha mercadería tiene pedidos más urgentes que un forecast. Mirando
+     los datos, esa regla no se cumplía para nadie: Ventas está encendido en
+     todas las organizaciones, y en una inmobiliaria lo está justamente por
+     el módulo inmobiliario —0127 convierte cada inmueble vendido en un
+     pedido con su comisión—. La condición se leía razonable y era código
+     muerto: dejaba la portada de la inmobiliaria en el panel de una empresa
+     que mueve mercadería, que es el problema que venía a resolver. */
+  const tieneModulo = (slug: string) =>
+    (esp?.modulos ?? []).some(m => m.slug === slug && m.disponible);
+  const portada: 'comercial' | 'operativo' =
+    tieneModulo('realestate') ? 'comercial' : 'operativo';
 
   /* El menú por zonas. Un grupo sin módulos no se dibuja: encabezar una lista
      vacía es peor que no encabezar nada. */
@@ -168,9 +189,50 @@ export function Espacio({ volver }: { volver?: () => void }) {
 
           {!cargando && esp && cid && vista === 'inicio' && (
             <>
-              <Inicio companyId={cid} moneda={esp.empresa.moneda}
-                      empresa={esp.empresa.nombre} linea={esp.empresa.linea}
-                      pais={esp.empresa.pais} />
+              {/* QUÉ SE ABRE AL ENTRAR
+                  -------------------------------------------------------------
+                  `Inicio` es el panel de una empresa que mueve mercadería:
+                  pedidos que salen hoy, stock bajo mínimo, lotes que vencen
+                  esta semana. Está bien hecho y es el correcto para quien
+                  vende cosas.
+
+                  A una inmobiliaria no le dice nada. Peor: le dice cosas de
+                  otro negocio. Sus siete bloques quedan en cero permanente
+                  —no hay lotes ni bodegas— y lo que de verdad necesita ver al
+                  entrar (cuánto falta para la meta, qué leads llevan dos días
+                  sin contactar, qué contrato vence) no aparece por ninguna
+                  parte.
+
+                  Así que la portada la decide lo que la organización tiene
+                  contratado, no una constante: con el módulo inmobiliario
+                  encendido, entrar abre el panel comercial.
+
+                  No se mira si además tiene Ventas. Se intentó —«inmobiliaria
+                  y sin Ventas»— y era código muerto: Ventas está encendido en
+                  todas, y en una inmobiliaria lo está POR el módulo
+                  inmobiliario, porque una venta cerrada se convierte en un
+                  pedido con su comisión. Esa condición dejaba a la
+                  inmobiliaria abriendo por el panel de la mercadería, que es
+                  exactamente lo que había que arreglar.
+
+                  No es un caso especial escondido en un `if`: es la misma
+                  regla de todo el registro de módulos —la empresa ve lo que
+                  contrató— aplicada a la primera pantalla. */}
+              {portada === 'comercial'
+                ? <>
+                    <PanelComercialInmobiliario companyId={cid} />
+                    {/* Las cuotas del plan viven dentro de `Inicio`, y son de
+                        la organización y no del negocio que tenga: un tope que
+                        se descubre al chocar es una trampa igual para una
+                        inmobiliaria que para una pescadería. Se repiten aquí
+                        para que cambiar de portada no se lleve por delante el
+                        aviso. La propia tarjeta no se dibuja cuando el plan no
+                        tiene topes. */}
+                    <Cuotas companyId={cid} />
+                  </>
+                : <Inicio companyId={cid} moneda={esp.empresa.moneda}
+                          empresa={esp.empresa.nombre} linea={esp.empresa.linea}
+                          pais={esp.empresa.pais} />}
 
               {esp.features.length > 0 && (
                 <section className="grid gap-3">
@@ -301,11 +363,20 @@ export function Modulo({ slug, companyId, nivel, moneda, pais, addons = [] }:
         <RondaCapital companyId={companyId} puedeEditar={nivel >= 60} />
       )}
 
-      {/* Real Estate Intelligence trae tres propias por el mismo motivo que su
-          hermano: un panel con filtros, una MATRIZ de oportunidades por
+      {/* Real Estate Intelligence trae cuatro propias por el mismo motivo que
+          su hermano: dos paneles con filtros, una MATRIZ de oportunidades por
           criterios y una hoja de prefactibilidad con su flujo de caja. El
-          resto del módulo —desarrollos, oportunidades, inventario, demanda,
-          vehículos— sale del motor como cualquier otra entidad. */}
+          resto del módulo —leads, negociaciones, visitas, contratos, metas,
+          desarrollos, oportunidades, inventario, demanda— sale del motor como
+          cualquier otra entidad.
+
+          El panel comercial no pide `puedeEditar`: no tiene nada que escribir.
+          Es la única de las cuatro que solo mira, y por eso la misma pantalla
+          sirve igual a un corredor y a quien dirige la oficina — lo que cambia
+          entre los dos es qué metas devuelve la base, no qué se dibuja. */}
+      {activa.tipo === 'inmobiliaria' && activa.vista === 'comercial' && (
+        <PanelComercialInmobiliario companyId={companyId} />
+      )}
       {activa.tipo === 'inmobiliaria' && activa.vista === 'panel' && (
         <PanelInmobiliario companyId={companyId} puedeEditar={nivel >= 60} />
       )}
