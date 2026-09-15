@@ -36,7 +36,8 @@ y [`docs/lineas-de-producto.md`](docs/lineas-de-producto.md). Los dos módulos d
 plan Enterprise tienen el suyo:
 [Real Estate Intelligence](docs/real-estate-intelligence.md) —originación de
 suelo, calificación de oportunidades y prefactibilidad— va a la par de Capital
-Intelligence y se enlaza con él.
+Intelligence y se enlaza con él. Su mitad comercial —leads, negociaciones,
+visitas, contratos y metas— está en [Brokerage](docs/brokerage.md).
 
 ---
 

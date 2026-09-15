@@ -22,9 +22,10 @@ import type { ModuleSlug } from '@/types/core';
                  comparación presupuesto/real. El motor dibuja filas con ficha;
                  estas son otra cosa, y forzarlas al motor habría sido
                  deformar el motor para que cupieran
-     inmobiliaria — lo mismo en Real Estate Intelligence: el panel, la matriz
-                 de calificación (oportunidades × criterios) y la hoja de
-                 prefactibilidad con su flujo de caja
+     inmobiliaria — lo mismo en Real Estate Intelligence: el panel comercial,
+                 el panel de desarrollo, la matriz de calificación
+                 (oportunidades × criterios) y la hoja de prefactibilidad con
+                 su flujo de caja
 
    Un módulo sin declaración cae en el comportamiento de siempre: una pestaña
    por entidad. Así, agregar una entidad nueva sigue sin obligar a tocar esto. */
@@ -37,7 +38,7 @@ export type Pestana =
   | { id: string; nombre: string; tipo: 'capital';
       vista: 'levantamiento' | 'panel' | 'modelo' | 'presupuesto' | 'ronda' }
   | { id: string; nombre: string; tipo: 'inmobiliaria';
-      vista: 'panel' | 'calificacion' | 'prefactibilidad' };
+      vista: 'comercial' | 'panel' | 'calificacion' | 'prefactibilidad' };
 
 /** Los módulos cuyo resumen sabe calcular `resumen_modulo()`. */
 export const CON_RESUMEN = new Set<string>([
@@ -47,6 +48,12 @@ export const CON_RESUMEN = new Set<string>([
 /* Nombres cortos para la pestaña. El título del esquema es el de la pantalla
    —"Por cobrar (apertura)"— y en una fila de pestañas no cabe. */
 const CORTO: Record<string, string> = {
+  rei_leads:            'Leads',
+  rei_deals:            'Negociaciones',
+  rei_visits:           'Visitas',
+  rei_activities:       'Bitácora',
+  rei_contracts:        'Contratos',
+  rei_targets:          'Metas',
   rei_developments:     'Desarrollos',
   rei_opportunities:    'Oportunidades',
   rei_properties:       'Inventario',
@@ -103,12 +110,22 @@ export function pestanasDe(slug: ModuleSlug, addons: string[] = []): Pestana[] {
 
   /* Real Estate Intelligence abre por el panel, igual que su hermano, y por
      el mismo motivo: la pregunta del día es cómo va la comercialización, no
-     qué hay en la tabla de inmuebles. Después vienen las dos pantallas de
-     decisión —calificar y dictaminar— y recién entonces las entidades, que es
-     donde se carga. */
+     qué hay en la tabla de inmuebles.
+
+     Son DOS paneles y no uno, y el orden entre ellos no es casual. Comercial
+     va primero porque es la pantalla de todos los días: cómo va el mes contra
+     la meta, qué hay que hacer hoy, qué se está cayendo. Mercado —el que ya
+     existía— responde la pregunta de más arriba: cómo está el inventario, la
+     demanda y el pipeline de desarrollo, que se mira una vez por semana.
+     Meterlas en una sola pantalla habría obligado a hacer scroll para llegar
+     a lo urgente.
+
+     Después vienen las dos pantallas de decisión —calificar y dictaminar— y
+     recién entonces las entidades, que es donde se carga. */
   if (slug === 'realestate') {
     salida.push(
-      { id: 'panel',           nombre: 'Panel',           tipo: 'inmobiliaria', vista: 'panel' },
+      { id: 'comercial',       nombre: 'Comercial',       tipo: 'inmobiliaria', vista: 'comercial' },
+      { id: 'panel',           nombre: 'Mercado',         tipo: 'inmobiliaria', vista: 'panel' },
       { id: 'calificacion',    nombre: 'Calificación',    tipo: 'inmobiliaria', vista: 'calificacion' },
       { id: 'prefactibilidad', nombre: 'Prefactibilidad', tipo: 'inmobiliaria', vista: 'prefactibilidad' });
     for (const e of esquemas) {
