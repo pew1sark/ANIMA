@@ -39,8 +39,14 @@ export const colorTono = (t?: string) =>
 : t === 'ok'    ? 'var(--color-ok)'
 : undefined;
 
-export function TarjetaCifra({ ind, moneda, destacada }:
-  { ind: Indicador; moneda: string; destacada?: boolean }) {
+export function TarjetaCifra({ ind, moneda, destacada, onDetalle }:
+  { ind: Indicador; moneda: string; destacada?: boolean;
+    /** Cuando la cifra tiene registros detrás, quien la dibuja pasa esto y
+     *  aparece «Ver los registros» dentro de la fórmula. Va ahí y no en la
+     *  tarjeta porque el orden importa: primero cómo se calcula, después qué
+     *  la forma. Capital Intelligence no lo pasa y la tarjeta se comporta
+     *  igual que siempre. */
+    onDetalle?: (clave: string) => void }) {
   const [abierta, setAbierta] = useState(false);
   const nulo = ind.valor == null;
 
@@ -83,6 +89,12 @@ export function TarjetaCifra({ ind, moneda, destacada }:
             <p style={{ color: 'var(--color-faint)' }}>
               No se puede calcular con los datos que hay. No es cero: falta un dato.
             </p>
+          )}
+          {onDetalle && !nulo && (
+            <button type="button" className="b b-sec b-sm mt-1 no-imprimir"
+                    onClick={() => onDetalle(ind.clave)}>
+              Ver los registros
+            </button>
           )}
         </div>
       )}

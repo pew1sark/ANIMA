@@ -25,6 +25,11 @@ import { PresupuestoVsReal } from '@/components/capital/Presupuesto';
 import { RondaCapital } from '@/components/capital/Ronda';
 import { PanelInmobiliario } from '@/components/inmobiliaria/Panel';
 import { PanelComercialInmobiliario } from '@/components/inmobiliaria/Comercial';
+import { InformeSemanalInmobiliario } from '@/components/inmobiliaria/Semanal';
+import { PanelCiudades } from '@/components/inmobiliaria/Ciudades';
+import { CalidadDeDato } from '@/components/inmobiliaria/Calidad';
+import { FichaCliente360 } from '@/components/inmobiliaria/Cliente360';
+import { BuscadorGlobal } from '@/components/inmobiliaria/Buscador';
 import { CalificacionOportunidades } from '@/components/inmobiliaria/Calificacion';
 import { PrefactibilidadProyecto } from '@/components/inmobiliaria/Prefactibilidad';
 import { pestanasDe } from '@/core/modules/pestanas';
@@ -45,11 +50,23 @@ export function Espacio({ volver }: { volver?: () => void }) {
   const [esp, setEsp] = useState<EspacioData | null>(null);
   const [vista, setVista] = useState<string>('miespacio');
   const [cargando, setCargando] = useState(true);
+  /* A dónde llevó la búsqueda global: módulo y pestaña. Se guarda aparte de
+     `vista` porque `vista` solo sabe de módulos, y aquí hace falta decir
+     además en qué pestaña de ese módulo está lo que se encontró. */
+  const [destino, setDestino] = useState<{ modulo: string; pestana: string } | null>(null);
 
   /* Cambiar de organización sí devuelve a Inicio: la pestaña donde estabas
      era de la otra empresa. Recargar el mismo espacio —moneda, módulos— no,
      porque entonces cambiar algo en Configuración te sacaría de ahí. */
-  useEffect(() => { setVista('miespacio'); }, [cid]);
+  useEffect(() => { setVista('miespacio'); setDestino(null); }, [cid]);
+
+  /* Un resultado de la búsqueda global lleva al módulo Y a la pestaña. Si se
+     vuelve a buscar la misma cosa, el destino tiene que cambiar de identidad
+     para que el módulo lo note: de ahí el objeto nuevo en cada llamada. */
+  const irA = (modulo: string, pestana: string) => {
+    setDestino({ modulo, pestana });
+    setVista(modulo);
+  };
 
   useEffect(() => {
     if (!cid) return;
@@ -130,7 +147,8 @@ export function Espacio({ volver }: { volver?: () => void }) {
             <div key={z.id} className="flex md:flex-col gap-1">
               <div className="grupo-nav hidden md:block">{z.nombre}</div>
               {z.modulos.map(m => (
-                <Item key={m.slug} activo={vista===m.slug} onClick={() => setVista(m.slug)}
+                <Item key={m.slug} activo={vista===m.slug}
+                      onClick={() => { setDestino(null); setVista(m.slug); }}
                       label={MODULES[m.slug as ModuleSlug]?.name ?? m.slug}
                       fueraDelPlan={!m.disponible} />
               ))}
@@ -173,6 +191,13 @@ export function Espacio({ volver }: { volver?: () => void }) {
             </span>
           </span>
           <span className="ml-auto" />
+          {/* §46 · la búsqueda va en la cabecera y no dentro de un módulo,
+              porque cruza ocho entidades de tres módulos distintos. Solo
+              aparece donde hay operación inmobiliaria: en una empresa que
+              vende mercadería buscaría en tablas vacías. */}
+          {cid && tieneModulo('realestate') && (
+            <BuscadorGlobal companyId={cid} irA={irA} />
+          )}
           {isPlatformAdmin && <span className="marca marca-acento">Super Admin</span>}
           <MenuCuenta irAMiEspacio={() => setVista('miespacio')}
                       irAMiPlan={() => setVista('miplan')}
@@ -267,7 +292,9 @@ export function Espacio({ volver }: { volver?: () => void }) {
             <Modulo slug={vista as ModuleSlug} companyId={cid}
                     nivel={esp.mi_rol?.nivel ?? 0} moneda={esp.empresa.moneda}
                     pais={esp.empresa.pais}
-                    addons={esp.features.map(f => f.slug)} />
+                    addons={esp.features.map(f => f.slug)}
+                    modulos={disponibles.map(m => m.slug)}
+                    pestanaInicial={destino?.modulo === vista ? destino.pestana : undefined} />
           )}
 
           {!cargando && esp && cid && vista === 'config' && (
@@ -289,7 +316,8 @@ export function Espacio({ volver }: { volver?: () => void }) {
    carga. Qué pestañas tiene lo declara `pestanasDe()`; aquí solo se dibujan.
 
    Un módulo sin nada declarado dice con honestidad qué falta. */
-export function Modulo({ slug, companyId, nivel, moneda, pais, addons = [] }:
+export function Modulo({ slug, companyId, nivel, moneda, pais, addons = [],
+                        modulos = [], pestanaInicial }:
   { slug: ModuleSlug; companyId: string; nivel: number; moneda: string;
     /** El país de la empresa. Decide cómo se llaman el número tributario y la
      *  unidad territorial: RUT y comuna en Chile, NIT y municipio en Colombia.
@@ -298,11 +326,25 @@ export function Modulo({ slug, companyId, nivel, moneda, pais, addons = [] }:
     pais?: string | null;
     /** Los addons encendidos para esta empresa. Un addon puede agregar una
      *  pestaña a un módulo; el módulo no sabe cuál ni tiene que saberlo. */
-    addons?: string[] }) {
-  const pestanas = useMemo(() => pestanasDe(slug, addons), [slug, addons.join(',')]);
+    addons?: string[];
+    /** Los módulos disponibles de la organización. Una pestaña puede depender
+     *  de otro módulo: la ficha 360 solo tiene sentido con el inmobiliario. */
+    modulos?: string[];
+    /** La pestaña con la que abrir, cuando se llega desde otro sitio —la
+     *  búsqueda global— en vez de entrando por el menú. */
+    pestanaInicial?: string }) {
+  const pestanas = useMemo(() => pestanasDe(slug, addons, modulos),
+                           [slug, addons.join(','), modulos.join(',')]);
   const [cual, setCual] = useState(0);
 
-  useEffect(() => { setCual(0); }, [slug]);
+  /* Cambiar de módulo vuelve a la primera pestaña, salvo que se haya llegado
+     pidiendo una concreta: quien pulsa un resultado de la búsqueda quiere
+     caer donde está la cosa, no en la portada del módulo. */
+  useEffect(() => {
+    const i = pestanaInicial ? pestanas.findIndex(p => p.id === pestanaInicial) : -1;
+    setCual(i >= 0 ? i : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, pestanaInicial]);
 
   if (pestanas.length === 0) return <PorConstruir slug={slug} />;
   const activa = pestanas[Math.min(cual, pestanas.length - 1)]!;
@@ -376,6 +418,18 @@ export function Modulo({ slug, companyId, nivel, moneda, pais, addons = [] }:
           entre los dos es qué metas devuelve la base, no qué se dibuja. */}
       {activa.tipo === 'inmobiliaria' && activa.vista === 'comercial' && (
         <PanelComercialInmobiliario companyId={companyId} />
+      )}
+      {activa.tipo === 'inmobiliaria' && activa.vista === 'semanal' && (
+        <InformeSemanalInmobiliario companyId={companyId} />
+      )}
+      {activa.tipo === 'inmobiliaria' && activa.vista === 'ciudades' && (
+        <PanelCiudades companyId={companyId} />
+      )}
+      {activa.tipo === 'inmobiliaria' && activa.vista === 'calidad' && (
+        <CalidadDeDato companyId={companyId} />
+      )}
+      {activa.tipo === 'inmobiliaria' && activa.vista === 'cliente360' && (
+        <FichaCliente360 companyId={companyId} />
       )}
       {activa.tipo === 'inmobiliaria' && activa.vista === 'panel' && (
         <PanelInmobiliario companyId={companyId} puedeEditar={nivel >= 60} />

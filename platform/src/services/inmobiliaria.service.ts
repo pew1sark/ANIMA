@@ -391,3 +391,194 @@ export async function sembrarUmbrales(companyId: string): Promise<number> {
   if (error) throw error;
   return (data ?? 0) as number;
 }
+
+// ------------------------------------------------- §48 calidad de dato
+
+/* EL DATA QUALITY ENGINE
+   ---------------------------------------------------------------------------
+   Dos cosas, y la segunda es la que sirve. El porcentaje por entidad dice si
+   la cosa mejora; la lista de filas concretas es lo que se puede arreglar.
+   `gravedad` 1 rompe cifras, 2 las distorsiona, 3 deja un hueco. */
+
+export interface FaltaCampo { campo: string; n: number }
+
+export interface EntidadCalidad {
+  entidad: string; tabla: string; filas: number;
+  completitud: number | null;
+  faltantes: FaltaCampo[];
+}
+
+export interface FilaArreglar {
+  gravedad: 1 | 2 | 3;
+  entidad: string; tabla: string;
+  codigo: string; nombre: string; ciudad: string;
+  problema: string; efecto: string;
+}
+
+export interface Calidad {
+  entidades: EntidadCalidad[];
+  arreglar: FilaArreglar[];
+  mediana_precio_m2: number;
+  factor_atipico: number;
+}
+
+export async function cargarCalidad(companyId: string): Promise<Calidad | null> {
+  const { data, error } = await supabase.rpc('rei_calidad', { p_company: companyId });
+  if (error) throw error;
+  const d = data as Partial<Calidad> | null;
+  if (!d || !d.entidades) return null;
+  return d as Calidad;
+}
+
+// ------------------------------------------------------- §14 por ciudad
+
+export interface FilaCiudad {
+  ciudad: string;
+  inventario: number; disponibles: number; captaciones: number; cierres: number;
+  comision: number; dias_mercado: number | null;
+  precio_m2: number | null; canon_m2: number | null;
+  leads: number; visitas: number; pipeline: number; oportunidades: number;
+}
+
+export interface Ciudades {
+  moneda: string;
+  periodo: { desde: string; hasta: string };
+  ciudades: FilaCiudad[];
+}
+
+export async function cargarCiudades(
+  companyId: string, rango: { desde?: string; hasta?: string } = {}
+): Promise<Ciudades | null> {
+  const { data, error } = await supabase.rpc('rei_ciudades', {
+    p_company: companyId, p_filtros: limpiar(rango)
+  });
+  if (error) throw error;
+  const d = data as Partial<Ciudades> | null;
+  if (!d || !d.ciudades) return null;
+  return d as Ciudades;
+}
+
+// ----------------------------------------------------- §46 búsqueda global
+
+export interface Hallazgo { id: string; titulo: string; detalle: string | null }
+export interface GrupoBusqueda { entidad: string; total: number; resultados: Hallazgo[] }
+
+export async function buscar(companyId: string, texto: string): Promise<GrupoBusqueda[]> {
+  const { data, error } = await supabase.rpc('rei_buscar', {
+    p_company: companyId, p_texto: texto
+  });
+  if (error) throw error;
+  return (data ?? []) as GrupoBusqueda[];
+}
+
+// ------------------------------------------------------- §21 drill-down
+
+export interface FilaRegistro {
+  codigo: string; nombre: string; etapa: string; ciudad: string;
+  contacto: string; responsable: string; cuando: string | null;
+  monto?: number | null;
+}
+
+export interface Registros {
+  clave: string;
+  titulo: string | null;
+  filas: FilaRegistro[];
+  nota?: string;
+}
+
+/* Los registros detrás de una cifra. Recibe la MISMA clave y los MISMOS
+   filtros que `rei_comercial()`: es lo que garantiza que el detalle sume
+   exactamente el número que se abrió. */
+export async function cargarRegistros(
+  companyId: string, clave: string, filtros: FiltrosComercial
+): Promise<Registros> {
+  const { data, error } = await supabase.rpc('rei_registros', {
+    p_company: companyId, p_clave: clave, p_filtros: limpiar(filtros)
+  });
+  if (error) throw error;
+  return (data ?? { clave, titulo: null, filas: [] }) as Registros;
+}
+
+// --------------------------------------------------- §11 informe semanal
+
+export interface PersonaSemanal {
+  persona: string; meta: number | null; resultado: number;
+  cumplimiento: number | null; pipeline: number;
+  actividad: number; conversion: number | null; pendientes: number;
+}
+
+export interface InformeSemanal {
+  moneda: string;
+  semana: { desde: string; hasta: string; mes_desde: string; mes_hasta: string };
+  resumen: {
+    cierres_semana: number; comision_semana: number;
+    cierres_mes: number; comision_mes: number;
+    meta_mes: number | null; brecha: number | null;
+    riesgos: string[]; victorias: string[];
+  };
+  revenue: {
+    meta: number | null; real: number; cumplimiento: number | null;
+    proyeccion: number; pipeline_ponderado: number; brecha: number | null;
+  };
+  equipo: PersonaSemanal[];
+  brokerage: {
+    captaciones: number; leads: number; visitas: number; ofertas: number;
+    cierres: number; comision_esperada: number; comision_realizada: number;
+  };
+  operaciones: {
+    contratos_vigentes: number; vencen_30_dias: number;
+    tareas_pendientes: number; tareas_vencidas: number; registros_incompletos: number;
+  };
+  desarrollo: {
+    oportunidades_nuevas: number; en_screening: number;
+    factibilidades_activas: number; aprobadas: number;
+  };
+  /** Lo que el informe NO pudo calcular, y por qué. */
+  notas: string[];
+}
+
+export async function cargarSemanal(
+  companyId: string, semana?: string
+): Promise<InformeSemanal | null> {
+  const { data, error } = await supabase.rpc('rei_informe_semanal', {
+    p_company: companyId, p_semana: semana ?? null
+  });
+  if (error) throw error;
+  const d = data as Partial<InformeSemanal> | null;
+  if (!d || !d.revenue) return null;
+  return d as InformeSemanal;
+}
+
+// ------------------------------------------------------ §16 cliente 360
+
+export interface Cliente360 {
+  identidad: {
+    id: string; nombre: string; tipo: string; estado: string;
+    telefono: string | null; whatsapp: string | null; email: string | null;
+    ciudad: string | null; direccion: string | null; razon_social: string | null;
+    contacto: string | null; notas: string | null; desde: string;
+  };
+  origen: { canal: string | null; campana: string | null; entrada: string;
+            primera_interaccion: string | null; operacion: string } | null;
+  necesidad: { busca: string | null; zona: string | null; presupuesto: number | null;
+               forma_pago: string | null; subsidio: string | null;
+               proceso: string | null; estado: string | null } | null;
+  cifras: {
+    inmuebles: number; negociaciones: number; ganadas: number;
+    comision_generada: number; visitas: number; contratos_vigentes: number;
+  };
+  inmuebles: Record<string, unknown>[];
+  leads: Record<string, unknown>[];
+  negociaciones: Record<string, unknown>[];
+  contratos: Record<string, unknown>[];
+  visitas: Record<string, unknown>[];
+  actividad: Record<string, unknown>[];
+}
+
+export async function cargarCliente360(customerId: string): Promise<Cliente360 | null> {
+  const { data, error } = await supabase.rpc('rei_cliente_360', { p_customer: customerId });
+  if (error) throw error;
+  const d = data as Partial<Cliente360> | null;
+  if (!d || !d.identidad) return null;
+  return d as Cliente360;
+}

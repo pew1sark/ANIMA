@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { cargarComercial, corredores, opcionesDeFiltro,
+import { cargarComercial, corredores, opcionesDeFiltro, cargarRegistros,
          type PanelComercial, type FiltrosComercial, type Corredor,
-         type OpcionesFiltro, type PeldanoEmbudo } from '@/services/inmobiliaria.service';
+         type OpcionesFiltro, type PeldanoEmbudo, type Registros } from '@/services/inmobiliaria.service';
 import { TarjetaCifra, Avisos, Elige, Cabecera } from '@/components/capital/Cifra';
 import { Periodo, type Rango } from '@/components/capital/Periodo';
 import { Grafico, Lista } from '@/components/panel/Cuadro';
-import { cantidad, mesCorto } from '@/lib/formato';
+import { cantidad, mesCorto, dinero, diaCorto } from '@/lib/formato';
 
 /* EL PANEL COMERCIAL
    ---------------------------------------------------------------------------
@@ -32,6 +32,13 @@ const HEROICAS = ['comision', 'meta', 'cumplimiento', 'forecast'];
 /* Los nombres del embudo. Viven aquí y no en la base por lo mismo que las
    tipologías: son etiquetas de pantalla. Los VALORES sí los fija un check en
    PostgreSQL, porque de ellos cuelgan las fechas que estampa el trigger. */
+/* Las cifras que tienen una lista de registros detrás. Las demás —cumplimiento,
+   brecha, días hasta el primer contacto— son razones o promedios: no hay un
+   conjunto de filas que las forme, y ofrecer un «ver los registros» que abre
+   otra cosa es peor que no ofrecerlo. */
+const CON_REGISTROS = new Set(['leads', 'cierres', 'comision', 'visitas',
+                               'captaciones', 'forecast', 'sin_accion']);
+
 const ETAPA: Record<string, string> = {
   nuevo: 'Nuevo', contactado: 'Contactado', calificado: 'Calificado',
   con_inmueble: 'Con inmueble', visita_agendada: 'Visita agendada',
@@ -49,6 +56,11 @@ export function PanelComercialInmobiliario({ companyId }: { companyId: string })
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sinAcceso, setSinAcceso] = useState(false);
+  /* §21 · los registros detrás de una cifra. Se piden al abrirla y no de
+     antemano: traer las seis listas por si acaso sería pagar seis consultas
+     para que casi siempre no se mire ninguna. */
+  const [detalle, setDetalle] = useState<Registros | null>(null);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
 
   const filtros: FiltrosComercial = useMemo(
     () => ({ ciudad: ciudad || undefined, broker: broker || undefined, ...rango }),
@@ -72,6 +84,15 @@ export function PanelComercialInmobiliario({ companyId }: { companyId: string })
       .finally(() => vivo && setCargando(false));
     return () => { vivo = false; };
   }, [companyId, JSON.stringify(filtros)]);
+
+  async function abrirDetalle(clave: string) {
+    setCargandoDetalle(true); setDetalle(null);
+    try {
+      setDetalle(await cargarRegistros(companyId, clave, filtros));
+    } catch (e) {
+      setError((e as Error).message ?? 'No se pudieron cargar los registros.');
+    } finally { setCargandoDetalle(false); }
+  }
 
   if (sinAcceso) {
     return (
@@ -144,17 +165,24 @@ export function PanelComercialInmobiliario({ companyId }: { companyId: string })
           ) : (
             <>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {heroicas.map(c => <TarjetaCifra key={c.clave} ind={c} moneda={d.moneda} destacada />)}
+                {heroicas.map(c => <TarjetaCifra key={c.clave} ind={c} moneda={d.moneda} destacada
+                                                 onDetalle={CON_REGISTROS.has(c.clave) ? abrirDetalle : undefined} />)}
               </div>
 
               <Embudo peldanos={d.embudo} />
+
+              {(cargandoDetalle || detalle) && (
+                <Registrados detalle={detalle} cargando={cargandoDetalle}
+                             moneda={d.moneda} cerrar={() => setDetalle(null)} />
+              )}
 
               <section className="grid gap-2.5">
                 <h2 className="rotulo rotulo-tenue">
                   El resto del cuadro · {mesCorto(d.periodo.desde)} a {mesCorto(d.periodo.hasta)}
                 </h2>
                 <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-                  {resto.map(c => <TarjetaCifra key={c.clave} ind={c} moneda={d.moneda} />)}
+                  {resto.map(c => <TarjetaCifra key={c.clave} ind={c} moneda={d.moneda}
+                                                onDetalle={CON_REGISTROS.has(c.clave) ? abrirDetalle : undefined} />)}
                 </div>
               </section>
 
@@ -223,6 +251,84 @@ function Embudo({ peldanos }: { peldanos: PeldanoEmbudo[] }) {
               <b className="tabular-nums">{cantidad(p.cantidad)}</b> {ETAPA[p.etapa]?.toLowerCase()}
             </span>
           ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* LOS REGISTROS DETRÁS DE UNA CIFRA · §21
+   ---------------------------------------------------------------------------
+   «34 leads → los 34 registros». Comparte clave y filtros con la cifra que se
+   abrió, que es lo que garantiza que la lista sume exactamente el número. Un
+   drill-down que devuelve una lista parecida es peor que no tenerlo: nadie
+   vuelve a creer el número. */
+function Registrados({ detalle, cargando, moneda, cerrar }:
+  { detalle: Registros | null; cargando: boolean; moneda: string; cerrar: () => void }) {
+  if (cargando) {
+    return <section className="tarjeta p-5 entra" aria-busy="true"
+                    style={{ minHeight: 120 }}><span className="rotulo">Buscando los registros…</span></section>;
+  }
+  if (!detalle) return null;
+
+  const hayMonto = detalle.filas.some(f => f.monto != null);
+
+  return (
+    <section className="tarjeta p-5 entra">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h2 className="rotulo">{detalle.titulo ?? 'Registros'}</h2>
+        {detalle.filas.length > 0 && (
+          <span className="marca"><b className="tabular-nums">{cantidad(detalle.filas.length)}</b></span>
+        )}
+        <button className="b b-sec b-sm ml-auto no-imprimir" onClick={cerrar}>Cerrar</button>
+      </div>
+
+      {detalle.nota && (
+        <p className="mt-2" style={{ fontSize: 'var(--texto-md)', color: 'var(--color-muted)' }}>
+          {detalle.nota}
+        </p>
+      )}
+
+      {!detalle.nota && detalle.filas.length === 0 && (
+        <p className="mt-2" style={{ fontSize: 'var(--texto-md)', color: 'var(--color-muted)' }}>
+          La cifra es cero y la lista también: no hay nada detrás que mirar.
+        </p>
+      )}
+
+      {detalle.filas.length > 0 && (
+        <div className="desliza -mx-5 px-5 mt-3">
+          <table className="tabla">
+            <thead>
+              <tr>
+                <th className="ancla">Código</th>
+                <th>Nombre</th>
+                <th>Etapa</th>
+                <th>Ciudad</th>
+                <th>Con quién</th>
+                <th>Responsable</th>
+                <th>Cuándo</th>
+                {hayMonto && <th className="num">Monto</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {detalle.filas.map((f, i) => (
+                <tr key={`${f.codigo}-${i}`}>
+                  <td className="ancla cifra" style={{ whiteSpace: 'nowrap' }}>{f.codigo}</td>
+                  <td className="principal">{f.nombre}</td>
+                  <td><span className="marca">{f.etapa}</span></td>
+                  <td style={{ color: 'var(--color-muted)' }}>{f.ciudad}</td>
+                  <td style={{ color: 'var(--color-muted)' }}>{f.contacto}</td>
+                  <td style={{ color: 'var(--color-muted)' }}>{f.responsable}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{f.cuando ? diaCorto(f.cuando) : '—'}</td>
+                  {hayMonto && (
+                    <td className="num cifra">
+                      {f.monto == null ? '—' : dinero(Number(f.monto), moneda)}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </section>

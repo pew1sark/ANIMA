@@ -24,7 +24,11 @@ import type { ModuleSlug } from '@/types/core';
                  deformar el motor para que cupieran
      inmobiliaria — lo mismo en Real Estate Intelligence: el panel, la matriz
                  de calificación (oportunidades × criterios), la hoja de
-                 prefactibilidad con su flujo de caja y el panel comercial
+                 prefactibilidad con su flujo de caja, el panel comercial, la
+                 minuta semanal, el cuadro por municipio, la calidad de dato
+                 y la ficha 360 de un cliente. El motor dibuja filas con
+                 ficha; estas son cuadros, matrices y minutas, y forzarlas al
+                 motor habría sido deformarlo para que cupieran
 
    Un módulo sin declaración cae en el comportamiento de siempre: una pestaña
    por entidad. Así, agregar una entidad nueva sigue sin obligar a tocar esto. */
@@ -37,7 +41,8 @@ export type Pestana =
   | { id: string; nombre: string; tipo: 'capital';
       vista: 'levantamiento' | 'panel' | 'modelo' | 'presupuesto' | 'ronda' }
   | { id: string; nombre: string; tipo: 'inmobiliaria';
-      vista: 'comercial' | 'panel' | 'calificacion' | 'prefactibilidad' };
+      vista: 'comercial' | 'panel' | 'calificacion' | 'prefactibilidad'
+           | 'semanal' | 'ciudades' | 'calidad' | 'cliente360' };
 
 /** Los módulos cuyo resumen sabe calcular `resumen_modulo()`. */
 export const CON_RESUMEN = new Set<string>([
@@ -83,7 +88,14 @@ const CORTO: Record<string, string> = {
   processing_orders: 'Procesos'
 };
 
-export function pestanasDe(slug: ModuleSlug, addons: string[] = []): Pestana[] {
+export function pestanasDe(
+  slug: ModuleSlug,
+  addons: string[] = [],
+  /** Los módulos que la organización tiene disponibles. Una pestaña puede
+   *  depender de OTRO módulo —la ficha 360 vive en Clientes y la alimenta el
+   *  inmobiliario— y eso no es un addon: es una relación entre módulos. */
+  modulos: string[] = []
+): Pestana[] {
   const esquemas = ESQUEMAS_POR_MODULO[slug] ?? [];
   const salida: Pestana[] = [];
 
@@ -124,7 +136,10 @@ export function pestanasDe(slug: ModuleSlug, addons: string[] = []): Pestana[] {
       { id: 'panel',           nombre: 'Panel',           tipo: 'inmobiliaria', vista: 'panel' },
       { id: 'calificacion',    nombre: 'Calificación',    tipo: 'inmobiliaria', vista: 'calificacion' },
       { id: 'prefactibilidad', nombre: 'Prefactibilidad', tipo: 'inmobiliaria', vista: 'prefactibilidad' },
-      { id: 'comercial',       nombre: 'Comercial',       tipo: 'inmobiliaria', vista: 'comercial' });
+      { id: 'comercial',       nombre: 'Comercial',       tipo: 'inmobiliaria', vista: 'comercial' },
+      { id: 'semanal',         nombre: 'Minuta semanal',  tipo: 'inmobiliaria', vista: 'semanal' },
+      { id: 'ciudades',        nombre: 'Por municipio',   tipo: 'inmobiliaria', vista: 'ciudades' },
+      { id: 'calidad',         nombre: 'Calidad de dato', tipo: 'inmobiliaria', vista: 'calidad' });
     for (const e of esquemas) {
       salida.push({ id: e.tabla, nombre: CORTO[e.tabla] ?? e.titulo, tipo: 'datos', esquema: e });
     }
@@ -133,6 +148,18 @@ export function pestanasDe(slug: ModuleSlug, addons: string[] = []): Pestana[] {
 
   if (CON_RESUMEN.has(slug)) {
     salida.push({ id: 'resumen', nombre: 'Resumen', tipo: 'resumen' });
+  }
+
+  /* La ficha 360 vive en Clientes y no en el módulo inmobiliario, aunque la
+     alimente él: quien busca a una persona la busca en Clientes. Va detrás del
+     resumen y delante de las entidades, que es el orden de siempre —primero la
+     respuesta, después el detalle, al final la carga—.
+
+     Solo aparece donde hay operación inmobiliaria que reunir. En una empresa
+     que solo vende mercadería, la ficha no tendría inmuebles, ni visitas, ni
+     contratos: sería la misma ficha de cliente con más pasos. */
+  if (slug === 'crm' && modulos.includes('realestate')) {
+    salida.push({ id: 'cliente360', nombre: 'Ficha 360', tipo: 'inmobiliaria', vista: 'cliente360' });
   }
 
   /* El análisis va inmediatamente después del resumen y antes de las
