@@ -740,10 +740,12 @@ function vAlmaPublica(a){
   </div>`;
 }
 /* Gráficos simples */
-function chartFinance(a){
+/* Las listas se pueden pasar ya filtradas (el Resumen manda las de su tramo);
+   sin ellas, el gráfico habla de toda la Raíz, como siempre. */
+function chartFinance(a,incList,expList){
   const map={};
-  rootIncome(a).forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k){(map[k]=map[k]||{i:0,e:0}).i+=x.a;}});
-  a.finance.expense.forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k){(map[k]=map[k]||{i:0,e:0}).e+=x.a;}});
+  (incList||rootIncome(a)).forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k){(map[k]=map[k]||{i:0,e:0}).i+=x.a;}});
+  (expList||a.finance.expense||[]).forEach(x=>{const k=(x.d||x.on||"").slice(0,7);if(k){(map[k]=map[k]||{i:0,e:0}).e+=x.a;}});
   const keys=Object.keys(map).sort().slice(-6);
   if(!keys.length) return `<p class="muted">Aún no hay datos de Raíz.</p>`;
   const max=Math.max(1,...keys.map(k=>Math.max(map[k].i,map[k].e)));
@@ -1146,7 +1148,10 @@ function projectSelectFilters(ps){
   const owners=[...new Set(ps.map(p=>p.responsible||p.owner||"").filter(Boolean))].sort();
   const comunas=[...new Set(ps.map(p=>String(p.comuna||"").trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,"es"));
   const d=state.projDetailFilter||{};
-  return `<div class="proj-filters">
+  /* Los atajos van en su propia línea y rotulados: pegados a los filtros de
+     contexto, "Todo" y "Todos" se leen como el mismo botón. */
+  return `<div class="per-row"><span class="per-lbl">Periodo</span>${periodQuick("pj",d.desde||"",d.hasta||"")}${periodMonthPicker("pj",d.desde||"",d.hasta||"")}</div>
+    <div class="proj-filters">
     <select data-projfilter2="template">${opt("Plantilla",templates,d.template||"")}</select>
     <select data-projfilter2="category">${opt("Categoría",cats,d.category||"")}</select>
     <select data-projfilter2="responsible">${opt("Responsable",owners,d.responsible||"")}</select>
@@ -1213,6 +1218,88 @@ function projectMatchesDetail(p){
   if(!projectInPeriod(p)) return false;
   return true;
 }
+/* ===========================================================
+   TRAMOS DE FECHA — compartidos por el Taller
+   -----------------------------------------------------------
+   Un tramo son dos textos ISO ("AAAA-MM-DD"): desde y hasta. Se
+   comparan como texto y nunca con Date, por lo mismo que ya se
+   explicó arriba: new Date("2026-09-01") se lee en UTC y en Chile
+   retrocede un día, así que el 1 se caía del tramo que empieza el 1.
+   Por eso el "hoy" de los atajos también se arma a mano, con la
+   fecha local, y no con toISOString().
+   =========================================================== */
+function isoDay(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+const PERIOD_PRESETS=[{k:"todo",t:"Todo"},{k:"7d",t:"7 días"},{k:"30d",t:"30 días"},{k:"mes",t:"Este mes"},{k:"ano",t:"Este año"}];
+function periodRange(k){
+  const hoy=new Date(), hasta=isoDay(hoy);
+  if(k==="7d"||k==="30d"){ const x=new Date(hoy); x.setDate(x.getDate()-(k==="7d"?6:29)); return {desde:isoDay(x),hasta}; }
+  if(k==="mes") return {desde:isoDay(new Date(hoy.getFullYear(),hoy.getMonth(),1)),hasta};
+  if(k==="ano") return {desde:isoDay(new Date(hoy.getFullYear(),0,1)),hasta};
+  return {desde:"",hasta:""};
+}
+/* Qué atajo describe el tramo actual: enciende el botón correcto y distingue
+   un tramo escrito a mano ("A medida"). */
+function periodPreset(desde,hasta){
+  if(!desde && !hasta) return "todo";
+  const hit=PERIOD_PRESETS.find(p=>{ if(p.k==="todo") return false; const r=periodRange(p.k); return r.desde===desde && r.hasta===hasta; });
+  return hit?hit.k:"custom";
+}
+function inRange(iso,desde,hasta){
+  if(!desde && !hasta) return true;
+  const s=String(iso||"").slice(0,10);
+  if(!s) return false;                        // sin fecha no se puede ubicar en el tramo
+  if(desde && s<desde) return false;
+  if(hasta && s>hasta) return false;
+  return true;
+}
+/* Raíz guarda el día exacto (`on`) o sólo el mes (`d`). Con día se compara
+   día; con mes, el mes entero cuenta como dentro si toca el tramo. */
+function finInRange(x,desde,hasta){
+  if(!desde && !hasta) return true;
+  if(x.on && /^\d{4}-\d{2}-\d{2}/.test(x.on)) return inRange(x.on,desde,hasta);
+  const m=finMonthKey(x); if(!m) return false;
+  if(desde && m<desde.slice(0,7)) return false;
+  if(hasta && m>hasta.slice(0,7)) return false;
+  return true;
+}
+/* Un mes entero como tramo: es como se mira el trabajo cerrado —"lo de
+   marzo"—, y el último día lo pone el calendario (día 0 del mes siguiente). */
+function monthBounds(ym){
+  const [y,m]=String(ym||"").split("-").map(Number);
+  if(!y||!m||m<1||m>12) return {desde:"",hasta:""};
+  const fin=new Date(y,m,0).getDate();
+  return {desde:`${ym}-01`, hasta:`${ym}-${String(fin).padStart(2,"0")}`};
+}
+/* Si el tramo es exactamente un mes completo, el selector lo muestra. */
+function periodMonth(desde,hasta){
+  if(!desde||!hasta) return "";
+  const ym=desde.slice(0,7), b=monthBounds(ym);
+  return (b.desde===desde&&b.hasta===hasta)?ym:"";
+}
+function periodMonthPicker(ns,desde,hasta){
+  return `<label class="per-date"><span>Mes</span><input type="month" data-${ns}month value="${esc(periodMonth(desde,hasta))}"></label>`;
+}
+/* Atajos de tramo. `ns` separa los data-attr para que el Resumen y las
+   Unidades de Trabajo no se escuchen los clics entre sí. */
+function periodQuick(ns,desde,hasta){
+  const cur=periodPreset(desde,hasta);
+  return `<div class="per-quick">${PERIOD_PRESETS.map(p=>`<button class="per-b ${cur===p.k?'on':''}" data-${ns}preset="${p.k}">${esc(p.t)}</button>`).join("")}${cur==="custom"&&!periodMonth(desde,hasta)?`<span class="per-b on">A medida</span>`:""}</div>`;
+}
+/* Barra completa: atajos + tramo a mano. */
+function periodBar(ns,desde,hasta){
+  return `<div class="per-bar">${periodQuick(ns,desde,hasta)}
+      ${periodMonthPicker(ns,desde,hasta)}
+      <label class="per-date"><span>Desde</span><input type="date" data-${ns}date="desde" value="${esc(desde||"")}"></label>
+      <label class="per-date"><span>Hasta</span><input type="date" data-${ns}date="hasta" value="${esc(hasta||"")}"></label>
+      ${(desde||hasta)?`<button class="btn ghost sm" data-${ns}clear>Limpiar</button>`:""}</div>`;
+}
+/* El tramo dicho en palabras — las cifras tienen que decir de qué periodo
+   hablan o mienten por omisión. */
+function periodWords(desde,hasta){
+  if(!desde && !hasta) return "";
+  return desde&&hasta?`del ${fechaCorta(desde)} al ${fechaCorta(hasta)}`
+        :desde?`desde el ${fechaCorta(desde)}`:`hasta el ${fechaCorta(hasta)}`;
+}
 function projectMetaLine(a,p){
   return [p.template, p.category, p.responsible].filter(Boolean).map(esc).join(" · ");
 }
@@ -1231,67 +1318,109 @@ function tallerSaludo(){ const h=new Date().getHours(); return h<6?"Buenas noche
 function vTaller(a){
   const nameFirst=(a.name||"Alma").split(" ")[0];
   const TERM=["Entregado","Cerrado","Terminado"];
-  const active=a.projects.filter(p=>!TERM.includes(p.st));
-  const clients=a.clients||[];
-  const quotes = a.live ? (state.cloudQuotes||[]) : (typeof loadQuotes==="function"?loadQuotes(a):[]);
-  const inc=sum(rootIncome(a)), exp=sum(a.finance.expense), gan=inc-exp;
+  /* El Resumen se puede pedir por tramo. Sin tramo cuenta todo, exactamente
+     como antes; con tramo, cada tarjeta cuenta sobre SU propia fecha —la que
+     de verdad tiene guardada— y lo dice en la etiqueta. */
+  const per=state.tallerPeriod||{}, D=per.desde||"", H=per.hasta||"";
+  const ranged=!!(D||H);
+  const inPer=iso=>inRange(iso,D,H);
+
+  const allProjects=a.projects||[];
+  const projects=ranged?allProjects.filter(p=>inPer(projectDate(p,"created"))):allProjects;
+  const active=projects.filter(p=>!TERM.includes(p.st));
+  const allClients=a.clients||[];
+  const clients=ranged?allClients.filter(c=>inPer(c.created)):allClients;
+  const allQuotes = a.live ? (state.cloudQuotes||[]) : (typeof loadQuotes==="function"?loadQuotes(a):[]);
+  const quotes=ranged?allQuotes.filter(q=>inPer(q.created_at||q.date)):allQuotes;
+
+  const incAll=rootIncome(a), expAll=a.finance.expense||[];
+  const incL=ranged?incAll.filter(x=>finInRange(x,D,H)):incAll;
+  const expL=ranged?expAll.filter(x=>finInRange(x,D,H)):expAll;
+  const inc=sum(incL), exp=sum(expL), gan=inc-exp;
+
+  /* Entregas: sin tramo, las de los próximos 14 días. Con tramo, las que caen
+     dentro —y se buscan en todos los proyectos, no sólo en los creados en el
+     tramo: una entrega de octubre puede venir de un trabajo de julio. */
   const now=Date.now(), soon=now+14*864e5;
-  const upcoming=active.filter(p=>p.due && !isNaN(new Date(p.due)) && new Date(p.due).getTime()>=now-864e5 && new Date(p.due).getTime()<=soon)
-                       .sort((x,y)=>new Date(x.due)-new Date(y.due));
+  const upcoming=ranged
+    ? allProjects.filter(p=>!TERM.includes(p.st) && inPer(p.due)).sort((x,y)=>String(x.due).localeCompare(String(y.due)))
+    : allProjects.filter(p=>!TERM.includes(p.st) && p.due && !isNaN(new Date(p.due)) && new Date(p.due).getTime()>=now-864e5 && new Date(p.due).getTime()<=soon)
+                 .sort((x,y)=>new Date(x.due)-new Date(y.due));
   const nextDue=upcoming[0];
-  const ag=(a.agenda||[]); const todayKey=new Date().toISOString().slice(0,10);
-  const agToday=ag.filter(x=>!x.date || x.date===todayKey);
+
+  const todayKey=isoDay(new Date());
+  const agAll=a.agenda||[];
+  const ag=ranged?agAll.filter(x=>inPer(x.date)):agAll;
+  const agToday=ranged?ag:ag.filter(x=>!x.date || x.date===todayKey);
   const agNext=ag.filter(x=>x.date && x.date>=todayKey).sort((x,y)=>(x.date>y.date?1:-1))[0] || ag[0];
 
-  // PARTE SUPERIOR — saludo + "Hoy tienes".
+  const tasksAll=a.tasks||[];
+  const tasks=ranged?tasksAll.filter(t=>inPer(t.due)):tasksAll;
+
+  /* Cuando el tramo esconde todo porque ese dato no guarda fecha, hay que
+     decirlo: un cero sin explicación se lee como una falla. */
+  const sinFecha=(lista,campo)=>ranged && lista.length>0 && !lista.some(campo);
+  const aviso=txt=>`<small class="tl-nodate">${esc(txt)}</small>`;
+
+  // PARTE SUPERIOR — saludo + tramo + "Hoy tienes".
   const hero=`<div class="card s12 tl-hero">
       <h2 class="tl-greet">${tallerSaludo()}, ${esc(nameFirst)}.</h2>
-      <div class="tl-today"><span class="tl-today-lbl">Hoy tienes</span>
+      ${periodBar("tl",D,H)}
+      <div class="tl-today"><span class="tl-today-lbl">${ranged?"En el tramo":"Hoy tienes"}</span>
         <span class="tl-chip"><b>${active.length}</b> Proyectos activos</span>
         <span class="tl-chip"><b>${quotes.length}</b> ${quotes.length===1?"Cotización":"Cotizaciones"}</span>
-        <span class="tl-chip"><b>${upcoming.length}</b> Entregas próximas</span>
+        <span class="tl-chip"><b>${upcoming.length}</b> Entregas${ranged?"":" próximas"}</span>
         <span class="tl-chip tl-chip-gain"><b>${money(gan)}</b> de ganancia</span>
-      </div></div>`;
+      </div>
+      ${ranged?`<p class="tl-range">Resumen ${esc(periodWords(D,H))}. Cada tarjeta cuenta por su propia fecha: proyectos por creación, Raíz por fecha del movimiento, agenda y tareas por su día.</p>`:""}</div>`;
 
   // PROYECTOS
   const proy=`<div class="card s4 tl-card"><div class="section-title"><h2 style="font-size:15px">Proyectos</h2><div class="spacer"></div><button class="btn ghost sm" data-go="proyectos">Ver Todo →</button></div>
-      <div class="tl-stat"><div><b class="num">${active.length}</b><span class="lbl">Activos</span></div><div><b class="num">${a.projects.length}</b><span class="lbl">Totales</span></div></div>
-      <div class="tl-mini">${nextDue?`<span class="tl-mini-k">Entrega próxima</span><b>${esc(nextDue.t)}</b><small class="muted">${esc(tallerDate(nextDue.due))}${nextDue.client?" · "+esc(nextDue.client):""}</small>`:`<span class="muted" style="font-size:13px">Sin entregas próximas.</span>`}</div>
+      <div class="tl-stat">${ranged
+        ? `<div><b class="num">${projects.length}</b><span class="lbl">Creados</span></div><div><b class="num">${active.length}</b><span class="lbl">Activos</span></div><div><b class="num">${allProjects.length}</b><span class="lbl">Totales</span></div>`
+        : `<div><b class="num">${active.length}</b><span class="lbl">Activos</span></div><div><b class="num">${allProjects.length}</b><span class="lbl">Totales</span></div>`}</div>
+      ${sinFecha(allProjects,p=>projectDate(p,"created"))?aviso("Ningún proyecto tiene fecha de creación guardada."):""}
+      <div class="tl-mini">${nextDue?`<span class="tl-mini-k">${ranged?"Entrega en el tramo":"Entrega próxima"}</span><b>${esc(nextDue.t)}</b><small class="muted">${esc(tallerDate(nextDue.due))}${nextDue.client?" · "+esc(nextDue.client):""}</small>`:`<span class="muted" style="font-size:13px">Sin entregas${ranged?" en el tramo":" próximas"}.</span>`}</div>
       <button class="btn sm" data-add="proyecto" style="margin-top:12px">＋ Nuevo Proyecto</button></div>`;
 
   // VÍNCULOS
   const vinc=`<div class="card s4 tl-card"><div class="section-title"><h2 style="font-size:15px">Vínculos</h2><div class="spacer"></div><button class="btn ghost sm" data-go="clientes">Ver →</button></div>
-      <div class="tl-stat"><div><b class="num">${clients.length}</b><span class="lbl">Clientes</span></div></div>
-      <div class="tl-mini">${clients[0]?`<span class="tl-mini-k">Último contacto</span><b>${esc(clients[0].name)}</b>${clients[0].email?`<small class="muted">${esc(clients[0].email)}</small>`:""}`:`<span class="muted" style="font-size:13px">Aún no tienes vínculos.</span>`}</div>
+      <div class="tl-stat">${ranged
+        ? `<div><b class="num">${clients.length}</b><span class="lbl">Nuevos</span></div><div><b class="num">${allClients.length}</b><span class="lbl">Totales</span></div>`
+        : `<div><b class="num">${clients.length}</b><span class="lbl">Clientes</span></div>`}</div>
+      ${sinFecha(allClients,c=>c.created)?aviso("Estos vínculos no guardan fecha de registro."):""}
+      <div class="tl-mini">${clients[0]?`<span class="tl-mini-k">${ranged?"Vínculo del tramo":"Último contacto"}</span><b>${esc(clients[0].name)}</b>${clients[0].email?`<small class="muted">${esc(clients[0].email)}</small>`:""}`:`<span class="muted" style="font-size:13px">${ranged?"Ningún vínculo nuevo en el tramo.":"Aún no tienes vínculos."}</span>`}</div>
       <button class="btn secondary sm" data-add="cliente" style="margin-top:12px">＋ Nuevo vínculo</button></div>`;
 
   // RAÍZ + mini gráfico
   const raiz=`<div class="card s4 tl-card"><div class="section-title"><h2 style="font-size:15px">Raíz</h2><div class="spacer"></div><button class="btn ghost sm" data-go="finanzas">Ver →</button></div>
       <div class="tl-stat tl-stat-3"><div><b class="num" style="color:var(--ok)">${money(inc)}</b><span class="lbl">Abonos / pagos</span></div><div><b class="num" style="color:var(--danger)">${money(exp)}</b><span class="lbl">Egresos</span></div><div><b class="num">${money(gan)}</b><span class="lbl">Ganancia</span></div></div>
-      <div class="tl-chart">${chartFinance(a)}</div></div>`;
+      <div class="tl-chart">${chartFinance(a,incL,expL)}</div></div>`;
 
   // AGENDA
   const agenda=`<div class="card s6 tl-card"><div class="section-title"><h2 style="font-size:15px">Agenda</h2><div class="spacer"></div><button class="btn ghost sm" data-go="agenda">Ver →</button></div>
-      <div class="tl-stat"><div><b class="num">${agToday.length}</b><span class="lbl">Hoy</span></div><div><b class="num">${ag.length}</b><span class="lbl">En total</span></div></div>
-      <div class="tl-mini">${agNext?`<span class="tl-mini-k">Próximo</span><b>${esc(agNext.t)}</b><small class="muted">${esc([agNext.date||"hoy",agNext.h].filter(Boolean).join(" · "))}</small>`:`<span class="muted" style="font-size:13px">Agenda libre.</span>`}</div></div>`;
+      <div class="tl-stat"><div><b class="num">${agToday.length}</b><span class="lbl">${ranged?"En el tramo":"Hoy"}</span></div><div><b class="num">${agAll.length}</b><span class="lbl">En total</span></div></div>
+      ${sinFecha(agAll,x=>x.date)?aviso("Estas citas no tienen fecha."):""}
+      <div class="tl-mini">${agNext?`<span class="tl-mini-k">Próximo</span><b>${esc(agNext.t)}</b><small class="muted">${esc([agNext.date||"hoy",agNext.h].filter(Boolean).join(" · "))}</small>`:`<span class="muted" style="font-size:13px">Agenda libre${ranged?" en el tramo":""}.</span>`}</div></div>`;
 
   // ACTIVIDAD — señales recientes (sintetizadas de tus datos).
   const acts=[];
-  const recentIncome=rootIncome(a)[0];
+  const recentIncome=incL[0];
   if(recentIncome) acts.push(["✦","Pago recibido",recentIncome.t,"+"+money(recentIncome.a)]);
-  if(a.projects[0]) acts.push(["◷","Proyecto",a.projects[0].t,flowOf(a.projects[0].st)]);
+  if(projects[0]) acts.push(["◷","Proyecto",projects[0].t,flowOf(projects[0].st)]);
   if(clients[0]) acts.push(["☺","Vínculo agregado",clients[0].name,""]);
-  if((a.portfolio||[])[0]) acts.push(["▦","Huella creada",a.portfolio[0].t,""]);
+  // El portafolio sólo guarda el año, así que no sabe caer en un tramo de días.
+  if(!ranged && (a.portfolio||[])[0]) acts.push(["▦","Huella creada",a.portfolio[0].t,""]);
   const activity=`<div class="card s6 tl-card"><div class="section-title"><h2 style="font-size:15px">Actividad</h2></div>
-      ${acts.length?`<div class="tl-act">${acts.map(x=>`<div class="tl-act-row"><span class="tl-act-ico">${x[0]}</span><div class="grow"><b>${esc(x[1])}</b><br><small class="muted">${esc(x[2])}</small></div>${x[3]?`<span class="amt ${x[3][0]==="+"?"in":""}">${esc(x[3])}</span>`:""}</div>`).join("")}</div>`:`<p class="muted" style="font-size:13px">Tu actividad aparecerá aquí cuando empieces a crear.</p>`}</div>`;
+      ${acts.length?`<div class="tl-act">${acts.map(x=>`<div class="tl-act-row"><span class="tl-act-ico">${x[0]}</span><div class="grow"><b>${esc(x[1])}</b><br><small class="muted">${esc(x[2])}</small></div>${x[3]?`<span class="amt ${x[3][0]==="+"?"in":""}">${esc(x[3])}</span>`:""}</div>`).join("")}</div>`:`<p class="muted" style="font-size:13px">${ranged?"Sin actividad registrada en el tramo.":"Tu actividad aparecerá aquí cuando empieces a crear."}</p>`}</div>`;
 
   // TAREAS
-  const tasks=a.tasks||[];
   const tPend=tasks.filter(t=>["Pendiente","En proceso","Bloqueada"].includes(t.st||"Pendiente")).length;
   const tUrg=tasks.filter(t=>(t.pr==="Urgente"||t.pr==="Alta") && t.st!=="Finalizada" && t.st!=="Archivada").length;
   const tDone=tasks.filter(t=>t.st==="Finalizada").length;
   const tareas=`<div class="card s6 tl-card"><div class="section-title"><h2 style="font-size:15px">Tareas</h2><div class="spacer"></div><button class="btn ghost sm" data-go="tareas">Ver →</button></div>
       <div class="tl-stat tl-stat-3"><div><b class="num">${tPend}</b><span class="lbl">Pendientes</span></div><div><b class="num" style="color:var(--danger)">${tUrg}</b><span class="lbl">Urgentes</span></div><div><b class="num" style="color:var(--ok)">${tDone}</b><span class="lbl">Completadas</span></div></div>
+      ${sinFecha(tasksAll,t=>t.due)?aviso("Estas tareas no tienen fecha."):""}
       <button class="btn sm" data-add="tarea" style="margin-top:6px">＋ Nueva tarea</button></div>`;
 
   return `<div class="grid">${hero}${proy}${vinc}${raiz}${agenda}${tareas}${activity}</div>`;
@@ -1435,10 +1564,11 @@ function vProyectoDetalle(a, i){
       </div>
 
       <div class="pd-sec">Fechas</div>
-      <div class="pd-grid2">
-        <div><span class="pd-k">Inicio</span><b>${p.start?esc(tallerDate(p.start)):"—"}</b></div>
-        <div><span class="pd-k">Entrega</span><b>${p.due?esc(tallerDate(p.due)):"—"}</b></div>
+      <div class="pd-dates">
+        ${PROJECT_DATE_FIELDS.map(f=>`<label class="pd-date"><span class="pd-k">${esc(f.t)}</span>
+          <input type="date" data-pdate="${i}:${f.k}" value="${esc(projectDate(p,f.k))}"></label>`).join("")}
       </div>
+      <p class="muted" style="font-size:11.5px;margin:8px 0 0">Se guardan al instante. Corrige la creación cuando el trabajo sea más viejo que el día en que lo anotaste: es la fecha con la que se ordena por mes.</p>
 
       ${hist.length?`<div class="pd-sec">Historial de estado</div>
         <div class="pd-hist">${hist.slice(-5).reverse().map(h=>`<div class="pd-hist-row"><span class="proj-badge ${projStageClass(h.st)}">${esc(h.st)}</span><small class="muted">${h.at?esc(tallerDate(h.at)):""}</small></div>`).join("")}</div>`:""}
@@ -1527,6 +1657,23 @@ async function setProjectStatus(i,st){
   if(!Array.isArray(p.hist)) p.hist=[];
   if(!p.hist.length || p.hist[p.hist.length-1].st!==st) p.hist.push({ st, at:new Date().toISOString().slice(0,10) });
   await patchProject(p, {status:st, history:p.hist}, {status:st});
+  save(); renderAll();
+}
+const PROJECT_DATE_COLUMN={created:"created_at",start:"started_at",due:"due_at"};
+/* Cambiar la fecha de un trabajo —también de uno ya entregado o cerrado—, que
+   es lo que permite ordenarlos por el mes al que de verdad corresponden: la
+   creación en la base es el día en que se anotó, no el día en que se hizo.
+
+   Inicio y entrega son fechas sin hora y se guardan tal cual. La creación es
+   timestamptz: guardar "2026-03-15" a secas lo deja a medianoche UTC y en
+   Chile se lee como el 14. Por eso se ancla al mediodía UTC, que cae en el
+   mismo día del calendario en todo el huso donde vive ANIMA. */
+async function setProjectDate(i,campo,valor){
+  const a=me(); const p=a.projects[i]; if(!p) return;
+  const col=PROJECT_DATE_COLUMN[campo]; if(!col) return;
+  const dia=String(valor||"").slice(0,10);
+  p[campo]= campo==="created" ? (dia?dia+"T12:00:00Z":"") : dia;
+  await patchProject(p, {[col]: dia ? (campo==="created"?dia+"T12:00:00Z":dia) : null});
   save(); renderAll();
 }
 async function updateProjectField(i,field,value){
@@ -4722,7 +4869,7 @@ async function loadMyAlma(){
      explícitamente false → sin bucles (el rito lo deja en true antes de volver). */
   if(row.awakening_completed === false){ location.replace("despertar.html"); return; }
   const mods=await Cloud.loadModules(row.id); const a=dbAlmaToState(row,mods);
-  try{ a.clients=(await Cloud.clients(row.id)).map(c=>({_id:c.id,name:c.name,email:c.email,phone:c.phone,notes:c.notes,kind:((c.kind||"cliente").toLowerCase()==="colaborador"?"Colaborador":"Cliente"),role:c.role||""})); }catch(e){ a.clients=[]; }
+  try{ a.clients=(await Cloud.clients(row.id)).map(c=>({_id:c.id,name:c.name,email:c.email,phone:c.phone,notes:c.notes,kind:((c.kind||"cliente").toLowerCase()==="colaborador"?"Colaborador":"Cliente"),role:c.role||"",created:c.created_at})); }catch(e){ a.clients=[]; }
   try{ state.cloudQuotes=await Cloud.quotes(row.id); }catch(e){ state.cloudQuotes=[]; }
   try{ const p=await Cloud.getPrefs(row.id); if(p) localStorage.setItem("anima_cfg_"+row.id, JSON.stringify(p)); }catch(e){}
   state.almas=[a];   // tu Alma viva, limpia (las de muestra no se mezclan)
@@ -5328,6 +5475,11 @@ document.addEventListener("click", e=>{
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
   const pv=e.target.closest("[data-projview]"); if(pv){ state.projView=pv.dataset.projview; renderView(); return; }
   const pf=e.target.closest("[data-projfilter]"); if(pf){ state.projFilter=pf.dataset.projfilter; state.projOpen=null; renderView(); return; }
+  // Atajos de tramo: sólo escriben desde/hasta; el filtrado sigue siendo el mismo.
+  const tlp=e.target.closest("[data-tlpreset]"); if(tlp){ state.tallerPeriod=periodRange(tlp.dataset.tlpreset); renderView(); return; }
+  if(e.target.closest("[data-tlclear]")){ state.tallerPeriod={desde:"",hasta:""}; renderView(); return; }
+  const pjp=e.target.closest("[data-pjpreset]"); if(pjp){ const r=periodRange(pjp.dataset.pjpreset);
+    state.projDetailFilter=Object.assign({},state.projDetailFilter,{desde:r.desde,hasta:r.hasta}); state.projOpen=null; renderView(); return; }
   if(e.target.closest("[data-projclear]")){ state.projFilter="todos"; state.projDetailFilter={}; state.projOpen=null; renderView(); return; }
   const pa=e.target.closest("[data-addproject]"); if(pa){ openProjectRecord(pa.dataset.addproject); return; }
   if(e.target.closest("[data-finclear]")){ state.finPeriod="all"; state.finCat="all"; renderView(); return; }
@@ -5460,6 +5612,11 @@ document.addEventListener("change", e=>{
   const kp=e.target.closest(".kpct"); if(kp){ updateProjectField(+kp.dataset.pct, "pct", kp.value); return; }
   const tks=e.target.closest(".tk-status"); if(tks){ setTaskStatus(+tks.dataset.tstatus, tks.value); return; }
   const pf2=e.target.closest("[data-projfilter2]"); if(pf2){ state.projDetailFilter=state.projDetailFilter||{}; state.projDetailFilter[pf2.dataset.projfilter2]=pf2.value; state.projOpen=null; renderView(); return; }
+  const pdt=e.target.closest("[data-pdate]"); if(pdt){ const [pi,campo]=pdt.dataset.pdate.split(":"); setProjectDate(+pi,campo,pdt.value); return; }
+  const tlm=e.target.closest("[data-tlmonth]"); if(tlm){ state.tallerPeriod=monthBounds(tlm.value); renderView(); return; }
+  const pjm=e.target.closest("[data-pjmonth]"); if(pjm){ const r=monthBounds(pjm.value);
+    state.projDetailFilter=Object.assign({},state.projDetailFilter,{desde:r.desde,hasta:r.hasta}); state.projOpen=null; renderView(); return; }
+  const tld=e.target.closest("[data-tldate]"); if(tld){ state.tallerPeriod=Object.assign({desde:"",hasta:""},state.tallerPeriod,{[tld.dataset.tldate]:tld.value}); renderView(); return; }
   const fpr=e.target.closest("[data-finperiod]"); if(fpr){ state.finPeriod=fpr.value; renderView(); return; }
   const fca=e.target.closest("[data-fincat]"); if(fca){ state.finCat=fca.value; renderView(); return; }
   const qf=e.target.closest("#q_fmt"); if(qf){ readQuoteForm(); renderView(); return; }
