@@ -1300,6 +1300,20 @@ function periodWords(desde,hasta){
   return desde&&hasta?`del ${fechaCorta(desde)} al ${fechaCorta(hasta)}`
         :desde?`desde el ${fechaCorta(desde)}`:`hasta el ${fechaCorta(hasta)}`;
 }
+/* Buscar una unidad no es lo mismo que filtrar. Quien escribe "mural Teno"
+   quiere encontrarla esté donde esté —cerrada, archivada o fuera del tramo—,
+   así que la búsqueda pasa por encima de los demás filtros en vez de sumarse
+   a ellos, y la pantalla lo dice. Cada palabra tiene que aparecer en algún
+   campo, sin tildes ni mayúsculas de por medio: "teno" encuentra "Teño" y
+   "MURAL" encuentra "Mural". */
+function projectSearchText(p){
+  return deburr([p.t,p.client,p.comuna,p.city,p.category,p.responsible,p.template,p.owner,p.desc].filter(Boolean).join(" "));
+}
+function projectMatchesQuery(p){
+  const q=deburr(state.projQuery||""); if(!q) return true;
+  const texto=projectSearchText(p);
+  return q.split(" ").filter(Boolean).every(w=>texto.includes(w));
+}
 function projectMetaLine(a,p){
   return [p.template, p.category, p.responsible].filter(Boolean).map(esc).join(" · ");
 }
@@ -1478,8 +1492,18 @@ function vProyectos(a){
   // Vista de detalle (panel dividido) cuando hay un proyecto abierto.
   if(state.projOpen!=null && a.projects[state.projOpen]) return vProyectoDetalle(a, state.projOpen);
   const view=state.projView||"tarjetas"; const all=a.projects||[];
-  const entries=all.map((p,i)=>({p,i})).filter(x=>projectVisibleForFilter(a,x.p)).filter(x=>projectMatchesDetail(x.p));
+  const q=String(state.projQuery||"").trim(), buscando=!!q;
+  const entries=buscando
+    ? all.map((p,i)=>({p,i})).filter(x=>projectMatchesQuery(x.p))
+    : all.map((p,i)=>({p,i})).filter(x=>projectVisibleForFilter(a,x.p)).filter(x=>projectMatchesDetail(x.p));
   const ps=entries.map(x=>x.p);
+  /* Un filtro que esconde en silencio es un dato perdido: mientras haya algo
+     a la vista nadie se entera de lo que falta. Por eso se cuenta siempre. */
+  const ocultas=all.length-entries.length;
+  const avisoOcultas=(!buscando && ocultas>0 && entries.length)
+    ? `<div class="proj-aviso">${ocultas} unidad${ocultas===1?"":"es"} más ${ocultas===1?"no aparece":"no aparecen"} con los filtros de ahora.<button class="btn ghost sm" data-projclear>Limpiar filtros</button></div>` : "";
+  const avisoBuscando=buscando
+    ? `<div class="proj-aviso">Buscando <b>${esc(q)}</b> en las ${all.length} unidades — también cerradas, archivadas y fuera del tramo.<button class="btn ghost sm" data-projqclear>Borrar búsqueda</button></div>` : "";
   const summary=projectSummary(ps);
   const summaryCards=`<div class="card s3"><div class="stat"><span class="num">${summary.avgPct}%</span><span class="lbl">Avance visible</span></div></div>
     <div class="card s3"><div class="stat"><span class="num">${money(summary.totalBudget)}</span><span class="lbl">Total contratado</span></div></div>
@@ -1497,11 +1521,15 @@ function vProyectos(a){
   const head=`<div class="card s12"><div class="section-title"><h2>Unidades de Trabajo</h2><div class="spacer"></div>
       <div class="seg">${segBtn("tarjetas","Tarjetas")}${segBtn("lista","Lista")}${segBtn("kanban","Kanban")}</div>
       <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}</span></div>
+      <input class="proj-search" type="search" data-projquery placeholder="Buscar por nombre, cliente, comuna…" value="${esc(q)}" autocomplete="off">
       <div class="seg" style="margin-top:12px;flex-wrap:wrap">${filterBtn("todos","Todos")}${filterBtn("personal","Mi Taller")}${filterBtn("clan","Clanes")}${filterBtn("cerrados","Cerrados")}${filterBtn("archivados","Archivados")}</div>
-      ${projectSelectFilters(all)}${projectPeriodLine(ps.length)}${cotInfo}</div>`;
+      ${projectSelectFilters(all)}${buscando?"":projectPeriodLine(ps.length)}${avisoBuscando}${avisoOcultas}${cotInfo}</div>`;
   if(!ps.length){
     const hasProjects=all.length>0;
-    return `<div class="grid">${summaryCards}${head}<div class="card s12"><p class="muted">${hasProjects?"Hay proyectos guardados, pero el filtro actual no los muestra. Limpia filtros o revisa Cerrados y Archivados.":"No hay unidades todavía. Crea una nueva desde el botón ＋."}</p>${hasProjects?`<button class="btn sm secondary" data-projclear>Limpiar filtros</button>`:""}</div></div>${fab}`;
+    const vacio=buscando
+      ? `Ninguna de tus ${all.length} unidades dice <b>${esc(q)}</b>. Puede estar escrito de otra forma, o la comuna quedó vacía al crearla.`
+      : (hasProjects?"Hay proyectos guardados, pero el filtro actual no los muestra. Limpia filtros o revisa Cerrados y Archivados.":"No hay unidades todavía. Crea una nueva desde el botón ＋.");
+    return `<div class="grid">${summaryCards}${head}<div class="card s12"><p class="muted">${vacio}</p>${buscando?`<button class="btn sm secondary" data-projqclear>Borrar búsqueda</button>`:(hasProjects?`<button class="btn sm secondary" data-projclear>Limpiar filtros</button>`:"")}</div></div>${fab}`;
   }
   const pct=p=>clampPct(p.pct);
   let body;
@@ -5481,6 +5509,7 @@ document.addEventListener("click", e=>{
   const pjp=e.target.closest("[data-pjpreset]"); if(pjp){ const r=periodRange(pjp.dataset.pjpreset);
     state.projDetailFilter=Object.assign({},state.projDetailFilter,{desde:r.desde,hasta:r.hasta}); state.projOpen=null; renderView(); return; }
   if(e.target.closest("[data-projclear]")){ state.projFilter="todos"; state.projDetailFilter={}; state.projOpen=null; renderView(); return; }
+  if(e.target.closest("[data-projqclear]")){ state.projQuery=""; state.projOpen=null; renderView(); return; }
   const pa=e.target.closest("[data-addproject]"); if(pa){ openProjectRecord(pa.dataset.addproject); return; }
   if(e.target.closest("[data-finclear]")){ state.finPeriod="all"; state.finCat="all"; renderView(); return; }
   const po=e.target.closest("[data-projopen]"); if(po && !e.target.closest("select,option")){ state.projOpen=+po.dataset.projopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
@@ -5636,6 +5665,10 @@ document.addEventListener("input", e=>{
   const kp=e.target.closest(".kpct"); if(kp){ previewProjectField(+kp.dataset.pct, "pct", kp.value); return; }
   if(e.target.id==="convRate"){ updateConvOut(); return; }
   if(e.target.id==="cgSearch"){ state.creatorGroupSearch=e.target.value; renderView(); return; }
+  const pq=e.target.closest("[data-projquery]"); if(pq){ state.projQuery=pq.value; state.projOpen=null; renderView();
+    const el=document.querySelector("[data-projquery]");
+    if(el){ el.focus(); const n=el.value.length; try{ el.setSelectionRange(n,n); }catch(_){} }
+    return; }
   if(e.target.closest(".cot-inspector")){ qLive(); return; }
   // Búsqueda en vivo del Panel de Almas / picker (sin re-render, conserva foco).
   if(e.target.id==="clanSearch" || e.target.id==="clanAddSearch"){
