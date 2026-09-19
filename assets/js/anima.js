@@ -1098,11 +1098,20 @@ function projectMoney(p){
   const paid=projectPaidTotal(p);
   return { budget, paid, balance:Math.max(0, budget-paid) };
 }
+/* Una cotización no es plata contratada: es una oferta que el cliente todavía
+   no acepta. Mezclarlas infla el total y ensucia el saldo con dinero que nadie
+   debe. Por eso lo que está Cotizando se cuenta aparte, y contratado, abonado
+   y saldo hablan sólo de lo aprobado. */
+function projectAprobado(p){ return flowOf(p.st)!=="Cotizando"; }
 function projectSummary(projects){
-  const totalBudget=projects.reduce((t,p)=>t+projectMoney(p).budget,0);
-  const totalPaid=projects.reduce((t,p)=>t+projectMoney(p).paid,0);
+  const cotizando=projects.filter(p=>!projectAprobado(p));
+  const aprobados=projects.filter(projectAprobado);
+  const enCotizacion=cotizando.reduce((t,p)=>t+projectMoney(p).budget,0);
+  const totalBudget=aprobados.reduce((t,p)=>t+projectMoney(p).budget,0);
+  const totalPaid=aprobados.reduce((t,p)=>t+projectMoney(p).paid,0);
   const avgPct=projects.length?Math.round(projects.reduce((t,p)=>t+clampPct(p.pct),0)/projects.length):0;
-  return { totalBudget, totalPaid, balance:Math.max(0,totalBudget-totalPaid), avgPct };
+  return { enCotizacion, nCotizando:cotizando.length, nAprobados:aprobados.length,
+           totalBudget, totalPaid, balance:Math.max(0,totalBudget-totalPaid), avgPct };
 }
 function projectFinanceLine(p){
   const fin=projectMoney(p);
@@ -1166,8 +1175,48 @@ function projectSelectFilters(ps){
    ella—; inicio y entrega se escriben a mano y la mayoría quedan vacías, así
    que filtrar por esas esconde justo lo que nadie llenó. Por eso creación es
    la de partida y las otras dos se piden a propósito. */
-const PROJECT_DATE_FIELDS=[{k:"created",t:"Creación"},{k:"start",t:"Inicio"},{k:"due",t:"Entrega"}];
-function projectDateField(){ const k=(state.projDetailFilter||{}).dateField; return PROJECT_DATE_FIELDS.some(f=>f.k===k)?k:"created"; }
+/* Las tres fechas cuentan la vida comercial de un trabajo, y dos de ellas las
+   escribe el dinero, no la mano:
+
+     · Creación  nace la cotización.
+     · Inicio    entra el primer abono — el trabajo arrancó cuando alguien pagó.
+     · Entrega   se completa el total — el trabajo se cierra cuando está pagado.
+
+   Por eso inicio y entrega se deducen de los abonos siempre que los haya, y el
+   mes por el que se ordena es el de inicio. Lo escrito a mano queda de
+   respaldo para los trabajos viejos, cargados sin historial de pagos, que no
+   tienen de dónde deducirlas. */
+const PROJECT_DATE_FIELDS=[{k:"created",t:"Creación",d:"nace la cotización"},{k:"start",t:"Inicio",d:"primer abono"},{k:"due",t:"Entrega",d:"pago total"}];
+function projectDateField(){ const k=(state.projDetailFilter||{}).dateField; return PROJECT_DATE_FIELDS.some(f=>f.k===k)?k:"start"; }
+/* Los abonos se guardan en el orden en que se anotaron, que no es el orden en
+   que ocurrieron: quien registra ayer un pago de marzo los deja desordenados.
+   Para saber cuál fue el primero hay que ordenarlos por su fecha. */
+function projectAbonosPorFecha(p){
+  return projectAbonos(p).filter(x=>x.on).slice().sort((x,y)=>String(x.on).localeCompare(String(y.on)));
+}
+function projectInicioAbono(p){
+  const ab=projectAbonosPorFecha(p);
+  return ab.length?String(ab[0].on).slice(0,10):"";
+}
+/* La entrega es el abono que completa el total, no el último que haya. Sin
+   valor total no hay nada que completar, y con saldo pendiente tampoco. */
+function projectEntregaPago(p){
+  const budget=+p.budget||0; if(budget<=0) return "";
+  const ab=projectAbonosPorFecha(p);
+  let acc=0;
+  for(let i=0;i<ab.length;i++){
+    acc+=Math.max(0,+ab[i].a||0);
+    if(acc>=budget) return String(ab[i].on).slice(0,10);
+  }
+  return "";
+}
+/* Si la fecha la puso el dinero o la puso una persona — la ficha lo dice en
+   vez de ofrecer un campo que no se va a respetar. */
+function projectDateSource(p,campo){
+  if(campo==="start" && projectInicioAbono(p)) return "abono";
+  if(campo==="due" && projectEntregaPago(p)) return "pago";
+  return "mano";
+}
 /* Dos formas distintas de fecha conviven aquí y se tratan distinto a propósito:
 
    · inicio y entrega son fechas sin hora ("2026-07-31"). Pasarlas por Date
@@ -1177,6 +1226,8 @@ function projectDateField(){ const k=(state.projDetailFilter||{}).dateField; ret
      cotización guardada a las 22:15 en Chile queda como 01:15 UTC del día
      siguiente, y sin convertir se iría al mes que no es. */
 function projectDate(p,campo){
+  if(campo==="start"){ const d=projectInicioAbono(p); if(d) return d; }
+  if(campo==="due"){ const d=projectEntregaPago(p); if(d) return d; }
   const s=String((campo==="start"?p.start:campo==="due"?p.due:p.created)||"");
   if(!s) return "";
   if(!/[T ]\d{2}:/.test(s)) return s.slice(0,10);
@@ -1505,25 +1556,25 @@ function vProyectos(a){
   const avisoBuscando=buscando
     ? `<div class="proj-aviso">Buscando <b>${esc(q)}</b> en las ${all.length} unidades — también cerradas, archivadas y fuera del tramo.<button class="btn ghost sm" data-projqclear>Borrar búsqueda</button></div>` : "";
   const summary=projectSummary(ps);
-  const summaryCards=`<div class="card s3"><div class="stat"><span class="num">${summary.avgPct}%</span><span class="lbl">Avance visible</span></div></div>
-    <div class="card s3"><div class="stat"><span class="num">${money(summary.totalBudget)}</span><span class="lbl">Total contratado</span></div></div>
-    <div class="card s3"><div class="stat"><span class="num" style="color:var(--ok)">${money(summary.totalPaid)}</span><span class="lbl">Abono realizado</span></div></div>
-    <div class="card s3"><div class="stat"><span class="num" style="color:var(--danger)">${money(summary.balance)}</span><span class="lbl">Saldo pendiente</span></div></div>`;
+  const pagadoPct=summary.totalBudget>0?Math.round(summary.totalPaid/summary.totalBudget*100):0;
+  const sub=t=>`<span class="stat-sub">${t}</span>`;
+  const summaryCards=`<div class="card s3"><div class="stat"><span class="num" style="color:var(--aviso,#b8862f)">${money(summary.enCotizacion)}</span><span class="lbl">En cotización</span>
+      ${sub(summary.nCotizando?`${summary.nCotizando} ${summary.nCotizando===1?"unidad esperando":"unidades esperando"} aprobación`:"Nada esperando aprobación")}</div></div>
+    <div class="card s3"><div class="stat"><span class="num">${money(summary.totalBudget)}</span><span class="lbl">Contratado</span>
+      ${sub(summary.nAprobados?`${summary.nAprobados} ${summary.nAprobados===1?"unidad aprobada":"unidades aprobadas"}`:"Sin unidades aprobadas")}</div></div>
+    <div class="card s3"><div class="stat"><span class="num" style="color:var(--ok)">${money(summary.totalPaid)}</span><span class="lbl">Abonado</span>
+      ${sub(summary.totalBudget?`${pagadoPct}% de lo contratado`:"—")}</div></div>
+    <div class="card s3"><div class="stat"><span class="num" style="color:var(--danger)">${money(summary.balance)}</span><span class="lbl">Saldo pendiente</span>
+      ${sub("Sólo de unidades aprobadas")}</div></div>`;
   const fab=`<button class="fab" data-addproject="Personal" title="Nuevo Proyecto">＋<span>Nueva Unidad</span></button>`;
   const segBtn=(k,t)=>`<button class="seg-b ${view===k?'on':''}" data-projview="${k}">${t}</button>`;
   const filterBtn=(k,t)=>`<button class="seg-b ${(state.projFilter||"todos")===k?'on':''}" data-projfilter="${k}">${t}</button>`;
-  // Valor total en cotización (todas las unidades activas, sin importar el filtro).
-  const cotPs=all.filter(p=>!p.archive&&flowOf(p.st)==="Cotizando");
-  const cotMonto=cotPs.reduce((t,p)=>t+(+p.budget||0),0);
-  const cotInfo=cotPs.length?`<div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(110,110,115,.06)">
-        <span class="proj-badge st-cot">Cotizando</span><b style="font-size:16px">${money(cotMonto)}</b>
-        <small class="muted">valor total en cotización · ${cotPs.length} unidad${cotPs.length===1?"":"es"} esperando aprobación</small></div>`:"";
   const head=`<div class="card s12"><div class="section-title"><h2>Unidades de Trabajo</h2><div class="spacer"></div>
       <div class="seg">${segBtn("tarjetas","Tarjetas")}${segBtn("lista","Lista")}${segBtn("kanban","Kanban")}</div>
-      <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}</span></div>
+      <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}${ps.length?` · avance ${summary.avgPct}%`:""}</span></div>
       <input class="proj-search" type="search" data-projquery placeholder="Buscar por nombre, cliente, comuna…" value="${esc(q)}" autocomplete="off">
       <div class="seg" style="margin-top:12px;flex-wrap:wrap">${filterBtn("todos","Todos")}${filterBtn("personal","Mi Taller")}${filterBtn("clan","Clanes")}${filterBtn("cerrados","Cerrados")}${filterBtn("archivados","Archivados")}</div>
-      ${projectSelectFilters(all)}${buscando?"":projectPeriodLine(ps.length)}${avisoBuscando}${avisoOcultas}${cotInfo}</div>`;
+      ${projectSelectFilters(all)}${buscando?"":projectPeriodLine(ps.length)}${avisoBuscando}${avisoOcultas}</div>`;
   if(!ps.length){
     const hasProjects=all.length>0;
     const vacio=buscando
@@ -1593,10 +1644,15 @@ function vProyectoDetalle(a, i){
 
       <div class="pd-sec">Fechas</div>
       <div class="pd-dates">
-        ${PROJECT_DATE_FIELDS.map(f=>`<label class="pd-date"><span class="pd-k">${esc(f.t)}</span>
-          <input type="date" data-pdate="${i}:${f.k}" value="${esc(projectDate(p,f.k))}"></label>`).join("")}
+        ${PROJECT_DATE_FIELDS.map(f=>{
+          const val=projectDate(p,f.k), src=projectDateSource(p,f.k);
+          if(src==="mano") return `<label class="pd-date"><span class="pd-k">${esc(f.t)}</span>
+            <input type="date" data-pdate="${i}:${f.k}" value="${esc(val)}"></label>`;
+          return `<div class="pd-date"><span class="pd-k">${esc(f.t)}</span>
+            <div class="pd-auto"><b>${esc(tallerDate(val))}</b><small>${src==="abono"?"primer abono":"pago total"}</small></div></div>`;
+        }).join("")}
       </div>
-      <p class="muted" style="font-size:11.5px;margin:8px 0 0">Se guardan al instante. Corrige la creación cuando el trabajo sea más viejo que el día en que lo anotaste: es la fecha con la que se ordena por mes.</p>
+      <p class="muted" style="font-size:11.5px;margin:8px 0 0">El <b>inicio</b> es el primer abono y la <b>entrega</b> es el pago que completa el total: los pone el dinero, no la mano. Mientras no haya abonos puedes escribirlos, igual que la <b>creación</b> —útil cuando el trabajo es más viejo que el día en que lo anotaste—. Se guardan al instante.</p>
 
       ${hist.length?`<div class="pd-sec">Historial de estado</div>
         <div class="pd-hist">${hist.slice(-5).reverse().map(h=>`<div class="pd-hist-row"><span class="proj-badge ${projStageClass(h.st)}">${esc(h.st)}</span><small class="muted">${h.at?esc(tallerDate(h.at)):""}</small></div>`).join("")}</div>`:""}

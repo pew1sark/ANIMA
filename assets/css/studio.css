@@ -986,6 +986,14 @@ a.nav-item{text-decoration:none;color:inherit}
 .pd-date input{border:1px solid var(--line);border-radius:10px;background:var(--card-solid,#fff);
   padding:8px 10px;font:inherit;font-size:12.5px;color:var(--text);min-width:0;width:100%}
 .pd-date input:focus{outline:2px solid rgba(208,170,99,.55);outline-offset:1px}
+/* Fecha que pone el dinero: se muestra y se explica, no se ofrece editar. El
+   rótulo queda fuera del recuadro para que alinee con el campo de al lado. */
+.pd-auto{display:flex;flex-direction:column;justify-content:center;gap:1px;
+  border:1px dashed var(--line);border-radius:10px;padding:5px 10px;min-height:36px}
+.pd-auto b{font-size:13px;letter-spacing:-.01em;line-height:1.2}
+.pd-auto small{font-size:10px;color:var(--faint,#9b9791);line-height:1.2}
+/* Detalle bajo cada cifra del resumen. */
+.stat-sub{display:block;font-size:11px;color:var(--faint,#9b9791);line-height:1.35;margin-top:4px}
 /* Buscar una unidad por su nombre — el cajón manda sobre los filtros. */
 .proj-search{width:100%;margin-top:12px;border:1px solid var(--line);border-radius:12px;
   background:var(--card-solid,#fff);padding:10px 13px;font:inherit;font-size:13px;color:var(--text)}
