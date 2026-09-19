@@ -1150,7 +1150,7 @@ function projectSelectFilters(ps){
   const d=state.projDetailFilter||{};
   /* Los atajos van en su propia línea y rotulados: pegados a los filtros de
      contexto, "Todo" y "Todos" se leen como el mismo botón. */
-  return `<div class="per-row"><span class="per-lbl">Periodo</span>${periodQuick("pj",d.desde||"",d.hasta||"")}</div>
+  return `<div class="per-row"><span class="per-lbl">Periodo</span>${periodQuick("pj",d.desde||"",d.hasta||"")}${periodMonthPicker("pj",d.desde||"",d.hasta||"")}</div>
     <div class="proj-filters">
     <select data-projfilter2="template">${opt("Plantilla",templates,d.template||"")}</select>
     <select data-projfilter2="category">${opt("Categoría",cats,d.category||"")}</select>
@@ -1262,15 +1262,33 @@ function finInRange(x,desde,hasta){
   if(hasta && m>hasta.slice(0,7)) return false;
   return true;
 }
+/* Un mes entero como tramo: es como se mira el trabajo cerrado —"lo de
+   marzo"—, y el último día lo pone el calendario (día 0 del mes siguiente). */
+function monthBounds(ym){
+  const [y,m]=String(ym||"").split("-").map(Number);
+  if(!y||!m||m<1||m>12) return {desde:"",hasta:""};
+  const fin=new Date(y,m,0).getDate();
+  return {desde:`${ym}-01`, hasta:`${ym}-${String(fin).padStart(2,"0")}`};
+}
+/* Si el tramo es exactamente un mes completo, el selector lo muestra. */
+function periodMonth(desde,hasta){
+  if(!desde||!hasta) return "";
+  const ym=desde.slice(0,7), b=monthBounds(ym);
+  return (b.desde===desde&&b.hasta===hasta)?ym:"";
+}
+function periodMonthPicker(ns,desde,hasta){
+  return `<label class="per-date"><span>Mes</span><input type="month" data-${ns}month value="${esc(periodMonth(desde,hasta))}"></label>`;
+}
 /* Atajos de tramo. `ns` separa los data-attr para que el Resumen y las
    Unidades de Trabajo no se escuchen los clics entre sí. */
 function periodQuick(ns,desde,hasta){
   const cur=periodPreset(desde,hasta);
-  return `<div class="per-quick">${PERIOD_PRESETS.map(p=>`<button class="per-b ${cur===p.k?'on':''}" data-${ns}preset="${p.k}">${esc(p.t)}</button>`).join("")}${cur==="custom"?`<span class="per-b on">A medida</span>`:""}</div>`;
+  return `<div class="per-quick">${PERIOD_PRESETS.map(p=>`<button class="per-b ${cur===p.k?'on':''}" data-${ns}preset="${p.k}">${esc(p.t)}</button>`).join("")}${cur==="custom"&&!periodMonth(desde,hasta)?`<span class="per-b on">A medida</span>`:""}</div>`;
 }
 /* Barra completa: atajos + tramo a mano. */
 function periodBar(ns,desde,hasta){
   return `<div class="per-bar">${periodQuick(ns,desde,hasta)}
+      ${periodMonthPicker(ns,desde,hasta)}
       <label class="per-date"><span>Desde</span><input type="date" data-${ns}date="desde" value="${esc(desde||"")}"></label>
       <label class="per-date"><span>Hasta</span><input type="date" data-${ns}date="hasta" value="${esc(hasta||"")}"></label>
       ${(desde||hasta)?`<button class="btn ghost sm" data-${ns}clear>Limpiar</button>`:""}</div>`;
@@ -1546,10 +1564,11 @@ function vProyectoDetalle(a, i){
       </div>
 
       <div class="pd-sec">Fechas</div>
-      <div class="pd-grid2">
-        <div><span class="pd-k">Inicio</span><b>${p.start?esc(tallerDate(p.start)):"—"}</b></div>
-        <div><span class="pd-k">Entrega</span><b>${p.due?esc(tallerDate(p.due)):"—"}</b></div>
+      <div class="pd-dates">
+        ${PROJECT_DATE_FIELDS.map(f=>`<label class="pd-date"><span class="pd-k">${esc(f.t)}</span>
+          <input type="date" data-pdate="${i}:${f.k}" value="${esc(projectDate(p,f.k))}"></label>`).join("")}
       </div>
+      <p class="muted" style="font-size:11.5px;margin:8px 0 0">Se guardan al instante. Corrige la creación cuando el trabajo sea más viejo que el día en que lo anotaste: es la fecha con la que se ordena por mes.</p>
 
       ${hist.length?`<div class="pd-sec">Historial de estado</div>
         <div class="pd-hist">${hist.slice(-5).reverse().map(h=>`<div class="pd-hist-row"><span class="proj-badge ${projStageClass(h.st)}">${esc(h.st)}</span><small class="muted">${h.at?esc(tallerDate(h.at)):""}</small></div>`).join("")}</div>`:""}
@@ -1638,6 +1657,23 @@ async function setProjectStatus(i,st){
   if(!Array.isArray(p.hist)) p.hist=[];
   if(!p.hist.length || p.hist[p.hist.length-1].st!==st) p.hist.push({ st, at:new Date().toISOString().slice(0,10) });
   await patchProject(p, {status:st, history:p.hist}, {status:st});
+  save(); renderAll();
+}
+const PROJECT_DATE_COLUMN={created:"created_at",start:"started_at",due:"due_at"};
+/* Cambiar la fecha de un trabajo —también de uno ya entregado o cerrado—, que
+   es lo que permite ordenarlos por el mes al que de verdad corresponden: la
+   creación en la base es el día en que se anotó, no el día en que se hizo.
+
+   Inicio y entrega son fechas sin hora y se guardan tal cual. La creación es
+   timestamptz: guardar "2026-03-15" a secas lo deja a medianoche UTC y en
+   Chile se lee como el 14. Por eso se ancla al mediodía UTC, que cae en el
+   mismo día del calendario en todo el huso donde vive ANIMA. */
+async function setProjectDate(i,campo,valor){
+  const a=me(); const p=a.projects[i]; if(!p) return;
+  const col=PROJECT_DATE_COLUMN[campo]; if(!col) return;
+  const dia=String(valor||"").slice(0,10);
+  p[campo]= campo==="created" ? (dia?dia+"T12:00:00Z":"") : dia;
+  await patchProject(p, {[col]: dia ? (campo==="created"?dia+"T12:00:00Z":dia) : null});
   save(); renderAll();
 }
 async function updateProjectField(i,field,value){
@@ -5576,6 +5612,10 @@ document.addEventListener("change", e=>{
   const kp=e.target.closest(".kpct"); if(kp){ updateProjectField(+kp.dataset.pct, "pct", kp.value); return; }
   const tks=e.target.closest(".tk-status"); if(tks){ setTaskStatus(+tks.dataset.tstatus, tks.value); return; }
   const pf2=e.target.closest("[data-projfilter2]"); if(pf2){ state.projDetailFilter=state.projDetailFilter||{}; state.projDetailFilter[pf2.dataset.projfilter2]=pf2.value; state.projOpen=null; renderView(); return; }
+  const pdt=e.target.closest("[data-pdate]"); if(pdt){ const [pi,campo]=pdt.dataset.pdate.split(":"); setProjectDate(+pi,campo,pdt.value); return; }
+  const tlm=e.target.closest("[data-tlmonth]"); if(tlm){ state.tallerPeriod=monthBounds(tlm.value); renderView(); return; }
+  const pjm=e.target.closest("[data-pjmonth]"); if(pjm){ const r=monthBounds(pjm.value);
+    state.projDetailFilter=Object.assign({},state.projDetailFilter,{desde:r.desde,hasta:r.hasta}); state.projOpen=null; renderView(); return; }
   const tld=e.target.closest("[data-tldate]"); if(tld){ state.tallerPeriod=Object.assign({desde:"",hasta:""},state.tallerPeriod,{[tld.dataset.tldate]:tld.value}); renderView(); return; }
   const fpr=e.target.closest("[data-finperiod]"); if(fpr){ state.finPeriod=fpr.value; renderView(); return; }
   const fca=e.target.closest("[data-fincat]"); if(fca){ state.finCat=fca.value; renderView(); return; }
