@@ -1213,7 +1213,10 @@ function projectEntregaPago(p){
 /* Si la fecha la puso el dinero o la puso una persona — la ficha lo dice en
    vez de ofrecer un campo que no se va a respetar. */
 function projectDateSource(p,campo){
-  if(campo==="start" && projectInicioAbono(p)) return "abono";
+  if(campo==="start"){
+    if(projectInicioAbono(p)) return "abono";
+    return String(p.start||"").trim() ? "mano" : "creacion";
+  }
   if(campo==="due" && projectEntregaPago(p)) return "pago";
   return "mano";
 }
@@ -1226,8 +1229,14 @@ function projectDateSource(p,campo){
      cotización guardada a las 22:15 en Chile queda como 01:15 UTC del día
      siguiente, y sin convertir se iría al mes que no es. */
 function projectDate(p,campo){
-  if(campo==="start"){ const d=projectInicioAbono(p); if(d) return d; }
-  if(campo==="due"){ const d=projectEntregaPago(p); if(d) return d; }
+  if(campo==="start"){
+    const d=projectInicioAbono(p); if(d) return d;
+    /* Sin abonos ni fecha escrita, el inicio vale la creación. Dejarlo vacío
+       sacaba del mes a todo el historial viejo, cargado sin registrar pago a
+       pago: un trabajo sin fecha no cae en ningún tramo y desaparece. */
+    if(!String(p.start||"").trim()) campo="created";
+  }
+  else if(campo==="due"){ const d=projectEntregaPago(p); if(d) return d; }
   const s=String((campo==="start"?p.start:campo==="due"?p.due:p.created)||"");
   if(!s) return "";
   if(!/[T ]\d{2}:/.test(s)) return s.slice(0,10);
@@ -1646,13 +1655,14 @@ function vProyectoDetalle(a, i){
       <div class="pd-dates">
         ${PROJECT_DATE_FIELDS.map(f=>{
           const val=projectDate(p,f.k), src=projectDateSource(p,f.k);
-          if(src==="mano") return `<label class="pd-date"><span class="pd-k">${esc(f.t)}</span>
-            <input type="date" data-pdate="${i}:${f.k}" value="${esc(val)}"></label>`;
+          if(src!=="abono" && src!=="pago") return `<label class="pd-date"><span class="pd-k">${esc(f.t)}</span>
+            <input type="date" data-pdate="${i}:${f.k}" value="${esc(val)}">
+            ${src==="creacion"?`<small class="pd-hint">sin abonos: vale la creación</small>`:""}</label>`;
           return `<div class="pd-date"><span class="pd-k">${esc(f.t)}</span>
             <div class="pd-auto"><b>${esc(tallerDate(val))}</b><small>${src==="abono"?"primer abono":"pago total"}</small></div></div>`;
         }).join("")}
       </div>
-      <p class="muted" style="font-size:11.5px;margin:8px 0 0">El <b>inicio</b> es el primer abono y la <b>entrega</b> es el pago que completa el total: los pone el dinero, no la mano. Mientras no haya abonos puedes escribirlos, igual que la <b>creación</b> —útil cuando el trabajo es más viejo que el día en que lo anotaste—. Se guardan al instante.</p>
+      <p class="muted" style="font-size:11.5px;margin:8px 0 0">El <b>inicio</b> es el primer abono y la <b>entrega</b> es el pago que completa el total: los pone el dinero, no la mano. Sin abonos, el inicio vale la <b>creación</b> —así el trabajo viejo no se cae del mes— y puedes escribirlo a mano, igual que la creación. Se guardan al instante.</p>
 
       ${hist.length?`<div class="pd-sec">Historial de estado</div>
         <div class="pd-hist">${hist.slice(-5).reverse().map(h=>`<div class="pd-hist-row"><span class="proj-badge ${projStageClass(h.st)}">${esc(h.st)}</span><small class="muted">${h.at?esc(tallerDate(h.at)):""}</small></div>`).join("")}</div>`:""}

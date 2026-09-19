@@ -1375,3 +1375,4 @@ a.nav-item{text-decoration:none;color:inherit}
 @media(max-width:960px){ .s2{grid-column:span 6} .esencia-mini{flex-wrap:wrap} }
 .kpi-sm{padding:14px 12px}
 .kpi-m .num{font-size:12.5px;letter-spacing:-.04em;white-space:nowrap;line-height:1.4}
+.pd-hint{font-size:9.5px;color:var(--faint,#9b9791);line-height:1.2}
