@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/anima.css" />
-  <link rel="stylesheet" href="assets/css/studio.css?v=nucleo-v16" />
+  <link rel="stylesheet" href="assets/css/studio.css?v=studio-v17" />
   <link rel="stylesheet" href="assets/css/world-tree.css" />
   <link rel="stylesheet" href="assets/css/identity.css" />
 </head>
@@ -41,7 +41,7 @@
         <button class="btn sm" id="installBtn" hidden>⤓ Instalar ANIMA</button>
         <button class="btn gold sm" id="feedbackBtn">✦ Enviar feedback</button>
         <button class="btn ghost sm" id="codiceBtn">❏ El Códice</button>
-        <small class="muted" style="padding:4px 6px;font-size:11px">ANIMA STUDIO · Beta cerrada</small>
+        <small class="muted" style="padding:4px 6px;font-size:11px">ANIMA STUDIO · Acceso por invitación</small>
       </div>
     </aside>
 
@@ -106,21 +106,25 @@
     <div class="auth-box">
       <div class="auth-head">
         <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        <div style="flex:1"><b>Entra a tu Alma</b><br><small class="muted">Tu espacio privado, en la nube.</small></div>
+        <div style="flex:1"><b>Entra a tu Alma</b><br><small class="muted">Tu espacio de trabajo, en la nube.</small></div>
         <button class="btn ghost sm" id="authClose">✕</button>
       </div>
+      <!-- Solo aparece cuando se llega por un enlace de invitación: lo rellena
+           pantallaInvitacion() con quién invita y a qué. -->
+      <div class="auth-invite" id="authInvite" hidden></div>
       <div class="field"><label>Correo</label><input id="authEmail" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" /></div>
       <div class="field"><label>Contraseña</label><input id="authPass" type="password" placeholder="••••••••" autocomplete="current-password" /></div>
       <label class="field" style="display:flex;align-items:center;gap:9px;cursor:pointer"><input type="checkbox" id="authRemember" checked style="width:16px;height:16px;accent-color:var(--gold)"><span style="font-size:13px">Recordar sesión</span></label>
-      <div class="field"><label>Código del Origen (solo al crear)</label><input id="authCode" placeholder="Beta cerrada — pídeselo a SARK" autocomplete="off" /></div>
-      <p class="muted" style="font-size:12px;margin:-4px 0 6px">Tu nombre de Alma lo eliges después, dentro de ANIMA.</p>
-      <div style="display:flex;gap:10px;margin-top:6px">
-        <button class="btn" id="authSignIn" style="flex:1">Entrar</button>
-        <button class="btn secondary" id="authSignUp" style="flex:1">Crear Alma</button>
-      </div>
+      <button class="btn" id="authSignIn" style="width:100%;margin-top:6px">Entrar</button>
       <div style="text-align:center;margin-top:10px"><button class="btn ghost sm" id="authForgot" style="font-size:12.5px">¿Olvidaste tu contraseña?</button></div>
       <div id="authMsg" class="muted" style="font-size:12.5px;margin-top:12px;min-height:16px"></div>
-      <p class="muted" style="font-size:11px;margin-top:8px">🔒 Tu Raíz, memorias y proyectos son privados. Nada se comparte automáticamente.</p>
+      <!-- No hay registro abierto: a ANIMA STUDIO se entra por invitación, y la
+           cuenta la crea el enlace que llega al correo. -->
+      <p class="muted" style="font-size:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
+        ¿Aún no tienes cuenta? A ANIMA STUDIO se entra <b>por invitación</b>: quien te invita escribe tu correo y te llega un enlace que crea tu cuenta.
+        <a href="mailto:tscanima@gmail.com?subject=ANIMA%20STUDIO%20%E2%80%94%20quiero%20una%20invitaci%C3%B3n">Pedir una invitación</a>.
+      </p>
+      <p class="muted" style="font-size:11px;margin-top:8px">Tu Raíz, memorias y proyectos son privados. Nada se comparte automáticamente.</p>
     </div>
   </div>
 
@@ -129,7 +133,7 @@
     <div class="auth-box">
       <div class="auth-head">
         <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        <div style="flex:1"><b>Cambiar contraseña</b><br><small class="muted">Elige una contraseña nueva para tu Alma.</small></div>
+        <div style="flex:1"><b id="cpTitulo">Cambiar contraseña</b><br><small class="muted" id="cpSub">Elige una contraseña nueva para tu Alma.</small></div>
         <button class="btn ghost sm" id="cpClose">✕</button>
       </div>
       <div class="field"><label>Nueva contraseña</label><input id="cpP1" type="password" placeholder="••••••••" autocomplete="new-password" /></div>
@@ -256,39 +260,37 @@
     <div class="auth-box">
       <div class="auth-head">
         <span class="mark"><svg viewBox="0 0 100 100" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        <div style="flex:1"><b>El Códice</b><br><small class="muted">Glosario y conceptos del mundo ANIMA.</small></div>
+        <div style="flex:1"><b>El Códice</b><br><small class="muted">El glosario de ANIMA STUDIO.</small></div>
         <button class="btn ghost sm" id="codiceClose">✕</button>
       </div>
-      <p class="muted" style="font-size:12.5px;margin:2px 0 12px">Un pequeño libro vivo. Toca cualquier término para abrirlo. Aquí encontrarás el lenguaje de ANIMA, por si quieres entenderlo mejor.</p>
+      <p class="muted" style="font-size:12.5px;margin:2px 0 12px">El lenguaje de ANIMA STUDIO, por si quieres entenderlo mejor. Toca cualquier término para abrirlo.</p>
       <div class="codice">
-        <details open><summary>¿Qué es ANIMA?</summary><p>Un mundo vivo para creadores. Aquí no hay usuarios: hay <b>Almas</b>. No mides seguidores ni likes, sino tu <b>Esencia</b> —la actividad que registras— y tu <b>Huella</b>. Organizas tu identidad, tu trabajo y tu trayectoria, y creces junto a otras Almas.</p></details>
-        <details><summary>Alma</summary><p>Tú, dentro de ANIMA. Tu identidad creativa: nombre, oficio, bio, portafolio y trayectoria. Cada Alma decide qué muestra al mundo y qué guarda en privado.</p></details>
-        <details><summary>Esencia</summary><p>La cuenta de lo que haces dentro de ANIMA STUDIO. Sube con cada acción (completar tu identidad, subir obras, crear proyectos, dejar Ecos, el Ritual) y refleja tu actividad acumulada. <b>No abre ni cierra ventanas</b>: eso lo decide tu plan.</p></details>
-        <details><summary>Huella</summary><p>Lo que dejas en el mundo: una obra publicada o una entrada en el Muro de la comunidad. Tus Huellas forman tu rastro creativo y hacen resonar el Árbol.</p></details>
-        <details><summary>Eco</summary><p>Una respuesta, un comentario en una Huella. Sustituye a los “me gusta”: en ANIMA las cosas resuenan, no se acumulan.</p></details>
-        <details><summary>Chispa</summary><p>El aprecio del mundo a una Huella. Puedes dar <b>una sola Chispa por Huella</b> en el muro. Las Chispas que recibes quedan en tu Alma.</p></details>
-        <details><summary>Vínculo · Constelación</summary><p><b>Vincular</b> es seguir a otra Alma. Si esa Alma te vincula de vuelta, nace una <b>Constelación</b>: una conexión mutua que aparece en tu mapa de Almas conectadas.</p></details>
-        <details><summary>Susurro</summary><p>Las notificaciones de tu Alma — solo lo importante. Te avisan cuando alguien se vincula, te da una Chispa o te envía una señal. Viven en la campana, junto a tu nombre.</p></details>
-        <details><summary>Señal</summary><p>Un mensaje privado de Alma a Alma. La envías desde la tarjeta pública de otra Alma; le llega como un Susurro.</p></details>
-        <details><summary>Crónica</summary><p>El registro vivo de ANIMA: lo que vamos integrando y mejorando. Vive en el Mundo, para que tu Alma sepa cómo crece el mundo.</p></details>
-        <details><summary>Umbral · Primer Despertar</summary><p>El rito de entrada a ANIMA. Se vive <b>una sola vez</b>: al cruzarlo, tu Alma nace y queda registrada. Después entras directo a tu HOME.</p></details>
-        <details><summary>Árbol de Almas</summary><p>El corazón del Mundo. Un organismo vivo que crece con la actividad de todas las Almas: cuantas más crean, más despierta el Árbol.</p></details>
-        <details><summary>Ritual del Eco</summary><p>Una ceremonia diaria: <b>una vez al día</b> compartes una Huella sobre lo que creaste esta semana. Enciende el Árbol y suma Esencia.</p></details>
-        <details><summary>Mundo · Constelación</summary><p>El mapa de las Almas que habitan ANIMA, por ubicación. Puedes visitar otras Almas y ver lo que decidieron hacer público: su portafolio y su resumen.</p></details>
-        <details><summary>Clan</summary><p>Una constelación pequeña de <b>2 a 8 Almas</b> que crean juntas, con <b>nombre, símbolo y descripción propios</b>. Comparten Plan de trabajo, Calendario, proyectos y memoria. Roles: <b>Admin</b> (representa al Clan, control total), <b>Líder</b> (segunda mano: tareas, calendario, proyectos) y <b>Alma</b> (miembro). Lo fundas tú o entras por invitación.</p></details>
-        <details><summary>Santuario</summary><p>No es una sección: es un <b>estado superior</b>. Una organización viva (<b>8+ Almas</b>) que reúne <b>varios Clanes</b> bajo un mismo techo, con vista general, eventos y su propio pulso del Árbol. Estructura: Santuario → Clanes → Almas.</p></details>
-        <details><summary>LUMBRE</summary><p>Tu chispa compañera: el motor agente de ANIMA. Aún <b>no despierta</b> — reunirá voz cuando el mundo tenga más Esencia. Pronto te ayudará con tu Raíz, tus proyectos y tu trayectoria.</p></details>
-        <details><summary>Raíz</summary><p>El sustento del Alma: tus ingresos, egresos y ganancia. Siempre privado. Es la base que sostiene tu trayectoria.</p></details>
-        <details><summary>Insignias</summary><p>Marcas que descubres al habitar ANIMA. No se anuncian: se encuentran.</p></details>
+        <details open><summary>¿Qué es ANIMA STUDIO?</summary><p>El espacio de trabajo de quien crea por su cuenta. Aquí organizas tu identidad profesional, tus proyectos, tus vínculos y tu sustento, y llevas la cuenta de tu trayectoria. No hay seguidores ni «me gusta»: hay trabajo hecho.</p></details>
+        <details><summary>Alma</summary><p>Tú, dentro de ANIMA: tu cuenta y tu identidad profesional —nombre, oficio, bio, portafolio y trayectoria—. Cada Alma decide qué muestra y qué guarda en privado.</p></details>
+        <details><summary>Taller</summary><p>Donde trabajas: Proyectos, Tareas, Vínculos, Raíz y Agenda. Todo está conectado —un proyecto sabe de su cliente, de su entrega y de lo que se abonó—, así que no hay que escribir lo mismo dos veces.</p></details>
+        <details><summary>Proyecto</summary><p>Una unidad de trabajo, de la cotización al cierre: <b>Cotizando · Aprobado · En producción · Revisión · Entregado · Cerrado</b>. Lleva su cliente, su valor, sus abonos, su avance y su fecha de entrega.</p></details>
+        <details><summary>Vínculo</summary><p>Un cliente o un colaborador. Desde su ficha ves todos sus proyectos, lo facturado y los documentos que se le emitieron.</p></details>
+        <details><summary>Raíz</summary><p>El sustento: ingresos, egresos y ganancia. Siempre privado, y nunca se muestra en tu cara pública. Puedes ocultar los montos en pantalla cuando trabajas acompañada.</p></details>
+        <details><summary>Centro documental</summary><p>Cotizaciones, propuestas, facturas, órdenes de trabajo y acuerdos, con tu marca y exportables a PDF. Es un <b>complemento</b>: no viene con el plan y lo activa soporte.</p></details>
+        <details><summary>Complemento</summary><p>Una función que no viene incluida en ningún plan. Se pide desde el Taller y soporte la enciende para tu Alma después de conversarla contigo. Nada se activa ni se cobra solo.</p></details>
+        <details><summary>Insignias</summary><p>Los hitos de tu oficio: el primer proyecto, los diez proyectos, la primera entrega, el primer vínculo. No se compran ni se regalan; se ganan trabajando, y cada una muestra cuánto falta.</p></details>
+        <details><summary>Esencia</summary><p>La cuenta de lo que llevas registrado aquí: obras, proyectos, memorias, hitos y tareas. Es un contador de actividad, no un rango: <b>no abre ni cierra ventanas</b>. Eso lo decide tu plan.</p></details>
+        <details><summary>Cronología</summary><p>La historia de tu cuenta, hecha sola: cada hito, cada insignia y cada cambio importante queda escrito ahí. Porque ANIMA recordará.</p></details>
+        <details><summary>Portafolio · Visibilidad</summary><p>Las obras que te representan. Tu portafolio es <b>público por defecto</b> para que puedas compartir un enlace, y en <b>Visibilidad</b> eliges qué se muestra —bio, servicios, trayectoria, obras, enlaces— o lo apagas entero.</p></details>
+        <details><summary>Clan</summary><p>Un equipo de <b>2 a 8 Almas</b> que trabajan juntas, con nombre, símbolo y descripción propios. Comparten plan de trabajo, calendario, proyectos y memoria. Roles: <b>Admin</b> (control total), <b>Líder</b> (tareas, calendario y proyectos) y <b>Alma</b> (miembro).</p></details>
+        <details><summary>Santuario</summary><p>La organización: <b>8 o más Almas</b> repartidas en varios Clanes, con vista general, informes y coordinación. Estructura: Santuario → Clanes → Almas.</p></details>
+        <details><summary>Invitación</summary><p>La única manera de entrar. Quien te invita escribe tu correo y te llega un enlace que crea tu cuenta y te deja dentro de su equipo, con el rol que eligió. Sin ese correo no hay acceso, y no existe el registro abierto.</p></details>
+        <details><summary>Plan · Forma</summary><p>Cómo habitas ANIMA: <b>Alma</b> (una persona), <b>Clan</b> (hasta 3) y <b>Santuario</b> (hasta 10). El plan decide cuánta gente y cuánto volumen, no qué módulos ves: el Taller viene entero en los tres.</p></details>
+        <details><summary>LUMBRE</summary><p>El asistente de ANIMA. Aún <b>no despierta</b>. Cuando lo haga, te ayudará con tu Raíz, tus proyectos y tu trayectoria, sin sacar tus datos de donde están.</p></details>
       </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/js/supabase.js?v=nucleo-v11"></script>
+  <script src="assets/js/supabase.js?v=studio-v17"></script>
   <script src="assets/js/anima-state.js?v=nucleo-v12"></script>
   <script src="assets/js/seed.js?v=nucleo-v12"></script>
-  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/icons.js?v=studio-v17"></script>
   <script src="assets/js/world-tree.js"></script>
   <script src="assets/js/services/ai.service.js"></script>
   <script src="assets/js/services/obsidian.service.js"></script>
@@ -298,7 +300,7 @@
   <script src="assets/js/lumbre/lumbre.providers.js"></script>
   <script src="assets/js/lumbre/lumbre.memory.js"></script>
   <script src="assets/js/lumbre/lumbre.agent.js"></script>
-  <script src="assets/js/anima.js?v=nucleo-v16"></script>
+  <script src="assets/js/anima.js?v=studio-v17"></script>
   <script>if(window.WorldTree) WorldTree.init();</script>
 </body>
 </html>

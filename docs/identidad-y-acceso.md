@@ -94,9 +94,42 @@ política de `select`: el formulario escribe y no puede leer nada, ni siquiera l
 suyo. Un índice único sobre los pendientes evita que pulsar diez veces deje diez
 filas. Las solicitudes se ven y se resuelven en la consola.
 
-Todavía **no sale ningún correo** al pedir acceso: la petición queda anotada y
-hay que responderla a mano. Eso se cierra cuando se porte el correo saliente de
-JLIZ.
+## La invitación de STUDIO
+
+STUDIO ya no depende de responder a mano. Una solicitud se cierra creando una
+**invitación** (migración 0136, `studio_invitations`): una dirección de correo,
+un destino —la plataforma, un Clan o un Santuario—, un rol y un enlace.
+
+| Quién invita | A qué | Desde dónde |
+|---|---|---|
+| Soporte (`is_creator`) | A la plataforma, con plan | Consola → *Dar de alta a alguien nuevo* |
+| Líder de un Clan (`leads_clan`) | A su Clan | Panel del Clan → *Invitaciones* |
+| Admin de un Santuario (`admin_santuario`) | A su Santuario | Santuario → Almas → *Invitaciones* |
+
+El correo lo manda la función edge **`invitacion-studio`**, que es lo único con
+`service_role` y por tanto lo único que puede crear una cuenta. No decide nada:
+pregunta a `preparar_envio_invitacion()`, igual que la 0119 hace en COMPANY.
+Tres cosas que conviene no perder de vista, por el mismo motivo que allá:
+
+- **No es un relé de correo.** Solo sale un correo si la invitación existe, está
+  vigente y no se mandó en los últimos diez minutos. Escribir la dirección de un
+  desconocido no le manda nada a nadie.
+- **El sello del envío lo pone la base**, no la función edge: dos pulsaciones
+  seguidas no mandan dos correos.
+- **La invitación se aplica sola al entrar.**
+  `aceptar_invitaciones_pendientes()` busca por el correo de la sesión, no por el
+  token, así que un enlace caducado en la bandeja no deja a nadie dentro de ANIMA
+  y fuera de su equipo.
+
+El `token` no sale nunca de una lista: solo lo devuelve `crear_invitacion()`, a
+quien la creó. `studio_invitations` tiene RLS sin políticas y el permiso revocado
+a `anon` y `authenticated` — se llega por las funciones o no se llega.
+
+Lo que se retiró al abrir esta puerta: el *Código del Origen* que pedían
+`studio.html` y `despertar.html`, los códigos de Clan (`clan_invites`) y los de
+Santuario (`santuario_invites`). Las tablas siguen ahí con lo que ya tenían; sus
+funciones de canje están revocadas. Un código no sabe a quién invita: si se
+filtra, entra quien lo pegue, con el rol que llevaba dentro.
 
 ## Lo legal
 

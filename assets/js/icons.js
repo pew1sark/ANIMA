@@ -37,6 +37,11 @@
     archivo:["XXXXXXXXX","X.......X","XXXXXXXXX","X..XXX..X","X.......X","XXXXXXXXX","X..XXX..X","X.......X","XXXXXXXXX"],
     grafico:[".........",".......XX",".......XX","....XX.XX","....XX.XX",".XX.XX.XX",".XX.XX.XX",".XX.XX.XX","XXXXXXXXX"],
     vista:  [".........","..XXXXX..",".X.....X.","X...X...X","X..XXX..X","X...X...X",".X.....X.","..XXXXX..","........."],
+    /* El mismo ojo, tachado: es el par de `vista` y sirve para decir "oculto"
+       sin recurrir a un emoji, que en cada sistema se dibuja distinto. */
+    vista_off:["X........",".XXXXXX..",".XX....X.","X..XX...X","X..XXX..X","X...XX..X",".X....XX.","..XXXXXX.","........X"],
+    correo: [".........","XXXXXXXXX","XX.....XX","X.XX.XX.X","X...X...X","X.......X","X.......X","XXXXXXXXX","........."],
+    complemento:["..XX.XX..","..XX.XX..",".XXXXXXX.",".XXXXXXX.",".XXXXXXX.","..XXXXX..","..XXXXX..","...XXX...","........."],
 
     /* 08 · Sistema / navegación auxiliares y reinos */
     ruta:   [".........","......XX.","......XX.","...XX....","...XX....","XX.......","XX.......",".........","........."],

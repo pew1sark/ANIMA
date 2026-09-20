@@ -17,8 +17,11 @@
   var LS_ONBOARDING = "anima_onboarding_completed";
   var LS_SEEN = "anima_last_seen";
 
-  /* El código de invitación con el que se despierta un Alma. */
-  var ALPHA_CODE = "ANIMA-2026";
+  /* Aquí vivía ALPHA_CODE, el código único con el que se despertaba un Alma
+     durante la beta. Se retiró con el acceso por invitación: un código fijo,
+     igual para todos y escrito en el cliente, no distingue a quien fue
+     invitado de quien pasaba por ahí. Ahora la cuenta la crea el enlace que
+     llega al correo (migración 0136). */
 
   /* --- Afinidades: la naturaleza creadora de cada Alma --- */
   var AFINIDADES = [
@@ -59,7 +62,6 @@
 
   var API = {
     LS_KEY: LS_KEY,
-    ALPHA_CODE: ALPHA_CODE,
     AFINIDADES: AFINIDADES,
 
     get: load,
@@ -69,11 +71,6 @@
     isCompleted: function () { return localStorage.getItem(LS_ONBOARDING) === "true"; },
     markCompleted: function () { localStorage.setItem(LS_ONBOARDING, "true"); },
     reset: function () { localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_ONBOARDING); },
-
-    /* --- Código de invitación --- */
-    checkAlphaCode: function (code) {
-      return String(code || "").trim().toUpperCase() === ALPHA_CODE;
-    },
 
     /* --- Afinidad --- */
     affinity: function (key) {

@@ -76,9 +76,44 @@ const Cloud = {
     return data || [];
   },
 
-  /* Invitaciones (beta cerrada) */
-  async checkInvite(code){ if(!_sb) return false; const { data } = await _sb.rpc("check_invite", { p_code:code }); return !!data; },
-  async redeemInvite(code){ if(!_sb) return false; const { data } = await _sb.rpc("redeem_invite", { p_code:code }); return !!data; },
+  /* ===========================================================
+     INVITACIONES POR CORREO (migración 0136)
+     -----------------------------------------------------------
+     Se acabaron los códigos. Una invitación es una dirección de
+     correo y un enlace; quien no tenga el correo, no tiene nada.
+     El token solo vuelve al crearla — las listas no lo enseñan.
+     =========================================================== */
+  async crearInvitacion({ email, ambito, clan, santuario, role, plan, mensaje }){
+    if(!_sb) throw new Error("Sin conexión a la nube.");
+    const { data, error } = await _sb.rpc("crear_invitacion", {
+      p_email:email, p_ambito:ambito||"clan", p_clan:clan||null,
+      p_santuario:santuario||null, p_role:role||"ALMA", p_plan:plan||null,
+      p_mensaje:mensaje||null });
+    if(error) throw error; return data;
+  },
+  async invitaciones(clan, santuario){
+    if(!_sb) return [];
+    const { data, error } = await _sb.rpc("invitaciones", { p_clan:clan||null, p_santuario:santuario||null });
+    if(error) throw error; return data||[];
+  },
+  async anularInvitacion(id){ if(!_sb) return false; const { data, error } = await _sb.rpc("anular_invitacion", { p_id:id }); if(error) throw error; return !!data; },
+  /* Lo que el enlace puede contar antes de que exista la cuenta. Responde a
+     quien todavía no ha entrado: es la única llamada de esta capa que no
+     necesita sesión. */
+  async invitacionPorToken(token){ if(!_sb) return null; const { data } = await _sb.rpc("invitacion_por_token", { p_token:token }); return data||null; },
+  /* Se llama al entrar, sin token: la invitación se busca por el correo de la
+     sesión, así que se cumple aunque el enlace haya caducado en la bandeja. */
+  async aceptarInvitacionesPendientes(){ if(!_sb) return null; try{ const { data } = await _sb.rpc("aceptar_invitaciones_pendientes"); return data||null; }catch(e){ return null; } },
+  /* Manda el correo. Lo hace la función edge `invitacion-studio`, que es lo
+     único con `service_role` y por tanto lo único que puede crear la cuenta.
+     Si todavía no está desplegada, esto falla y la pantalla ofrece el enlace
+     para mandarlo a mano — la invitación ya existe igual. */
+  async enviarInvitacion(id){
+    if(!_sb) throw new Error("Sin conexión a la nube.");
+    const { data, error } = await _sb.functions.invoke("invitacion-studio", {
+      body:{ invitacion_id:id, sitio:location.origin } });
+    if(error) throw error; return data;
+  },
 
   /* Feedback */
   async sendFeedback({ rating, message, context, almaName }){
@@ -293,11 +328,9 @@ const Cloud = {
   async updateClanProject(id, patch){ const { error } = await _sb.from("clan_projects").update(patch).eq("id", id); if(error) throw error; },
   async deleteClanProject(id){ const { error } = await _sb.from("clan_projects").delete().eq("id", id); if(error) throw error; },
 
-  /* Clan: códigos de invitación (migración 0011) */
-  async clanInvites(clan){ const { data, error } = await _sb.from("clan_invites").select("*").eq("clan", clan).order("created_at",{ascending:false}); if(error) throw error; return data||[]; },
-  async createInvite(row){ const { data, error } = await _sb.from("clan_invites").insert(row).select().single(); if(error) throw error; return data; },
-  async deleteInvite(id){ const { error } = await _sb.from("clan_invites").delete().eq("id", id); if(error) throw error; },
-  async joinByCode(code){ const { data, error } = await _sb.rpc("join_clan_by_code", { p_code: code }); if(error) throw error; return data; },
+  /* Los códigos de invitación del Clan y del Santuario (migraciones 0011 y
+     0031) se retiraron: ahora se invita por correo. Las tablas siguen ahí con
+     lo que ya tenían, pero nada las escribe ni las lee desde aquí. */
 
   /* Planificación del Santuario (migración 0019) — scope por santuario. */
   async santTasks(s){ const { data, error } = await _sb.from("santuario_tasks").select("*").eq("santuario", s).order("created_at",{ascending:false}); if(error) throw error; return data||[]; },
@@ -327,10 +360,6 @@ const Cloud = {
   async santuarioSetRole(alma, role){ const { error } = await _sb.rpc("santuario_set_role", { p_alma:alma, p_role:role }); if(error) throw error; },
   async santuarioAddMember(alma, s){ const { error } = await _sb.rpc("santuario_add_member", { p_alma:alma, p_santuario:s }); if(error) throw error; },
   async santuarioRemoveMember(alma){ const { error } = await _sb.rpc("santuario_remove_member", { p_alma:alma }); if(error) throw error; },
-  async santuarioGenInvite(s, role){ const { data, error } = await _sb.rpc("santuario_gen_invite", { p_santuario:s, p_role:role||"ALMA" }); if(error) throw error; return data; },
-  async santuarioJoinByCode(code){ const { data, error } = await _sb.rpc("santuario_join_by_code", { p_code:code }); if(error) throw error; return data; },
-  async santuarioInvites(s){ const { data } = await _sb.from("santuario_invites").select("*").eq("santuario", s).eq("active",true).order("created_at",{ascending:false}); return data||[]; },
-  async deleteSantInvite(id){ const { error } = await _sb.from("santuario_invites").delete().eq("id", id); if(error) throw error; },
   async santReports(s){ const { data, error } = await _sb.from("santuario_reports").select("*").eq("santuario", s).order("created_at",{ascending:false}); if(error) throw error; return data||[]; },
   async addSantReport(s, row){ const { data, error } = await _sb.from("santuario_reports").insert({ santuario:s, ...row }).select().single(); if(error) throw error; return data; },
   async deleteSantReport(id){ const { error } = await _sb.from("santuario_reports").delete().eq("id", id); if(error) throw error; },
@@ -357,12 +386,30 @@ const Cloud = {
   async timeline(){ if(!_sb) return []; const u = await this.user(); if(!u) return []; const { data } = await _sb.from("soul_timeline").select("*").eq("user_id", u.id).order("created_at",{ascending:false}); return data || []; },
   async logTimeline(event, title, desc){ if(!_sb) return null; const { data } = await _sb.rpc("log_timeline", { p_event:event, p_title:title, p_desc:desc||null }); return data; },
 
-  /* Insignias secretas — catálogo + las descubiertas por el Alma. */
-  async badgeCatalog(){ if(!_sb) return []; const { data } = await _sb.from("badges").select("*"); return data || []; },
+  /* Insignias del oficio (migración 0134) — catálogo + las ganadas.
+     El catálogo ya no es una lista de misterios: cada insignia dice qué se
+     cuenta (`metric`) y cuánto hace falta (`threshold`), para que la pantalla
+     pueda mostrar el avance en vez de un enigma. */
+  async badgeCatalog(){ if(!_sb) return []; const { data } = await _sb.from("badges").select("*").order("sort",{ascending:true}); return data || []; },
   async myBadges(){ if(!_sb) return []; const u = await this.user(); if(!u) return []; const { data } = await _sb.from("soul_badges").select("code,earned_at").eq("user_id", u.id); return data || []; },
-  async awardBadge(code){ if(!_sb) return false; const { data } = await _sb.rpc("award_badge", { p_code:code }); return !!data; },
-  /* Insignias por tiempo (Persistencia: 30 días habitando ANIMA). */
-  async claimTimeBadges(){ if(!_sb) return false; try{ const { data } = await _sb.rpc("claim_time_badges"); return !!data; }catch(e){ return false; } },
+  /* Otorga las alcanzadas CONTANDO en la base. El navegador ya no puede pedir
+     una insignia por su nombre: solo pide "revisa". Devuelve los códigos
+     nuevos, para poder celebrarlos una sola vez. */
+  async sincronizarInsignias(){ if(!_sb) return []; try{ const { data } = await _sb.rpc("sincronizar_insignias"); return data || []; }catch(e){ return []; } },
+
+  /* ===========================================================
+     COMPLEMENTOS (migración 0135)
+     Funciones que no vienen con el plan y que enciende soporte,
+     Alma por Alma. La ausencia de fila es "no lo tiene".
+     =========================================================== */
+  async misAddons(almaId){
+    if(!_sb || !almaId) return [];
+    const { data } = await _sb.from("alma_addons").select("addon,estado,nota,solicitado_at,activado_at").eq("alma_id", almaId);
+    return data || [];
+  },
+  async solicitarAddon(addon, nota){ if(!_sb) throw new Error("Sin conexión a la nube."); const { data, error } = await _sb.rpc("solicitar_addon", { p_addon:addon, p_nota:nota||null }); if(error) throw error; return data; },
+  async activarAddon(almaId, addon, encender){ if(!_sb) throw new Error("Sin conexión a la nube."); const { data, error } = await _sb.rpc("activar_addon", { p_alma:almaId, p_addon:addon, p_encender:!!encender }); if(error) throw error; return data; },
+  async addonsPendientes(){ if(!_sb) return []; try{ const { data } = await _sb.rpc("addons_pendientes"); return data || []; }catch(e){ return []; } },
 
   /* Sistema de logs — registra una acción del Alma (silencioso si falla). */
   async log(action, meta){ if(!_sb) return; try{ await _sb.rpc("log_activity", { p_action:action, p_meta:meta||{} }); }catch(e){} },
