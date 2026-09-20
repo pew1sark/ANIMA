@@ -9,7 +9,12 @@ begin;
 -- alguien que emite una cotización con su marca encima quiere que salga bien.
 --
 -- Deja de venir con el plan y pasa a ser un COMPLEMENTO: lo enciende soporte,
--- Alma por Alma, cuando lo acuerda con quien lo pide.
+-- Alma por Alma, cuando lo acuerda con quien lo pide, y solo sobre planes
+-- **Pro o superiores**. Esa última parte no es nueva: es la regla que publica
+-- planes.html desde siempre —"en Studio Starter no se cuelgan add-ons"— y que
+-- hasta ahora no estaba escrita en ninguna parte donde se pudiera aplicar.
+-- Una regla comercial que solo vive en una página de precios no es una regla:
+-- es una frase.
 --
 -- Esta tabla es el interruptor. No guarda precio ni factura: eso vive en la
 -- relación comercial. Guarda tres cosas y ninguna más: quién lo pidió, quién lo
@@ -44,6 +49,28 @@ comment on table public.alma_addons is
   'Complementos de ANIMA STUDIO encendidos por soporte, uno por Alma. La ausencia de fila es "no lo tiene".';
 
 create index if not exists alma_addons_estado_idx on public.alma_addons(estado, addon);
+
+-- ¿El plan de esta Alma alcanza para colgarse un complemento? -----------------
+-- Pro (CLAN) y Max (SANTUARIO) sí; Starter (ALMA) no. Está en una función y no
+-- repetida en dos sitios porque el día que la regla cambie —o que aparezca un
+-- complemento con otro mínimo— se cambia aquí y no en cada llamada.
+create or replace function public.plan_admite_addons(p_alma uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(
+    (select a.plan in ('CLAN','SANTUARIO') from public.almas a where a.id = p_alma),
+    false);
+$$;
+
+comment on function public.plan_admite_addons(uuid) is
+  'Los complementos se cuelgan desde Pro. Starter es un plan cerrado, y esa es la razón de que cueste lo que cuesta.';
+
+revoke execute on function public.plan_admite_addons(uuid) from public, anon;
+grant  execute on function public.plan_admite_addons(uuid) to authenticated;
 
 alter table public.alma_addons enable row level security;
 
@@ -86,6 +113,10 @@ begin
     raise exception 'Falta el nombre del complemento.';
   end if;
 
+  if not public.plan_admite_addons(v_alma) then
+    raise exception 'Los complementos se activan desde el plan Pro.';
+  end if;
+
   select estado into v_estado from public.alma_addons
    where alma_id = v_alma and addon = p_addon;
 
@@ -126,6 +157,14 @@ begin
   p_addon := lower(btrim(coalesce(p_addon, '')));
   if p_addon = '' then
     raise exception 'Falta el nombre del complemento.';
+  end if;
+
+  -- Soporte tampoco enciende sobre Starter. No es desconfianza: encenderlo
+  -- ahí dejaría una fila que dice "activo" y una pantalla que sigue con el
+  -- candado puesto, porque el plan manda al leer. Mejor decirlo aquí que
+  -- dejar a alguien buscando por qué no aparece lo que acaba de activar.
+  if p_encender and not public.plan_admite_addons(p_alma) then
+    raise exception 'Esta Alma está en Starter: sube su plan a Pro antes de encender el complemento.';
   end if;
 
   insert into public.alma_addons (alma_id, addon, estado, activado_at, activado_por, updated_at)

@@ -159,6 +159,10 @@ const ADDONS = {
     t:"Centro documental",
     ico:"documento",
     vista:"cotizador",
+    /* Los complementos se cuelgan desde Pro. Es la misma regla que publica
+       planes.html —"en Studio Starter no se cuelgan add-ons"— y se aplica aquí
+       para que no sea solo una frase en una página de precios. */
+    planMinimo:"CLAN",
     resumen:"Cotizaciones, propuestas, facturas, órdenes y acuerdos con tu marca, exportables a PDF.",
     incluye:[
       "Seis formatos profesionales listos para emitir",
@@ -174,9 +178,20 @@ function addonEstado(code){
   const fila=(state.addons||[]).find(x=>x.addon===code);
   return (fila && fila.estado) || "inactivo";
 }
+/* ¿El plan de esta Alma alcanza para colgarse este complemento? Se mira con
+   `effectivePlan`, no con el plan guardado, para que "Ver como" enseñe el
+   candado de verdad en vez del que ve soporte. */
+function addonPlanOk(code){
+  const c=ADDONS[code]; if(!c || !c.planMinimo) return true;
+  return PLAN_ORDER.indexOf(effectivePlan()) >= PLAN_ORDER.indexOf(c.planMinimo);
+}
 function addonActivo(code){
   if(!ADDONS[code]) return true;                       // no es complemento: siempre abierto
   if(isCreator && !state.viewAs) return true;          // soporte lo ve todo, para poder probarlo
+  /* El plan manda sobre el interruptor: si un Alma baja a Starter, su
+     complemento se apaga aunque la fila siga diciendo "activo". Al contrario
+     —dejarlo encendido por una fila vieja— el plan sería una sugerencia. */
+  if(!addonPlanOk(code)) return false;
   return addonEstado(code)==="activo";
 }
 async function loadAddons(almaId){
@@ -2600,13 +2615,21 @@ function vAddon(code){
   const fila=(state.addons||[]).find(x=>x.addon===code);
   const cuando=(fila&&fila.solicitado_at)?new Date(fila.solicitado_at).toLocaleDateString("es-CL",{day:"numeric",month:"long"}):"";
 
-  const accion = !a.live
-    ? `<p class="muted" style="font-size:13px">Entra a tu Alma en la nube para pedirlo.</p>`
-    : pedido
-      ? `<div class="addon-estado"><span class="pill gold">Solicitado${cuando?" · "+esc(cuando):""}</span>
-          <p class="muted" style="font-size:12.5px;margin:8px 0 0">Tu solicitud está con soporte. Te escribimos al correo de tu Alma en cuanto quede encendido.</p></div>`
-      : `<button class="btn gold" data-addonask="${esc(code)}">Pedir activación</button>
-         <p class="muted" style="font-size:12px;margin:8px 0 0">Lo activa soporte, no un pago automático: primero conversamos cómo lo vas a usar.</p>`;
+  const planOk=addonPlanOk(code);
+  const minimo=(PLAN_META[c.planMinimo]||{}).sub||"Pro";
+  const accion = !planOk
+    ? `<div class="addon-estado"><span class="pill">Desde ${esc((PLAN_META[c.planMinimo]||{}).t||"Clan")} · ${esc(minimo)}</span>
+        <p class="muted" style="font-size:12.5px;margin:8px 0 0">Los complementos se cuelgan desde <b>Pro</b>. Starter es un plan cerrado, y esa es la razón de que cueste lo que cuesta.</p>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn secondary sm" data-view="miplan">Ver mi plan →</button>
+          <a class="btn ghost sm" href="planes.html" target="_blank" rel="noopener">Comparar planes ↗</a></div></div>`
+    : !a.live
+      ? `<p class="muted" style="font-size:13px">Entra a tu Alma en la nube para pedirlo.</p>`
+      : pedido
+        ? `<div class="addon-estado"><span class="pill gold">Solicitado${cuando?" · "+esc(cuando):""}</span>
+            <p class="muted" style="font-size:12.5px;margin:8px 0 0">Tu solicitud está con soporte. Te escribimos al correo de tu Alma en cuanto quede encendido.</p></div>`
+        : `<button class="btn gold" data-addonask="${esc(code)}">Pedir activación</button>
+           <p class="muted" style="font-size:12px;margin:8px 0 0">Lo activa soporte, no un pago automático: primero conversamos cómo lo vas a usar.</p>`;
 
   return `<div class="grid">
     <div class="card s12 addon-hero">
@@ -2617,13 +2640,14 @@ function vAddon(code){
     <div class="card s7"><div class="section-title"><h2 style="font-size:15px">Qué incluye</h2></div>
       ${c.incluye.map(x=>`<div class="row addon-row"><span class="addon-tick">${ANIMA_ICON("documento","·")}</span><div class="grow">${esc(x)}</div></div>`).join("")}</div>
     <div class="card s5"><div class="section-title"><h2 style="font-size:15px">Cómo se activa</h2></div>
-      <p class="muted" style="font-size:13px;line-height:1.65">Los complementos no vienen con el plan y no se encienden solos. Lo pides desde aquí, soporte lo revisa y lo activa para tu Alma.</p>
+      <p class="muted" style="font-size:13px;line-height:1.65">Los complementos se cuelgan sobre planes <b>Pro</b> o superiores, no vienen incluidos y no se encienden solos. Lo pides desde aquí, soporte lo revisa y lo activa para tu Alma.</p>
       <div id="addonMsg" class="muted" style="font-size:12.5px;min-height:16px;margin-bottom:8px"></div>
       ${accion}</div>
   </div>`;
 }
 async function pedirAddon(code){
   const a=me(); const msg=document.getElementById("addonMsg");
+  if(!addonPlanOk(code)){ if(msg) msg.textContent="Los complementos se activan desde el plan Pro."; return; }
   if(!a.live){ if(msg) msg.textContent="Entra a tu Alma para pedirlo."; return; }
   if(msg) msg.textContent="Enviando tu solicitud…";
   try{
@@ -4527,9 +4551,11 @@ function complementosCard(a){
     const c=ADDONS[code], estado=addonEstado(code), on=addonActivo(code);
     const marca = on
       ? `<span class="pill ok">Activo</span>`
-      : estado==="solicitado"
-        ? `<span class="pill gold">Solicitado</span>`
-        : `<button class="btn ghost sm" data-view="${esc(c.vista)}">Ver complemento →</button>`;
+      : !addonPlanOk(code)
+        ? `<span class="pill">Desde ${esc((PLAN_META[c.planMinimo]||{}).t||"Clan")}</span>`
+        : estado==="solicitado"
+          ? `<span class="pill gold">Solicitado</span>`
+          : `<button class="btn ghost sm" data-view="${esc(c.vista)}">Ver complemento →</button>`;
     return `<div class="row addon-row">
       <span class="addon-ico">${ANIMA_ICON(c.ico,"✦")}</span>
       <div class="grow"><b>${esc(c.t)}</b><br><small class="muted">${esc(c.resumen)}</small></div>
@@ -4538,7 +4564,7 @@ function complementosCard(a){
   return `<div class="card s12">
     <div class="section-title"><h2 style="font-size:16px">Complementos</h2><div class="spacer"></div>
       <span class="pill">${codes.filter(addonActivo).length} de ${codes.length}</span></div>
-    <p class="muted" style="font-size:12.5px;margin:-4px 0 10px">Funciones que no vienen con ningún plan. Las activa soporte, una por una, después de conversarlas contigo.</p>
+    <p class="muted" style="font-size:12.5px;margin:-4px 0 10px">Funciones que no vienen con ningún plan y se cuelgan desde <b>Pro</b>. Las activa soporte, una por una, después de conversarlas contigo.</p>
     ${codes.map(fila).join("")}</div>`;
 }
 

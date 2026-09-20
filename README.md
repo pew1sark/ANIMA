@@ -194,11 +194,15 @@ enlace para mandarlo a mano.
   espacio. La config se guarda por Alma.
 - **Centro documental** (₵) — **complemento, no módulo del plan**. Editor de cotizaciones,
   propuestas, facturas, órdenes y acuerdos, adaptable a cualquier oficio (unidades libres:
-  m², hora, pieza…), con impuestos, multi-moneda y **exportación a PDF**. Lo enciende
-  soporte, Alma por Alma (`alma_addons`, migración `0135`): el Alma lo pide desde su Taller
-  con `solicitar_addon()` y el Creador lo activa desde la Consola con `activar_addon()`.
-  Mientras está apagado, la pestaña se ve con candado y lleva a su ficha — esconderla haría
-  que nadie supiera que existe.
+  m², hora, pieza…), con impuestos, multi-moneda y **exportación a PDF**. Se cuelga **desde
+  Pro** —la misma regla que publica `planes.html`, aplicada ahora en `plan_admite_addons()`
+  y no solo escrita en una página de precios— y lo enciende soporte, Alma por Alma
+  (`alma_addons`, migración `0135`): el Alma lo pide desde su Taller con `solicitar_addon()`
+  y el Creador lo activa desde la Consola con `activar_addon()`. En Starter ninguna de las
+  dos pasa, y `addonActivo()` mira el plan al leer: si un Alma baja a Starter, su
+  complemento se apaga aunque la fila siga diciendo «activo». Mientras está apagado, la
+  pestaña se ve con candado y lleva a su ficha — esconderla haría que nadie supiera que
+  existe.
 
 ### Módulos en pausa
 
