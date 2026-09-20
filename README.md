@@ -64,8 +64,12 @@ La Alpha oficial está limitada a **100 Almas** (exclusividad por diseño) y añ
 - **Árbol de Almas** — el mapa de Almas (puntos sobre el planeta) es la referencia dentro
   de la ventana de **Comunidad**, con panel de Ecos, conteo por país y contador `X / 100`.
   `arbol.html` es la versión pública de la misma pantalla.
-- **Insignias secretas** (`badges` / `soul_badges`) — no se anuncian, se descubren
-  (Primer Latido, Alma Fundadora, Explorador, Eco Vivo, Guardián, Persistencia).
+- **Insignias del oficio** (`badges` / `soul_badges`) — dejaron de ser secretas. Marcan la
+  trayectoria profesional (primer proyecto, diez proyectos, primera entrega, primer vínculo,
+  primer documento…), muestran su avance a la vista y las otorga la base **contando**
+  (`sincronizar_insignias()`, migración `0134`), no el navegador pidiéndolas por su nombre.
+  Las seis de la Alpha quedan retiradas (`badges.active = false`): no se otorgan más, y
+  quien las ganó las conserva.
 - **Consejo de Almas** — las primeras **50** Almas (`almas.council`) reciben la insignia
   *Alma Fundadora* y acceden a **Votaciones**: proponen funciones y votan cambios
   (`proposals` / `votes`, vista *Consejo* en el Studio).
@@ -149,23 +153,35 @@ Funciona en 4 modos y **no depende obligatoriamente de internet**:
 
 ---
 
-## 🧪 Beta cerrada (operación)
+## 🧪 Acceso por invitación (operación)
 
-ANIMA está lista para una **beta cerrada por invitación**:
+**No hay registro abierto.** A ANIMA STUDIO se entra por invitación, y la cuenta la crea
+el enlace que llega al correo (migración `0136`, tabla `studio_invitations`):
 
-- **Acceso por invitación**: para crear un Alma se requiere un código.
-  - Código reutilizable para amigos cercanos: **`ANIMA-2026`**
-  - Códigos de un solo uso: `FUNDADOR-01` … `FUNDADOR-05`
-  - Para crear más: insertar filas en la tabla `invites` (Supabase).
-- **Login sin fricción** — recomendado para la beta:
-  *Supabase → Authentication → Sign In / Providers → Email →* desactivar
-  **"Confirm email"**. (Por defecto está activado; con amigos conviene apagarlo.)
-- **Constelación viva**: cada Alma que entra aparece en *Comunidad* para los demás
-  (solo su cara pública: nombre, rol, nivel, bio, trayectoria y portafolio).
+1. Quien invita —soporte desde la **Consola**, el Líder de un Clan desde su **Panel**, o el
+   Admin de un **Santuario**— escribe una dirección de correo y elige el rol.
+2. La función edge **`invitacion-studio`** (`supabase/functions/`) manda el correo con
+   `inviteUserByEmail`. Es lo único con `service_role` y no decide nada: pregunta a
+   `preparar_envio_invitacion()`, que solo responde «manda» si la invitación existe, está
+   vigente y no se mandó en los últimos diez minutos. Escribir el correo de un desconocido
+   no le manda nada a nadie.
+3. El enlace abre `studio.html?invitacion=<token>` con sesión ya iniciada. STUDIO pide
+   elegir contraseña y `aceptar_invitaciones_pendientes()` aplica el Clan, el rol y el plan.
+4. Quien **ya tenía cuenta** no necesita el enlace: al entrar con el correo invitado, esa
+   misma función le aplica lo que le estaba esperando.
+
+Lo que se retiró: el *Código del Origen* (`ANIMA-2026`), los códigos de Clan
+(`clan_invites`) y los de Santuario (`santuario_invites`). Las tablas siguen ahí con lo que
+ya tenían, pero nada las escribe y sus funciones de canje están revocadas.
+
+**Desplegar la función edge:** `supabase functions deploy invitacion-studio`. Y en
+*Authentication → URL Configuration → Redirect URLs* hay que permitir
+`https://<tu-dominio>/studio.html*`, o Supabase no aceptará el `redirectTo` del correo.
+Mientras la función no esté desplegada, la invitación se crea igual y la pantalla ofrece el
+enlace para mandarlo a mano.
+
 - **Feedback**: botón **✦ Enviar feedback** en el Studio → tabla `feedback`
   (lee los resultados en Supabase → Table Editor).
-- **Subida de nivel**: agregar proyectos, memorias e hitos da XP y sube de nivel
-  automáticamente (FOUNDING → ANIMA).
 - **Privacidad**: finanzas, memorias, proyectos, agenda y biblioteca son privados por
   RLS — nadie más los ve, ni siquiera en el Santuario.
 
@@ -176,10 +192,27 @@ ANIMA está lista para una **beta cerrada por invitación**:
   el resto de paneles al instante (KPIs, dashboard, etc.).
 - **Personalizar** (⚙): cada Alma decide **qué módulos y secciones se muestran** en su
   espacio. La config se guarda por Alma.
-- **Cotizador** (₵): editor de presupuestos profesional, adaptable a cualquier rama de
-  arte (unidades libres: m², hora, pieza…), con impuestos, multi-moneda, cotizaciones
-  guardadas y **exportación a PDF**.
-- **Crear Alma** visible desde la portada de cada Alma de muestra y al editar perfil.
+- **Centro documental** (₵) — **complemento, no módulo del plan**. Editor de cotizaciones,
+  propuestas, facturas, órdenes y acuerdos, adaptable a cualquier oficio (unidades libres:
+  m², hora, pieza…), con impuestos, multi-moneda y **exportación a PDF**. Lo enciende
+  soporte, Alma por Alma (`alma_addons`, migración `0135`): el Alma lo pide desde su Taller
+  con `solicitar_addon()` y el Creador lo activa desde la Consola con `activar_addon()`.
+  Mientras está apagado, la pestaña se ve con candado y lleva a su ficha — esconderla haría
+  que nadie supiera que existe.
+
+### Módulos en pausa
+
+El **MUNDO** (Árbol de Almas, Muro, Ecos, Crónica, Consejo y Huellas Errantes) está
+**apagado** para la apertura a cuentas nuevas. El interruptor es una línea en
+`assets/js/anima.js`:
+
+```js
+const MODULOS = { mundo:false };
+```
+
+No se borró nada: todas las vistas, las tablas y el motor del Árbol siguen en su sitio y
+vuelven poniendo `mundo:true`. Con la puerta cerrada, sus vistas no se alcanzan ni
+escribiendo la URL ni por `#go=`.
 
 ## 🔟 Las 10 Almas Fundadoras
 

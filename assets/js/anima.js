@@ -61,12 +61,11 @@ function shade(hex,p){ hex=hex||"#111111"; const n=parseInt(hex.slice(1),16); le
    (reward_config); estos son los de partida.
    =========================================================== */
 const ESENCIA_WAYS = [
-  ["○","Nacer en ANIMA","+200","al crear tu Alma"],
+  ["○","Crear tu cuenta","+200","una sola vez"],
   ["✦","Completar tu Núcleo","+500","una sola vez"],
   ["✧","Subir tu primera obra","+200","luego +40 por obra"],
-  ["▦","Crear tu primer Proyecto","+150","luego +60 por proyecto"],
-  ["📜","Tu primera Huella en la Comunidad","+300","luego +150 por Huella"],
-  ["🌱","Vincularte con otra Alma","+150","por cada Alma nueva"],
+  ["▦","Crear tu primer proyecto","+150","luego +60 por proyecto"],
+  ["☺","Sumar tu primer vínculo","+150","luego +40 por vínculo"],
   ["🜂","Primer ingreso del día","+250","una vez al día"],
   ["✎","Memorias, hitos, tareas y documentos","+10 a +50","cada vez que registras"]
 ];
@@ -128,6 +127,62 @@ function updateConvOut(){
 }
 function setCfg(a,c){ localStorage.setItem(cfgKey(a), JSON.stringify(c)); if(a.live){ Cloud.savePrefs(a.almaId,c).catch(()=>{}); } }
 function toggleCfg(path){ const a=me(); const c=getCfg(a); const [g,k]=path.split(":"); c[g][k]=(c[g][k]===false); setCfg(a,c); renderAll(); }
+
+/* ===========================================================
+   QUÉ ESTÁ ABIERTO HOY — los interruptores de la plataforma
+   -----------------------------------------------------------
+   ANIMA STUDIO abre a Almas nuevas como herramienta de trabajo:
+   la identidad completa y el Taller entero. El MUNDO —el Árbol,
+   el Muro, los Ecos, la Crónica, el Consejo y las Huellas
+   Errantes— queda EN PAUSA.
+   Pausa, no demolición: no se borró una línea. Todas las vistas
+   siguen aquí y vuelven poniendo `mundo:true`. Apagar una puerta
+   y tirar la habitación abajo no son lo mismo, y la diferencia se
+   nota el día que hay que reabrirla.
+   =========================================================== */
+const MODULOS = { mundo:false };
+const MUNDO_ACTIVO = MODULOS.mundo === true;
+/* Todo lo que vive dentro del Mundo. Si la puerta está cerrada, estas vistas
+   no se dibujan ni se pueden alcanzar escribiendo la URL. */
+const VISTAS_MUNDO = ["mundo","comunidad","consejo","cronica","world_wandering_traces"];
+
+/* ===========================================================
+   COMPLEMENTOS (add-ons) — lo que enciende soporte
+   -----------------------------------------------------------
+   No vienen con ningún plan. Se piden desde el Taller y los
+   activa soporte, Alma por Alma (tabla `alma_addons`, migración
+   0135). Aquí solo vive su ficha: el nombre, qué hace y qué
+   vista abre.
+   =========================================================== */
+const ADDONS = {
+  cotizador: {
+    t:"Centro documental",
+    ico:"documento",
+    vista:"cotizador",
+    resumen:"Cotizaciones, propuestas, facturas, órdenes y acuerdos con tu marca, exportables a PDF.",
+    incluye:[
+      "Seis formatos profesionales listos para emitir",
+      "Plantillas por oficio y plantillas propias",
+      "Tu logo, tus colores y tu tipografía en cada documento",
+      "Exportación a PDF y archivo de lo emitido"
+    ]
+  }
+};
+/* Estado de un complemento en esta Alma: "activo", "solicitado" o "inactivo".
+   Sin fila en la nube, es "inactivo" — la ausencia ya lo dice. */
+function addonEstado(code){
+  const fila=(state.addons||[]).find(x=>x.addon===code);
+  return (fila && fila.estado) || "inactivo";
+}
+function addonActivo(code){
+  if(!ADDONS[code]) return true;                       // no es complemento: siempre abierto
+  if(isCreator && !state.viewAs) return true;          // soporte lo ve todo, para poder probarlo
+  return addonEstado(code)==="activo";
+}
+async function loadAddons(almaId){
+  if(!Cloud.enabled || !almaId){ state.addons=[]; return; }
+  try{ state.addons=await Cloud.misAddons(almaId); }catch(e){ state.addons=[]; }
+}
 
 /* ---------- Navegación (3 capas: secciones › reinos › módulos) ---------- */
 const CREATOR_EMAIL = "sarkgraff@gmail.com";
@@ -271,7 +326,6 @@ const SECTION_REVEAL = {
   mialma: "Mi Alma se ha revelado — tu identidad: Resumen, Senda, Trayectoria, Portafolio, Cronología e Insignias.",
   taller: "El Taller se ha revelado — donde creas: Proyectos, Vínculos y Agenda, todo interconectado.",
   clan:   "El Clan se ha revelado — crear junto a otras Almas (2 a 8).",
-  mundo:  "El Mundo se ha revelado — la Constelación de Almas, el Árbol vivo y los Ecos.",
   miplan: "Mi Plan se ha revelado — cómo habitas ANIMA: Alma, Clan o Santuario."
 };
 const SECTION_TITLE = { mialma:"Mi Alma", taller:"el Taller", clan:"el Clan", mundo:"el Mundo", miplan:"Mi Plan" };
@@ -298,11 +352,12 @@ function navSectionItem(id, ico, ic, t, defView){
 /* Solo 3 moradas en la barra. Todo lo demás vive en pestañas del dashboard:
    Mi Plan dentro de Mi Alma · Clan dentro de Mundo. */
 function buildSections(cfg){
-  return [
+  const secs=[
     { id:"mialma", html:navSectionItem("mialma","◆","alma","Mi Alma","mialma") },
-    { id:"taller", html:navSectionItem("taller","₵","taller","Taller","taller") },
-    { id:"mundo",  html:navSectionItem("mundo","❂","nucleo","Mundo","mundo") }
+    { id:"taller", html:navSectionItem("taller","₵","taller","Taller","taller") }
   ];
+  if(MUNDO_ACTIVO) secs.push({ id:"mundo", html:navSectionItem("mundo","❂","nucleo","Mundo","mundo") });
+  return secs;
 }
 function renderNav(){
   const cfg=getCfg(me());
@@ -350,9 +405,9 @@ function renderBottomNav(stage){
   const cur=sectionOfView(state.view);
   const core=[
     {id:"mialma",ic:"alma",ico:"◆",t:"Mi Alma",v:"mialma"},
-    {id:"taller",ic:"taller",ico:"₵",t:"Taller",v:"taller"},
-    {id:"mundo", ic:"nucleo",ico:"❂",t:"Mundo", v:"mundo"}
+    {id:"taller",ic:"taller",ico:"₵",t:"Taller",v:"taller"}
   ];
+  if(MUNDO_ACTIVO) core.push({id:"mundo", ic:"nucleo",ico:"❂",t:"Mundo", v:"mundo"});
   let items=core.map(s=>`<button type="button" class="botnav-item ${cur===s.id?'on':''}" data-view="${s.v}"><span class="bi">${ANIMA_ICON(s.ic,s.ico)}</span><span class="bl">${esc(s.t)}</span></button>`);
   if(planAllows("clanpanel")) items.push(`<button type="button" class="botnav-item ${cur==='clan'?'on':''}" data-view="clanpanel"><span class="bi">${ANIMA_ICON('constelacion','❂')}</span><span class="bl">Clan</span></button>`);
   if(planAllows("santuario")) items.push(`<button type="button" class="botnav-item ${cur==='santuario'?'on':''}" data-view="santuario"><span class="bi">${ANIMA_ICON('santuario','🜁')}</span><span class="bl">Santuario</span></button>`);
@@ -527,6 +582,7 @@ function moradaKids(sec){
   if(sec==="mialma"){ kids=NAV_TREE[0].children.slice(); kids.push({v:"miplan",t:"Forma",ico:"❖",ic:"forma"}); }   // Mi Plan plegado aquí
   else if(sec==="taller"){ kids=[{v:"taller",t:"Resumen",ico:"₵",ic:"taller"}].concat(NAV_TREE[1].children.slice()); }
   else if(sec==="mundo"){
+    if(!MUNDO_ACTIVO) return [];
     kids.push({v:"mundo",t:"Resumen",ico:"❂",ic:"nucleo"});
     if(planAllows("comunidad")) kids.push({v:"comunidad",t:"Muro",ico:"❂",ic:"constelacion"});
     kids.push({v:"world_wandering_traces",t:"Huellas Errantes",ico:"✦",ic:"huellas"});
@@ -538,7 +594,10 @@ function moradaKids(sec){
     kids.push({v:"santuario",t:"Fogón",ico:"🜁",ic:"santuario"});
     if(me().santuario){ kids.push({v:"sant_almas",t:"Almas",ico:"☺",ic:"constelacion"},{v:"sant_tareas",t:"Tareas",ico:"▦",ic:"obra"},{v:"sant_proyectos",t:"Proyectos",ico:"◷",ic:"proceso"},{v:"sant_cal",t:"Calendario",ico:"☷",ic:"agenda"},{v:"sant_informes",t:"Informes",ico:"📄",ic:"documento"}); }
   }
-  return kids.filter(c=>planAllows(c.v) && cfg.modules[c.v]!==false);
+  /* Un complemento apagado no se esconde: se enseña con candado. Esconderlo
+     haría que nadie supiera que existe, y pedirlo empieza por verlo. */
+  return kids.filter(c=>planAllows(c.v) && cfg.modules[c.v]!==false)
+             .map(c=>ADDONS[c.v] && !addonActivo(c.v) ? Object.assign({},c,{locked:true}) : c);
 }
 const MORADA_LABEL={mialma:"Mi Alma",taller:"Taller",mundo:"Mundo",clan:"Clan",santuario:"Santuario"};
 /* Vista de portada (landing) de cada morada: ahí se muestra el resumen-hub. */
@@ -557,7 +616,7 @@ function moradaTabs(view){
       <button type="button" class="morada-step-btn" data-view="${next.v}" aria-label="Pestaña siguiente">›</button>
     </div>`;
   return `<div class="morada-tabs"><span class="morada-tabs-label">${esc(label)}</span><div class="morada-tabs-row">`+
-    kids.map(c=>`<button type="button" class="morada-tab ${state.view===c.v?'on':''}" data-view="${c.v}"><span class="mt-ico">${ANIMA_ICON(c.ic,c.ico||"◆")}</span>${esc(c.t)}</button>`).join("")+
+    kids.map(c=>`<button type="button" class="morada-tab ${state.view===c.v?'on':''} ${c.locked?'locked':''}" data-view="${c.v}"><span class="mt-ico">${ANIMA_ICON(c.ic,c.ico||"◆")}</span>${esc(c.t)}${c.locked?`<span class="mt-lock" title="Complemento">${ANIMA_ICON("lock","·")}</span>`:""}</button>`).join("")+
     `</div></div>${stepper}`;
 }
 /* Transición suave: el cuerpo de cada vista "abre los ojos" en cada render.
@@ -569,6 +628,8 @@ function renderView(){
   if((state.view==="config"||state.view==="consola") && (!isCreator || state.viewAs)) state.view="mialma";
   // Gating por plan: si el plan (real o previsualizado) no incluye la vista, vuelve a Mi Alma.
   if(!planAllows(state.view)) state.view="mialma";
+  // El Mundo está en pausa: sus ventanas no se alcanzan ni escribiendo la URL.
+  if(!MUNDO_ACTIVO && VISTAS_MUNDO.includes(state.view)) state.view="mialma";
   // Consejo de Almas: reservado a las Almas Fundadoras (Consejo) y al Creador.
   if(state.view==="consejo" && !(me().council || (isCreator && !state.viewAs))) state.view="mialma";
   const fn = { mialma:vMiAlma, taller:vTaller, mundo:vMundo, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
@@ -585,9 +646,11 @@ function renderView(){
     bodyHTML = animaWrap(`<div class="grid"><div class="card s12"><p class="muted">Esta ventana tuvo un tropiezo al cargar. Intenta de nuevo o entra a <button class="btn sm" data-view="mialma">Mi Alma</button>.</p></div></div>`);
   }
   document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + bodyHTML;
-  if(state.view==="mundo" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
+  if(MUNDO_ACTIVO && state.view==="mundo" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
   if(state.view==="finanzas"){ requestAnimationFrame(updateConvOut); if(isCreator && !state.viewAs && state.flowLiq===undefined) requestAnimationFrame(loadFlowLiq); }
-  if(state.view==="consola"){ if(state.creatorClans==null && state.creatorSantuarios==null) requestAnimationFrame(loadCreatorGroups); requestAnimationFrame(loadWorldMonitor); requestAnimationFrame(loadRewardPanel); }
+  if(state.view==="consola"){ if(state.creatorClans==null && state.creatorSantuarios==null) requestAnimationFrame(loadCreatorGroups); requestAnimationFrame(loadWorldMonitor); requestAnimationFrame(loadRewardPanel);
+    if(state.addonsConsola==null) requestAnimationFrame(loadAddonsConsola);
+    requestAnimationFrame(()=>loadInvitaciones(null,null)); }
   // Desliza la pestaña activa al centro (sensación suave en móvil).
   if(window.innerWidth>720) requestAnimationFrame(()=>{ const on=document.querySelector(".morada-tab.on"); if(on && on.scrollIntoView){ try{ on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){} } });
 }
@@ -614,7 +677,7 @@ function vMiAlma(a){
     <div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       ${(a.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}
       ${linksHTML(a)}<span style="flex:1"></span>
-      ${a.live?`<button class="btn ghost sm" id="discreetBtn" title="Privacidad: oculta tus montos">${ANIMA_DISCREET?"👁 Mostrar montos":"🙈 Ocultar montos"}</button>`:""}
+      ${a.live?montosBtn():""}
       ${a.live?`<button class="btn ghost sm" id="sharePf">↗ Compartir portafolio</button>`:""}
       <button class="btn ghost sm" data-export>⤓ PDF</button>
     </div>
@@ -633,6 +696,16 @@ function almaBadges(a){
   if(isCreator && a.live && a.id===me().id) b.push(`<span class="alma-sigil" title="Primera Alma">◉</span>`);
   if(a.council || a.origin_soul) b.push(`<span class="alma-sigil" title="Alma Fundadora">✦</span>`);
   return b.length?`<span class="alma-sigils">${b.join("")}</span>`:"";
+}
+/* El control de privacidad de las cifras. Mismo icono en sus dos estados —el
+   ojo y el ojo tachado— para que el botón se reconozca antes de leerlo, y
+   `aria-pressed` para que un lector de pantalla diga en cuál está. */
+function montosBtn(){
+  const oculto=ANIMA_DISCREET;
+  return `<button class="btn ghost sm btn-ico" id="discreetBtn" aria-pressed="${oculto?"true":"false"}"
+    title="${oculto?"Los montos están ocultos en pantalla. Tócalo para mostrarlos.":"Oculta los montos en pantalla, sin cambiar ningún dato."}">`
+    + ANIMA_ICON(oculto?"vista_off":"vista","·")
+    + `<span>${oculto?"Montos ocultos":"Ocultar montos"}</span></button>`;
 }
 function linksHTML(a){
   const L=[]; if(a.website)L.push(["Sitio",a.website]); if(a.instagram)L.push(["Instagram",a.instagram.startsWith("http")?a.instagram:"https://instagram.com/"+a.instagram.replace("@","")]);
@@ -658,14 +731,15 @@ function vAlmaResumen(a){
   const agToday=(a.agenda||[]).map((x,i)=>({x,i})).filter(o=>!o.x.date||o.x.date===todayKey);
   const createCTA=(!a.live && Cloud.enabled)?`<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
       <span class="pill gold">Estás viendo una Alma de muestra</span>
-      <p style="margin:8px 0 0">Entra a tu Alma o crea una nueva para construir tu trayectoria real y aparecer en la constelación.</p>
-      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="enterAlmaBtn">Entrar</button><button class="btn secondary" id="createAlmaBtn">✦ Crear mi Alma</button></div></div>`:``;
+      <p style="margin:8px 0 0">Esto es una muestra con datos de ejemplo. Entra con tu correo para trabajar sobre tu Taller real.</p>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="enterAlmaBtn">Entrar</button></div></div>`:``;
   const onboarding=(a.live && a.memories.length===0 && a.projects.length===0)?`<div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
       <span class="pill gold">Bienvenida, Alma nueva</span>
-      <p style="margin:8px 0 0">Empieza por <b>Identidad</b>: pon tu foto y datos. Luego crea tu primer trabajo o memoria. Cada acción da Esencia.</p>
+      <p style="margin:8px 0 0">Empieza por <b>Identidad</b>: tu foto, tu oficio y tu bio. Después crea tu primer proyecto — con eso ya tienes tu primera insignia.</p>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn sm" data-tab="identidad">✎ Completar identidad</button>
-        <button class="btn secondary sm" data-add="proyecto">+ Primer trabajo</button></div></div>`:``;
+        <button class="btn secondary sm" data-add="proyecto">+ Primer proyecto</button>
+        <button class="btn ghost sm" data-view="insignias">Ver mis insignias →</button></div></div>`:``;
   // KPIs operativos — el pulso del taller en una fila.
   const kpi=(val,lbl,style,goTo,cls)=>`<div class="card s2 kpi-sm ${cls||""} card-link" data-go="${goTo||"proyectos"}"><div class="stat"><span class="num" ${style?`style="${style}"`:""}>${val}</span><span class="lbl">${lbl}</span></div></div>`;
   const kpis=cfg.cards.kpis!==false?`
@@ -709,7 +783,7 @@ function vAlmaResumen(a){
   return `${createCTA}${onboarding}${kpis}${proyectos}${flujo}${raiz}${hoy}${tareas}${memoria}${esencia}`;
 }
 function vAlmaIdentidad(a){
-  if(!a.live) return `<div class="card s12"><p class="muted">Entra o crea tu Alma para editar tu identidad. <button class="btn sm" id="createAlmaBtn" style="margin-left:8px">Crear mi Alma</button></p></div>`;
+  if(!a.live) return `<div class="card s12"><p class="muted">Entra a tu Alma para editar tu identidad. <button class="btn sm" id="enterAlmaBtn" style="margin-left:8px">Entrar</button></p></div>`;
   const f=(id,l,v,ph="")=>`<div class="field"><label>${l}</label><input id="${id}" value="${esc(v||"")}" placeholder="${ph}"></div>`;
   return `<div class="card s8">
     <div class="section-title"><h2>Identidad creativa</h2></div>
@@ -1442,7 +1516,7 @@ function vTaller(a){
       ${periodBar("tl",D,H)}
       <div class="tl-today"><span class="tl-today-lbl">${ranged?"En el tramo":"Hoy tienes"}</span>
         <span class="tl-chip"><b>${active.length}</b> Proyectos activos</span>
-        <span class="tl-chip"><b>${quotes.length}</b> ${quotes.length===1?"Cotización":"Cotizaciones"}</span>
+        ${addonActivo("cotizador")?`<span class="tl-chip"><b>${quotes.length}</b> ${quotes.length===1?"Cotización":"Cotizaciones"}</span>`:""}
         <span class="tl-chip"><b>${upcoming.length}</b> Entregas${ranged?"":" próximas"}</span>
         <span class="tl-chip tl-chip-gain"><b>${money(gan)}</b> de ganancia</span>
       </div>
@@ -2050,7 +2124,7 @@ function vBiblioteca(a){
 /* --- Personalizar --- */
 function vConfigBody(a){
   const cfg=getCfg(a);
-  const mod=[["trayectoria","Trayectoria"],["portafolio","Portafolio"],["proyectos","Flujo de trabajo"],["finanzas","Raíz"],["clientes","Vínculos"],["cotizador","Cotizador"],["agenda","Agenda"],["memoria","Memorias"],["biblioteca","Biblioteca"]];
+  const mod=[["trayectoria","Trayectoria"],["portafolio","Portafolio"],["proyectos","Flujo de trabajo"],["finanzas","Raíz"],["clientes","Vínculos"],["cotizador","Centro documental · complemento"],["agenda","Agenda"],["memoria","Memorias"],["biblioteca","Biblioteca"]];
   const card=[["kpis","Indicadores rápidos"],["esencia","Esencia (línea de actividad)"],["graficos","Gráficos"],["hoy","Agenda y tareas de hoy"],["memoria","Última memoria"]];
   const tg=(g,k,l,on)=>`<div class="row"><div class="grow"><b>${l}</b></div><button class="toggle ${on?'on':''}" data-cfg="${g}:${k}"><span></span></button></div>`;
   return `<div class="card s12"><span class="pill gold">Personalización</span>
@@ -2120,7 +2194,57 @@ function vConsola(a){
       <div class="section-title"><h2>Esencia · cuánto suma cada actividad</h2><div class="spacer"></div><button class="btn ghost sm" id="expReload">↻ Actualizar</button></div>
       <p class="muted" style="font-size:12.5px;margin:-4px 0 12px">Define cuánta Esencia suma cada hito registrado en STUDIO. Los cambios aplican a <b>todo el Mundo</b> al instante. Cada hito se cuenta <b>una sola vez por Alma</b> (en cualquier dispositivo, sin repetir). La Esencia no otorga permisos: es la cuenta de la actividad.</p>
       <div id="expBody" class="muted" style="font-size:13px">Cargando la tabla de actividad…</div></div>`;
-  return `<div class="grid">${omni}${groups}${monitor}${exp}${note}${rows}</div>`;
+  const altas=invitacionesCard({
+    ambito:"studio", clan:null, santuario:null, conPlan:true,
+    titulo:"Dar de alta a alguien nuevo",
+    sub:"Escribe su correo y elige su plan. Le llega un enlace que crea su cuenta y la deja lista. No hay otra manera de entrar a ANIMA STUDIO: sin invitación no hay registro."
+  });
+  return `<div class="grid">${omni}${altas}${addonsPanel()}${groups}${monitor}${exp}${note}${rows}</div>`;
+}
+/* ===========================================================
+   COMPLEMENTOS — la bandeja de soporte
+   -----------------------------------------------------------
+   Quién pidió qué y qué está encendido. El orden lo pone la
+   base: primero lo solicitado, que es lo que espera respuesta.
+   =========================================================== */
+function addonsPanel(){
+  const filas=state.addonsConsola;
+  const cuerpo = filas==null
+    ? `<p class="muted" style="font-size:13px">Cargando complementos…</p>`
+    : !filas.length
+      ? `<p class="muted" style="font-size:13px">Nadie ha pedido un complemento todavía.</p>`
+      : filas.map(f=>{
+          const c=ADDONS[f.addon]||{t:f.addon,ico:"complemento"};
+          const on=f.estado==="activo";
+          const cuando=f.solicitado_at?timeAgo(f.solicitado_at):"";
+          return `<div class="row addon-row">
+            <span class="addon-ico">${ANIMA_ICON(c.ico,"✦")}</span>
+            <div class="grow"><b>${esc(f.alma_nombre||"Alma")}</b> <small class="muted">· ${esc(c.t)}</small><br>
+              <small class="muted">${on?"Activo":(f.estado==="solicitado"?("Solicitado"+(cuando?" hace "+esc(cuando):"")):"Apagado")}${f.nota?" · "+esc(f.nota):""}</small></div>
+            <button class="btn sm ${on?'ghost':'gold'}" data-addontoggle="${esc(f.alma_id)}|${esc(f.addon)}|${on?'0':'1'}">${on?"Apagar":"Encender"}</button>
+          </div>`;
+        }).join("");
+  return `<div class="card s12" id="addonsPanel">
+    <div class="section-title"><h2>Complementos</h2><div class="spacer"></div>
+      <button class="btn ghost sm" id="addonsReload">↻ Actualizar</button></div>
+    <p class="muted" style="font-size:12.5px;margin:-4px 0 12px">Lo que cada Alma pidió y lo que está encendido. Encender un complemento es un acuerdo comercial: esto solo ejecuta lo acordado.</p>
+    ${cuerpo}</div>`;
+}
+async function loadAddonsConsola(){
+  if(!(isCreator && !state.viewAs)) return;
+  try{ state.addonsConsola=await Cloud.addonsPendientes(); }catch(e){ state.addonsConsola=[]; }
+  if(state.view==="consola") renderView();
+}
+async function toggleAddon(almaId, addon, encender){
+  try{
+    await Cloud.activarAddon(almaId, addon, encender);
+    try{ Cloud.log("addon_"+(encender?"activado":"apagado"), { alma:almaId, addon }); }catch(e){}
+    await loadAddonsConsola();
+    /* Si soporte se lo encendió a sí mismo, que se note sin recargar. */
+    if(me().almaId===almaId) await loadAddons(almaId);
+    renderView();
+    animaToast(encender?"✦ Complemento encendido.":"Complemento apagado.");
+  }catch(e){ alert("No se pudo cambiar: "+(e.message||e)); }
 }
 function creatorGroupsPanel(almas){
   const sort=state.creatorGroupSort||"name";
@@ -2454,7 +2578,62 @@ function readQuoteForm(){
   const lg=el("q_logo"); if(lg) quoteDraft.showLogo=lg.checked;
   if(el("qi_desc_0")){ const items=[]; let i=0; while(el("qi_desc_"+i)){ items.push({desc:g("qi_desc_"+i)||"",qty:+g("qi_qty_"+i)||0,price:+g("qi_price_"+i)||0,unit:g("qi_unit_"+i)||"unidad"}); i++; } quoteDraft.items=items; }
 }
-function vCotizador(a){ return state.cotMode==="editor" ? vCotEditor(a) : vCotGaleria(a); }
+function vCotizador(a){
+  if(!addonActivo("cotizador")) return vAddon("cotizador");
+  return state.cotMode==="editor" ? vCotEditor(a) : vCotGaleria(a);
+}
+
+/* ===========================================================
+   FICHA DE UN COMPLEMENTO
+   -----------------------------------------------------------
+   Lo que ve quien todavía no lo tiene. No es un muro: cuenta qué
+   hace, qué incluye y deja pedirlo en un toque. Pedirlo no lo
+   enciende —eso lo hace soporte— y la pantalla lo dice tal cual,
+   porque prometer una activación automática que no existe es la
+   manera más rápida de que alguien vuelva enfadado.
+   =========================================================== */
+function vAddon(code){
+  const c=ADDONS[code]; if(!c) return `<div class="grid"><div class="card s12"><p class="muted">Este complemento no existe.</p></div></div>`;
+  const a=me();
+  const estado=addonEstado(code);
+  const pedido=estado==="solicitado";
+  const fila=(state.addons||[]).find(x=>x.addon===code);
+  const cuando=(fila&&fila.solicitado_at)?new Date(fila.solicitado_at).toLocaleDateString("es-CL",{day:"numeric",month:"long"}):"";
+
+  const accion = !a.live
+    ? `<p class="muted" style="font-size:13px">Entra a tu Alma en la nube para pedirlo.</p>`
+    : pedido
+      ? `<div class="addon-estado"><span class="pill gold">Solicitado${cuando?" · "+esc(cuando):""}</span>
+          <p class="muted" style="font-size:12.5px;margin:8px 0 0">Tu solicitud está con soporte. Te escribimos al correo de tu Alma en cuanto quede encendido.</p></div>`
+      : `<button class="btn gold" data-addonask="${esc(code)}">Pedir activación</button>
+         <p class="muted" style="font-size:12px;margin:8px 0 0">Lo activa soporte, no un pago automático: primero conversamos cómo lo vas a usar.</p>`;
+
+  return `<div class="grid">
+    <div class="card s12 addon-hero">
+      <span class="pill"><span class="addon-ico">${ANIMA_ICON("complemento","✦")}</span> Complemento</span>
+      <h2 style="font-size:26px;letter-spacing:-.04em;margin:12px 0 6px">${esc(c.t)}</h2>
+      <p class="muted" style="max-width:640px;font-size:14px">${esc(c.resumen)}</p>
+    </div>
+    <div class="card s7"><div class="section-title"><h2 style="font-size:15px">Qué incluye</h2></div>
+      ${c.incluye.map(x=>`<div class="row addon-row"><span class="addon-tick">${ANIMA_ICON("documento","·")}</span><div class="grow">${esc(x)}</div></div>`).join("")}</div>
+    <div class="card s5"><div class="section-title"><h2 style="font-size:15px">Cómo se activa</h2></div>
+      <p class="muted" style="font-size:13px;line-height:1.65">Los complementos no vienen con el plan y no se encienden solos. Lo pides desde aquí, soporte lo revisa y lo activa para tu Alma.</p>
+      <div id="addonMsg" class="muted" style="font-size:12.5px;min-height:16px;margin-bottom:8px"></div>
+      ${accion}</div>
+  </div>`;
+}
+async function pedirAddon(code){
+  const a=me(); const msg=document.getElementById("addonMsg");
+  if(!a.live){ if(msg) msg.textContent="Entra a tu Alma para pedirlo."; return; }
+  if(msg) msg.textContent="Enviando tu solicitud…";
+  try{
+    await Cloud.solicitarAddon(code, null);
+    await loadAddons(a.almaId);
+    try{ Cloud.log("addon_solicitado",{ addon:code }); }catch(e){}
+    renderView();
+    animaToast("✦ Solicitud enviada. Soporte te responde al correo de tu Alma.");
+  }catch(e){ if(msg) msg.textContent="No se pudo enviar: "+(e.message||e); }
+}
 
 function vCotGaleria(a){
   const saved = a.live
@@ -3423,7 +3602,7 @@ async function sendComment(postId){
     if(post && post.author_alma_id!==a.almaId){
       try{
         const nick=(a.name||"Alma").split(" ")[0];
-        Cloud.awardBadge("guardian").then(g=>{ if(g) state.cloudBadges=null; });
+        state.cloudBadges=null;
         Cloud.log("comentario", { post:postId });
         Cloud.emitEcho("senal", "✦ "+nick+" envió una señal").catch(()=>{});
       }catch(e){}
@@ -3461,31 +3640,134 @@ function vCronologia(a){
 async function loadTimeline(){ if(!Cloud.enabled) return; try{ state.cloudTimeline=await Cloud.timeline(); if(state.view==="cronologia") renderView(); }catch(e){ state.cloudTimeline=[]; } }
 
 /* ===========================================================
-   INSIGNIAS SECRETAS (Alpha 2026) — "No se anuncian. Se descubren."
+   INSIGNIAS DEL OFICIO
+   -----------------------------------------------------------
+   Antes eran secretas: "no se anuncian, se descubren". En un
+   mundo eso es una invitación a explorar; en una herramienta de
+   trabajo es una pantalla que no se puede leer. Quien entra a
+   ANIMA STUDIO a trabajar no está explorando.
+   Ahora marcan la trayectoria profesional —el primer proyecto,
+   los diez proyectos, la primera entrega, el primer vínculo— y
+   cada una lleva su avance a la vista. Quien las otorga es la
+   base, contando (migración 0134); aquí solo se dibuja.
    =========================================================== */
+/* Lo que vale cada métrica del catálogo, leído del Taller que ya está en
+   memoria. Es la misma cuenta que hace `sincronizar_insignias()` en la nube;
+   aquí sirve para dibujar el avance sin pedir otra vuelta a la base. */
+const INSIGNIA_METRICAS = {
+  proyectos:     a => (a.projects||[]).length,
+  entregas:      a => (a.projects||[]).filter(p=>["Entregado","Cerrado","Terminado"].includes(p.st)).length,
+  vinculos:      a => (a.clients||[]).length,
+  obras:         a => (a.portfolio||[]).length,
+  documentos:    a => (a.live ? (state.cloudQuotes||[]) : loadQuotes(a)).length,
+  movimientos:   a => rootIncome(a).length + (((a.finance||{}).expense)||[]).length,
+  tareas_hechas: a => (a.tasks||[]).filter(t=>["Hecho","Finalizada","Completada","Terminada"].includes(t.st)).length,
+  hitos:         a => (a.trajectory||[]).length,
+  dias:          a => a.created_at ? Math.max(0,Math.floor((Date.now()-new Date(a.created_at).getTime())/86400000)) : 0,
+  equipo:        a => a.clan ? 1 : 0,
+  /* El Núcleo completo son cuatro cosas: foto, oficio, ubicación y bio. Las
+     cuatro, o no está — media ficha no es una ficha. */
+  nucleo:        a => (a.name && (a.discipline||a.role) && (a.city||a.country) && a.bio && (a.photo||a.avatar_url)) ? 1 : 0
+};
+function insigniaAvance(a,b){
+  const f=INSIGNIA_METRICAS[b.metric];
+  if(!f || !b.threshold) return null;
+  const n=f(a)||0, meta=b.threshold;
+  return { n:Math.min(n,meta), meta, pct:Math.max(0,Math.min(100,Math.round(n/meta*100))) };
+}
+/* El orden de las familias en pantalla. Lo que no esté aquí va al final, por si
+   mañana se suma una categoría y nadie se acuerda de esta línea. */
+const INSIGNIA_FAMILIAS = ["Proyectos","Vínculos","Portafolio","Documentos","Gestión","Oficio","Equipo","Reconocimiento"];
+function famOrden(c){ const i=INSIGNIA_FAMILIAS.indexOf(c); return i<0?99:i; }
+
 function vInsignias(a){
-  if(!a.live){ return `<div class="grid"><div class="card s12"><p class="muted">Entra a tu Alma en la nube para descubrir tus Insignias.</p></div></div>`; }
-  if(state.cloudBadges==null){ loadBadges(); return `<div class="grid"><div class="card s12"><p class="muted">Buscando tus insignias…</p></div></div>`; }
-  const cat = state.badgeCatalog||[]; const earned = state.cloudBadges||[];
-  const earnedSet = new Set(earned.map(b=>b.code));
-  const earnedAt = c => { const r=earned.find(b=>b.code===c); return r?new Date(r.earned_at).toLocaleDateString("es-CL",{day:"numeric",month:"long"}):""; };
-  // Orden: descubiertas primero; el resto, misterio.
-  const cards = cat.slice().sort((x,y)=> (earnedSet.has(y.code)?1:0)-(earnedSet.has(x.code)?1:0)).map(b=>{
-    const has=earnedSet.has(b.code);
-    if(has) return `<div class="badge-card on"><span class="badge-glyph">${esc(b.glyph||"✦")}</span>
-        <b>${esc(b.name)}</b><small class="muted">${esc(b.description||"")}</small><small class="badge-when">Descubierta · ${esc(earnedAt(b.code))}</small></div>`;
-    if(b.secret) return `<div class="badge-card off secret"><span class="badge-glyph">✦</span><b>Insignia secreta</b><small class="muted">Sigue creando para descubrirla.</small></div>`;
-    return `<div class="badge-card off"><span class="badge-glyph">${esc(b.glyph||"✦")}</span><b>${esc(b.name)}</b><small class="muted">${esc(b.description||"")}</small></div>`;
+  if(!a.live){
+    return `<div class="grid"><div class="card s12">
+      <span class="pill">Insignias</span>
+      <h2 style="letter-spacing:-.03em;margin:8px 0 4px">Los hitos de tu oficio</h2>
+      <p class="muted" style="max-width:620px">Se ganan trabajando: el primer proyecto, los diez proyectos, el primer vínculo. Entra a tu Alma en la nube para llevar la cuenta.</p>
+    </div></div>`;
+  }
+  if(state.cloudBadges==null){ loadBadges(); return `<div class="grid"><div class="card s12"><p class="muted">Contando tus hitos…</p></div></div>`; }
+
+  const cat=(state.badgeCatalog||[]), ganadas=(state.cloudBadges||[]);
+  const tengo=new Set(ganadas.map(b=>b.code));
+  const cuando=c=>{ const r=ganadas.find(b=>b.code===c); return r?new Date(r.earned_at).toLocaleDateString("es-CL",{day:"numeric",month:"long",year:"numeric"}):""; };
+
+  const vigentes=cat.filter(b=>b.active!==false);
+  const anteriores=cat.filter(b=>b.active===false && tengo.has(b.code));
+  const logradas=vigentes.filter(b=>tengo.has(b.code)).length;
+
+  const tarjeta=b=>{
+    const has=tengo.has(b.code);
+    const av=has?null:insigniaAvance(a,b);
+    const pie = has
+      ? `<small class="badge-when">Lograda · ${esc(cuando(b.code))}</small>`
+      : av
+        ? `<div class="badge-prog"><div class="badge-prog-bar"><span style="width:${av.pct}%"></span></div>
+             <small class="muted">${av.n} de ${av.meta}</small></div>`
+        : `<small class="muted">Pendiente</small>`;
+    return `<div class="badge-card ${has?'on':'off'}">
+      <span class="badge-glyph">${esc(b.glyph||"✦")}</span>
+      <b>${esc(b.name)}</b>
+      <small class="muted">${esc(b.description||"")}</small>
+      ${pie}</div>`;
+  };
+
+  const familias={};
+  vigentes.forEach(b=>{ const c=b.category||"Oficio"; (familias[c]=familias[c]||[]).push(b); });
+  const bloques=Object.keys(familias).sort((x,y)=>famOrden(x)-famOrden(y)).map(c=>{
+    const lista=familias[c].slice().sort((x,y)=>(x.sort||500)-(y.sort||500));
+    const n=lista.filter(b=>tengo.has(b.code)).length;
+    return `<div class="card s12">
+      <div class="section-title"><h2 style="font-size:16px">${esc(c)}</h2><div class="spacer"></div>
+        <span class="pill ${n===lista.length?'gold':''}">${n} de ${lista.length}</span></div>
+      <div class="badge-grid">${lista.map(tarjeta).join("")}</div></div>`;
   }).join("");
-  return `<div class="grid"><div class="card s12">
-    <div class="section-title"><h2>Tus Insignias</h2><div class="spacer"></div><span class="pill ${earned.length?'gold':''}">${earned.length} de ${cat.length}</span></div>
-    <p class="muted" style="margin:-4px 0 14px;font-size:13px">No se anuncian todas. Algunas esperan a ser descubiertas.</p>
-    <div class="badge-grid">${cards}</div></div></div>`;
+
+  const historico = anteriores.length
+    ? `<div class="card s12"><div class="section-title"><h2 style="font-size:15px">Insignias anteriores</h2></div>
+        <p class="muted" style="font-size:12.5px;margin:-4px 0 10px">De la etapa Alpha de ANIMA. Ya no se otorgan, pero son tuyas.</p>
+        <div class="badge-grid">${anteriores.map(b=>`<div class="badge-card on legacy"><span class="badge-glyph">${esc(b.glyph||"✦")}</span>
+          <b>${esc(b.name)}</b><small class="muted">${esc(b.description||"")}</small>
+          <small class="badge-when">Lograda · ${esc(cuando(b.code))}</small></div>`).join("")}</div></div>`
+    : "";
+
+  return `<div class="grid">
+    <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
+      <span class="pill gold">${logradas} de ${vigentes.length}</span>
+      <h2 style="font-size:24px;letter-spacing:-.04em;margin:10px 0 4px">Los hitos de tu oficio</h2>
+      <p class="muted" style="max-width:640px">No se regalan ni se compran: se ganan trabajando. Cada una lleva su cuenta a la vista, para que sepas cuánto falta.</p>
+    </div>
+    ${bloques}${historico}
+  </div>`;
 }
 async function loadBadges(){
   if(!Cloud.enabled){ state.cloudBadges=[]; return; }
-  try{ const r=await Promise.all([Cloud.badgeCatalog(),Cloud.myBadges()]); state.badgeCatalog=r[0]; state.cloudBadges=r[1]; if(state.view==="insignias"||state.view==="estadisticas") renderView(); }
+  try{
+    /* Primero se otorgan las alcanzadas y después se leen: al revés, una
+       insignia recién ganada tardaría una visita en aparecer. */
+    await Cloud.sincronizarInsignias();
+    const r=await Promise.all([Cloud.badgeCatalog(),Cloud.myBadges()]);
+    state.badgeCatalog=r[0]; state.cloudBadges=r[1];
+    if(state.view==="insignias"||state.view==="estadisticas") renderView();
+  }
   catch(e){ state.cloudBadges=[]; }
+}
+/* Después de registrar algo, revisa si eso desbloqueó una insignia y lo dice
+   una sola vez. Silencioso si falla: nadie pierde su trabajo porque una
+   felicitación no llegue. */
+async function revisarInsignias(){
+  if(!Cloud.enabled || !me().live) return;
+  try{
+    const nuevas=await Cloud.sincronizarInsignias();
+    if(!nuevas || !nuevas.length) return;
+    state.cloudBadges=null; state.cloudTimeline=null;
+    const cat=state.badgeCatalog||[];
+    const nombre=c=>{ const b=cat.find(x=>x.code===c); return b?b.name:c; };
+    animaToast("✦ Nueva insignia: "+nuevas.map(nombre).join(" · "));
+    if(state.view==="insignias"||state.view==="estadisticas") loadBadges();
+  }catch(e){}
 }
 
 /* ===========================================================
@@ -3512,7 +3794,7 @@ function vEstadisticas(a){
       <h2 style="font-size:24px;letter-spacing:-.04em;margin:10px 0 4px">La huella de tu Alma</h2>
       <div class="muted" style="font-size:12.5px">Todo lo que registras aquí suma Esencia${days?` · ${days} día${days===1?"":"s"} en ANIMA`:""}</div>
     </div>
-    ${stat((a.sparks||0).toLocaleString("es-CL"),"Chispas","var(--gold-deep)")}
+    ${MUNDO_ACTIVO?stat((a.sparks||0).toLocaleString("es-CL"),"Chispas","var(--gold-deep)"):stat(projT,"Proyectos")}
     ${stat(works,"Obras")}
     ${stat(projA+"/"+projT,"Proyectos activos")}
     ${stat(recuerdos,"Recuerdos")}
@@ -3524,7 +3806,7 @@ function vEstadisticas(a){
     <div class="card s5"><div class="section-title"><h2>Tu pulso</h2></div>
       <p class="muted" style="font-size:13px;line-height:1.6">Cada obra, memoria e hito que registras suma Esencia: es la cuenta de tu actividad en ANIMA STUDIO, no un rango. Lo que abre ventanas es tu plan.</p>
       ${a.live?"":`<p class="muted" style="font-size:12px">Entra a tu Alma en la nube para contar tus insignias y recuerdos.</p>`}</div>
-    ${a.live?vinculosPanel(a):""}
+    ${(a.live && MUNDO_ACTIVO)?vinculosPanel(a):""}
   </div>`;
 }
 /* Panel de Vínculos del Alma: a quién vincula, quién la vincula y sus Constelaciones. */
@@ -3715,7 +3997,7 @@ async function syncTeam(clan){
       reminders: reminders.map(r=>({id:r.id,title:r.title,due:r.due_at,assignee:r.assignee,done:!!r.done,_cloud:true})),
       events: events.map(e=>({id:e.id,title:e.title,date:e.at_date,time:e.at_time,kind:e.kind,notes:e.notes,_cloud:true})),
       projects: projects.map(p=>({id:p.id,title:p.title,assignee:p.assignee,status:p.status||"Pendiente",pct:p.pct||0,due:p.due_at,notes:p.notes,_cloud:true})),
-      invites: prev.invites||null, _cloud:true
+      _cloud:true
     };
     if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(state.view)) renderView();
   }catch(e){ /* tablas aún no creadas → se mantiene lo local */ }
@@ -3814,13 +4096,165 @@ async function delReminder(id){
 }
 
 function fmtDay(d){ if(!d) return "—"; try{ return new Date(d+"T00:00:00").toLocaleDateString("es-CL",{day:"2-digit",month:"short"}); }catch(e){ return d; } }
-function joinCodeBox(){ return `<div class="join-box"><input id="joinCode" placeholder="Código de invitación (ej: CLAN-AB12)"><button class="btn sm" id="joinBtn">Unirme</button></div>`; }
+/* ===========================================================
+   INVITACIONES POR CORREO
+   -----------------------------------------------------------
+   Se acabaron los códigos. Un código no sabe a quién invita: si
+   se filtra, entra quien lo pegue, con el rol que llevaba dentro.
+   Y después de pegarlo hay que crear la cuenta igual.
+   Ahora se escribe una dirección de correo y sale un enlace hacia
+   esa bandeja. Quien no tenga el correo, no tiene nada; y el
+   enlace no solo abre la puerta: crea la cuenta.
+   Lo que sí queda a la vista es el enlace, para poder mandarlo a
+   mano cuando el correo tarda o cae en no deseado. Que el sistema
+   falle no puede significar que alguien se quede fuera.
+   =========================================================== */
+const INVITACION_ESTADOS = {
+  "sin-enviar":{ t:"Sin enviar", cls:"" },
+  "enviada":   { t:"Enviada",    cls:"gold" },
+  "aceptada":  { t:"Aceptada",   cls:"ok" },
+  "vencida":   { t:"Vencida",    cls:"" },
+  "anulada":   { t:"Anulada",    cls:"" }
+};
+/* El enlace de una invitación, en el mismo sitio desde el que se está
+   mirando: en pruebas locales esto vale igual que en producción. */
+function invitacionURL(token){
+  const base=location.origin+location.pathname.replace(/[^/]*$/,"");
+  return base+"studio.html?invitacion="+encodeURIComponent(token);
+}
+function invitacionesCache(){ return state.invitaciones||[]; }
+/* `ambito` recuerda qué lista está cargada. Sin esa marca, la Consola entra en
+   bucle: cargar vuelve a dibujar, y dibujar vuelve a cargar. */
+async function loadInvitaciones(clan, santuario, forzar){
+  if(!(Cloud.enabled && me().live)) return;
+  if(!clan && !santuario && !(isCreator && !state.viewAs)) return;
+  const ambito=(clan||"")+"|"+(santuario||"");
+  if(!forzar && state.invAmbito===ambito) return;
+  state.invAmbito=ambito;
+  try{
+    state.invitaciones=await Cloud.invitaciones(clan||null, santuario||null);
+    if(["clanpanel","sant_almas","consola"].includes(state.view)) renderView();
+  }catch(e){ state.invitaciones=[]; }
+}
+/* La tarjeta: escribir un correo, elegir el rol, invitar. Es la misma en el
+   Clan, en el Santuario y en la Consola — cambia el destino, no el gesto. */
+function invitacionesCard(opts){
+  const { clan, santuario, ambito, titulo, sub, conPlan } = opts;
+  const lista=(invitacionesCache()||[]).filter(i=>
+    (clan ? i.clan===clan : true) && (santuario ? i.santuario===santuario : true));
+  const roles=ROLES.filter(r=>r[0]!=="ADMIN");
+  const fila=i=>{
+    const est=INVITACION_ESTADOS[i.estado]||INVITACION_ESTADOS["sin-enviar"];
+    const viva=i.estado==="sin-enviar"||i.estado==="enviada";
+    const destino=i.santuario||i.clan||"ANIMA STUDIO";
+    return `<div class="row inv-row">
+      <span class="inv-ico">${ANIMA_ICON("correo","✉")}</span>
+      <div class="grow"><b>${esc(i.email)}</b><br>
+        <small class="muted">${esc(destino)} · ${esc((roles.find(r=>r[0]===i.team_role)||["",i.team_role||"Alma"])[1])}${i.sent_at?" · enviada hace "+esc(timeAgo(i.sent_at)):""}</small></div>
+      <span class="pill ${est.cls}">${esc(est.t)}</span>
+      ${viva?`<button class="btn ghost sm" data-invresend="${esc(i.id)}">Reenviar</button>
+              <button class="ia danger" data-invdel="${esc(i.id)}" title="Anular">✕</button>`:""}
+    </div>`;
+  };
+  const planSel = conPlan
+    ? `<label class="fld"><span>Plan</span><select id="invPlan">${PLAN_TIERS.map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></label>`
+    : "";
+  return `<div class="card s12 inv-card" data-invscope="${esc(ambito)}|${esc(clan||"")}|${esc(santuario||"")}">
+    <div class="section-title"><h2 style="font-size:16px">${esc(titulo)}</h2><div class="spacer"></div>
+      <span class="pill">${lista.filter(i=>i.estado==="enviada"||i.estado==="sin-enviar").length} pendiente(s)</span></div>
+    <p class="muted" style="font-size:12.5px;margin:-4px 0 12px">${esc(sub)}</p>
+    <div class="inv-form">
+      <label class="fld" style="flex:2;min-width:210px"><span>Correo</span>
+        <input id="invEmail" type="email" placeholder="nombre@ejemplo.com" autocomplete="off"></label>
+      <label class="fld"><span>Rol</span>
+        <select id="invRole">${roles.map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></label>
+      ${planSel}
+      <button class="btn sm gold" id="invSend">Invitar</button>
+    </div>
+    <div id="invMsg" class="muted" style="font-size:12.5px;min-height:16px;margin:8px 0 4px"></div>
+    ${lista.length?lista.map(fila).join(""):`<p class="muted" style="font-size:13px">Todavía no invitaste a nadie.</p>`}
+  </div>`;
+}
+/* Crear la invitación y mandar el correo son dos pasos, y se hacen en ese
+   orden a propósito: si el correo falla, la invitación ya existe y el enlace
+   se puede copiar. Al revés, un fallo de correo dejaría a la persona sin
+   invitación y sin saberlo. */
+/* De qué destino habla la tarjeta que se está mirando: el Clan, el Santuario o
+   la plataforma entera. Se lee del DOM y no de `me()`, porque soporte también
+   tiene Clan y su bandeja no es la del Clan. */
+function invScopeActual(){
+  const card=document.querySelector(".inv-card");
+  const [ambito, clan, santuario]=((card&&card.dataset.invscope)||"clan||").split("|");
+  return { ambito:ambito||"clan", clan:clan||null, santuario:santuario||null };
+}
+async function enviarInvitacion(){
+  const card=document.querySelector(".inv-card"); if(!card) return;
+  const { ambito, clan, santuario }=invScopeActual();
+  const msg=document.getElementById("invMsg");
+  const email=((document.getElementById("invEmail")||{}).value||"").trim();
+  const role=((document.getElementById("invRole")||{}).value||"ALMA");
+  const plan=((document.getElementById("invPlan")||{}).value||null);
+  if(!email || email.indexOf("@")<1){ if(msg) msg.textContent="Escribe un correo válido."; return; }
+  if(msg) msg.textContent="Creando la invitación…";
+  let inv=null;
+  try{
+    inv=await Cloud.crearInvitacion({ email, ambito, clan:clan||null, santuario:santuario||null, role, plan });
+  }catch(e){ if(msg) msg.textContent=(e.message||"No se pudo crear la invitación."); return; }
+
+  const enlace=invitacionURL(inv.token);
+  if(msg) msg.textContent="Mandando el correo…";
+  try{
+    const r=await Cloud.enviarInvitacion(inv.id);
+    if(r && r.enviado) msg.innerHTML=`✦ Invitación enviada a <b>${esc(email)}</b>.`;
+    else if(r && r.motivo==="ya-tiene-cuenta") msg.innerHTML=`Esa persona ya tiene Alma en ANIMA. Al entrar con <b>${esc(email)}</b>, su lugar la estará esperando.`;
+    else if(r && r.motivo==="recien-enviado") msg.textContent="Ya se mandó un correo hace un momento. Espera diez minutos antes de reenviarlo.";
+    else msg.innerHTML=`Invitación creada. ${enlaceCopiable(enlace)}`;
+  }catch(e){
+    /* La función edge puede no estar desplegada todavía. La invitación existe
+       igual, así que lo honesto es dar el enlace y decir qué pasó. */
+    msg.innerHTML=`Invitación creada, pero el correo no salió (${esc(e.message||"envío no disponible")}). ${enlaceCopiable(enlace)}`;
+  }
+  const el=document.getElementById("invEmail"); if(el) el.value="";
+  await loadInvitaciones(clan||null, santuario||null, true);
+}
+function enlaceCopiable(enlace){
+  return `Compártelo a mano: <button class="btn ghost sm" data-invcopy="${esc(enlace)}">Copiar enlace</button>`;
+}
+function copiarEnlace(enlace){
+  if(navigator.clipboard){ navigator.clipboard.writeText(enlace).then(()=>animaToast("✦ Enlace copiado."), ()=>prompt("Copia el enlace:",enlace)); }
+  else prompt("Copia el enlace:",enlace);
+}
+async function reenviarInvitacion(id){
+  const msg=document.getElementById("invMsg"); if(msg) msg.textContent="Reenviando…";
+  try{
+    const r=await Cloud.enviarInvitacion(id);
+    if(msg) msg.textContent = (r&&r.enviado) ? "✦ Correo reenviado."
+      : (r&&r.motivo==="recien-enviado") ? "Ya se mandó hace menos de diez minutos."
+      : (r&&r.motivo==="ya-tiene-cuenta") ? "Esa persona ya tiene Alma: al entrar, su lugar la espera."
+      : "No hizo falta reenviarlo.";
+  }catch(e){ if(msg) msg.textContent="No se pudo reenviar: "+(e.message||e); }
+  const sc=invScopeActual(); await loadInvitaciones(sc.clan, sc.santuario, true);
+}
+async function anularInvitacion(id){
+  if(!confirm("¿Anular esta invitación? El enlace dejará de funcionar.")) return;
+  try{ await Cloud.anularInvitacion(id); }catch(e){ alert("No se pudo anular: "+(e.message||e)); }
+  const sc=invScopeActual(); await loadInvitaciones(sc.clan, sc.santuario, true);
+}
+/* Lo que ve quien todavía no pertenece a ningún equipo. Ya no hay una casilla
+   donde pegar nada: si te invitaron, el correo ya salió. */
+function invitacionEsperaBox(){
+  return `<div class="inv-espera">
+    <span class="inv-ico">${ANIMA_ICON("correo","✉")}</span>
+    <div><b>¿Te invitaron?</b><br>
+    <small class="muted">Las invitaciones llegan por correo. Abre el enlace que te mandaron y tu lugar quedará listo. Si ya tienes Alma, entra con el mismo correo de la invitación y se aplicará sola.</small></div>
+  </div>`;
+}
 function clanEmpty(title, sub){
   return `<div class="grid"><div class="card s12">
     <span class="pill gold">${esc(title)}</span>
     <h2 style="letter-spacing:-.03em;margin:8px 0">Aún no perteneces a un Clan</h2>
-    <p class="muted" style="max-width:620px">${esc(sub)} Únete con un código de tu Líder, o activa el plan <b>Clan</b> en <b>Mi Plan</b>.</p>
-    <div style="margin-top:12px">${joinCodeBox()}</div>
+    <p class="muted" style="max-width:620px">${esc(sub)} Se entra a un Clan por invitación de su Líder, o activando el plan <b>Clan</b> en <b>Mi Plan</b>.</p>
+    <div style="margin-top:12px">${invitacionEsperaBox()}</div>
     <div style="margin-top:10px"><button class="btn secondary sm" data-view="miplan">Ir a Mi Plan →</button></div>
   </div></div>`;
 }
@@ -3893,18 +4327,16 @@ function vClanPanel(a){
   const panel=`<div class="card s7" id="clanPanelCard"><div class="section-title"><h2>Panel de Almas</h2><div class="spacer"></div><span class="pill">${members.length}</span></div>
       <div class="field" style="margin-bottom:10px"><input id="clanSearch" placeholder="Buscar Alma…" value="${esc(state.clanSearch||"")}"></div>
       ${roster}
-      ${isAdmin?`<div class="clan-add"><button class="btn secondary sm" id="clanAddBtn">+ Sumar un Alma</button><span class="muted" style="font-size:11.5px">o comparte un código de invitación</span></div>`:""}</div>`;
+      ${isAdmin?`<div class="clan-add"><button class="btn secondary sm" id="clanAddBtn">+ Sumar un Alma</button><span class="muted" style="font-size:11.5px">o invita por correo, más abajo</span></div>`:""}</div>`;
   const legend=`<div class="card s5"><div class="section-title"><h2 style="font-size:15px">Roles</h2></div>
       ${ROLES.map(([k])=>`<div class="row"><span class="grow">${roleBadge(k)} <small class="muted">${ROLE_DESC[k]}</small></span><span class="chip">${members.filter(m=>almaRole(m)===k).length}</span></div>`).join("")}
       <p class="muted" style="font-size:12px;margin-top:8px">${lead?'Cambia el rol de cada Alma con el selector.':'Los roles definen quién organiza al Clan.'}</p></div>`;
-  const inv=(teamCache(clan).invites)||[];
   const invitesCard = lead
-    ? `<div class="card s12"><div class="section-title"><h2>Códigos de invitación</h2><div class="spacer"></div>
-        <select id="inviteRole" class="role-sel">${ROLES.filter(r=>r[0]!=='ADMIN').map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select>
-        <button class="btn sm gold" id="genInvite">+ Generar código</button></div>
-        <p class="muted" style="font-size:12.5px">Comparte un código para que un Alma se una a <b>${esc(clan)}</b> con el rol elegido. Lo ingresa en su <b>Mi Plan</b>.</p>
-        ${inv.length?inv.map(c=>`<div class="row"><code class="invite-code">${esc(c.code)}</code><div class="grow"><small class="muted">Rol al unirse: <b>${esc((ROLES.find(r=>r[0]===c.role)||['',c.role])[1])}</b></small></div>
-          <button class="btn ghost sm" data-copycode="${esc(c.code)}">Copiar</button><button class="ia danger" data-delinvite="${c.id}">✕</button></div>`).join(""):`<p class="muted">Aún no generaste códigos.</p>`}</div>`
+    ? invitacionesCard({
+        ambito:"clan", clan, santuario:null,
+        titulo:"Invitaciones",
+        sub:`Escribe el correo de quien quieres sumar a ${clan}. Le llega un enlace que crea su cuenta y la deja dentro del Clan, con el rol que elijas. Nadie entra sin ese correo.`
+      })
     : "";
   // Abandonar el Clan: derecho de toda Alma (la RPC transfiere o disuelve si es Admin).
   const leaveBtn=`<button class="btn ghost sm" id="clanLeaveBtn" style="color:var(--danger);border-color:var(--danger)">Abandonar Clan</button>`;
@@ -3942,12 +4374,10 @@ function vClanCreate(a){
         <p class="muted" style="font-size:12.5px;margin:0">Fundar una constelación necesita un Alma viva en la nube. Entra o crea la tuya y podrás reunir a las demás.</p>
       </div></div>`;
   return `<div class="grid">
-    ${clanHeader(a,null,"Clan","Crea tu Clan o únete a uno por código.")}
+    ${clanHeader(a,null,"Clan","Funda tu Clan, o espera la invitación de quien lo lidera.")}
     ${create}
-    <div class="card s5"><div class="section-title"><h2 style="font-size:15px">Unirme por código</h2></div>
-      <p class="muted" style="font-size:13px">¿Te invitaron? Ingresa el código del Clan.</p>
-      <div class="field"><input id="joinCode" placeholder="CLAN-XXXX"></div>
-      <button class="btn" id="joinBtn">Unirme al Clan</button></div>
+    <div class="card s5"><div class="section-title"><h2 style="font-size:15px">Entrar a un Clan</h2></div>
+      ${invitacionEsperaBox()}</div>
   </div>`;
 }
 /* ===========================================================
@@ -4078,6 +4508,7 @@ function vMiPlan(a){
     : `<p class="muted" style="max-width:640px">Tu Forma define cómo habitas ANIMA. Toda Alma nace como <b>Alma</b>. Cuando quieras crear junto a otras, puedes <b>fundar tu propio Clan</b> —y, con él, un <b>Santuario</b>.</p>`;
   return `<div class="grid">
     ${barras}
+    ${complementosCard(a)}
     <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
       <span class="pill gold">Forma</span>
       <h2 style="font-size:26px;letter-spacing:-.04em;margin:10px 0 4px">Cómo habitas ANIMA</h2>
@@ -4087,6 +4518,30 @@ function vMiPlan(a){
     ${["ALMA","CLAN","SANTUARIO"].map(card).join("")}
   </div>`;
 }
+/* Los complementos del Alma y en qué estado está cada uno. Vive en Mi Plan
+   porque es ahí donde se mira qué se tiene contratado, no en una tienda
+   aparte: un complemento es parte del plan, aunque se pague distinto. */
+function complementosCard(a){
+  const codes=Object.keys(ADDONS); if(!codes.length) return "";
+  const fila=code=>{
+    const c=ADDONS[code], estado=addonEstado(code), on=addonActivo(code);
+    const marca = on
+      ? `<span class="pill ok">Activo</span>`
+      : estado==="solicitado"
+        ? `<span class="pill gold">Solicitado</span>`
+        : `<button class="btn ghost sm" data-view="${esc(c.vista)}">Ver complemento →</button>`;
+    return `<div class="row addon-row">
+      <span class="addon-ico">${ANIMA_ICON(c.ico,"✦")}</span>
+      <div class="grow"><b>${esc(c.t)}</b><br><small class="muted">${esc(c.resumen)}</small></div>
+      ${marca}</div>`;
+  };
+  return `<div class="card s12">
+    <div class="section-title"><h2 style="font-size:16px">Complementos</h2><div class="spacer"></div>
+      <span class="pill">${codes.filter(addonActivo).length} de ${codes.length}</span></div>
+    <p class="muted" style="font-size:12.5px;margin:-4px 0 10px">Funciones que no vienen con ningún plan. Las activa soporte, una por una, después de conversarlas contigo.</p>
+    ${codes.map(fila).join("")}</div>`;
+}
+
 /* --- Santuario: membresía, identidad y permisos --- */
 function santMembers(s){ return s ? roster().filter(x=>x.santuario===s) : []; }
 function santMeta(s){ return (state.santMeta && state.santMeta[s]) || null; }
@@ -4165,12 +4620,10 @@ function vSantCreate(a){
   return `<div class="grid">
     <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.7))">
       <span class="pill gold">🜁 Santuario</span><h2 style="font-size:24px;letter-spacing:-.04em;margin:8px 0 4px">El espacio de los grupos grandes</h2>
-      <p class="muted" style="max-width:640px">El Santuario reúne a <b>muchas Almas</b> bajo una misma visión. Se funda como un Clan y se ingresa por <b>código</b> o por <b>invitación directa del Admin</b>.</p></div>
+      <p class="muted" style="max-width:640px">El Santuario reúne a <b>muchas Almas</b> bajo una misma visión. Se funda como un Clan y se entra por <b>invitación del Admin</b>, que llega al correo.</p></div>
     ${create}
-    <div class="card s5"><div class="section-title"><h2 style="font-size:15px">Unirme por código</h2></div>
-      <p class="muted" style="font-size:13px">¿Te invitaron a un Santuario? Ingresa su código.</p>
-      <div class="field"><input id="santJoinCode" placeholder="SANT-XXXX"></div>
-      <button class="btn" id="santJoinBtn">Unirme al Santuario</button></div>
+    <div class="card s5"><div class="section-title"><h2 style="font-size:15px">Entrar a un Santuario</h2></div>
+      ${invitacionEsperaBox()}</div>
   </div>`;
 }
 
@@ -4190,21 +4643,19 @@ function vSantAlmas(a){
         ${roleCtrl(m)}${(admin && m.id!==a.almaId)?`<button class="ia danger" data-santremove="${m.id}" title="Quitar del Santuario">✕</button>`:""}</div>`; }).join("");
     return `<div class="sant-group"><div class="section-title" style="margin-top:6px"><h3 style="font-size:13.5px;margin:0">${g==='Sin Clan'?'◦ Sin Clan':'❂ '+esc(g)}</h3><div class="spacer"></div><span class="chip">${groups[g].length}</span></div>${rows}</div>`;
   }).join("");
-  const inv=(santCache(s).invites)||[];
   const invitesCard = admin
-    ? `<div class="card s12"><div class="section-title"><h2 style="font-size:15px">Códigos de invitación</h2><div class="spacer"></div>
-        <select id="santInviteRole" class="role-sel">${ROLES.filter(r=>r[0]!=='ADMIN').map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select>
-        <button class="btn sm gold" id="santGenInviteBtn">+ Generar código</button></div>
-        <p class="muted" style="font-size:12.5px">Comparte un código para que un Alma entre a <b>${esc(s)}</b> con el rol elegido.</p>
-        ${inv.length?inv.map(c=>`<div class="row"><code class="invite-code">${esc(c.code)}</code><div class="grow"><small class="muted">Rol: <b>${esc((ROLES.find(r=>r[0]===c.role)||['',c.role])[1])}</b></small></div>
-          <button class="btn ghost sm" data-copycode="${esc(c.code)}">Copiar</button><button class="ia danger" data-santdelinvite="${c.id}">✕</button></div>`).join(""):`<p class="muted">Aún no generaste códigos.</p>`}</div>`
+    ? invitacionesCard({
+        ambito:"santuario", clan:null, santuario:s,
+        titulo:"Invitaciones",
+        sub:`Escribe el correo de quien quieres sumar a ${s}. Le llega un enlace que crea su cuenta y la deja dentro del Santuario, con el rol que elijas.`
+      })
     : "";
   return `<div class="grid">
     ${santHeader(a,s,"Almas",admin?"Suma, organiza y asigna roles a las Almas del Santuario.":"Las Almas que habitan el Santuario.")}
     <div class="card s12" id="santPanelCard"><div class="section-title"><h2>Panel de Almas</h2><div class="spacer"></div><span class="pill">${members.length}</span></div>
       <div class="field" style="margin-bottom:10px"><input id="santSearch" placeholder="Buscar Alma, Clan o rol…" value="${esc(state.santSearch||"")}"></div>
       ${shown.length?groupHTML:`<p class="muted" style="font-size:13px">Ninguna Alma coincide.</p>`}
-      ${admin?`<div class="clan-add"><button class="btn secondary sm" id="santAddBtn">+ Sumar un Alma</button><span class="muted" style="font-size:11.5px">de cualquier parte del Mundo, o por código</span></div>`:""}</div>
+      ${admin?`<div class="clan-add"><button class="btn secondary sm" id="santAddBtn">+ Sumar un Alma</button><span class="muted" style="font-size:11.5px">de entre las Almas que ya existen, o invita por correo</span></div>`:""}</div>
     ${(admin&&state.santAddOpen)?santAddPicker(s):""}
     ${invitesCard}
     <div class="card s12 clan-danger"><div class="section-title"><h2 style="font-size:15px">Abandonar el Santuario</h2></div>
@@ -4245,14 +4696,6 @@ async function createSantuario(){
     state.view="santuario"; save(); renderAll();
   }catch(e){ if(msg) msg.textContent="No se pudo fundar: "+(e.message||e); }
 }
-async function joinSantuarioCode(){
-  const a=me(); if(!a.live){ alert("Entra a tu Alma para unirte."); return; }
-  const el=document.getElementById("santJoinCode"); const code=(el?el.value:"").trim(); if(!code) return;
-  try{ const s=await Cloud.santuarioJoinByCode(code);
-    try{ state.cloudAlmas=await Cloud.allAlmas(); const meRow=(state.cloudAlmas||[]).find(x=>x.id===a.almaId); if(meRow){ a.santuario=meRow.santuario; a.team_role=meRow.team_role; a.plan=meRow.plan; } }catch(e){}
-    a.santuario=a.santuario||s; await loadSant(a.santuario); save(); state.view="santuario"; renderAll(); toast("✦ Te uniste al Santuario "+s);
-  }catch(e){ alert("No se pudo unir: "+(e.message||e)); }
-}
 async function santSetRole(almaId, role){
   try{ await Cloud.santuarioSetRole(almaId, role); state.cloudAlmas=await Cloud.allAlmas(); renderView(); }
   catch(e){ alert("No se pudo cambiar el rol: "+(e.message||e)); }
@@ -4269,18 +4712,12 @@ async function santRemoveMember(almaId){
   try{ await Cloud.santuarioRemoveMember(almaId); state.cloudAlmas=await Cloud.allAlmas(); renderView(); }
   catch(e){ alert("No se pudo quitar: "+(e.message||e)); }
 }
-async function santGenInvite(){
-  const s=me().santuario; if(!s||!canAdminSantuario()) return;
-  const role=(document.getElementById("santInviteRole")||{}).value||"ALMA";
-  try{ await Cloud.santuarioGenInvite(s, role); await loadSant(s); }catch(e){ alert("No se pudo generar: "+(e.message||e)); }
-}
-async function santDelInvite(id){ const s=me().santuario; try{ await Cloud.deleteSantInvite(id); await loadSant(s); }catch(e){ alert("No se pudo eliminar: "+(e.message||e)); } }
 /* ===========================================================
    PLANIFICACIÓN DEL SANTUARIO (Alpha 2026)
    Igual que el Panel de Clan, pero a escala de organización.
    Lectura: cualquier Alma del Santuario. Edición: ADMIN (o Creador).
    =========================================================== */
-function santCache(s){ if(!state.santCache) state.santCache={}; if(!state.santCache[s]) state.santCache[s]={tasks:[],projects:[],events:[],reports:[],invites:[]}; const d=state.santCache[s]; d.tasks=d.tasks||[]; d.projects=d.projects||[]; d.events=d.events||[]; d.reports=d.reports||[]; d.invites=d.invites||[]; return d; }
+function santCache(s){ if(!state.santCache) state.santCache={}; if(!state.santCache[s]) state.santCache[s]={tasks:[],projects:[],events:[],reports:[]}; const d=state.santCache[s]; d.tasks=d.tasks||[]; d.projects=d.projects||[]; d.events=d.events||[]; d.reports=d.reports||[]; return d; }
 async function loadSant(s){
   if(!s || !(Cloud.enabled && me().live)) return;
   loadSantMeta(s);
@@ -4294,10 +4731,11 @@ async function loadSant(s){
       tasks:tasks.map(t=>({id:t.id,title:t.title,assignee:t.assignee,status:t.status||'Pendiente',description:t.description,area:t.area,priority:t.priority,start:t.start_date,due:t.due_at,notes:t.notes,_cloud:true})),
       projects:projects.map(p=>({id:p.id,title:p.title,assignee:p.assignee,due:p.due_at,status:p.status||'Pendiente',pct:p.pct||0,description:p.description,area:p.area,notes:p.notes,_cloud:true})),
       events:events.map(e=>({id:e.id,title:e.title,date:e.at_date,time:e.at_time,notes:e.notes,_cloud:true})),
-      reports:reports.map(r=>({id:r.id,alma_id:r.alma_id,author:r.author,title:r.title,body:r.body,period:r.period,status:r.status,at:r.created_at,_cloud:true})),
-      invites:prev.invites||[]
+      reports:reports.map(r=>({id:r.id,alma_id:r.alma_id,author:r.author,title:r.title,body:r.body,period:r.period,status:r.status,at:r.created_at,_cloud:true}))
     };
-    if(canAdminSantuario()){ try{ state.santCache[s].invites=(await Cloud.santuarioInvites(s)).map(i=>({id:i.id,code:i.code,role:i.role})); }catch(e){} }
+    /* Las invitaciones del Santuario ya no son códigos guardados en su caché:
+       viven en `studio_invitations` y se piden por su cuenta. */
+    if(canAdminSantuario()) loadInvitaciones(null, s);
     if(sectionOfView(state.view)==="santuario") renderView();
   }catch(e){}
 }
@@ -4459,17 +4897,6 @@ async function pickPlan(plan){
     save(); renderAll(); toast("✦ Forma "+PLAN_META[plan].t+" activada.");
   }catch(e){ alert("No se pudo activar tu Forma: "+(e.message||e)); }
 }
-async function joinClanCode(){
-  const a=me(); if(!a.live){ alert("Entra a tu Alma para unirte a un Clan."); return; }
-  const el=document.getElementById("joinCode"); const code=(el?el.value:"").trim(); if(!code) return;
-  try{ const clan=await Cloud.joinByCode(code);
-    try{ state.cloudAlmas=await Cloud.allAlmas(); const meRow=(state.cloudAlmas||[]).find(x=>x.id===a.almaId);
-      if(meRow){ a.clan=meRow.clan; a.team_role=meRow.team_role; a.santuario=meRow.santuario; } }catch(e){}
-    a.clan=a.clan||clan;
-    if(almaPlan(a)==="ALMA"){ try{ await Cloud.updateAlma(a.almaId,{plan:"CLAN"}); a.plan="CLAN"; }catch(e){} }
-    await syncTeam(a.clan); save(); state.view="clanpanel"; renderAll(); alert("Te uniste al Clan "+clan+" ✓");
-  }catch(e){ alert("No se pudo unir: "+(e.message||e)); }
-}
 async function setMemberRole(almaId, role){
   try{ await Cloud.clanSetRole(almaId, role); state.cloudAlmas=await Cloud.allAlmas(); renderView(); }
   catch(e){ alert("No se pudo cambiar el rol: "+(e.message||e)); }
@@ -4573,19 +5000,6 @@ function clanAddPicker(clan){
     ${cand.length?cand.map(row).join(""):`<p class="muted" style="font-size:13px">No hay otras Almas en el Mundo todavía.</p>`}</div>`;
 }
 function meta_emoji(clan){ const m=clanMeta(clan); return (m&&m.emoji)||"❂"; }
-async function loadInvites(clan){
-  if(!(Cloud.enabled && me().live && clan && canLead())) return;
-  try{ const inv=await Cloud.clanInvites(clan); const d=teamCache(clan); d.invites=inv.map(c=>({id:c.id,code:c.code,role:c.role})); if(state.view==='clanpanel') renderView(); }catch(e){}
-}
-async function genInvite(){
-  const a=me(), clan=a.clan; if(!clan||!canLead()) return;
-  const role=(document.getElementById("inviteRole")||{}).value||"ALMA";
-  const code="CLAN-"+Math.random().toString(36).slice(2,6).toUpperCase();
-  try{ await Cloud.createInvite({code,clan,santuario:a.santuario||null,role}); await loadInvites(clan); }
-  catch(e){ alert("No se pudo generar el código: "+(e.message||e)); }
-}
-async function delInvite(id){ const clan=me().clan; try{ await Cloud.deleteInvite(id); await loadInvites(clan); }catch(e){ alert("No se pudo eliminar: "+(e.message||e)); } }
-function copyCode(code){ if(navigator.clipboard){ navigator.clipboard.writeText(code).then(()=>alert("Código copiado: "+code)); } else { prompt("Copia el código:",code); } }
 /* Navegación del calendario (Día/Semana/Mes/Año). */
 function calNav(dir){
   const mode=state.calMode||"mes"; const s=dir==="next"?1:-1;
@@ -4807,7 +5221,7 @@ function recordAlphaEvents(kind, v, arr){
       const first = (arr||[]).length===1;
       Cloud.log("obra_subida", { titulo:v.t||"" });
       Cloud.logTimeline("obra", first?"Dejaste tu primera huella":"Dejaste una nueva huella", v.t||"");
-      if(first) Cloud.awardBadge("primer_latido");
+
       Cloud.emitEcho("huella", "✦ "+nick+(first?" dejó su primera huella":" dejó una nueva huella")).catch(()=>{});
       if(window.WorldTree) WorldTree.onHuella({ almaName:a.name, branch:branchOf(a), country:a.country });
     } else if(kind==="memoria"){
@@ -4815,8 +5229,10 @@ function recordAlphaEvents(kind, v, arr){
     } else if(kind==="hito"){
       Cloud.logTimeline("nivel", "Sumaste un hito a tu trayectoria", v.t||"");
     }
-    // Invalida cachés para que Cronología e Insignias se refresquen al entrar.
+    // Invalida cachés para que Cronología e Insignias se refresquen al entrar,
+    // y pide a la base que revise si este registro desbloqueó algún hito.
     state.cloudTimeline=null; state.cloudBadges=null;
+    revisarInsignias();
     // LUMBRE · Obsidian (Etapa 1): solo eventos reales de creación, nunca sync
     // constante — y solo si el Creador conectó su Vault en esta sesión.
     if((typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre()
@@ -4941,6 +5357,80 @@ function lumbreThink(q){
 }
 
 /* ===========================================================
+   LLEGAR POR INVITACIÓN
+   -----------------------------------------------------------
+   El enlace del correo trae `?invitacion=<token>`. Supabase, al
+   verificarlo, abre sesión y devuelve a esta misma dirección, así
+   que quien llega ya está dentro — pero sin contraseña. Ese es el
+   único momento en el que hay que pararlo todo y pedirla: sin
+   ella no podría volver a entrar nunca.
+   El token se guarda en el dispositivo porque el camino puede
+   pasar por el rito de entrada (`despertar.html`) y volver, y una
+   invitación que se pierde en una redirección es una persona que
+   se queda fuera de su equipo sin saber por qué.
+   =========================================================== */
+const INVITACION_KEY="anima_invitacion";
+function tokenInvitacion(){
+  try{
+    const m=(location.search||"").match(/[?&]invitacion=([^&#]+)/);
+    if(m && m[1]){ const t=decodeURIComponent(m[1]); localStorage.setItem(INVITACION_KEY,t); return t; }
+    return localStorage.getItem(INVITACION_KEY)||"";
+  }catch(e){ return ""; }
+}
+function olvidarInvitacion(){
+  try{ localStorage.removeItem(INVITACION_KEY); }catch(e){}
+  try{ if(/[?&]invitacion=/.test(location.search)) history.replaceState(null,"",location.pathname); }catch(e){}
+}
+/* Con sesión recién abierta por el enlace: bienvenida y contraseña. Cerrar el
+   modal continúa igual —nadie se queda encerrado en una pantalla—, y la
+   contraseña se puede poner después desde el menú del nombre. */
+function abrirBienvenida(session){
+  state.bienvenida=true;   // una marca, no la sesión: esto se serializa a localStorage
+  renderAll();   // dibuja la app detrás; hideBootLoader la destapa
+  if(typeof hideBootLoader==="function") hideBootLoader();
+  const m=document.getElementById("cpModal"); if(!m){ continuarTrasBienvenida(); return; }
+  const t=document.getElementById("cpTitulo"), sub=document.getElementById("cpSub");
+  if(t) t.textContent="Bienvenida a ANIMA STUDIO";
+  if(sub) sub.textContent="Tu cuenta ya existe. Elige una contraseña para poder volver a entrar.";
+  const msg=document.getElementById("cpMsg"); if(msg) msg.textContent="";
+  const p1=document.getElementById("cpP1"), p2=document.getElementById("cpP2");
+  if(p1) p1.value=""; if(p2) p2.value="";
+  m.classList.add("open");
+}
+async function continuarTrasBienvenida(){
+  state.bienvenida=null;
+  olvidarInvitacion();
+  await loadMyAlma();
+  try{ updateAuthUI(await Cloud.session()); }catch(e){ updateAuthUI(null); }
+  if(state.invAplicada){ const d=state.invAplicada; state.invAplicada=null;
+    animaToast(d.clan?("✦ Ya eres parte de "+d.clan+"."):(d.santuario?("✦ Ya eres parte de "+d.santuario+"."):"✦ Tu invitación quedó aplicada.")); }
+}
+/* Sin sesión y con un enlace en la mano: casi siempre significa que el enlace
+   ya se usó o caducó. La cuenta existe desde que salió el correo, así que el
+   camino de vuelta es recuperar la contraseña, no volver a registrarse. */
+async function pantallaInvitacion(){
+  if(typeof hideBootLoader==="function") hideBootLoader();
+  const token=tokenInvitacion();
+  let inv=null;
+  try{ inv=await Cloud.invitacionPorToken(token); }catch(e){}
+  renderAll();
+  const box=document.getElementById("authModal"); if(!box) return;
+  const destino=inv&&(inv.santuario||inv.clan);
+  const cuerpo=document.getElementById("authInvite");
+  if(cuerpo){
+    cuerpo.hidden=false;
+    cuerpo.innerHTML = (inv && inv.valida)
+      ? `<p><b>${esc(inv.invita||"Alguien")}</b> te invitó${destino?` a <b>${esc(destino)}</b>`:" a ANIMA STUDIO"}.</p>
+         <p class="muted" style="font-size:12.5px">Tu cuenta se crea desde el enlace que te llegó a <b>${esc(inv.correo||"tu correo")}</b>. Si ya la abriste una vez, entra con tu contraseña; si todavía no la elegiste, usa <b>¿Olvidaste tu contraseña?</b> con ese mismo correo.</p>`
+      : `<p><b>Esta invitación ya no está vigente.</b></p>
+         <p class="muted" style="font-size:12.5px">${esc(inv&&inv.motivo==="usada"?"Ya se usó para crear una cuenta. Entra con tu correo y contraseña.":inv&&inv.motivo==="vencida"?"Caducó. Pídele a quien te invitó que la vuelva a mandar.":"Pídele a quien te invitó que la vuelva a mandar.")}</p>`;
+  }
+  const mail=document.getElementById("authEmail");
+  if(mail && inv && inv.correo){ mail.value=inv.correo; }
+  box.classList.add("open");
+}
+
+/* ===========================================================
    AUTH (Supabase)
    =========================================================== */
 async function refreshAuth(){
@@ -4948,9 +5438,21 @@ async function refreshAuth(){
   try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){}
   const s=await Cloud.session();
   isCreator = !!(s && s.user && (s.user.email||"").toLowerCase() === CREATOR_EMAIL);
-  if(s){ const pend=localStorage.getItem("anima_pending_invite"); if(pend){ try{await Cloud.redeemInvite(pend);}catch(e){} localStorage.removeItem("anima_pending_invite"); }
+  if(s){
+    /* La invitación se aplica por el correo de la sesión, no por el enlace: da
+       igual si llegó por el correo o si entró por su cuenta tres días después,
+       su Clan y su rol la están esperando. */
+    try{ const r=await Cloud.aceptarInvitacionesPendientes(); if(r && r.aplicadas) state.invAplicada=r; }catch(e){}
+    /* Quien viene de un enlace de invitación tiene sesión pero todavía no tiene
+       contraseña: sin este paso, no podría volver a entrar nunca. */
+    if(tokenInvitacion()){ abrirBienvenida(s); return; }
     await loadMyAlma(); updateAuthUI(s);
+    if(state.invAplicada){ const d=state.invAplicada; state.invAplicada=null;
+      animaToast(d.clan?("✦ Ya eres parte de "+d.clan+"."):(d.santuario?("✦ Ya eres parte de "+d.santuario+"."):"✦ Tu invitación quedó aplicada.")); }
   }else{
+    // Sin sesión pero con un enlace de invitación en la mano: se explica qué
+    // hacer en vez de mandarla al HOME, que sería perder la invitación.
+    if(tokenInvitacion()){ pantallaInvitacion(); return; }
     // Sin sesión: ya no existe la "Invitada". El Alma vuelve al HOME principal
     // (elige ALMA · CLAN · SANTUARIO / Entrar · Crear).
     location.replace("home.html");
@@ -4965,6 +5467,7 @@ async function loadMyAlma(){
   const mods=await Cloud.loadModules(row.id); const a=dbAlmaToState(row,mods);
   try{ a.clients=(await Cloud.clients(row.id)).map(c=>({_id:c.id,name:c.name,email:c.email,phone:c.phone,notes:c.notes,kind:((c.kind||"cliente").toLowerCase()==="colaborador"?"Colaborador":"Cliente"),role:c.role||"",created:c.created_at})); }catch(e){ a.clients=[]; }
   try{ state.cloudQuotes=await Cloud.quotes(row.id); }catch(e){ state.cloudQuotes=[]; }
+  await loadAddons(row.id);   // qué complementos tiene encendidos esta Alma
   try{ const p=await Cloud.getPrefs(row.id); if(p) localStorage.setItem("anima_cfg_"+row.id, JSON.stringify(p)); }catch(e){}
   state.almas=[a];   // tu Alma viva, limpia (las de muestra no se mezclan)
   state.currentId=a.id; state.view="mialma"; state.chat=[]; renderAll();
@@ -4974,8 +5477,8 @@ async function loadMyAlma(){
   rewardDaily("ingreso_diario",30,"Primer ingreso del día");
   // Sistema de logs (Alpha 2026): registra el inicio de sesión una vez por sesión.
   try{ if(!sessionStorage.getItem("anima_logged_login")){ Cloud.log("login"); sessionStorage.setItem("anima_logged_login","1"); } }catch(e){}
-  // Insignia Persistencia: 30 días habitando ANIMA (best-effort).
-  try{ Cloud.claimTimeBadges().then(g=>{ if(g) state.cloudBadges=null; }); }catch(e){}
+  // Insignias del oficio: la base cuenta y otorga lo alcanzado (best-effort).
+  try{ Cloud.sincronizarInsignias().then(n=>{ if(n && n.length) state.cloudBadges=null; }); }catch(e){}
   // Puente con el camino ceremonial (Esencia + Afinidad del rito de entrada)
   if(window.AnimaState){ try{
     const st=AnimaState.get(); if(a.name) st.name=a.name; if(a.affinity) st.affinity=a.affinity; AnimaState.save(st);
@@ -5021,6 +5524,7 @@ function updateAuthUI(session){
   else { btn.textContent=Cloud.enabled?"Entrar":"Modo local"; btn.dataset.in=""; }
 }
 function openAuth(){ if(!Cloud.enabled){ alert("Conexión a la nube no disponible. ANIMA funciona en modo Fundadores local."); return; }
+  const inv=document.getElementById("authInvite"); if(inv && !tokenInvitacion()){ inv.hidden=true; inv.innerHTML=""; }
   document.getElementById("authModal").classList.add("open"); document.getElementById("authMsg").textContent=""; }
 function closeAuth(){ document.getElementById("authModal").classList.remove("open"); }
 
@@ -5177,6 +5681,7 @@ async function sendSignalTo(id){
 function applyHashView(){
   const m=(location.hash||"").match(/go=([a-z_]+)/i); if(!m) return;
   const v=m[1]; history.replaceState(null,"",location.pathname+location.search);
+  if(!MUNDO_ACTIVO && VISTAS_MUNDO.includes(v)) return;
   if(planAllows(v)) go(v);
 }
 
@@ -5290,33 +5795,39 @@ function setupSwipeNav(){
     }
   },{passive:true});
 }
-async function doAuth(mode){
-  const g=id=>document.getElementById(id).value, email=g("authEmail").trim(), pass=g("authPass"),
-    code=(g("authCode")||"").trim().toUpperCase(), msg=document.getElementById("authMsg");
+/* Entrar. Ya no hay "crear cuenta" aquí: a ANIMA STUDIO se entra por
+   invitación, y la cuenta la crea el enlace que llega al correo. Un formulario
+   de registro abierto al lado de una invitación solo sirve para que alguien se
+   cree una cuenta suelta, sin equipo y sin plan, y después pregunte por qué no
+   ve nada. */
+async function doAuth(){
+  const g=id=>(document.getElementById(id)||{}).value||"";
+  const email=g("authEmail").trim(), pass=g("authPass"), msg=document.getElementById("authMsg");
   const remember=document.getElementById("authRemember"); try{ localStorage.setItem("anima_remember",(remember&&!remember.checked)?"0":"1"); sessionStorage.setItem("anima_tab","1"); }catch(e){}
   if(!email||!pass){ msg.textContent="Ingresa correo y contraseña."; return; }
   msg.textContent="…";
   try{
-    if(mode==="up"){
-      if(!code){ msg.textContent="Necesitas un Código del Origen (beta cerrada)."; return; }
-      if(!await Cloud.checkInvite(code)){ msg.textContent="Código inválido o ya usado."; return; }
-      localStorage.setItem("anima_pending_invite",code);
-      // El nombre del Alma se elige después, dentro de ANIMA (parte del correo por ahora).
-      const {data,error}=await Cloud.signUp(email,pass,email.split("@")[0]); if(error) throw error;
-      if(!data.session){ msg.textContent="Alma creada. Revisa tu correo para confirmar y vuelve a entrar."; return; }
-    }else{ const {error}=await Cloud.signIn(email,pass); if(error) throw error; }
+    const {error}=await Cloud.signIn(email,pass); if(error) throw error;
     closeAuth(); await refreshAuth();
-  }catch(e){ msg.textContent=e.message||"No se pudo completar."; }
+  }catch(e){ msg.textContent=e.message||"No se pudo entrar."; }
 }
 /* Cambiar contraseña (sesión iniciada) — usa updateUser. */
 function openChangePass(){
   if(!me().live){ alert("Entra a tu Alma para cambiar la contraseña."); return; }
   const m=document.getElementById("cpModal"); if(!m) return;
+  const t=document.getElementById("cpTitulo"), sub=document.getElementById("cpSub");
+  if(t) t.textContent="Cambiar contraseña";
+  if(sub) sub.textContent="Elige una contraseña nueva para tu Alma.";
   document.getElementById("cpMsg").textContent="";
   document.getElementById("cpP1").value=""; document.getElementById("cpP2").value="";
   m.classList.add("open");
 }
-function closeChangePass(){ const m=document.getElementById("cpModal"); if(m) m.classList.remove("open"); }
+function closeChangePass(){
+  const m=document.getElementById("cpModal"); if(m) m.classList.remove("open");
+  /* Si esto era la bienvenida, cerrar no puede dejar a la persona mirando una
+     pantalla vacía: se entra igual y la contraseña queda para más tarde. */
+  if(state.bienvenida) continuarTrasBienvenida();
+}
 async function doChangePass(){
   const msg=document.getElementById("cpMsg");
   const p1=document.getElementById("cpP1").value, p2=document.getElementById("cpP2").value;
@@ -5325,8 +5836,9 @@ async function doChangePass(){
   msg.textContent="Guardando…";
   try{
     const { error }=await Cloud.updatePassword(p1); if(error) throw error;
-    try{ Cloud.log("cambio_contrasena"); Cloud.logTimeline("seguridad","Cambiaste tu contraseña"); }catch(e){}
-    msg.textContent="✦ Contraseña actualizada.";
+    const estrena=!!state.bienvenida;
+    try{ Cloud.log(estrena?"contrasena_inicial":"cambio_contrasena"); Cloud.logTimeline("seguridad", estrena?"Elegiste tu contraseña":"Cambiaste tu contraseña"); }catch(e){}
+    msg.textContent=estrena?"✦ Listo. Entrando a tu Taller…":"✦ Contraseña actualizada.";
     setTimeout(closeChangePass, 900);
   }catch(e){ msg.textContent=e.message||"No se pudo cambiar la contraseña."; }
 }
@@ -5421,8 +5933,8 @@ async function sendFeedback(){ const message=document.getElementById("fbMsg").va
    RENDER + EVENTOS
    =========================================================== */
 function renderAll(){ try{ setAnimaCurrency(getCfg(me()).currency); }catch(e){} renderNav(); renderWho(); renderTop(); renderView(); renderWhisperBell(); if(typeof hideBootLoader==="function") hideBootLoader(); }
-function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; state.projOpen=null; state.vinOpen=null; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(view==="comunidad"||view==="mundo"){ loadPosts(); loadCommunityExtras(); loadNotices(); loadChangelog(); } if(view==="world_wandering_traces"){ if(state.wtPool==null) loadWanderingTraces(); else { wtPickOne(); wtPickConstel(); renderView(); } } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
-function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
+function go(view){ state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; state.projOpen=null; state.vinOpen=null; save(); renderAll(); document.getElementById("view").scrollTop=0; closeSide(); closeAlmaMenu(); if(MUNDO_ACTIVO && (view==="comunidad"||view==="mundo")){ loadPosts(); loadCommunityExtras(); loadNotices(); loadChangelog(); } if(MUNDO_ACTIVO && view==="world_wandering_traces"){ if(state.wtPool==null) loadWanderingTraces(); else { wtPickOne(); wtPickConstel(); renderView(); } } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvitaciones(me().clan, null, true); } }
+function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; state.addons=[]; state.invitaciones=[]; state.invAmbito=null; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 /* LUMBRE aún no despierta: el chat permanece desactivado. Al tocarla, en vez de
    desplegar el panel, avisa con serenidad. Despertará cuando el mundo (y el Alma)
@@ -5486,6 +5998,7 @@ document.addEventListener("click", e=>{
   const rn=e.target.closest("[data-reino]"); if(rn){ toggleReino(rn.dataset.reino); return; }
   const va=e.target.closest("[data-viewas]"); if(va){ setViewAs(va.dataset.viewas); return; }
   if(e.target.closest("#monitorReload")){ loadWorldMonitor(); return; }
+  if(e.target.closest("#addonsReload")){ loadAddonsConsola(); return; }
   if(e.target.closest("#expReload")){ loadRewardPanel(); return; }
   const xs=e.target.closest("[data-expsave]"); if(xs){ saveRewardConfig(xs.dataset.expsave); return; }
   if(e.target.closest("#chSend")){ publishChangelog(); return; }
@@ -5508,8 +6021,12 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#taskClose")||bdClose(e,"taskModal")){ closeTaskModal(); return; }
   const ted=e.target.closest("[data-taskedit]"); if(ted){ openTaskModal(ted.dataset.taskedit); return; }
   const pkp=e.target.closest("[data-pickplan]"); if(pkp){ pickPlan(pkp.dataset.pickplan); return; }
-  if(e.target.closest("#joinBtn")){ joinClanCode(); return; }
-  if(e.target.closest("#genInvite")){ genInvite(); return; }
+  if(e.target.closest("#invSend")){ enviarInvitacion(); return; }
+  const ivr=e.target.closest("[data-invresend]"); if(ivr){ reenviarInvitacion(ivr.dataset.invresend); return; }
+  const ivd=e.target.closest("[data-invdel]"); if(ivd){ anularInvitacion(ivd.dataset.invdel); return; }
+  const ivc=e.target.closest("[data-invcopy]"); if(ivc){ copiarEnlace(ivc.dataset.invcopy); return; }
+  const ada=e.target.closest("[data-addonask]"); if(ada){ pedirAddon(ada.dataset.addonask); return; }
+  const adt=e.target.closest("[data-addontoggle]"); if(adt){ const [alma,addon,on]=adt.dataset.addontoggle.split("|"); toggleAddon(alma,addon,on==="1"); return; }
   if(e.target.closest("#clanCreateBtn")){ createClan(); return; }
   if(e.target.closest("#clanSave")){ saveClanIdentity(); return; }
   if(e.target.closest("#clanDeleteBtn")){ deleteClan(); return; }
@@ -5519,8 +6036,6 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#clanAddClose")){ state.clanAddOpen=false; renderView(); return; }
   const crm=e.target.closest("[data-clanremove]"); if(crm){ removeClanMember(crm.dataset.clanremove); return; }
   const cad=e.target.closest("[data-clanadd]"); if(cad){ addClanMember(cad.dataset.clanadd); return; }
-  const cpc=e.target.closest("[data-copycode]"); if(cpc){ copyCode(cpc.dataset.copycode); return; }
-  const din=e.target.closest("[data-delinvite]"); if(din){ delInvite(din.dataset.delinvite); return; }
   if(e.target.closest("[data-eventadd]")){ addClanEvent(); return; }
   const cmd=e.target.closest("[data-calmode]"); if(cmd){ state.calMode=cmd.dataset.calmode; renderView(); return; }
   const cnv=e.target.closest("[data-calnav]"); if(cnv){ calNav(cnv.dataset.calnav); return; }
@@ -5536,13 +6051,10 @@ document.addEventListener("click", e=>{
   const rdl=e.target.closest("[data-remdel]"); if(rdl){ delReminder(rdl.dataset.remdel); return; }
   // Santuario PRO
   if(e.target.closest("#santCreateBtn")){ createSantuario(); return; }
-  if(e.target.closest("#santJoinBtn")){ joinSantuarioCode(); return; }
   if(e.target.closest("#santAddBtn")){ state.santAddOpen=true; renderView(); return; }
   if(e.target.closest("#santAddClose")){ state.santAddOpen=false; renderView(); return; }
   const sad=e.target.closest("[data-santadd]"); if(sad){ santAddMember(sad.dataset.santadd); return; }
   const srm=e.target.closest("[data-santremove]"); if(srm){ santRemoveMember(srm.dataset.santremove); return; }
-  if(e.target.closest("#santGenInviteBtn")){ santGenInvite(); return; }
-  const sdi=e.target.closest("[data-santdelinvite]"); if(sdi){ santDelInvite(sdi.dataset.santdelinvite); return; }
   if(e.target.closest("[data-santtaskadd]")){ addSantTask(); return; }
   const sto=e.target.closest("[data-santtaskopen]"); if(sto){ openTaskModal(sto.dataset.santtaskopen,"sant"); return; }
   const stc=e.target.closest("[data-santtaskcycle]"); if(stc){ cycleSantTask(stc.dataset.santtaskcycle); return; }
@@ -5636,7 +6148,6 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#q_tpl")) cotSaveTemplate();
   if(e.target.closest("#q_save")) qSave();
   if(e.target.closest("#q_export")) qExport();
-  if(e.target.closest("#createAlmaBtn")) openAuth();
   if(e.target.closest("#enterAlmaBtn")) openAuth();
   if(e.target.closest("#idSave")) saveIdentity();
   if(e.target.closest("#edSave")) saveEdit();
@@ -5688,14 +6199,13 @@ document.addEventListener("click", e=>{
   if(e.target.closest("#authBtn")){ const b=e.target.closest("#authBtn"); b.dataset.in?toggleAlmaMenu():openAuth(); return; }
   else if(!e.target.closest("#almaPop")) closeAlmaMenu();
   if(e.target.closest("#authClose")||bdClose(e,"authModal")) closeAuth();
-  if(e.target.closest("#authSignIn")) doAuth("in");
-  if(e.target.closest("#authSignUp")) doAuth("up");
+  if(e.target.closest("#authSignIn")) doAuth();
   if(e.target.closest("#authForgot")) doForgot();
   if(e.target.closest("#lumbreSend")) sendLumbre();
   if(e.target.closest("#lumbreObsidianBtn")) connectObsidianVault();
 });
 document.addEventListener("keydown", e=>{
-  if(e.key==="Enter" && e.target.id==="joinCode") joinClanCode();
+  if(e.key==="Enter" && e.target.id==="invEmail") enviarInvitacion();
   if(e.key==="Enter" && e.target.id==="lumbreInput") sendLumbre();
   if(e.key==="Enter" && e.target.id==="commentInput"){ const b=document.getElementById("commentSend"); if(b) sendComment(b.dataset.post); }
 });
@@ -5767,11 +6277,12 @@ function sharePortfolio(){ const a=me(); if(!a.live){ alert("Crea tu Alma para t
 
 /* ---------- Tutorial guiado por LUMBRE ---------- */
 const TOUR=[
-  {sel:"#nav", selMobile:".botnav", title:"Tu menú", text:"Aquí cambias de morada. En el celular vive abajo (como Instagram): Mi Alma, Taller y Mundo. Cada una guarda sus pestañas dentro."},
+  {sel:"#nav", selMobile:".botnav", title:"Tu menú", text:"Aquí cambias de espacio. En el celular vive abajo: Mi Alma y Taller. Cada uno guarda sus pestañas dentro."},
   {sel:".tabbar", title:"Tu Alma", text:"Mi Alma tiene pestañas: Resumen, Identidad (tu foto y datos), Vista pública (qué muestras) y Ajustes."},
-  {sel:".esencia-mini", title:"Tu Esencia", text:"Cada obra, proyecto o memoria que registras suma Esencia: es la cuenta de tu actividad aquí. Tócala para ver el detalle."},
-  {sel:'[data-view="mundo"]', selMobile:'.botnav [data-view="mundo"]', title:"El mundo", text:"En Mundo vive el Árbol de Almas: el mapa de quienes habitan ANIMA, los Ecos en vivo, y un vistazo al Muro y a la Crónica. Toca una Alma para visitarla."},
-  {sel:"#lumbreFab", selMobile:"#botLumbre", title:"LUMBRE ✦", text:"Tu chispa compañera. Aún está despertando: reunirá voz cuando el mundo y tu Alma junten más Esencia. ¡Bienvenida a ANIMA!"}
+  {sel:".esencia-mini", title:"Tu actividad", text:"Cada obra, proyecto o memoria que registras suma Esencia: es la cuenta de lo que llevas hecho aquí. Tócala para ver el detalle."},
+  {sel:'[data-view="taller"]', selMobile:'.botnav [data-view="taller"]', title:"El Taller", text:"Proyectos, tareas, vínculos y Raíz. Todo interconectado: un proyecto sabe de su cliente, de su entrega y de lo que se abonó."},
+  {sel:'[data-view="insignias"]', title:"Tus insignias", text:"Se ganan trabajando: el primer proyecto, los diez proyectos, el primer vínculo. Cada una lleva su avance a la vista."},
+  {sel:"#lumbreFab", selMobile:"#botLumbre", title:"LUMBRE ✦", text:"Tu asistente. Aún está despertando; pronto te ayudará con tu Raíz, tus proyectos y tu trayectoria. Bienvenida a ANIMA STUDIO."}
 ];
 function startTour(){ closeLumbre(); closeSide(); state.view="mialma"; state.almaTab="resumen"; renderAll(); setTimeout(()=>tourStep(0),360); }
 function tourStep(i){

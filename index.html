@@ -284,6 +284,14 @@
           && !/[?&]code=/.test(q)) return;
 
       var tipo = (h.match(/[#&]type=([a-z_]+)/) || [])[1] || '';
+
+      /* Una invitación de STUDIO se reconoce por su token y va a STUDIO.
+         El «redirectTo» del correo ya apunta ahí, así que esto solo actúa
+         cuando el enlace cae en la raíz por la configuración del proyecto —
+         pero si actúa, mandar a alguien a COMPANY con la invitación de su
+         Clan en el bolsillo sería perderla en la puerta. */
+      if (/[?&]invitacion=/.test(q)) { location.replace('studio.html' + q + h); return; }
+
       var marca = tipo === 'recovery' ? 'recuperar=1'
                 : (tipo === 'invite' || tipo === 'signup') ? 'activar=1' : '';
       var busca = marca ? (q ? q + '&' + marca : '?' + marca) : q;

@@ -352,10 +352,25 @@
 .plan-pick .btn{width:100%}
 .role-sel{border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13px;font-family:inherit;background:#fff;outline:none;cursor:pointer}
 .role-sel:focus{border-color:var(--gold)}
-.join-box{display:flex;gap:8px;flex-wrap:wrap}
-.join-box input{flex:1;min-width:200px;border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;font-family:inherit;background:#fff;outline:none;text-transform:uppercase}
-.join-box input:focus{border-color:var(--gold)}
-.invite-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;font-size:14px;letter-spacing:.04em;background:rgba(208,170,99,.14);color:#7b5920;border:1px solid rgba(208,170,99,.3);padding:6px 11px;border-radius:10px;flex:0 0 auto}
+/* ---------- Invitaciones por correo ----------
+   Reemplazan a los códigos: una dirección, un rol y un enlace. */
+.inv-form{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.inv-form .fld{display:flex;flex-direction:column;gap:5px;flex:1;min-width:130px}
+.inv-form .fld>span{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.inv-form input,.inv-form select{border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;
+  font-family:inherit;background:#fff;outline:none;width:100%}
+.inv-form input:focus,.inv-form select:focus{border-color:var(--gold)}
+.inv-form .btn{flex:0 0 auto;height:42px}
+.inv-row{align-items:center}
+.inv-ico{width:26px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;color:var(--gold-deep,#7b5920)}
+.inv-ico .ai{width:17px;height:17px}
+.inv-espera{display:flex;gap:12px;align-items:flex-start;border:1px dashed var(--line);border-radius:14px;padding:14px}
+.inv-espera .inv-ico{width:28px}
+.inv-espera .inv-ico .ai{width:20px;height:20px}
+.auth-invite{border:1px solid rgba(208,170,99,.35);background:rgba(208,170,99,.10);border-radius:14px;
+  padding:12px 14px;margin-bottom:14px;font-size:13.5px}
+.auth-invite p{margin:0 0 6px}
+.auth-invite p:last-child{margin-bottom:0}
 .ev-row .ev-date{flex:0 0 auto;width:58px;text-align:center;display:flex;flex-direction:column;line-height:1.1}
 .ev-row .ev-date b{font-size:13px;letter-spacing:-.02em}
 .ev-row .ev-date small{color:var(--muted);font-size:11px}
@@ -868,7 +883,32 @@ a.nav-item{text-decoration:none;color:inherit}
 .badge-card.on .badge-glyph{background:radial-gradient(circle,rgba(208,170,99,.22),transparent 70%);color:var(--gold-deep,#7b5920)}
 .badge-card.off{opacity:.62;filter:grayscale(.4)}
 .badge-card.off .badge-glyph{background:rgba(0,0,0,.04);color:var(--muted)}
-.badge-card.secret .badge-glyph{font-size:22px}
+.badge-card.legacy{opacity:.78}
+.badge-card .badge-prog{width:100%;display:flex;flex-direction:column;gap:5px;align-items:center;margin-top:2px}
+.badge-prog-bar{width:100%;height:5px;border-radius:99px;background:rgba(0,0,0,.08);overflow:hidden}
+.badge-prog-bar span{display:block;height:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--gold,#d0aa63),var(--gold-deep,#7b5920));transition:width .3s ease}
+.badge-card .badge-prog small{font-variant-numeric:tabular-nums;font-size:11px}
+
+/* ---------- Botón con icono pixel (privacidad de montos y similares) ---------- */
+.btn.btn-ico{gap:7px}
+.btn.btn-ico .ai{width:15px;height:15px}
+.btn.btn-ico[aria-pressed="true"]{color:var(--gold-deep,#7b5920);border-color:rgba(208,170,99,.5)}
+
+/* ---------- Complementos (add-ons) ---------- */
+.addon-hero{background:linear-gradient(145deg,rgba(208,170,99,.16),rgba(255,255,255,.72))}
+.addon-ico{width:28px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;color:var(--gold-deep,#7b5920)}
+.addon-ico .ai{width:18px;height:18px}
+.addon-row{align-items:center;gap:10px}
+.addon-tick{width:22px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;color:var(--gold-deep,#7b5920)}
+.addon-tick .ai{width:13px;height:13px}
+.addon-estado{border:1px dashed rgba(208,170,99,.5);border-radius:14px;padding:12px 14px;background:rgba(208,170,99,.08)}
+
+/* Una pestaña con candado se ve, se puede tocar y lleva a la ficha del
+   complemento. Esconderla haría que nadie supiera que existe. */
+.morada-tab.locked{opacity:.72}
+.morada-tab .mt-lock{display:inline-flex;align-items:center;margin-left:5px;opacity:.8}
+.morada-tab .mt-lock .ai{width:11px;height:11px}
 .badge-card b{font-size:14px;letter-spacing:-.01em}
 .badge-card small{font-size:11.5px;line-height:1.4}
 .badge-when{color:var(--gold-deep,#7b5920);font-weight:700;margin-top:2px}
