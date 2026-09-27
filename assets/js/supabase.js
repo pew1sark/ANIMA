@@ -87,7 +87,10 @@ const Cloud = {
 
   /* El Alma del usuario autenticado */
   async myAlma(){
-    const u = await this.user(); if(!u) return null;
+    // Lee el usuario desde la sesión local (getSession) en vez de getUser (red):
+    // evita renovaciones de token concurrentes que revocaban la sesión al cargar.
+    const { data:sd } = await _sb.auth.getSession(); const u = sd.session && sd.session.user;
+    if(!u) return null;
     const { data } = await _sb.from("almas").select(ALMA_FIELDS).eq("user_id", u.id).maybeSingle();
     return data;
   },
