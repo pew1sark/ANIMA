@@ -622,21 +622,22 @@ function moradaTabs(view){
   const kids=moradaKids(sec);
   if(kids.length<2) return "";
   const label=MORADA_LABEL[sec]||"";
-  // Stepper móvil: ‹ etiqueta › — navegación robusta entre pestañas (cíclica).
-  let idx=kids.findIndex(c=>c.v===state.view); if(idx<0) idx=0;
-  const cur=kids[idx], prev=kids[(idx-1+kids.length)%kids.length], next=kids[(idx+1)%kids.length];
-  const stepper=`<div class="morada-step">
-      <button type="button" class="morada-step-btn" data-view="${prev.v}" aria-label="Pestaña anterior">‹</button>
-      <div class="morada-step-cur"><span class="mt-ico">${ANIMA_ICON(cur.ic,cur.ico||"◆")}</span><b>${esc(cur.t)}</b><small>${idx+1} / ${kids.length}</small></div>
-      <button type="button" class="morada-step-btn" data-view="${next.v}" aria-label="Pestaña siguiente">›</button>
-    </div>`;
-  return `<div class="morada-tabs"><span class="morada-tabs-label">${esc(label)}</span><div class="morada-tabs-row">`+
-    kids.map(c=>`<button type="button" class="morada-tab ${state.view===c.v?'on':''} ${c.locked?'locked':''}" data-view="${c.v}"><span class="mt-ico">${ANIMA_ICON(c.ic,c.ico||"◆")}</span>${esc(c.t)}${c.locked?`<span class="mt-lock" title="Complemento">${ANIMA_ICON("lock","·")}</span>`:""}</button>`).join("")+
-    `</div></div>${stepper}`;
+  /* Una sola tira de pestañas, también en el celular. Antes, por debajo de
+     640px, las pestañas se escondían y quedaba un paginador ‹ 2/7 ›: para ir
+     de Resumen a Agenda había que tocar seis veces y pasar por cinco pantallas
+     que nadie había pedido. Ahora todas están a un toque, y la tira se desliza
+     sola hasta dejar a la vista la pestaña en la que estás. */
+  return `<nav class="morada-tabs" aria-label="${esc(label)}"><span class="morada-tabs-label">${esc(label)}</span><div class="morada-tabs-row" data-noswipe>`+
+    kids.map(c=>`<button type="button" class="morada-tab ${state.view===c.v?'on':''} ${c.locked?'locked':''}" data-view="${c.v}"${state.view===c.v?' aria-current="page"':''}><span class="mt-ico">${ANIMA_ICON(c.ic,c.ico||"◆")}</span>${esc(c.t)}${c.locked?`<span class="mt-lock" title="Complemento">${ANIMA_ICON("lock","·")}</span>`:""}</button>`).join("")+
+    `</div></nav>`;
 }
-/* Transición suave: el cuerpo de cada vista "abre los ojos" en cada render.
-   No envuelve la barra de pestañas (queda estable, sin parpadeo). */
-function animaWrap(html){ return `<div class="anima-page-transition">${html}</div>`; }
+/* Transición suave: el cuerpo de una vista "abre los ojos" al LLEGAR a ella.
+   Antes lo hacía en cada redibujo —al escribir en un buscador, al elegir un
+   filtro, al mover el avance de un proyecto—, y la pantalla entera se
+   desenfocaba y volvía a subir 240ms por cada tecla. Eso no es una
+   transición: es un parpadeo. Ahora se anima solo cuando cambia la vista. */
+let VISTA_DIBUJADA=null;
+function animaWrap(html, animar){ return `<div class="${animar?'anima-page-transition':'anima-page'}">${html}</div>`; }
 function renderView(){
   if(state.viewAs && !isCreator) state.viewAs=null;              // "Ver como" es solo del Creador
   // Consola y Personalizar: SOLO el Creador, y nunca durante una vista previa.
@@ -655,10 +656,11 @@ function renderView(){
     sant_almas:vSantAlmas, sant_tareas:vSantTareas, sant_proyectos:vSantProyectos, sant_cal:vSantCalendario, sant_informes:vSantInformes,
     sant_plan:vSantTareas, cronica:vCronica }[state.view] || vMiAlma;
   let bodyHTML;
-  try{ bodyHTML = animaWrap(fn(me())); }
+  const llega = VISTA_DIBUJADA!==state.view; VISTA_DIBUJADA=state.view;
+  try{ bodyHTML = animaWrap(fn(me()), llega); }
   catch(err){
     console.error("ANIMA · error al dibujar la vista", state.view, err);
-    bodyHTML = animaWrap(`<div class="grid"><div class="card s12"><p class="muted">Esta ventana tuvo un tropiezo al cargar. Intenta de nuevo o entra a <button class="btn sm" data-view="mialma">Mi Alma</button>.</p></div></div>`);
+    bodyHTML = animaWrap(`<div class="grid"><div class="card s12"><p class="muted">Esta ventana tuvo un tropiezo al cargar. Intenta de nuevo o entra a <button class="btn sm" data-view="mialma">Mi Alma</button>.</p></div></div>`, llega);
   }
   document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + bodyHTML;
   if(MUNDO_ACTIVO && state.view==="mundo" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
@@ -666,8 +668,16 @@ function renderView(){
   if(state.view==="consola"){ if(state.creatorClans==null && state.creatorSantuarios==null) requestAnimationFrame(loadCreatorGroups); requestAnimationFrame(loadWorldMonitor); requestAnimationFrame(loadRewardPanel);
     if(state.addonsConsola==null) requestAnimationFrame(loadAddonsConsola);
     requestAnimationFrame(()=>loadInvitaciones(null,null)); }
-  // Desliza la pestaña activa al centro (sensación suave en móvil).
-  if(window.innerWidth>720) requestAnimationFrame(()=>{ const on=document.querySelector(".morada-tab.on"); if(on && on.scrollIntoView){ try{ on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){} } });
+  // La pestaña activa, a la vista dentro de su tira. Se mueve la tira y no la
+  // página: scrollIntoView también desplaza en vertical y, en el celular,
+  // mandaba la vista hacia arriba en cada redibujo.
+  requestAnimationFrame(()=>centrarPestana(llega));
+}
+function centrarPestana(suave){
+  const row=document.querySelector(".morada-tabs-row"), on=row&&row.querySelector(".morada-tab.on");
+  if(!row||!on||row.scrollWidth<=row.clientWidth) return;
+  const x=on.offsetLeft-(row.clientWidth-on.offsetWidth)/2;
+  try{ row.scrollTo({left:Math.max(0,x), behavior:suave?"smooth":"auto"}); }catch(e){ row.scrollLeft=Math.max(0,x); }
 }
 /* --- Mi Alma --- */
 function vMiAlma(a){
@@ -1231,33 +1241,64 @@ function projectContextBadge(a,p){
   const label=ctx==="Personal"?"Mi Taller":ctx==="Clan"?owner:"Santuario";
   return `<span class="pill ${ctx==="Clan"?'gold':''}" style="font-size:10.5px;padding:4px 8px">${esc(label)}</span>`;
 }
+/* Qué conjunto de unidades se mira. El primer botón decía "Todos" y escondía
+   las cerradas y las archivadas, y la pantalla avisaba entonces de "filtros"
+   que nadie había puesto. Ahora el tablero del día se llama por su nombre
+   —Activos— y "Todas" son todas. `todos` es la clave vieja guardada en los
+   dispositivos: se lee como Activos, que es lo que siempre fue. */
+const PROJ_CONTEXTOS=[["activos","Activos"],["personal","Mi Taller"],["clan","Clanes"],["cerrados","Cerrados"],["archivados","Archivados"],["todas","Todas"]];
+function projContexto(){ const f=state.projFilter; return PROJ_CONTEXTOS.some(c=>c[0]===f)?f:"activos"; }
 function projectVisibleForFilter(a,p){
-  const f=state.projFilter||"todos", ctx=projectContext(p), archived=projectArchived(p);
+  const f=projContexto(), ctx=projectContext(p), archived=projectArchived(p);
+  if(f==="todas") return true;
   if(f==="personal") return ctx==="Personal" && !archived;
   if(f==="clan") return ctx==="Clan" && !archived;
   if(f==="cerrados") return projectClosed(p);
   if(f==="archivados") return archived;
   return !archived;
 }
-function projectSelectFilters(ps){
-  const opt=(label,arr,cur)=>`<option value="" ${cur?'':'selected'}>${label}</option>`+arr.map(x=>`<option value="${esc(x)}" ${cur===x?'selected':''}>${esc(x)}</option>`).join("");
-  const templates=[...new Set(ps.map(p=>p.template||"").filter(Boolean))].sort();
-  const cats=[...new Set(ps.map(p=>p.category||"").filter(Boolean))].sort();
-  const owners=[...new Set(ps.map(p=>p.responsible||p.owner||"").filter(Boolean))].sort();
-  const comunas=[...new Set(ps.map(p=>String(p.comuna||"").trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,"es"));
-  const d=state.projDetailFilter||{};
-  /* Los atajos van en su propia línea y rotulados: pegados a los filtros de
-     contexto, "Todo" y "Todos" se leen como el mismo botón. */
-  return `<div class="per-row"><span class="per-lbl">Periodo</span>${periodQuick("pj",d.desde||"",d.hasta||"")}${periodMonthPicker("pj",d.desde||"",d.hasta||"")}</div>
-    <div class="proj-filters">
-    <select data-projfilter2="template">${opt("Plantilla",templates,d.template||"")}</select>
-    <select data-projfilter2="category">${opt("Categoría",cats,d.category||"")}</select>
-    <select data-projfilter2="responsible">${opt("Responsable",owners,d.responsible||"")}</select>
-    <select data-projfilter2="comuna">${opt("Comuna",comunas,d.comuna||"")}</select>
-    <select data-projfilter2="status">${opt("Estado",FLOW,d.status||"")}</select>
-    <select data-projfilter2="dateField">${PROJECT_DATE_FIELDS.map(f=>`<option value="${f.k}" ${projectDateField()===f.k?'selected':''}>Fecha · ${f.t}</option>`).join("")}</select>
-    <label class="pf-date"><span>Desde</span><input type="date" data-projfilter2="desde" value="${esc(d.desde||"")}"></label>
-    <label class="pf-date"><span>Hasta</span><input type="date" data-projfilter2="hasta" value="${esc(d.hasta||"")}"></label>
+/* Los filtros finos, cada uno con su nombre. Estado va primero porque es el
+   que más se usa; los demás solo aparecen si hay algo que elegir: un selector
+   de "Plantilla" vacío es ruido. */
+const PROJ_FILTROS=[["status","Estado"],["template","Plantilla"],["category","Categoría"],["responsible","Responsable"],["comuna","Comuna"]];
+function projOpciones(ps){
+  const uniq=f=>[...new Set(ps.map(f).map(x=>String(x||"").trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,"es"));
+  return { status:FLOW, template:uniq(p=>p.template), category:uniq(p=>p.category),
+           responsible:uniq(p=>p.responsible||p.owner), comuna:uniq(p=>p.comuna) };
+}
+/* Lo que está filtrando ahora, dicho en palabras. Se enseña siempre como
+   chips, con el panel abierto o cerrado: un filtro que se olvida puesto es
+   una unidad que "desaparece". */
+function projFiltrosActivos(){
+  const d=state.projDetailFilter||{}, out=[];
+  PROJ_FILTROS.forEach(([k,t])=>{ if(d[k]) out.push({k, t:`${t}: ${d[k]}`}); });
+  if(d.desde||d.hasta){
+    const campo=(PROJECT_DATE_FIELDS.find(x=>x.k===projectDateField())||PROJECT_DATE_FIELDS[0]).t;
+    out.push({k:"periodo", t:`${campo} ${periodWords(d.desde,d.hasta)}`});
+  }
+  return out;
+}
+function projFiltrosPanel(ps){
+  const d=state.projDetailFilter||{}, op=projOpciones(ps);
+  const sel=(k,t)=>{ const arr=op[k]||[]; if(k!=="status" && !arr.length && !d[k]) return "";
+    return `<label class="ph-fld"><span>${esc(t)}</span><select data-projfilter2="${k}">
+      <option value="">Cualquiera</option>${arr.map(x=>`<option value="${esc(x)}" ${d[k]===x?'selected':''}>${esc(x)}</option>`).join("")}</select></label>`; };
+  /* Primero lo que describe el trabajo (estado, plantilla…), después el tramo
+     de fechas: Estado es el filtro que más se usa y no puede quedar debajo de
+     cuatro campos de fecha. */
+  return `<div class="ph-panel" id="projPanel">
+    <div class="ph-grid">${PROJ_FILTROS.map(([k,t])=>sel(k,t)).join("")}</div>
+    <div class="ph-sec"><span class="per-lbl">Periodo</span>
+      <div class="ph-per" data-noswipe>${periodQuick("pj",d.desde||"",d.hasta||"")}</div></div>
+    <div class="ph-grid">
+      <label class="ph-fld"><span>Medir por</span><select data-projfilter2="dateField">${PROJECT_DATE_FIELDS.map(f=>`<option value="${f.k}" ${projectDateField()===f.k?'selected':''}>${f.t} · ${f.d}</option>`).join("")}</select></label>
+      <label class="ph-fld"><span>Mes</span><input type="month" data-pjmonth value="${esc(periodMonth(d.desde||"",d.hasta||""))}"></label>
+      <label class="ph-fld"><span>Desde</span><input type="date" data-projfilter2="desde" value="${esc(d.desde||"")}"></label>
+      <label class="ph-fld"><span>Hasta</span><input type="date" data-projfilter2="hasta" value="${esc(d.hasta||"")}"></label>
+    </div>
+    <div class="ph-foot">
+      ${projFiltrosActivos().length?`<button class="btn ghost sm" data-projclear>Limpiar filtros</button>`:""}
+      <button class="btn sm" data-projfiltros>Listo</button></div>
   </div>`;
 }
 /* Con qué fecha se mide una unidad. La de creación la tiene toda —nace con
@@ -1449,12 +1490,15 @@ function periodWords(desde,hasta){
   return desde&&hasta?`del ${fechaCorta(desde)} al ${fechaCorta(hasta)}`
         :desde?`desde el ${fechaCorta(desde)}`:`hasta el ${fechaCorta(hasta)}`;
 }
-/* Buscar una unidad no es lo mismo que filtrar. Quien escribe "mural Teno"
-   quiere encontrarla esté donde esté —cerrada, archivada o fuera del tramo—,
-   así que la búsqueda pasa por encima de los demás filtros en vez de sumarse
-   a ellos, y la pantalla lo dice. Cada palabra tiene que aparecer en algún
-   campo, sin tildes ni mayúsculas de por medio: "teno" encuentra "Teño" y
-   "MURAL" encuentra "Mural". */
+/* Buscar SE SUMA a los filtros. Antes pasaba por encima de ellos: con
+   "Estado: En producción" elegido y "Bar" escrito, la lista enseñaba unidades
+   en Cotizando mientras el selector seguía diciendo En producción. Una
+   pantalla que dice una cosa y muestra otra no se puede usar.
+   Lo que la versión anterior quería cuidar —que una unidad cerrada o fuera
+   del tramo se encuentre igual— no se pierde: si hay coincidencias fuera de
+   los filtros, la pantalla las cuenta y ofrece buscar en todas.
+   Cada palabra tiene que aparecer en algún campo, sin tildes ni mayúsculas de
+   por medio: "teno" encuentra "Teño" y "MURAL" encuentra "Mural". */
 function projectSearchText(p){
   return deburr([p.t,p.client,p.comuna,p.city,p.category,p.responsible,p.template,p.owner,p.desc].filter(Boolean).join(" "));
 }
@@ -1637,26 +1681,27 @@ function toggleTaskDone(i){ const a=me(); const t=(a.tasks||[])[i]; if(!t) retur
 /* Etapa → clase de color del badge. */
 function projStageClass(st){ const s=flowOf(st);
   return ({"Cotizando":"st-cot","Aprobado":"st-apr","En producción":"st-pro","Revisión":"st-rev","Entregado":"st-ent","Cerrado":"st-cer"})[s]||"st-cot"; }
-function vProyectos(a){
-  // Vista de detalle (panel dividido) cuando hay un proyecto abierto.
-  if(state.projOpen!=null && a.projects[state.projOpen]) return vProyectoDetalle(a, state.projOpen);
-  const view=state.projView||"tarjetas"; const all=a.projects||[];
-  const q=String(state.projQuery||"").trim(), buscando=!!q;
-  const entries=buscando
-    ? all.map((p,i)=>({p,i})).filter(x=>projectMatchesQuery(x.p))
-    : all.map((p,i)=>({p,i})).filter(x=>projectVisibleForFilter(a,x.p)).filter(x=>projectMatchesDetail(x.p));
-  const ps=entries.map(x=>x.p);
-  /* Un filtro que esconde en silencio es un dato perdido: mientras haya algo
-     a la vista nadie se entera de lo que falta. Por eso se cuenta siempre. */
-  const ocultas=all.length-entries.length;
-  const avisoOcultas=(!buscando && ocultas>0 && entries.length)
-    ? `<div class="proj-aviso">${ocultas} unidad${ocultas===1?"":"es"} más ${ocultas===1?"no aparece":"no aparecen"} con los filtros de ahora.<button class="btn ghost sm" data-projclear>Limpiar filtros</button></div>` : "";
-  const avisoBuscando=buscando
-    ? `<div class="proj-aviso">Buscando <b>${esc(q)}</b> en las ${all.length} unidades — también cerradas, archivadas y fuera del tramo.<button class="btn ghost sm" data-projqclear>Borrar búsqueda</button></div>` : "";
+/* Qué se ve con los filtros y la búsqueda de ahora. Una sola cuenta para la
+   pantalla entera, así la cifra de arriba, los indicadores y la lista no
+   pueden contradecirse entre sí. */
+function projCalcular(a){
+  const all=a.projects||[];
+  const q=String(state.projQuery||"").trim();
+  const base=all.map((p,i)=>({p,i})).filter(x=>projectVisibleForFilter(a,x.p) && projectMatchesDetail(x.p));
+  const entries=q ? base.filter(x=>projectMatchesQuery(x.p)) : base;
+  const fuera = q ? all.filter(projectMatchesQuery).length-entries.length : 0;
+  const enContexto = all.filter(p=>projectVisibleForFilter(a,p)).length;
+  return { all, q, base, entries, fuera, enContexto, filtros:projFiltrosActivos() };
+}
+function projCuentaTexto(c){
+  const n=c.entries.length;
+  return c.q ? `${n} de ${c.base.length}` : `${n} unidad${n===1?"":"es"}`;
+}
+function projKpisHTML(ps){
   const summary=projectSummary(ps);
   const pagadoPct=summary.totalBudget>0?Math.round(summary.totalPaid/summary.totalBudget*100):0;
   const sub=t=>`<span class="stat-sub">${t}</span>`;
-  const summaryCards=`<div class="card s3"><div class="stat"><span class="num" style="color:var(--aviso,#b8862f)">${money(summary.enCotizacion)}</span><span class="lbl">En cotización</span>
+  return `<div class="card s3"><div class="stat"><span class="num" style="color:var(--aviso,#b8862f)">${money(summary.enCotizacion)}</span><span class="lbl">En cotización</span>
       ${sub(summary.nCotizando?`${summary.nCotizando} ${summary.nCotizando===1?"unidad esperando":"unidades esperando"} aprobación`:"Nada esperando aprobación")}</div></div>
     <div class="card s3"><div class="stat"><span class="num">${money(summary.totalBudget)}</span><span class="lbl">Contratado</span>
       ${sub(summary.nAprobados?`${summary.nAprobados} ${summary.nAprobados===1?"unidad aprobada":"unidades aprobadas"}`:"Sin unidades aprobadas")}</div></div>
@@ -1664,35 +1709,66 @@ function vProyectos(a){
       ${sub(summary.totalBudget?`${pagadoPct}% de lo contratado`:"—")}</div></div>
     <div class="card s3"><div class="stat"><span class="num" style="color:var(--danger)">${money(summary.balance)}</span><span class="lbl">Saldo pendiente</span>
       ${sub("Sólo de unidades aprobadas")}</div></div>`;
-  const fab=`<button class="fab" data-addproject="Personal" title="Nuevo Proyecto">＋<span>Nueva Unidad</span></button>`;
+}
+function projCabecera(a,c){
+  const view=state.projView||"tarjetas", ctx=projContexto(), abierto=!!state.projFiltrosOpen;
+  const nF=c.filtros.length;
   const segBtn=(k,t)=>`<button class="seg-b ${view===k?'on':''}" data-projview="${k}">${t}</button>`;
-  const filterBtn=(k,t)=>`<button class="seg-b ${(state.projFilter||"todos")===k?'on':''}" data-projfilter="${k}">${t}</button>`;
-  const head=`<div class="card s12"><div class="section-title"><h2>Unidades de Trabajo</h2><div class="spacer"></div>
-      <div class="seg">${segBtn("tarjetas","Tarjetas")}${segBtn("lista","Lista")}${segBtn("kanban","Kanban")}</div>
-      <span class="muted" style="font-size:12.5px;margin:0 6px">${ps.length}${ps.length?` · avance ${summary.avgPct}%`:""}</span></div>
-      <input class="proj-search" type="search" data-projquery placeholder="Buscar por nombre, cliente, comuna…" value="${esc(q)}" autocomplete="off">
-      <div class="seg" style="margin-top:12px;flex-wrap:wrap">${filterBtn("todos","Todos")}${filterBtn("personal","Mi Taller")}${filterBtn("clan","Clanes")}${filterBtn("cerrados","Cerrados")}${filterBtn("archivados","Archivados")}</div>
-      ${projectSelectFilters(all)}${buscando?"":projectPeriodLine(ps.length)}${avisoBuscando}${avisoOcultas}</div>`;
-  if(!ps.length){
-    const hasProjects=all.length>0;
-    const vacio=buscando
-      ? `Ninguna de tus ${all.length} unidades dice <b>${esc(q)}</b>. Puede estar escrito de otra forma, o la comuna quedó vacía al crearla.`
-      : (hasProjects?"Hay proyectos guardados, pero el filtro actual no los muestra. Limpia filtros o revisa Cerrados y Archivados.":"No hay unidades todavía. Crea una nueva desde el botón ＋.");
-    return `<div class="grid">${summaryCards}${head}<div class="card s12"><p class="muted">${vacio}</p>${buscando?`<button class="btn sm secondary" data-projqclear>Borrar búsqueda</button>`:(hasProjects?`<button class="btn sm secondary" data-projclear>Limpiar filtros</button>`:"")}</div></div>${fab}`;
+  const chips = nF ? `<div class="ph-activos">${c.filtros.map(f=>`<button class="ph-chip" data-projquitar="${f.k}" title="Quitar este filtro">${esc(f.t)}<span aria-hidden="true">✕</span></button>`).join("")}
+      ${nF>1?`<button class="ph-limpiar" data-projclear>Limpiar todo</button>`:""}</div>` : "";
+  return `<div class="card s12 proj-head">
+    <div class="ph-top">
+      <div class="ph-tit"><h2>Unidades de trabajo</h2><span class="ph-count" id="projCuenta">${projCuentaTexto(c)}</span></div>
+      <div class="seg ph-views">${segBtn("tarjetas","Tarjetas")}${segBtn("lista","Lista")}${segBtn("kanban","Kanban")}</div>
+    </div>
+    <div class="ph-search">
+      <label class="ph-q"><span class="ph-lupa">${ANIMA_ICON("lupa","⌕")}</span>
+        <input type="search" data-projquery placeholder="Buscar por nombre, cliente, comuna…" value="${esc(c.q)}" autocomplete="off" enterkeyhint="search" aria-label="Buscar unidades">
+        <button type="button" class="ph-x" data-projqclear aria-label="Borrar búsqueda"${c.q?"":" hidden"}>✕</button></label>
+      <button type="button" class="btn ghost sm ph-fbtn ${abierto?'on':''}" data-projfiltros aria-expanded="${abierto}" aria-controls="projPanel">
+        ${ANIMA_ICON("config","⚙")}<span>Filtros</span>${nF?`<span class="ph-n">${nF}</span>`:""}</button>
+    </div>
+    <div class="ph-ctx" data-noswipe>${PROJ_CONTEXTOS.map(([k,t])=>`<button class="ph-c ${ctx===k?'on':''}" data-projfilter="${k}">${t}</button>`).join("")}</div>
+    ${chips}
+    ${abierto?projFiltrosPanel(c.all):""}
+  </div>`;
+}
+function projResultados(a,c){
+  const { all, q, entries, fuera } = c;
+  const hayFiltros = c.filtros.length>0;
+  const avisos=[];
+  if(q && fuera>0) avisos.push(`<div class="proj-aviso"><span>${fuera} coincidencia${fuera===1?"":"s"} más con <b>${esc(q)}</b> fuera de estos filtros.</span><button class="btn ghost sm" data-projtodo>Buscar en todas</button></div>`);
+  if(!q && hayFiltros && c.enContexto>entries.length){
+    const k=c.enContexto-entries.length, nom=(PROJ_CONTEXTOS.find(x=>x[0]===projContexto())||["","Activos"])[1];
+    avisos.push(`<div class="proj-aviso"><span>Los filtros dejan fuera ${k} unidad${k===1?"":"es"} de <b>${esc(nom)}</b>.</span><button class="btn ghost sm" data-projclear>Limpiar filtros</button></div>`);
   }
-  const pct=p=>clampPct(p.pct);
+  const periodo = (!q && hayFiltros) ? projectPeriodLine(entries.length) : "";
+  const cabeza = (avisos.length||periodo) ? `<div class="s12 proj-avisos">${periodo}${avisos.join("")}</div>` : "";
+
+  if(!entries.length){
+    const vacio = !all.length
+      ? `<p class="muted">Todavía no hay unidades. Crea la primera con el botón ＋.</p>`
+      : q
+        ? `<p class="muted">Nada con <b>${esc(q)}</b> ${fuera?"con estos filtros":"en tus "+all.length+" unidades"}.${fuera?"":" Prueba con otra palabra: se busca en el nombre, el cliente, la comuna, la categoría y el responsable."}</p>
+           <div class="ph-vacio-acc">${fuera?`<button class="btn sm" data-projtodo>Buscar en todas (${fuera})</button>`:""}<button class="btn sm secondary" data-projqclear>Borrar búsqueda</button></div>`
+        : `<p class="muted">Ninguna unidad cumple estos filtros.</p>
+           <div class="ph-vacio-acc">${hayFiltros?`<button class="btn sm secondary" data-projclear>Limpiar filtros</button>`:""}${projContexto()!=="todas"?`<button class="btn sm ghost" data-projfilter="todas">Ver todas</button>`:""}</div>`;
+    return `${cabeza}<div class="card s12 ph-vacio">${vacio}</div>`;
+  }
+
+  const view=state.projView||"tarjetas", pct=p=>clampPct(p.pct);
   let body;
   if(view==="lista"){
-    body=`<div class="card s12">${entries.map(({p,i})=>`<div class="tk-row proj-litem ${p.color?'has-pc':''}"${projColorAttrs(p)} data-projopen="${i}">
+    body=`<div class="card s12 proj-lista">${entries.map(({p,i})=>`<div class="tk-row proj-litem ${p.color?'has-pc':''}"${projColorAttrs(p)} data-projopen="${i}">
         <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
         <div class="grow"><b>${esc(p.t)}</b> ${projectContextBadge(a,p)}<br><small class="muted">${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")}${projectLocation(p)?" · ⌖ "+esc(projectLocation(p)):""} · ${pct(p)}%${p.due?" · ⌛ "+esc(tallerDate(p.due)):""}${projectFinanceLine(p)?" · "+esc(projectFinanceLine(p)):""}</small></div>
-        <div class="proj-bar" style="width:110px"><span style="width:${pct(p)}%"></span></div>
-        <b style="min-width:70px;text-align:right">${p.budget?esc(money(p.budget)):""}</b>
+        <div class="proj-bar"><span style="width:${pct(p)}%"></span></div>
+        <b class="proj-litem-monto">${p.budget?esc(money(p.budget)):""}</b>
       </div>`).join("")}</div>`;
   } else if(view==="kanban"){
     const cols=FLOW.map(s=>({s,items:[]}));
     entries.forEach(({p,i})=>{ const col=cols.find(c=>c.s===flowOf(p.st)); (col||cols[0]).items.push({p,i}); });
-    body=`<div class="card s12"><div class="kanban">${cols.map(c=>`<div class="kcol"><div class="kcol-h">${c.s.toUpperCase()}<span>${c.items.length||""}</span></div>
+    body=`<div class="card s12"><div class="kanban" data-noswipe>${cols.map(c=>`<div class="kcol"><div class="kcol-h">${c.s.toUpperCase()}<span>${c.items.length||""}</span></div>
         ${c.items.map(({p,i})=>`<div class="kcard ${p.color?'has-pc':''}" data-projopen="${i}" style="cursor:pointer${p.color?`;--pc:${esc(p.color)}`:''}">
           <b>${esc(p.t)}</b><small>${projectMetaLine(a,p)||esc(p.client||"Sin vínculo")}</small>${projectLocation(p)?`<small>⌖ ${esc(projectLocation(p))}</small>`:""}${projectFinanceLine(p)?`<small>${esc(projectFinanceLine(p))}</small>`:""}
           <div class="proj-bar" style="margin-top:9px"><span style="width:${pct(p)}%"></span></div>
@@ -1709,7 +1785,43 @@ function vProyectos(a){
         ${projectFinanceLine(p)?`<div class="proj-money-line">${esc(projectFinanceLine(p))}</div>`:""}
       </button>`).join("")}</div>`;
   }
-  return `<div class="grid">${summaryCards}${head}${body}</div>${fab}`;
+  return cabeza+body;
+}
+/* La pantalla en tres piezas: la cabecera (búsqueda, contexto y filtros), los
+   indicadores y los resultados. Las dos últimas viven en contenedores con
+   `display:contents` —siguen siendo hijas de la rejilla— para poder
+   reemplazarlas sin tocar la cabecera. Así, al escribir, el campo de búsqueda
+   no se vuelve a crear: no pierde el foco, el cursor no salta al final y el
+   teclado del celular no se cierra ni se reinicia a cada letra. */
+function vProyectos(a){
+  // Vista de detalle (panel dividido) cuando hay un proyecto abierto.
+  if(state.projOpen!=null && a.projects[state.projOpen]) return vProyectoDetalle(a, state.projOpen);
+  const c=projCalcular(a);
+  const fab=`<button class="fab" data-addproject="Personal" title="Nuevo Proyecto">＋<span>Nueva Unidad</span></button>`;
+  return `<div class="grid proj-pantalla">${projCabecera(a,c)}
+    <div id="projKpis" class="proj-kpis">${projKpisHTML(c.entries.map(x=>x.p))}</div>
+    <div id="projResultados" class="proj-res">${projResultados(a,c)}</div></div>${fab}`;
+}
+/* Escribir en el buscador actualiza la cuenta, los indicadores y la lista —y
+   nada más—. Con una pausa corta, para no recalcular a mitad de palabra. */
+let PROJ_ESPERA=null;
+function projBuscar(valor){
+  state.projQuery=valor; state.projOpen=null;
+  const x=document.querySelector(".ph-x"); if(x) x.hidden=!String(valor||"").trim();
+  clearTimeout(PROJ_ESPERA); PROJ_ESPERA=setTimeout(refrescarProyectos, 90);
+}
+function refrescarProyectos(){
+  const k=document.getElementById("projKpis"), r=document.getElementById("projResultados");
+  if(state.view!=="proyectos" || state.projOpen!=null || !k || !r){ renderView(); return; }
+  const a=me(), c=projCalcular(a);
+  k.innerHTML=projKpisHTML(c.entries.map(x=>x.p));
+  r.innerHTML=projResultados(a,c);
+  const n=document.getElementById("projCuenta"); if(n) n.textContent=projCuentaTexto(c);
+}
+function projLimpiarBusqueda(){
+  const el=document.querySelector("[data-projquery]");
+  if(el){ el.value=""; projBuscar(""); clearTimeout(PROJ_ESPERA); refrescarProyectos(); try{ el.focus(); }catch(e){} }
+  else { state.projQuery=""; renderView(); }
 }
 function vProyectoDetalle(a, i){
   const p=a.projects[i]; const pct=clampPct(p.pct), fin=projectMoney(p);
@@ -5790,8 +5902,18 @@ function setupSwipeNav(){
     setTimeout(()=>{ ghost.remove(); reset(); animating=false; }, 340);
   }
 
+  /* ¿El dedo empezó sobre algo que ya se desliza solo? Deslizar dentro del
+     Kanban o de la tira de pestañas cambiaba de morada entera: el gesto era
+     de ellos, no de la página. */
+  const deslizaSolo=t=>{
+    for(let el=t; el && el!==document.body; el=el.parentElement){
+      if(el.matches && el.matches("input,select,textarea,[data-noswipe]")) return true;
+      if(el.scrollWidth>el.clientWidth+2){ const ox=getComputedStyle(el).overflowX; if(ox==="auto"||ox==="scroll") return true; }
+    }
+    return false;
+  };
   window.addEventListener("touchstart",e=>{
-    if(animating || window.innerWidth>960 || e.touches.length!==1 || overlayOpen()){ active=false; return; }
+    if(animating || window.innerWidth>960 || e.touches.length!==1 || overlayOpen() || deslizaSolo(e.target)){ active=false; return; }
     x0=e.touches[0].clientX; y0=e.touches[0].clientY; dx=0; axis=null; active=true;
     const v=view(); if(v) v.style.transition="none";
   },{passive:true});
@@ -6112,8 +6234,13 @@ document.addEventListener("click", e=>{
   if(e.target.closest("[data-tlclear]")){ state.tallerPeriod={desde:"",hasta:""}; renderView(); return; }
   const pjp=e.target.closest("[data-pjpreset]"); if(pjp){ const r=periodRange(pjp.dataset.pjpreset);
     state.projDetailFilter=Object.assign({},state.projDetailFilter,{desde:r.desde,hasta:r.hasta}); state.projOpen=null; renderView(); return; }
-  if(e.target.closest("[data-projclear]")){ state.projFilter="todos"; state.projDetailFilter={}; state.projOpen=null; renderView(); return; }
-  if(e.target.closest("[data-projqclear]")){ state.projQuery=""; state.projOpen=null; renderView(); return; }
+  /* Limpiar filtros deja la búsqueda: tiene su propia ✕, a la vista. El modo
+     de medir fechas tampoco se toca — es una preferencia, no un filtro. */
+  if(e.target.closest("[data-projclear]")){ const df=(state.projDetailFilter||{}).dateField; state.projFilter="activos"; state.projDetailFilter=df?{dateField:df}:{}; state.projOpen=null; renderView(); return; }
+  if(e.target.closest("[data-projqclear]")){ state.projOpen=null; projLimpiarBusqueda(); return; }
+  if(e.target.closest("[data-projtodo]")){ const df=(state.projDetailFilter||{}).dateField; state.projFilter="todas"; state.projDetailFilter=df?{dateField:df}:{}; state.projOpen=null; renderView(); return; }
+  if(e.target.closest("[data-projfiltros]")){ state.projFiltrosOpen=!state.projFiltrosOpen; renderView(); return; }
+  const pqt=e.target.closest("[data-projquitar]"); if(pqt){ const d=Object.assign({},state.projDetailFilter); if(pqt.dataset.projquitar==="periodo"){ delete d.desde; delete d.hasta; } else delete d[pqt.dataset.projquitar]; state.projDetailFilter=d; state.projOpen=null; renderView(); return; }
   const pa=e.target.closest("[data-addproject]"); if(pa){ openProjectRecord(pa.dataset.addproject); return; }
   if(e.target.closest("[data-finclear]")){ state.finPeriod="all"; state.finCat="all"; renderView(); return; }
   const po=e.target.closest("[data-projopen]"); if(po && !e.target.closest("select,option")){ state.projOpen=+po.dataset.projopen; renderView(); try{window.scrollTo(0,0);}catch(_){} return; }
@@ -6260,6 +6387,12 @@ document.addEventListener("focusout", e=>{
   const kp=e.target.closest(".kpct"); if(kp){ updateProjectField(+kp.dataset.pct, "pct", kp.value); return; }
 });
 document.addEventListener("keydown", e=>{
+  // En el buscador de Proyectos: Enter cierra el teclado del celular (los
+  // resultados ya están), Escape borra.
+  if(e.target && e.target.matches && e.target.matches("[data-projquery]")){
+    if(e.key==="Enter"){ e.preventDefault(); clearTimeout(PROJ_ESPERA); refrescarProyectos(); e.target.blur(); return; }
+    if(e.key==="Escape"){ e.preventDefault(); projLimpiarBusqueda(); return; }
+  }
   if(e.key==="Enter" && e.target && e.target.id==="ck_new"){ e.preventDefault(); const b=document.querySelector("[data-ckadd]"); if(b) b.click(); return; }
   if(e.key==="Enter" && e.target && e.target.id==="ab_amount"){ e.preventDefault(); const b=document.querySelector("[data-abadd]"); if(b) b.click(); return; }
 });
@@ -6267,10 +6400,8 @@ document.addEventListener("input", e=>{
   const kp=e.target.closest(".kpct"); if(kp){ previewProjectField(+kp.dataset.pct, "pct", kp.value); return; }
   if(e.target.id==="convRate"){ updateConvOut(); return; }
   if(e.target.id==="cgSearch"){ state.creatorGroupSearch=e.target.value; renderView(); return; }
-  const pq=e.target.closest("[data-projquery]"); if(pq){ state.projQuery=pq.value; state.projOpen=null; renderView();
-    const el=document.querySelector("[data-projquery]");
-    if(el){ el.focus(); const n=el.value.length; try{ el.setSelectionRange(n,n); }catch(_){} }
-    return; }
+  // Escribir no redibuja la pantalla: solo la cuenta, los indicadores y la lista.
+  const pq=e.target.closest("[data-projquery]"); if(pq){ projBuscar(pq.value); return; }
   if(e.target.closest(".cot-inspector")){ qLive(); return; }
   // Búsqueda en vivo del Panel de Almas / picker (sin re-render, conserva foco).
   if(e.target.id==="clanSearch" || e.target.id==="clanAddSearch"){
