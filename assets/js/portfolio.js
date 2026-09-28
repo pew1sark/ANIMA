@@ -24,7 +24,7 @@ async function main(){
   if(!a){ $("#app").innerHTML="<div class='empty'><h2>Esta Alma aún no es pública</h2><p>Puede que el enlace sea incorrecto.</p></div>"; return; }
   if(a.visibility && a.visibility.public===false){
     document.title=`${a.name} · ANIMA`;
-    $("#app").innerHTML=`<div class='empty'><h2>Portafolio privado</h2><p>${esc(a.name)} mantiene su portafolio en privado por ahora.</p><a class='btn' href='studio.html' style='margin-top:14px;display:inline-block'>Crear mi Alma →</a></div>`;
+    $("#app").innerHTML=`<div class='empty'><h2>Portafolio privado</h2><p>${esc(a.name)} mantiene su portafolio en privado por ahora.</p><a class='btn' href='studio.html' style='margin-top:14px;display:inline-block'>Entrar a ANIMA STUDIO →</a></div>`;
     return;
   }
   const [{data:port},{data:traj}] = await Promise.all([
@@ -103,7 +103,7 @@ function render(a, port, traj){
         <div style="margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.5);text-align:center">
           <div class="pixel-font" style="font-size:10px;color:#7b5920">ANIMA TSC</div>
           <p class="muted" style="font-size:12px;margin:8px 0 10px">Crea tu propio mundo creativo.</p>
-          <a class="btn sm" href="studio.html">Crear mi Alma →</a>
+          <a class="btn sm" href="studio.html">Entrar a ANIMA STUDIO →</a>
         </div>
       </aside>
       <section>${gallery}</section>

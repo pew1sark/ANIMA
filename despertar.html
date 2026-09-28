@@ -85,8 +85,6 @@
     .field input{width:100%;border:1px solid var(--line);background:#fff;border-radius:2px;
       padding:13px 15px;font-size:15px;color:var(--ink);font-family:inherit}
     .field input:focus{outline:none;border-color:var(--ink)}
-    .code-chip{display:inline-block;border:1px dashed var(--line);border-radius:2px;
-      padding:5px 12px;font-family:ui-monospace,monospace;letter-spacing:.18em;font-size:13px;color:var(--ink)}
     .check{display:flex;gap:11px;align-items:flex-start;text-align:left;max-width:460px;
       margin:0 auto;font-size:14px;color:var(--ink);cursor:pointer;user-select:none}
     .check input{margin-top:3px;width:16px;height:16px;accent-color:var(--ink);flex:0 0 auto}
@@ -125,13 +123,14 @@
      ANIMA · blanco · negro · gris · pixel art · letras pro
      ===========================================================
      Pantallas: ANIMA → La Raíz → El Mundo → Almas del Origen →
-                Pacto del Origen → Crear Alma → Lumbre te observa.
+                Pacto del Origen → El Umbral → Lumbre te observa.
      La nube decide quién ya cruzó el Umbral (awakening_completed).
      =========================================================== */
   var scene = document.getElementById("scene");
-  var form = { name:"", email:"", pass:"", code:"" };
+  var form = { name:"", email:"", pass:"" };
   var ctx  = { existing:false };     // existing = sesión sin despertar (no recrear cuenta)
-  var ALPHA = (window.AnimaState && AnimaState.ALPHA_CODE) || "ANIMA-2026";
+  /* Aquí vivía ALPHA, el Código del Origen. Ya no se pide en ninguna pantalla:
+     la cuenta la crea el enlace de la invitación. */
 
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
   function bind(id, fn){ var e=document.getElementById(id); if(e) e.addEventListener("click", fn); }
@@ -287,60 +286,34 @@
     );
   }
 
-  /* ---------- PANTALLA 6 · CREAR ALMA ---------- */
+  /* ---------- PANTALLA 6 · LA PUERTA ----------
+     Aquí había un formulario para crear un Alma, con el Código del Origen
+     impreso en la misma pantalla que lo pedía. Mientras el acceso era una beta
+     abierta a quien llegara, eso tenía sentido.
+     Ya no: a ANIMA STUDIO se entra por invitación, y la cuenta la crea el
+     enlace que llega al correo (migración 0136). Un formulario de registro
+     aquí sería la puerta de atrás de todo ese sistema — bastaría con conocer
+     esta URL, que además está enlazada desde el HOME.
+     Quien ya tiene cuenta entra; quien no, pide invitación. */
   function sCrear(){
     render(
-      '<div class="eyebrow mono">Crear Alma</div>'+
-      '<p class="big">Da forma a tu Alma</p>'+
-      '<p class="sub">Aquí no hay usuarios. Hay Almas. Esto es lo único que necesitamos para que nazcas. Tu nombre lo elegirás después, dentro de ANIMA.</p>'+
-      '<form class="form" id="crearForm" autocomplete="on" novalidate>'+
-        '<div class="field"><label>Correo</label><input id="f_email" name="email" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" /></div>'+
-        '<div class="field"><label>Contraseña</label><input id="f_pass" name="password" type="password" placeholder="Una clave secreta (mín. 6)" autocomplete="new-password" /></div>'+
-        '<div class="field"><label>Código del Origen</label><input id="f_code" name="code" placeholder="'+esc(ALPHA)+'" autocomplete="off" /></div>'+
-        '<div style="text-align:center;margin:4px 0 2px"><span class="code-chip">'+esc(ALPHA)+'</span></div>'+
-        '<div class="err" id="f_err"></div>'+
-        '<div class="actions" style="margin-top:14px">'+
-          '<button type="button" class="cbtn ghost" id="b_back">Volver</button>'+
-          '<button type="submit" class="cbtn" id="b_nacer">Crear Alma</button>'+
-        '</div>'+
-        '<div style="text-align:center"><a class="tiny-link" id="c_have">¿Ya tienes un Alma? · Entrar</a></div>'+
-      '</form>',
+      '<div class="eyebrow mono">El Umbral</div>'+
+      '<p class="big">ANIMA se entra por invitación</p>'+
+      '<p class="sub">No hay registro abierto. Quien te invita escribe tu correo y te llega un enlace que crea tu cuenta y te deja dentro de tu equipo.</p>'+
+      '<div class="pact" style="margin-top:22px">'+
+        '<p>Si ya recibiste ese correo, abre el enlace desde tu bandeja: es el que te da la entrada.</p>'+
+        '<p>Si ya tienes un Alma, entra con tu correo y tu contraseña.</p>'+
+      '</div>'+
+      '<div class="actions" style="margin-top:14px">'+
+        '<button type="button" class="cbtn ghost" id="b_back">Volver</button>'+
+        '<button type="button" class="cbtn" id="c_have">Entrar a mi Alma</button>'+
+      '</div>'+
+      '<div style="text-align:center"><a class="tiny-link" href="mailto:tscanima@gmail.com?subject=ANIMA%20STUDIO%20%E2%80%94%20quiero%20una%20invitaci%C3%B3n">Pedir una invitación</a></div>',
       function(){
-        document.getElementById("f_email").value=form.email;
-        document.getElementById("f_code").value=form.code;
         bind("b_back", sPacto);
         bind("c_have", sLogin);
-        document.getElementById("crearForm").addEventListener("submit", function(e){ e.preventDefault(); nacer(); });
       }
     );
-  }
-
-  async function nacer(){
-    var g=function(id){ return (document.getElementById(id).value||"").trim(); };
-    form.email=g("f_email"); form.pass=document.getElementById("f_pass").value; form.code=g("f_code");
-    form.name=(form.email.split("@")[0]||"Alma");   // el nombre se elige después, dentro de ANIMA
-    var err=document.getElementById("f_err");
-    if(!form.email || !/.+@.+\..+/.test(form.email)){ err.textContent="Necesitamos un correo válido."; return; }
-    if(!form.pass || form.pass.length<6){ err.textContent="Tu clave debe tener al menos 6 caracteres."; return; }
-    var okCode = window.AnimaState ? AnimaState.checkAlphaCode(form.code) : (form.code.toUpperCase()===ALPHA);
-    if(!okCode){ err.textContent="Código inválido. Esta Alma aún no ha sido convocada."; return; }
-
-    var btn=document.getElementById("b_nacer"); btn.disabled=true; btn.textContent="Naciendo…"; err.textContent="";
-    if(typeof Cloud==="undefined" || !Cloud.enabled){ err.textContent="Sin conexión a la nube. Intenta más tarde."; btn.disabled=false; btn.textContent="Crear Alma"; return; }
-    try{
-      var res = await Cloud.signUp(form.email, form.pass, form.name, null);
-      var exists = res && res.error && /registered|already/i.test(res.error.message||"");
-      var hasSession = res && res.data && res.data.session;
-      if(exists){
-        var si = await Cloud.signIn(form.email, form.pass);
-        if(si && si.error){ err.textContent="Este correo ya tiene un Alma, pero la clave no coincide."; btn.disabled=false; btn.textContent="Crear Alma"; return; }
-      } else if(res && res.error){
-        err.textContent="No pudimos crear tu Alma: "+(res.error.message||"intenta de nuevo."); btn.disabled=false; btn.textContent="Crear Alma"; return;
-      } else if(!hasSession){
-        try{ await Cloud.signIn(form.email, form.pass); }catch(e2){}
-      }
-    }catch(e){ err.textContent="Algo falló al crear tu Alma. Intenta de nuevo."; btn.disabled=false; btn.textContent="Crear Alma"; return; }
-    sFinal();
   }
 
   /* ---------- ENTRAR A UN ALMA EXISTENTE ---------- */

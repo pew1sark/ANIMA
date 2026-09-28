@@ -22,6 +22,11 @@
   --danger:#b23b3b;
 }
 *{box-sizing:border-box}
+/* `hidden` quiere decir oculto. Sin esta línea, cualquier regla con display
+   —flex, grid, inline-flex— le ganaba al atributo: la campana vacía que
+   quedaba sola en la cabecera del celular, su punto naranja sin avisos y el
+   botón de instalar antes de que el navegador lo ofreciera eran eso. */
+[hidden]{display:none !important}
 html{scroll-behavior:smooth;overscroll-behavior-y:none}
 body{
   margin:0;
