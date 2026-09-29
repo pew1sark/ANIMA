@@ -37,6 +37,8 @@
     archivo:["XXXXXXXXX","X.......X","XXXXXXXXX","X..XXX..X","X.......X","XXXXXXXXX","X..XXX..X","X.......X","XXXXXXXXX"],
     grafico:[".........",".......XX",".......XX","....XX.XX","....XX.XX",".XX.XX.XX",".XX.XX.XX",".XX.XX.XX","XXXXXXXXX"],
     vista:  [".........","..XXXXX..",".X.....X.","X...X...X","X..XXX..X","X...X...X",".X.....X.","..XXXXX..","........."],
+    /* El ojo tachado: la acción de ocultar los montos (privacidad). */
+    oculto: ["X........",".XXXXXX..",".XX....X.","X..XX...X","X..XXX..X","X...XX..X",".X....XX.","..XXXXXX.","........X"],
 
     /* 08 · Sistema / navegación auxiliares y reinos */
     ruta:   [".........","......XX.","......XX.","...XX....","...XX....","XX.......","XX.......",".........","........."],
