@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#f5f5f7" />
+  <meta name="theme-color" content="#070708" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
   <link rel="icon" href="assets/img/favicon-32.png" sizes="32x32" type="image/png" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/img/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta name="apple-mobile-web-app-title" content="ANIMA" />
   <meta name="mobile-web-app-capable" content="yes" />
   <!-- Pantalla de la aplicación, no del sitio: fuera de los buscadores. -->
@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/umbral.css" />
-  <link rel="stylesheet" href="assets/css/home.css?v=home-v1" />
+  <link rel="stylesheet" href="assets/css/home.css?v=home-v2" />
   <style>
     /* HOME minimalista — mismo diseño en todo dispositivo, solo adaptado. */
     .world-line{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
@@ -40,6 +40,8 @@
 </head>
 <body class="rite h2" style="display:block;align-items:stretch;justify-content:flex-start">
   <div class="field"><div class="core"></div></div>
+  <!-- La luz del portal: resplandor y dos haces que dibujan la ∧ (home.css). -->
+  <div class="p-luz" aria-hidden="true"><i></i><i></i></div>
 
   <!-- Intro: la ∧ se traza y el Home sube. Solo la primera vez de la sesión. -->
   <div class="intro" id="intro" aria-hidden="true">
@@ -63,7 +65,7 @@
   var CREATOR_EMAIL = "sarkgraff@gmail.com";
   var home = document.getElementById("home");
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
-  var PEAK = '<svg viewBox="23 27 54 48" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#141416" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var PEAK = '<svg viewBox="23 27 54 48" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#f4f2ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function IC(nombre, respaldo){ return (window.ANIMA_ICON ? ANIMA_ICON(nombre, respaldo) : respaldo); }
 
   /* ---------- Intro ----------
