@@ -26,14 +26,37 @@
    Se carga ANTES que anima.js: aquí solo se declaran funciones.
    =========================================================== */
 
-const CC = { leads: undefined, conn: undefined, loading: false, busy: "", pick: null, draft: null, connectOpen: false, tplOpen: false };
+const CC = { leads: undefined, conn: undefined, loading: false, busy: "", pick: null, draft: null, connectOpen: false, tplOpen: false,
+             q: "", ciudad: "", origen: "", fecha: "" };
 
-const LEAD_ESTADOS = {
-  nuevo:      { t: "Nuevo",      cls: "lb-nuevo" },
-  revisado:   { t: "Por responder", cls: "lb-rev" },
-  contactado: { t: "Contactado", cls: "lb-ok" },
-  descartado: { t: "Descartado", cls: "lb-off" }
-};
+/* Etapas como en el Centro de clientes potenciales de Meta (migración 0135). */
+const LEAD_ETAPAS = [
+  ["nuevo",      "Nueva",         "lb-nuevo"],
+  ["revisado",   "Por responder", "lb-rev"],
+  ["contactado", "Contactada",    "lb-con"],
+  ["cotizado",   "Cotizada",      "lb-cot"],
+  ["ganado",     "Ganada",        "lb-won"],
+  ["descartado", "Descartada",    "lb-off"]
+];
+const LEAD_ESTADOS = Object.fromEntries(LEAD_ETAPAS.map(([k, t, cls], i) => [k, { t, cls, i }]));
+/* Pestañas de arriba: filtran por etapa. «Activas» es todo menos lo descartado. */
+const LEAD_TABS = [
+  ["activas", "Activas", l => l.status !== "descartado"],
+  ["nuevo", "Nuevas", l => l.status === "nuevo"],
+  ["revisado", "Por responder", l => l.status === "revisado"],
+  ["contactado", "Contactadas", l => l.status === "contactado"],
+  ["cotizado", "Cotizadas", l => l.status === "cotizado"],
+  ["ganado", "Ganadas", l => l.status === "ganado"],
+  ["descartado", "Descartadas", l => l.status === "descartado"]
+];
+const LEAD_ORDEN = [
+  ["recientes", "Más recientes"], ["antiguas", "Más antiguas"], ["nombre", "Nombre A–Z"],
+  ["ciudad", "Ciudad A–Z"], ["etapa", "Etapa"]
+];
+/* Al pasar a una etapa se anota cuándo (si aún no estaba anotado). */
+const LEAD_SELLO = { revisado:"reviewed_at", contactado:"contacted_at", cotizado:"quoted_at", ganado:"won_at" };
+
+const WA_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.08-.3-.15-1.26-.46-2.39-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.14.3-.35.44-.52.15-.18.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.7.63.71.22 1.36.19 1.87.12.57-.09 1.76-.72 2-1.41.25-.7.25-1.29.18-1.41-.08-.13-.28-.2-.57-.35M12.05 21.8h-.01a9.87 9.87 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.89-9.88 2.64 0 5.12 1.03 6.99 2.9a9.83 9.83 0 0 1 2.89 6.99c0 5.45-4.44 9.88-9.88 9.88m8.41-18.3A11.82 11.82 0 0 0 12.05 0C5.5 0 .16 5.34.16 11.89c0 2.1.55 4.14 1.59 5.95L.06 24l6.3-1.65a11.88 11.88 0 0 0 5.68 1.45h.01c6.55 0 11.89-5.34 11.89-11.89 0-3.18-1.24-6.16-3.48-8.41"/></svg>';
 
 const LEAD_TPL_DEFAULT =
   "Hola {nombre} 👋 Soy SARK, de PEW1 Murales. Ya revisé tu solicitud:\n" +
@@ -66,9 +89,15 @@ async function loadLeads(){
   leadsRefresh();
   ensureLeadsRealtime();
 }
-function leadsRefresh(){
+/* Redibuja la pantalla, salvo que estés escribiendo en ella: Realtime puede
+   traer una solicitud nueva a mitad de una nota y no hay que borrártela. */
+function leadsRefresh(force){
   try{ renderNav(); }catch(e){}
-  if(state.view === "centro") renderView();
+  if(state.view !== "centro") return;
+  const f = document.activeElement;
+  if(!force && f && f.closest && f.closest("#view") && /^(INPUT|TEXTAREA|SELECT)$/.test(f.tagName)){ CC.pendiente = true; return; }
+  renderView();
+  if(CC.q) leadAplicarBusqueda();
 }
 
 /* En directo: cada INSERT de una solicitud mía aparece sola. */
@@ -151,91 +180,158 @@ function leadWaNumero(p){
   return d;
 }
 
+/* ---------- filtros y orden ---------- */
+function leadCiudad(l){ return String(l.city || "").split(/[,·]/)[0].trim(); }
+function leadOrigen(l){ return l.source === "csv" ? "csv" : l.source === "manual" ? "manual" : (l.platform === "ig" ? "ig" : "fb"); }
+const LEAD_ORIGEN_T = { ig:"Instagram", fb:"Facebook", csv:"CSV de Meta", manual:"Manual" };
+function leadTexto(l){ return deburr([l.full_name, l.phone, l.email, l.city, l.idea, l.measures].filter(Boolean).join(" ")); }
+
+function leadsFiltrados(){
+  const tab = LEAD_TABS.find(t => t[0] === (state.leadTab || "activas")) || LEAD_TABS[0];
+  const ahora = Date.now(), dia = 86400000;
+  const hoy0 = new Date(); hoy0.setHours(0,0,0,0);
+  let L = leadsList().filter(tab[2]);
+  if(CC.ciudad) L = L.filter(l => deburr(leadCiudad(l)) === CC.ciudad);
+  if(CC.origen) L = L.filter(l => leadOrigen(l) === CC.origen);
+  if(CC.fecha){
+    const desde = CC.fecha === "hoy" ? hoy0.getTime() : ahora - Number(CC.fecha) * dia;
+    L = L.filter(l => new Date(l.lead_created_at).getTime() >= desde);
+  }
+  const t = l => new Date(l.lead_created_at).getTime();
+  const cmp = {
+    recientes: (a, b) => t(b) - t(a),
+    antiguas:  (a, b) => t(a) - t(b),
+    nombre:    (a, b) => String(a.full_name || "~").localeCompare(String(b.full_name || "~"), "es"),
+    ciudad:    (a, b) => (leadCiudad(a) || "~").localeCompare(leadCiudad(b) || "~", "es") || t(b) - t(a),
+    etapa:     (a, b) => ((LEAD_ESTADOS[a.status] || {}).i - (LEAD_ESTADOS[b.status] || {}).i) || t(b) - t(a)
+  }[state.leadOrden || "recientes"] || ((a, b) => t(b) - t(a));
+  return L.slice().sort(cmp);
+}
+/* Buscar filtra en el sitio: el campo y el teclado no se mueven. */
+function leadAplicarBusqueda(){
+  const q = deburr(CC.q || "").split(" ").filter(Boolean); let n = 0;
+  document.querySelectorAll(".ld-row[data-q]").forEach(el => { const ok = q.every(w => el.dataset.q.includes(w)); el.hidden = !ok; if(ok) n++; });
+  const c = document.getElementById("ldCount"); if(c) c.textContent = n + (n === 1 ? " solicitud" : " solicitudes");
+  const v = document.getElementById("ldNone"); if(v) v.hidden = n > 0;
+}
+
+/* Tiempo promedio entre que llega y se contacta: el dato que Meta pone arriba. */
+function leadRespuestaMedia(){
+  const xs = leadsList().filter(l => l.contacted_at).map(l => new Date(l.contacted_at) - new Date(l.lead_created_at)).filter(x => x > 0);
+  if(!xs.length) return "";
+  const m = xs.reduce((s, x) => s + x, 0) / xs.length / 60000;
+  return m < 60 ? Math.round(m) + " min" : m < 1440 ? (m / 60).toFixed(1).replace(".0", "") + " h" : (m / 1440).toFixed(1).replace(".0", "") + " d";
+}
+
+function leadEtapaSelect(l, extra){
+  const est = LEAD_ESTADOS[l.status] || LEAD_ESTADOS.nuevo;
+  return `<select class="ld-stage ${est.cls} ${extra||""}" data-leadstage="${esc(l.id)}" aria-label="Etapa de ${esc(l.full_name || "la solicitud")}">` +
+    LEAD_ETAPAS.map(([k, t]) => `<option value="${k}" ${k===l.status?"selected":""}>${t}</option>`).join("") + `</select>`;
+}
+
 /* ---------- vistas ---------- */
 function vCentro(a){
   if(!a.live || !Cloud.enabled){
     return `<div class="grid"><div class="card s12"><p class="muted">El Centro de clientes necesita tu sesión en la nube de ANIMA.</p></div></div>`;
   }
   if(CC.almaId && CC.almaId !== a.almaId){ CC.leads = undefined; CC.conn = undefined; state.leadOpen = null; }
-  if(CC.leads === undefined){ setTimeout(loadLeads, 0); return `<div class="grid"><div class="card s12"><p class="muted">Cargando solicitudes…</p></div></div>`; }
+  if(CC.leads === undefined){ setTimeout(loadLeads, 0); return `<div class="grid"><div class="card s12 ld-cargando"><span class="ld-spin"></span>Cargando solicitudes…</div></div>`; }
   if(CC.leads === null){
     return `<div class="grid"><div class="card s12"><p class="muted">No se pudieron cargar las solicitudes.</p><button class="btn sm" data-leadreload>Reintentar</button></div></div>`;
   }
-  if(state.leadOpen && leadById(state.leadOpen)) return vLeadDetalle(a, leadById(state.leadOpen));
-  state.leadOpen = null;
-
   const L = leadsList();
-  const vista = state.leadView || "responder";
-  const grupos = {
-    responder:   L.filter(l => l.status === "nuevo" || l.status === "revisado"),
-    contactados: L.filter(l => l.status === "contactado"),
-    descartados: L.filter(l => l.status === "descartado"),
-    todos:       L
-  };
-  const seg = (k, t) => `<button class="seg-b ${vista===k?'on':''}" data-leadview="${k}">${t} <span class="seg-n">${grupos[k].length}</span></button>`;
-  const lista = grupos[vista] || grupos.responder;
+  const tabActual = state.leadTab || "activas";
+  const tabs = LEAD_TABS.map(([k, t, f]) => { const n = L.filter(f).length;
+    return `<button class="ld-tab ${tabActual===k?'on':''}" data-leadtab="${k}" ${tabActual===k?'aria-current="true"':''}>${t}<span>${n}</span></button>`; }).join("");
 
-  const cards = lista.map(l => {
+  const hoy0 = new Date(); hoy0.setHours(0,0,0,0);
+  const nHoy = L.filter(l => new Date(l.lead_created_at) >= hoy0).length;
+  const resp = leadRespuestaMedia();
+  const resumen = [`${L.length} solicitud${L.length===1?"":"es"}`, nHoy ? `${nHoy} hoy` : "", resp ? `respondes en ${resp} en promedio` : ""].filter(Boolean).join(" · ");
+
+  const ciudades = [...new Map(L.map(l => [deburr(leadCiudad(l)), leadCiudad(l)]).filter(([k]) => k)).entries()].sort((x, y) => x[1].localeCompare(y[1], "es"));
+  const opt = (v, t, cur) => `<option value="${esc(v)}" ${v===cur?"selected":""}>${esc(t)}</option>`;
+  const filtros = `<div class="ld-filters">
+      <label class="ld-search"><span aria-hidden="true">⌕</span><input id="leadQ" type="search" placeholder="Buscar por nombre, teléfono o ciudad" value="${esc(CC.q)}" autocomplete="off" enterkeyhint="search"></label>
+      <div class="ld-selects">
+        <select class="ld-sel ${CC.ciudad?'on':''}" data-leadfiltro="ciudad" aria-label="Ciudad">${opt("", "Todas las ciudades", CC.ciudad)}${ciudades.map(([k, t]) => opt(k, t, CC.ciudad)).join("")}</select>
+        <select class="ld-sel ${CC.origen?'on':''}" data-leadfiltro="origen" aria-label="Origen">${opt("", "Todo origen", CC.origen)}${Object.entries(LEAD_ORIGEN_T).map(([k, t]) => opt(k, t, CC.origen)).join("")}</select>
+        <select class="ld-sel ${CC.fecha?'on':''}" data-leadfiltro="fecha" aria-label="Fecha">${opt("", "Cualquier fecha", CC.fecha)}${opt("hoy", "Hoy", CC.fecha)}${opt("7", "Últimos 7 días", CC.fecha)}${opt("30", "Últimos 30 días", CC.fecha)}</select>
+        <select class="ld-sel" data-leadorden aria-label="Ordenar">${LEAD_ORDEN.map(([k, t]) => opt(k, "↕ " + t, state.leadOrden || "recientes")).join("")}</select>
+        ${(CC.ciudad||CC.origen||CC.fecha) ? `<button class="ld-clear" data-leadlimpiar>Quitar filtros</button>` : ""}
+      </div>
+    </div>`;
+
+  const lista = leadsFiltrados();
+  if(CC.q) requestAnimationFrame(leadAplicarBusqueda);
+  const filas = lista.map(l => {
     const est = LEAD_ESTADOS[l.status] || LEAD_ESTADOS.nuevo;
-    const dato = [l.city, l.measures].filter(Boolean).join(" · ");
-    return `<button class="vin-card lead-card ${l.status==='nuevo'?'is-new':''}" data-leadopen="${esc(l.id)}">
-      <span class="avatar sm vin-av" style="background:linear-gradient(145deg,${a.color},${shade(a.color,-22)})">${initials(l.full_name || "?")}</span>
-      <div class="vin-main">
-        <div class="vin-top"><b>${esc(l.full_name || "Sin nombre")}</b><span class="vin-badge ${est.cls}">${est.t}</span></div>
-        <small class="muted">${esc(dato || l.phone || "Sin datos del muro")}</small>
-        ${l.idea ? `<small class="lead-idea">«${esc(l.idea)}»</small>` : ""}
-        <small class="vin-stat">${esc(postDate(l.lead_created_at))}${l.ad_name ? " · " + esc(l.ad_name) : ""}${l.source==="csv" ? " · CSV" : ""}</small>
-      </div></button>`;
+    const wa = leadWaNumero(l.phone);
+    return `<div class="ld-row ${l.status==='nuevo'?'is-new':''} ${String(state.leadOpen)===String(l.id)?'is-open':''}" role="row" tabindex="0" data-leadopen="${esc(l.id)}" data-q="${esc(leadTexto(l))}">
+      <div class="ld-c ld-name" role="cell"><span class="ld-av">${initials(l.full_name || "?")}</span><div><b>${esc(l.full_name || "Sin nombre")}</b><small>${esc(l.phone || l.email || "Sin contacto")}</small></div></div>
+      <div class="ld-c ld-etapa" role="cell">${leadEtapaSelect(l)}</div>
+      <div class="ld-c ld-city" role="cell" data-med="${l.measures ? " · " + esc(l.measures) : ""}">${esc(l.city || "—")}</div>
+      <div class="ld-c ld-med" role="cell">${esc(l.measures || "—")}</div>
+      <div class="ld-c ld-idea" role="cell">${esc(l.idea || "")}</div>
+      <div class="ld-c ld-when" role="cell"><b>${esc(postDate(l.lead_created_at))}</b><small>${esc(LEAD_ORIGEN_T[leadOrigen(l)])}</small></div>
+      <div class="ld-c ld-acts" role="cell">${wa ? `<button class="ld-wa" data-leadwago="${esc(l.id)}" title="Escribir a ${esc(leadPrimerNombre(l.full_name) || "este cliente")} por WhatsApp">${WA_SVG}<span>WhatsApp</span></button>` : `<span class="ld-nowa" title="Sin teléfono">—</span>`}</div>
+    </div>`;
   }).join("");
 
   const vacio = !L.length
-    ? `<div class="card s12"><p class="muted" style="margin:0">Todavía no llega ninguna solicitud. ${CC.conn ? "Cuando alguien llene el formulario de tu anuncio aparecerá aquí sola." : "Conecta tu página de Facebook o importa el CSV de Meta."}</p></div>`
-    : (!lista.length ? `<div class="card s12"><p class="muted" style="margin:0">Nada en este filtro.</p></div>` : "");
+    ? `<div class="ld-empty"><b>Todavía no llega ninguna solicitud.</b><span>${CC.conn ? "Cuando alguien llene el formulario de tu anuncio aparecerá aquí, sola." : "Conecta tu página de Facebook o importa el CSV de Meta."}</span></div>`
+    : (!lista.length ? `<div class="ld-empty"><b>Nada con estos filtros.</b><span>Prueba otra etapa o quita los filtros.</span></div>` : "");
 
-  return `<div class="grid">
-    <div class="card s12 vin-head">
-      <div class="section-title"><h2>Centro de clientes</h2><div class="spacer"></div>
-        <div class="seg lead-seg">${seg("responder","Por responder")}${seg("contactados","Contactados")}${seg("descartados","Descartados")}${seg("todos","Todos")}</div>
+  return `<div class="grid ld">
+    <div class="card s12 ld-card">
+      <div class="ld-head">
+        <div class="ld-title"><h2>Centro de clientes</h2><p>${esc(resumen)}</p></div>
+        <div class="ld-tools">
+          ${CC.conn ? `<button class="btn ghost sm" data-leadsync ${CC.busy?'disabled':''}>${CC.busy==="sync"?"Trayendo…":"↻ Traer ahora"}</button>` : `<button class="btn sm" data-leadconnect>Conectar Meta</button>`}
+          <button class="btn ghost sm" data-leadtpl>✎ Mensaje</button>
+          <details class="ld-more"><summary class="btn ghost sm" aria-label="Más opciones">⋯</summary><div class="ld-menu">
+            <button data-leadcsv>⇪ Importar CSV de Meta</button>
+            <button data-leadconnect>⚙ Conexión con Meta</button>
+            ${("Notification" in window) && Notification.permission === "default" ? `<button data-leadnotif>🔔 Avisarme en este dispositivo</button>` : ""}
+          </div></details>
+        </div>
       </div>
       ${leadConexionHTML()}
+      <nav class="ld-tabs" aria-label="Etapas">${tabs}</nav>
+      ${filtros}
+      ${CC.connectOpen ? leadConectarHTML() : ""}
+      ${CC.tplOpen ? leadPlantillaHTML() : ""}
+      ${lista.length ? `<div class="ld-table" role="table" aria-label="Solicitudes">
+        <div class="ld-row ld-th" role="row"><span role="columnheader">Nombre</span><span role="columnheader">Etapa</span><span role="columnheader">Ubicación</span><span role="columnheader">Medidas</span><span role="columnheader">Idea</span><span role="columnheader">Llegó</span><span role="columnheader"></span></div>
+        ${filas}</div>
+        <div class="ld-foot"><span id="ldCount">${lista.length} solicitud${lista.length===1?"":"es"}</span><span id="ldNone" class="muted" hidden>· ninguna coincide con la búsqueda</span></div>` : vacio}
     </div>
-    ${CC.connectOpen ? leadConectarHTML() : ""}
-    ${CC.tplOpen ? leadPlantillaHTML() : ""}
-    ${vacio}
-    ${lista.length ? `<div class="vin-grid s12">${cards}</div>` : ""}
   </div>
+  ${state.leadOpen && leadById(state.leadOpen) ? vLeadPanel(a, leadById(state.leadOpen)) : ""}
   <input type="file" id="leadCsv" accept=".csv,.tsv,text/csv,text/plain" hidden>`;
 }
 
 function leadConexionHTML(){
-  const c = CC.conn, busy = CC.busy;
-  const acciones = `<div class="lead-acts">
-      ${c ? `<button class="btn sm" data-leadsync ${busy?'disabled':''}>${busy==="sync"?"Trayendo…":"↻ Traer ahora"}</button>` : `<button class="btn sm" data-leadconnect>Conectar Meta</button>`}
-      <button class="btn ghost sm" data-leadtpl>✎ Mensaje de confirmación</button>
-      <button class="btn ghost sm" data-leadcsv>⇪ Importar CSV</button>
-      ${("Notification" in window) && Notification.permission === "default" ? `<button class="btn ghost sm" data-leadnotif>🔔 Avisarme aquí</button>` : ""}
-      ${c ? `<button class="btn ghost sm" data-leadconnect>⚙ Conexión</button>` : ""}
-    </div>`;
-  if(!c) return `<p class="muted lead-conn">Conecta tu página de Facebook y cada formulario de tus anuncios llegará aquí solo, cada 5 minutos o al instante.</p>${acciones}`;
+  const c = CC.conn;
+  if(!c) return `<p class="ld-conn"><span class="ld-dot off"></span>Meta sin conectar · los formularios llegarán solos cuando conectes tu página.</p>`;
   const mal = c.last_sync_ok === false;
   const cuando = c.last_sync_at ? "hace " + timeAgo(c.last_sync_at) : "aún sin sincronizar";
-  return `<p class="lead-conn ${mal?'is-bad':''}"><span class="lead-dot"></span>
-      Meta conectada · <b>${esc(c.page_name || c.page_id)}</b> · ${esc(mal ? "Error: " + (c.last_sync_msg || "") : (c.last_sync_msg || "Conectada"))} · ${esc(cuando)}</p>${acciones}`;
+  return `<p class="ld-conn ${mal?'is-bad':''}"><span class="ld-dot"></span>Meta · <b>${esc(c.page_name || c.page_id)}</b> · ${esc(mal ? "Error: " + (c.last_sync_msg || "") : (c.last_sync_msg || "Conectada"))} · ${esc(cuando)}</p>`;
 }
 
 function leadConectarHTML(){
   if(CC.pick){
-    return `<div class="card s12 lead-panel"><div class="section-title"><h2 style="font-size:15px">¿Qué página conecto?</h2></div>
+    return `<div class="ld-panel"><h3>¿Qué página conecto?</h3>
       ${CC.pick.map(p => `<button class="btn secondary sm" data-leadpage="${esc(p.id)}" style="margin:0 8px 8px 0">${esc(p.name)}</button>`).join("")}
       <div><button class="btn ghost sm" data-leadcancel>Cancelar</button></div></div>`;
   }
   const c = CC.conn;
-  return `<div class="card s12 lead-panel">
-    <div class="section-title"><h2 style="font-size:15px">${c ? "Conexión con Meta" : "Conectar tu página de Facebook"}</h2></div>
+  return `<div class="ld-panel">
+    <h3>${c ? "Conexión con Meta" : "Conectar tu página de Facebook"}</h3>
     <ol class="lead-pasos">
-      <li>Entra a <b>developers.facebook.com</b> → <i>Mis apps</i> → crea una app de tipo <b>Negocios</b> (una sola vez).</li>
-      <li>Abre el <b>Explorador de la API Graph</b>, elige tu app y pide los permisos <code>leads_retrieval</code>, <code>ads_management</code>, <code>pages_show_list</code>, <code>pages_read_engagement</code> y <code>pages_manage_metadata</code>. Genera el token.</li>
-      <li>Pega aquí el token. Con el <b>ID</b> y la <b>clave secreta</b> de la app (en Configuración → Básica), ANIMA lo cambia por uno que no vence.</li>
+      <li>En <b>developers.facebook.com</b> abre tu app (tipo <b>Negocios</b>).</li>
+      <li>En el <b>Explorador de la API Graph</b> elige la app y pide <code>leads_retrieval</code>, <code>ads_management</code>, <code>pages_manage_ads</code>, <code>pages_show_list</code>, <code>pages_read_engagement</code>, <code>pages_manage_metadata</code> y <code>business_management</code>. Genera el token y, en la ventana de Facebook, marca tu página.</li>
+      <li>Pega aquí el token, con el <b>ID</b> y la <b>clave secreta</b> de la app (Configuración → Básica): ANIMA lo cambia por uno que no vence.</li>
     </ol>
     <label class="lead-f">Token de acceso<textarea id="leadTok" rows="3" autocomplete="off" spellcheck="false" placeholder="EAAB…"></textarea></label>
     <div class="lead-f2">
@@ -251,57 +347,55 @@ function leadConectarHTML(){
 }
 
 function leadPlantillaHTML(){
-  return `<div class="card s12 lead-panel">
-    <div class="section-title"><h2 style="font-size:15px">Mensaje de confirmación</h2></div>
-    <p class="muted" style="font-size:12.5px;margin-top:0">Se usa al tocar «Confirmar y abrir WhatsApp». Puedes escribir <code>{nombre}</code>, <code>{ciudad}</code>, <code>{medidas}</code>, <code>{idea}</code> y <code>{fotos}</code>; si la persona no dejó ese dato, la línea se omite.</p>
+  return `<div class="ld-panel">
+    <h3>Mensaje de confirmación</h3>
+    <p class="muted" style="font-size:12.5px;margin-top:0">Es el que se abre en WhatsApp. Puedes escribir <code>{nombre}</code>, <code>{ciudad}</code>, <code>{medidas}</code>, <code>{idea}</code> y <code>{fotos}</code>; si la persona no dejó ese dato, la línea se omite.</p>
     <textarea id="leadTplText" rows="7" class="lead-msg">${esc(leadTpl())}</textarea>
     <div style="margin-top:10px"><button class="btn sm" data-leadtplsave>Guardar</button> <button class="btn ghost sm" data-leadtplreset>Volver al original</button> <button class="btn ghost sm" data-leadcancel>Cerrar</button></div>
   </div>`;
 }
 
-function vLeadDetalle(a, l){
-  const est = LEAD_ESTADOS[l.status] || LEAD_ESTADOS.nuevo;
+/* Detalle en un panel lateral (hoja completa en el teléfono): la lista
+   queda detrás, como en Meta. */
+function vLeadPanel(a, l){
   const wa = leadWaNumero(l.phone);
-  const fila = (k, v) => v ? `<div class="pd-block"><span class="pd-k">${esc(k)}</span><b style="font-size:14.5px;font-weight:600">${esc(v)}</b></div>` : "";
+  const dato = (k, v) => v ? `<div class="ld-kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>` : "";
   const extra = (l.answers || []).filter(x => !["full_name","first_name","last_name","phone_number","email"].includes(x.key))
-    .map(x => `<div class="pd-block"><span class="pd-k">${esc(x.label || x.key)}</span><p style="margin:3px 0 0;font-size:14px">${esc(x.value || "—")}</p></div>`).join("");
+    .map(x => `<div class="ld-kv"><span>${esc(x.label || x.key)}</span><b>${esc(x.value || "—")}</b></div>`).join("");
   const vinculo = l.client_id && (a.clients || []).find(c => c._id === l.client_id);
-  return `<div class="grid">
-    <div class="card s12 pd-head">
-      <button class="btn ghost sm" data-leadback>← Centro de clientes</button>
-      <span class="avatar sm vin-av" style="background:linear-gradient(145deg,${a.color},${shade(a.color,-22)})">${initials(l.full_name || "?")}</span>
-      <h2 style="font-size:22px;letter-spacing:-.03em;margin:0;flex:1;min-width:140px">${esc(l.full_name || "Sin nombre")}</h2>
-      <span class="vin-badge ${est.cls}">${est.t}</span>
-      <div class="pd-acts">
-        ${l.status === "descartado"
-          ? `<button class="btn ghost sm" data-leadstatus="${esc(l.id)}:revisado">Recuperar</button>`
-          : `<button class="btn ghost sm pd-del" data-leadstatus="${esc(l.id)}:descartado">✕<span> Descartar</span></button>`}
-      </div>
+  const hito = (t, f) => f ? `<li><b>${esc(t)}</b><span>${esc(postDate(f))}</span></li>` : "";
+  const puedeConfirmar = l.status === "nuevo" || l.status === "revisado";
+  return `<div class="ld-scrim ${CC.anim?'entra':''}" data-leadback></div>
+  <aside class="ld-drawer ${CC.anim?'entra':''}" tabindex="-1" role="dialog" aria-modal="true" aria-label="Solicitud de ${esc(l.full_name || "cliente")}">
+    <header class="ld-dh">
+      <span class="ld-av lg">${initials(l.full_name || "?")}</span>
+      <div class="ld-dh-t"><h3>${esc(l.full_name || "Sin nombre")}</h3><small>${esc([l.phone, l.email].filter(Boolean).join(" · ") || "Sin contacto")}</small></div>
+      <button class="ld-x" data-leadback aria-label="Cerrar">✕</button>
+    </header>
+    <div class="ld-quick">
+      ${wa ? `<button class="ld-wa big" data-leadwa="${esc(l.id)}">${WA_SVG}<span>${puedeConfirmar ? "Confirmar por WhatsApp" : "Abrir WhatsApp"}</span></button>` : ""}
+      ${l.phone ? `<a class="btn ghost sm" href="tel:${esc(l.phone)}">☎ Llamar</a>` : ""}
+      ${l.email ? `<a class="btn ghost sm" href="mailto:${esc(l.email)}">✉ Correo</a>` : ""}
     </div>
-    <div class="card s5 proj-info">
-      <div class="pd-block"><span class="pd-k">Contacto</span><b style="font-size:14px">
-        ${l.phone ? `<a href="tel:${esc(l.phone)}">${esc(l.phone)}</a>` : "Sin teléfono"}${l.email ? ` · <a href="mailto:${esc(l.email)}">${esc(l.email)}</a>` : ""}</b></div>
-      ${fila("Ubicación del muro", l.city)}
-      ${fila("Medidas", l.measures)}
-      ${fila("Idea del diseño", l.idea)}
-      ${fila("Fotos", l.photos_via)}
-      <div class="pd-grid3" style="margin-top:6px">
-        <div><span class="pd-k">Llegó</span><b>${esc(postDate(l.lead_created_at))}</b></div>
-        <div><span class="pd-k">Origen</span><b>${esc(l.platform === "ig" ? "Instagram" : l.platform === "fb" ? "Facebook" : (l.source === "csv" ? "CSV" : "Meta"))}</b></div>
-        <div><span class="pd-k">Vínculo</span><b>${vinculo ? esc(vinculo.name) : "—"}</b></div>
-      </div>
-      ${l.ad_name || l.campaign_name ? `<p class="muted" style="font-size:12px;margin:10px 0 0">${esc([l.campaign_name, l.ad_name].filter(Boolean).join(" · "))}</p>` : ""}
+    <div class="ld-dsec"><span class="ld-lbl">Etapa</span>${leadEtapaSelect(l, "wide")}</div>
+    <div class="ld-dsec"><span class="ld-lbl">El muro</span>
+      ${dato("Ubicación", l.city)}${dato("Medidas", l.measures)}${dato("Idea del diseño", l.idea)}${dato("Fotos", l.photos_via)}
+      ${!(l.city||l.measures||l.idea||l.photos_via) ? `<p class="muted" style="margin:4px 0 0;font-size:13px">No dejó datos del muro.</p>` : ""}
     </div>
-    <div class="card s7">
-      <div class="section-title"><h2 style="font-size:15px">Confirmar por WhatsApp</h2></div>
-      <textarea id="leadMsg" rows="8" class="lead-msg">${esc(l.status === "contactado" && l.message ? l.message : leadMensaje(l))}</textarea>
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-        ${wa ? `<button class="btn" data-leadwa="${esc(l.id)}">✓ Confirmar y abrir WhatsApp</button>` : `<span class="muted" style="font-size:13px">No dejó un teléfono válido para WhatsApp.</span>`}
-        ${l.status === "contactado" ? `<span class="muted" style="font-size:12.5px;align-self:center">Contactado ${esc(postDate(l.contacted_at))}</span>` : ""}
-      </div>
-      ${extra ? `<div class="section-title" style="margin-top:18px"><h2 style="font-size:15px">Respuestas del formulario</h2></div>${extra}` : ""}
+    <div class="ld-dsec"><span class="ld-lbl">Mensaje de WhatsApp</span>
+      <textarea id="leadMsg" rows="7" class="lead-msg">${esc(!puedeConfirmar && l.message ? l.message : leadMensaje(l))}</textarea>
+      <small class="muted">Se abre en WhatsApp para que lo envíes tú. ${puedeConfirmar ? "Al confirmar, pasa a «Contactada» y queda en Vínculos." : ""}</small>
     </div>
-  </div>`;
+    <div class="ld-dsec"><span class="ld-lbl">Notas internas</span>
+      <textarea id="leadNotes" rows="3" class="lead-msg" data-leadnotes="${esc(l.id)}" placeholder="Solo las ves tú: presupuesto, fechas, lo que conversaron…">${esc(l.notes || "")}</textarea>
+    </div>
+    ${extra ? `<div class="ld-dsec"><span class="ld-lbl">Respuestas del formulario</span>${extra}</div>` : ""}
+    <div class="ld-dsec"><span class="ld-lbl">Historial</span><ul class="ld-time">
+      ${hito("Llegó", l.lead_created_at)}${hito("La leíste", l.reviewed_at)}${hito("Contactada", l.contacted_at)}${hito("Cotizada", l.quoted_at)}${hito("Ganada", l.won_at)}
+    </ul>
+      <p class="muted" style="font-size:12px;margin:8px 0 0">${esc([LEAD_ORIGEN_T[leadOrigen(l)], l.campaign_name, l.ad_name].filter(Boolean).join(" · "))}${vinculo ? " · Vínculo: " + esc(vinculo.name) : ""}</p>
+    </div>
+  </aside>`;
 }
 
 /* ---------- acciones ---------- */
@@ -311,22 +405,52 @@ function CC_open(id){
   if(l.status === "nuevo"){
     leadPatch(id, { status:"revisado", reviewed_at:new Date().toISOString() }).catch(e => console.error(e));
   }
-  state.leadOpen = id; leadsRefresh(); try{ scrollTopNow(0); }catch(e){}
+  CC.anim = true; state.leadOpen = id; leadsRefresh(true); CC.anim = false;
+  requestAnimationFrame(() => { const d = document.querySelector(".ld-drawer"); if(d) d.focus && d.focus(); });
+}
+function CC_close(){
+  const d = document.querySelector(".ld-drawer"), s = document.querySelector(".ld-scrim");
+  const cerrar = () => { state.leadOpen = null; leadsRefresh(true); };
+  if(!d || matchMedia("(prefers-reduced-motion: reduce)").matches){ cerrar(); return; }
+  d.classList.add("sale"); if(s) s.classList.add("sale");
+  setTimeout(cerrar, 180);
+}
+
+async function leadCambiarEtapa(id, st){
+  const l = leadById(id); if(!l || !LEAD_ESTADOS[st]) return;
+  const patch = { status: st }, sello = LEAD_SELLO[st];
+  if(sello && !l[sello]) patch[sello] = new Date().toISOString();
+  try{ await leadPatch(id, patch); leadsRefresh(true); }
+  catch(err){ toast("No se pudo guardar: " + (err.message || err)); }
+}
+
+/* WhatsApp desde la fila: si la solicitud aún espera respuesta abre el
+   mensaje de confirmación y la marca como contactada; si ya se conversó,
+   solo abre el chat. */
+async function leadWhatsappRapido(id){
+  const l = leadById(id); if(!l) return;
+  const num = leadWaNumero(l.phone);
+  if(!num){ toast("Esta solicitud no trae un teléfono válido."); return; }
+  if(l.status === "nuevo" || l.status === "revisado"){ leadConfirmar(id, leadMensaje(l)); return; }
+  window.open("https://wa.me/" + num, "_blank", "noopener");
 }
 
 /* Confirmar: abre WhatsApp (en el mismo toque, para que el navegador no lo
    bloquee), marca la solicitud como contactada y deja a la persona en Vínculos. */
-async function leadConfirmar(id){
+async function leadConfirmar(id, msgDado){
   const l = leadById(id); if(!l) return;
-  const msg = (document.getElementById("leadMsg") || {}).value || leadMensaje(l);
+  const msg = msgDado || (document.getElementById("leadMsg") || {}).value || leadMensaje(l);
   const num = leadWaNumero(l.phone);
   if(!num){ toast("Esta solicitud no trae un teléfono válido."); return; }
   window.open("https://wa.me/" + num + "?text=" + encodeURIComponent(msg), "_blank", "noopener");
   try{
     const client_id = await leadAVinculo(l);
-    await leadPatch(id, { status:"contactado", contacted_at:new Date().toISOString(), message:msg, client_id: client_id || l.client_id || null });
-    toast("✓ " + (l.full_name || "Solicitud") + " quedó como contactado");
-    renderView();
+    // Confirmar no retrocede una solicitud que ya iba más adelante (cotizada, ganada).
+    const patch = { message:msg, client_id: client_id || l.client_id || null };
+    if(l.status === "nuevo" || l.status === "revisado"){ patch.status = "contactado"; if(!l.contacted_at) patch.contacted_at = new Date().toISOString(); }
+    await leadPatch(id, patch);
+    toast("✓ " + (l.full_name || "Solicitud") + (patch.status ? " quedó como contactada" : ": WhatsApp abierto"));
+    leadsRefresh(true);
   }catch(e){ console.error(e); toast("Se abrió WhatsApp, pero no se pudo guardar el estado: " + (e.message || e)); }
 }
 
@@ -456,15 +580,15 @@ function leadsBadge(){ const n = leadsPendientes(); return n ? `<span class="nav
 
 document.addEventListener("click", e => {
   const t = e.target;
+  if(t.closest("[data-leadstage]")) return;                 // el selector de etapa no abre la ficha
   if(t.closest("[data-leadreload]")){ CC.leads = undefined; renderView(); return; }
-  const lv = t.closest("[data-leadview]"); if(lv){ state.leadView = lv.dataset.leadview; renderView(); return; }
-  const lo = t.closest("[data-leadopen]"); if(lo){ CC_open(lo.dataset.leadopen); return; }
-  if(t.closest("[data-leadback]")){ state.leadOpen = null; renderView(); return; }
+  const lt = t.closest("[data-leadtab]"); if(lt){ state.leadTab = lt.dataset.leadtab; renderView(); return; }
+  const lwg = t.closest("[data-leadwago]"); if(lwg){ leadWhatsappRapido(lwg.dataset.leadwago); return; }
   const lw = t.closest("[data-leadwa]"); if(lw){ leadConfirmar(lw.dataset.leadwa); return; }
-  const ls = t.closest("[data-leadstatus]"); if(ls){
-    const [id, st] = ls.dataset.leadstatus.split(":");
-    leadPatch(id, { status:st }).then(() => { if(st === "descartado") state.leadOpen = null; leadsRefresh(); }).catch(err => toast("No se pudo guardar: " + (err.message || err)));
-    return; }
+  const lo = t.closest("[data-leadopen]"); if(lo){ CC_open(lo.dataset.leadopen); return; }
+  if(t.closest("[data-leadback]")){ CC_close(); return; }
+  if(t.closest("[data-leadlimpiar]")){ CC.ciudad = CC.origen = CC.fecha = ""; renderView(); return; }
+  const mm = t.closest(".ld-menu button"); if(mm){ const d = mm.closest("details"); if(d) d.open = false; }
   if(t.closest("[data-leadsync]")){ leadSync(); return; }
   if(t.closest("[data-leadconnect]")){ CC.connectOpen = !CC.connectOpen; CC.tplOpen = false; CC.pick = null; renderView(); return; }
   if(t.closest("[data-leaddoconnect]")){ leadConectar(); return; }
@@ -477,7 +601,27 @@ document.addEventListener("click", e => {
   if(t.closest("[data-leadtplreset]")){ leadTplSet(""); const ta = document.getElementById("leadTplText"); if(ta) ta.value = LEAD_TPL_DEFAULT; return; }
   if(t.closest("[data-leadcsv]")){ const f = document.getElementById("leadCsv"); if(f) f.click(); return; }
   if(t.closest("[data-leadnotif]")){ try{ Notification.requestPermission().then(() => renderView()); }catch(err){} return; }
+  /* Un clic fuera del menú «⋯» lo cierra. */
+  document.querySelectorAll(".ld-more[open]").forEach(d => { if(!d.contains(t)) d.open = false; });
 });
 document.addEventListener("change", e => {
-  if(e.target && e.target.id === "leadCsv" && e.target.files && e.target.files[0]){ leadImportarCsv(e.target.files[0]); e.target.value = ""; }
+  const el = e.target; if(!el || !el.closest) return;
+  const st = el.closest("[data-leadstage]"); if(st){ leadCambiarEtapa(st.dataset.leadstage, st.value); return; }
+  const fi = el.closest("[data-leadfiltro]"); if(fi){ CC[fi.dataset.leadfiltro] = fi.value; renderView(); return; }
+  if(el.closest("[data-leadorden]")){ state.leadOrden = el.value; save(); renderView(); return; }
+  const nt = el.closest("[data-leadnotes]"); if(nt){
+    leadPatch(nt.dataset.leadnotes, { notes: nt.value.trim() || null }).then(() => toast("✓ Nota guardada")).catch(err => toast("No se pudo guardar la nota: " + (err.message || err)));
+    return; }
+  if(el.id === "leadCsv" && el.files && el.files[0]){ leadImportarCsv(el.files[0]); el.value = ""; }
+});
+document.addEventListener("input", e => { if(e.target && e.target.id === "leadQ"){ CC.q = e.target.value; leadAplicarBusqueda(); } });
+document.addEventListener("keydown", e => {
+  if(state.view !== "centro") return;
+  if(e.key === "Escape" && state.leadOpen){ CC_close(); return; }
+  if(e.key === "Enter" && e.target.matches && e.target.matches(".ld-row[data-leadopen]")) CC_open(e.target.dataset.leadopen);
+});
+/* Si llegó algo nuevo mientras escribías, la lista se redibuja al soltar el campo. */
+document.addEventListener("focusout", () => {
+  if(!CC.pendiente) return;
+  setTimeout(() => { const f = document.activeElement; if(!(f && /^(INPUT|TEXTAREA|SELECT)$/.test(f.tagName))){ CC.pendiente = false; leadsRefresh(true); } }, 0);
 });
