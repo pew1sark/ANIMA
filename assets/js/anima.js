@@ -237,6 +237,7 @@ const NAV_TREE = [
   // 2 · TALLER — lo que creo.
   { type:"reino", key:"taller", ico:"₵", ic:"taller", t:"Taller", children:[
       {v:"centro",     ico:"✉",ic:"enlace",t:"Centro de clientes"},
+      {v:"anuncios",   ico:"◎",ic:"grafico",t:"Anuncios"},
       {v:"proyectos",  ico:"◷",ic:"proceso",t:"Proyectos"},
       {v:"tareas",     ico:"✓",ic:"obra",t:"Tareas"},
       {v:"clientes",   ico:"☺",ic:"constelacion",t:"Vínculos"},
@@ -293,7 +294,7 @@ function sectionOfView(v){
   // Mi Plan vive DENTRO de Mi Alma. Clan y Santuario son moradas propias del menú,
   // visibles SOLO si el Alma tiene acceso a esa Forma. No viven dentro de Mundo.
   if(["mialma","trayectoria","portafolio","cronologia","insignias","estadisticas","visibilidad","memoria","biblioteca","miplan"].includes(v)) return "mialma";
-  if(["taller","centro","proyectos","tareas","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
+  if(["taller","centro","anuncios","proyectos","tareas","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
   if(["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "clan";
   if(SANT_VIEWS.includes(v)) return "santuario";
   if(["mundo","comunidad","consejo","cronica","world_wandering_traces"].includes(v)) return "mundo";
@@ -399,6 +400,7 @@ const TITLES = {
   trayectoria:["Trayectoria","La historia de tu Alma, hito a hito."],
   portafolio:["Portafolio","Las obras que te representan."],
   taller:["Taller","Proyectos, vínculos, dinero y agenda de un vistazo."],
+  anuncios:["Anuncios","Cada anuncio de Meta, de la inversión al trabajo ganado."],
   centro:["Centro de clientes","Las solicitudes de tus anuncios llegan aquí: léelas, confírmalas y conversa por WhatsApp."],
   proyectos:["Proyectos","Lo que está vivo ahora mismo."],
   tareas:["Tareas","Lo que hay que hacer, por prioridad."],
@@ -609,7 +611,7 @@ function renderView(){
   // Consejo de Almas: reservado a las Almas Fundadoras (Consejo) y al Creador.
   if(state.view==="consejo" && !(me().council || (isCreator && !state.viewAs))) state.view="mialma";
   const fn = { mialma:vMiAlma, taller:vTaller, mundo:vMundo, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
-    finanzas:vFinanzas, clientes:vClientes, centro:(typeof vCentro==="function"?vCentro:vMiAlma), cotizador:vCotizador, agenda:vAgenda, tareas:vTareas, memoria:vMemoria, biblioteca:vBiblioteca,
+    finanzas:vFinanzas, clientes:vClientes, centro:(typeof vCentro==="function"?vCentro:vMiAlma), anuncios:(typeof vAnuncios==="function"?vAnuncios:vMiAlma), cotizador:vCotizador, agenda:vAgenda, tareas:vTareas, memoria:vMemoria, biblioteca:vBiblioteca,
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, world_wandering_traces:vWanderingTraces, santuario:vSantuario,
