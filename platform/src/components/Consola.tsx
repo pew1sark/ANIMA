@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useBarra } from '@/components/Oscuro';
 import { useAuth } from '@/core/auth/AuthContext';
 import { Marca } from '@/components/Marca';
 import {
@@ -25,6 +26,7 @@ const TONO: Record<Gravedad, string> = {
 };
 
 export function Consola({ volver }: { volver?: () => void }) {
+  useBarra('#f5f5f7');   // adentro se trabaja en claro; el portal era oscuro
   const { user, signOut } = useAuth();
   const [clientes, setClientes] = useState<EstadoCliente[]>([]);
   const [cargando, setCargando] = useState(true);

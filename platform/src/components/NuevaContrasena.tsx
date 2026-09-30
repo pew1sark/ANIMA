@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Oscuro } from '@/components/Oscuro';
 import { useAuth } from '@/core/auth/AuthContext';
 import { Marca } from '@/components/Marca';
 import { accesoService, vieneDeInvitacion, limpiarMarcaDeInvitacion } from '@/services/acceso.service';
@@ -36,12 +37,11 @@ export function NuevaContrasena() {
   }
 
   return (
-    <div className="min-h-full grid place-items-center p-6">
+    <Oscuro className="min-h-full grid place-items-center p-6">
       <form onSubmit={submit}
-        className="w-full max-w-[420px] aparece bg-surface border border-line rounded-3xl p-8
-                   shadow-[0_18px_50px_rgba(0,0,0,.06)]">
+        className="w-full max-w-[420px] aparece vidrio rounded-3xl p-8">
         <Marca />
-        <h1 className="text-[22px] font-extrabold tracking-tight mt-7">
+        <h1 className="portal-titulo text-[36px] mt-7">
           {estrenando ? 'Elige tu contraseña' : 'Nueva contraseña'}
         </h1>
         <p className="text-[13px] text-muted mt-1.5 mb-6 leading-relaxed">
@@ -68,6 +68,6 @@ export function NuevaContrasena() {
         </button>
         <button type="button" onClick={signOut} className="b b-fan b-blq mt-2">Cancelar</button>
       </form>
-    </div>
+    </Oscuro>
   );
 }

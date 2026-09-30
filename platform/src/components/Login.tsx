@@ -3,6 +3,7 @@ import { useAuth } from '@/core/auth/AuthContext';
 import { Marca, Apex, ApexCompany } from '@/components/Marca';
 import { accesoService, correoParaRecuperar } from '@/services/acceso.service';
 import { env } from '@/config/env';
+import { Oscuro } from '@/components/Oscuro';
 
 type Vista = 'entrar' | 'activar' | 'recuperar' | 'solicitar' | 'pausa';
 
@@ -24,7 +25,7 @@ export function Login() {
   const [vista, setVista] = useState<Vista>(correo === null ? 'entrar' : 'recuperar');
 
   return (
-    <div className="min-h-full grid lg:grid-cols-[1.04fr_.96fr]">
+    <Oscuro className="min-h-full grid lg:grid-cols-[1.04fr_.96fr]">
       <Presentacion />
 
       <main className="grid place-items-center px-5 py-9">
@@ -47,7 +48,7 @@ export function Login() {
           </p>
         </div>
       </main>
-    </div>
+    </Oscuro>
   );
 }
 
@@ -57,7 +58,7 @@ export function Login() {
 function Presentacion() {
   return (
     <aside className="hidden lg:flex flex-col justify-between p-12 xl:p-16 text-white
-                      bg-[#08080a] relative overflow-hidden">
+                      relative overflow-hidden border-r border-white/[.06]">
       {/* El resplandor de la portada, muy tenue: da profundidad sin pedir turno. */}
       <div aria-hidden="true" className="absolute -top-1/3 left-1/2 -translate-x-1/2 w-[110%] aspect-square
                                          rounded-full blur-3xl opacity-[.13]
@@ -71,8 +72,8 @@ function Presentacion() {
       </div>
 
       <div className="relative max-w-[26rem]">
-        <h2 className="text-[34px] xl:text-[40px] font-extrabold tracking-[-.03em] leading-[1.06]">
-          Un sistema.<br />Dos plataformas.
+        <h2 className="portal-titulo text-[48px] xl:text-[58px]">
+          Un sistema.<br /><em>Dos plataformas.</em>
         </h2>
         <p className="text-[13.5px] text-white/55 mt-4 leading-relaxed">
           La misma base, la misma cuenta, cada trabajo en su lugar. Lo que se te
@@ -106,7 +107,7 @@ const Linea = ({ glifo, nombre, texto }: { glifo: ReactNode; nombre: string; tex
 );
 
 const Tarjeta = ({ children }: { children: ReactNode }) => (
-  <div className="bg-surface border border-line rounded-3xl p-7 sm:p-8 shadow-[0_18px_50px_rgba(0,0,0,.07)]">
+  <div className="vidrio rounded-3xl p-7 sm:p-8">
     {children}
   </div>
 );
@@ -114,7 +115,7 @@ const Tarjeta = ({ children }: { children: ReactNode }) => (
 const Cabecera = ({ titulo, texto }: { titulo: string; texto: string }) => (
   <>
     <span className="lg:hidden block"><Marca /></span>
-    <h1 className="text-[22px] font-extrabold tracking-tight mt-7 lg:mt-0">{titulo}</h1>
+    <h1 className="portal-titulo text-[36px] mt-7 lg:mt-0">{titulo}</h1>
     <p className="text-[13px] text-muted mt-1.5 mb-6 leading-relaxed">{texto}</p>
   </>
 );

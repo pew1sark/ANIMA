@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useBarra } from '@/components/Oscuro';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/core/auth/AuthContext';
 import { useTenant } from '@/core/tenant/TenantContext';
@@ -42,6 +43,7 @@ import type { ModuleSlug } from '@/types/core';
    sale de los módulos que su plan le permite. Dos empresas distintas ven
    menús distintos con el mismo código. */
 export function Espacio({ volver }: { volver?: () => void }) {
+  useBarra('#f5f5f7');   // adentro se trabaja en claro; el portal era oscuro
   const { isPlatformAdmin } = useAuth();
   const { memberships, current, select, version } = useTenant();
   const cid = current?.company.id;
