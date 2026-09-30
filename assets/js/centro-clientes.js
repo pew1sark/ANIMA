@@ -27,7 +27,15 @@
    =========================================================== */
 
 const CC = { leads: undefined, conn: undefined, loading: false, busy: "", pick: null, draft: null, connectOpen: false, tplOpen: false,
-             q: "", ciudad: "", origen: "", fecha: "" };
+             q: "", ciudad: "", origen: "", fecha: "", campana: "", desde: "", hasta: "",
+             edit: false, nuevo: false, propios: new Set() };
+
+/* Rango de días: se mide en días del calendario local, no en horas. */
+const LEAD_FECHAS = [
+  ["hoy", "Hoy"], ["ayer", "Ayer"], ["3", "Últimos 3 días"], ["7", "Últimos 7 días"], ["14", "Últimos 14 días"],
+  ["30", "Últimos 30 días"], ["90", "Últimos 90 días"], ["rango", "Elegir fechas…"]
+];
+const LEAD_SIN_CAMPANA = "__sin";
 
 /* Etapas como en el Centro de clientes potenciales de Meta (migración 0135). */
 const LEAD_ETAPAS = [
@@ -111,6 +119,7 @@ function ensureLeadsRealtime(){
         if(!Array.isArray(CC.leads)){ loadLeads(); return; }
         if(CC.leads.some(x => x.id === row.id)) return;
         CC.leads.unshift(row);
+        if(CC.propios.has(row.id)){ leadsRefresh(); return; }
         const quien = row.full_name || "alguien";
         toast("✦ Nueva solicitud de " + quien);
         leadAvisoDispositivo(quien, row);
@@ -184,19 +193,30 @@ function leadWaNumero(p){
 function leadCiudad(l){ return String(l.city || "").split(/[,·]/)[0].trim(); }
 function leadOrigen(l){ return l.source === "csv" ? "csv" : l.source === "manual" ? "manual" : (l.platform === "ig" ? "ig" : "fb"); }
 const LEAD_ORIGEN_T = { ig:"Instagram", fb:"Facebook", csv:"CSV de Meta", manual:"Manual" };
-function leadTexto(l){ return deburr([l.full_name, l.phone, l.email, l.city, l.idea, l.measures].filter(Boolean).join(" ")); }
+function leadTexto(l){ return deburr([l.full_name, l.phone, l.email, l.city, l.idea, l.measures, l.campaign_name, l.ad_name].filter(Boolean).join(" ")); }
+function leadCampana(l){ return String(l.campaign_name || "").trim(); }
+
+/* [desde, hasta) en milisegundos para el filtro de fecha elegido. */
+function leadVentana(){
+  const f = CC.fecha; if(!f) return null;
+  const d0 = (off) => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + off); return d.getTime(); };
+  if(f === "hoy")  return [d0(0), Infinity];
+  if(f === "ayer") return [d0(-1), d0(0)];
+  if(f === "rango"){
+    const dia = s => { const [y, m, d] = String(s).split("-").map(Number); return new Date(y, m - 1, d).getTime(); };
+    return [CC.desde ? dia(CC.desde) : -Infinity, CC.hasta ? dia(CC.hasta) + 86400000 : Infinity];
+  }
+  return [d0(1 - Number(f)), Infinity];   // «últimos 7 días» = hoy y los 6 anteriores
+}
 
 function leadsFiltrados(){
   const tab = LEAD_TABS.find(t => t[0] === (state.leadTab || "activas")) || LEAD_TABS[0];
-  const ahora = Date.now(), dia = 86400000;
-  const hoy0 = new Date(); hoy0.setHours(0,0,0,0);
   let L = leadsList().filter(tab[2]);
   if(CC.ciudad) L = L.filter(l => deburr(leadCiudad(l)) === CC.ciudad);
   if(CC.origen) L = L.filter(l => leadOrigen(l) === CC.origen);
-  if(CC.fecha){
-    const desde = CC.fecha === "hoy" ? hoy0.getTime() : ahora - Number(CC.fecha) * dia;
-    L = L.filter(l => new Date(l.lead_created_at).getTime() >= desde);
-  }
+  if(CC.campana) L = L.filter(l => CC.campana === LEAD_SIN_CAMPANA ? !leadCampana(l) : leadCampana(l) === CC.campana);
+  const w = leadVentana();
+  if(w) L = L.filter(l => { const t = new Date(l.lead_created_at).getTime(); return t >= w[0] && t < w[1]; });
   const t = l => new Date(l.lead_created_at).getTime();
   const cmp = {
     recientes: (a, b) => t(b) - t(a),
@@ -251,16 +271,28 @@ function vCentro(a){
 
   const ciudades = [...new Map(L.map(l => [deburr(leadCiudad(l)), leadCiudad(l)]).filter(([k]) => k)).entries()].sort((x, y) => x[1].localeCompare(y[1], "es"));
   const opt = (v, t, cur) => `<option value="${esc(v)}" ${v===cur?"selected":""}>${esc(t)}</option>`;
+  const porCampana = new Map();
+  L.forEach(l => { const k = leadCampana(l); if(k){ if(!porCampana.has(k)) porCampana.set(k, []); porCampana.get(k).push(l); } });
+  const campanas = [...porCampana.entries()].sort((x, y) => y[1].length - x[1].length);
+  const sinCampana = L.some(l => !leadCampana(l));
   const filtros = `<div class="ld-filters">
       <label class="ld-search"><span aria-hidden="true">⌕</span><input id="leadQ" type="search" placeholder="Buscar por nombre, teléfono o ciudad" value="${esc(CC.q)}" autocomplete="off" enterkeyhint="search"></label>
       <div class="ld-selects">
         <select class="ld-sel ${CC.ciudad?'on':''}" data-leadfiltro="ciudad" aria-label="Ciudad">${opt("", "Todas las ciudades", CC.ciudad)}${ciudades.map(([k, t]) => opt(k, t, CC.ciudad)).join("")}</select>
         <select class="ld-sel ${CC.origen?'on':''}" data-leadfiltro="origen" aria-label="Origen">${opt("", "Todo origen", CC.origen)}${Object.entries(LEAD_ORIGEN_T).map(([k, t]) => opt(k, t, CC.origen)).join("")}</select>
-        <select class="ld-sel ${CC.fecha?'on':''}" data-leadfiltro="fecha" aria-label="Fecha">${opt("", "Cualquier fecha", CC.fecha)}${opt("hoy", "Hoy", CC.fecha)}${opt("7", "Últimos 7 días", CC.fecha)}${opt("30", "Últimos 30 días", CC.fecha)}</select>
+        ${campanas.length ? `<select class="ld-sel ${CC.campana?'on':''}" data-leadfiltro="campana" aria-label="Campaña de Meta">${opt("", "Todas las campañas", CC.campana)}${campanas.map(([k]) => opt(k, k, CC.campana)).join("")}${sinCampana ? opt(LEAD_SIN_CAMPANA, "Sin campaña", CC.campana) : ""}</select>` : ""}
+        <select class="ld-sel ${CC.fecha?'on':''}" data-leadfiltro="fecha" aria-label="Días">${opt("", "Cualquier fecha", CC.fecha)}${LEAD_FECHAS.map(([k, t]) => opt(k, t, CC.fecha)).join("")}</select>
+        ${CC.fecha === "rango" ? `<span class="ld-rango"><input type="date" data-leadrango="desde" value="${esc(CC.desde)}" aria-label="Desde" max="${esc(CC.hasta || "")}"><span>→</span><input type="date" data-leadrango="hasta" value="${esc(CC.hasta)}" aria-label="Hasta" min="${esc(CC.desde || "")}"></span>` : ""}
         <select class="ld-sel" data-leadorden aria-label="Ordenar">${LEAD_ORDEN.map(([k, t]) => opt(k, "↕ " + t, state.leadOrden || "recientes")).join("")}</select>
-        ${(CC.ciudad||CC.origen||CC.fecha) ? `<button class="ld-clear" data-leadlimpiar>Quitar filtros</button>` : ""}
+        ${(CC.ciudad||CC.origen||CC.fecha||CC.campana) ? `<button class="ld-clear" data-leadlimpiar>Quitar filtros</button>` : ""}
       </div>
     </div>`;
+  /* Rendimiento por campaña: cuántas llegaron, cuántas se cotizaron y ganaron.
+     Tocar una la deja como filtro. */
+  const camps = campanas.length ? `<div class="ld-camps" aria-label="Campañas de Meta">${campanas.map(([k, xs]) => {
+      const cot = xs.filter(l => ["cotizado","ganado"].includes(l.status)).length, won = xs.filter(l => l.status === "ganado").length;
+      return `<button class="ld-camp ${CC.campana===k?'on':''}" data-leadcamp="${esc(k)}" title="Filtrar por esta campaña"><b>${esc(k)}</b><span>${xs.length} solicitud${xs.length===1?"":"es"}${cot ? " · " + cot + " cotizada" + (cot===1?"":"s") : ""}${won ? " · " + won + " ganada" + (won===1?"":"s") : ""}</span></button>`;
+    }).join("")}</div>` : "";
 
   const lista = leadsFiltrados();
   if(CC.q) requestAnimationFrame(leadAplicarBusqueda);
@@ -273,8 +305,8 @@ function vCentro(a){
       <div class="ld-c ld-city" role="cell" data-med="${l.measures ? " · " + esc(l.measures) : ""}">${esc(l.city || "—")}</div>
       <div class="ld-c ld-med" role="cell">${esc(l.measures || "—")}</div>
       <div class="ld-c ld-idea" role="cell">${esc(l.idea || "")}</div>
-      <div class="ld-c ld-when" role="cell"><b>${esc(postDate(l.lead_created_at))}</b><small>${esc(LEAD_ORIGEN_T[leadOrigen(l)])}</small></div>
-      <div class="ld-c ld-acts" role="cell">${wa ? `<button class="ld-wa" data-leadwago="${esc(l.id)}" title="Escribir a ${esc(leadPrimerNombre(l.full_name) || "este cliente")} por WhatsApp">${WA_SVG}<span>WhatsApp</span></button>` : `<span class="ld-nowa" title="Sin teléfono">—</span>`}</div>
+      <div class="ld-c ld-when" role="cell"><b>${esc(postDate(l.lead_created_at))}</b><small title="${esc(leadCampana(l))}">${esc(leadCampana(l) || LEAD_ORIGEN_T[leadOrigen(l)])}</small></div>
+      <div class="ld-c ld-acts" role="cell">${wa ? `<button class="ld-wa" data-leadwago="${esc(l.id)}" title="Escribir a ${esc(leadPrimerNombre(l.full_name) || "este cliente")} por WhatsApp">${WA_SVG}<span>WhatsApp</span></button>` : `<button class="ld-wa is-add" data-leadedit="${esc(l.id)}" title="Agregar el teléfono">${WA_SVG}<span>＋ Teléfono</span></button>`}</div>
     </div>`;
   }).join("");
 
@@ -287,6 +319,7 @@ function vCentro(a){
       <div class="ld-head">
         <div class="ld-title"><h2>Centro de clientes</h2><p>${esc(resumen)}</p></div>
         <div class="ld-tools">
+          <button class="btn sm" data-leadnuevo>＋ Nuevo cliente</button>
           ${CC.conn ? `<button class="btn ghost sm" data-leadsync ${CC.busy?'disabled':''}>${CC.busy==="sync"?"Trayendo…":"↻ Traer ahora"}</button>` : `<button class="btn sm" data-leadconnect>Conectar Meta</button>`}
           <button class="btn ghost sm" data-leadtpl>✎ Mensaje</button>
           <details class="ld-more"><summary class="btn ghost sm" aria-label="Más opciones">⋯</summary><div class="ld-menu">
@@ -299,6 +332,7 @@ function vCentro(a){
       ${leadConexionHTML()}
       <nav class="ld-tabs" aria-label="Etapas">${tabs}</nav>
       ${filtros}
+      ${camps}
       ${CC.connectOpen ? leadConectarHTML() : ""}
       ${CC.tplOpen ? leadPlantillaHTML() : ""}
       ${lista.length ? `<div class="ld-table" role="table" aria-label="Solicitudes">
@@ -307,7 +341,7 @@ function vCentro(a){
         <div class="ld-foot"><span id="ldCount">${lista.length} solicitud${lista.length===1?"":"es"}</span><span id="ldNone" class="muted" hidden>· ninguna coincide con la búsqueda</span></div>` : vacio}
     </div>
   </div>
-  ${state.leadOpen && leadById(state.leadOpen) ? vLeadPanel(a, leadById(state.leadOpen)) : ""}
+  ${CC.nuevo ? vLeadPanel(a, null) : (state.leadOpen && leadById(state.leadOpen) ? vLeadPanel(a, leadById(state.leadOpen)) : "")}
   <input type="file" id="leadCsv" accept=".csv,.tsv,text/csv,text/plain" hidden>`;
 }
 
@@ -355,30 +389,80 @@ function leadPlantillaHTML(){
   </div>`;
 }
 
+/* Formulario para editar (o crear a mano) nombre, contacto y datos del muro. */
+const LEAD_CAMPOS = [
+  ["full_name", "Nombre", "text", "Nombre y apellido", "name"],
+  ["phone", "WhatsApp / teléfono", "tel", "+56 9 1234 5678", "tel"],
+  ["email", "Correo", "email", "nombre@correo.cl", "email"],
+  ["city", "Ubicación del muro", "text", "Ciudad, comuna", "off"],
+  ["measures", "Medidas", "text", "Ej: 4 × 2,5 m", "off"],
+  ["idea", "Idea del diseño", "textarea", "Qué quiere pintar", "off"],
+  ["campaign_name", "Campaña / origen", "text", "Ej: Murales Oct 2026, Instagram, recomendado", "off"]
+];
+function leadFormHTML(l){
+  const v = l || {};
+  const camps = [...new Set(leadsList().map(leadCampana).filter(Boolean))];
+  return `<div class="ld-dsec ld-form">
+    ${LEAD_CAMPOS.map(([k, t, tipo, ph, ac]) => tipo === "textarea"
+      ? `<label class="lead-f">${t}<textarea id="ldf_${k}" rows="3" placeholder="${esc(ph)}">${esc(v[k] || "")}</textarea></label>`
+      : `<label class="lead-f">${t}<input id="ldf_${k}" type="${tipo}" value="${esc(v[k] || "")}" placeholder="${esc(ph)}" autocomplete="${ac}" ${k==="campaign_name"?'list="ldCampList"':""} ${tipo==="tel"?'inputmode="tel"':""}></label>`).join("")}
+    <datalist id="ldCampList">${camps.map(c => `<option value="${esc(c)}">`).join("")}</datalist>
+    ${l && l.client_id ? `<p class="muted" style="font-size:12px;margin:2px 0 10px">El nombre y el contacto también se actualizan en su Vínculo${l.project_id ? " y en el proyecto" : ""}.</p>` : ""}
+    <div class="ld-form-acts"><button class="btn sm" data-leadsave="${esc(v.id || "")}" ${CC.busy==="save"?"disabled":""}>${CC.busy==="save" ? "Guardando…" : (l ? "Guardar cambios" : "Crear cliente")}</button>
+    <button class="btn ghost sm" data-leadeditcancel>Cancelar</button></div>
+  </div>`;
+}
+
+/* Lo que la solicitud ya tiene en el Taller: Vínculo, Proyecto y Cotización. */
+function leadTallerHTML(a, l){
+  const cli = leadVinculo(a, l), pr = leadProyecto(a, l), q = leadCotizacion(l);
+  const fila = (ico, t, v, attr) => `<button class="ld-link" ${attr}><span class="ld-link-i" aria-hidden="true">${ico}</span><span class="ld-link-t"><small>${t}</small><b>${v}</b></span><span aria-hidden="true">›</span></button>`;
+  return `<div class="ld-dsec"><span class="ld-lbl">En el Taller</span>
+    <div class="ld-links">
+      ${cli ? fila("◉", "Vínculo", esc(cli.c.name), `data-leadgovin="${cli.i}"`) : ""}
+      ${pr ? fila("▣", "Proyecto · " + esc(flowOf(pr.p.st)), esc(pr.p.t) + (pr.p.budget ? " · " + esc(money(pr.p.budget)) : ""), `data-leadgoproj="${pr.i}"`) : ""}
+      ${q ? fila("✎", "Cotización", esc(q.title || "Cotización") + (q.total != null ? " · " + esc(money(q.total)) : ""), `data-leadgoquote="${esc(q.id)}"`) : ""}
+    </div>
+    <div class="ld-taller-acts">
+      <button class="btn sm" data-leadcotizar="${esc(l.id)}" ${CC.busy==="cotizar"?"disabled":""}>${CC.busy==="cotizar" ? "Preparando…" : (q ? "✎ Abrir cotización" : "✎ Cotizar")}</button>
+      ${!pr ? `<button class="btn ghost sm" data-leadproyecto="${esc(l.id)}" ${CC.busy?"disabled":""}>▣ Crear proyecto</button>` : ""}
+      ${!cli ? `<button class="btn ghost sm" data-leadvinculo="${esc(l.id)}" ${CC.busy?"disabled":""}>◉ Guardar en Vínculos</button>` : ""}
+    </div>
+    <small class="muted">${pr ? "Cuando el proyecto pase a «Aprobado», la solicitud queda como ganada." : "Cotizar crea el Vínculo y el proyecto en «Cotizando», con los datos del muro."}</small>
+  </div>`;
+}
+
 /* Detalle en un panel lateral (hoja completa en el teléfono): la lista
-   queda detrás, como en Meta. */
+   queda detrás, como en Meta. Con l = null es el alta manual. */
 function vLeadPanel(a, l){
+  const nuevo = !l;
+  const editando = nuevo || CC.edit;
+  const cab = `<header class="ld-dh">
+      <span class="ld-av lg">${initials((l && l.full_name) || "+")}</span>
+      <div class="ld-dh-t"><h3>${nuevo ? "Nuevo cliente" : esc(l.full_name || "Sin nombre")}</h3><small>${nuevo ? "Alguien que te escribió por otro lado: Instagram, WhatsApp, una recomendación…" : esc([l.phone, l.email].filter(Boolean).join(" · ") || "Sin contacto")}</small></div>
+      ${!nuevo && !CC.edit ? `<button class="ld-x ld-ed" data-leadedit="${esc(l.id)}" aria-label="Editar datos" title="Editar nombre y contacto">✎</button>` : ""}
+      <button class="ld-x" data-leadback aria-label="Cerrar">✕</button>
+    </header>`;
+  const marco = inner => `<div class="ld-scrim ${CC.anim?'entra':''}" data-leadback></div>
+  <aside class="ld-drawer ${CC.anim?'entra':''}" tabindex="-1" role="dialog" aria-modal="true" aria-label="${nuevo ? "Nuevo cliente" : "Solicitud de " + esc(l.full_name || "cliente")}">${cab}${inner}</aside>`;
+  if(editando) return marco(leadFormHTML(l));
+
   const wa = leadWaNumero(l.phone);
   const dato = (k, v) => v ? `<div class="ld-kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>` : "";
   const extra = (l.answers || []).filter(x => !["full_name","first_name","last_name","phone_number","email"].includes(x.key))
     .map(x => `<div class="ld-kv"><span>${esc(x.label || x.key)}</span><b>${esc(x.value || "—")}</b></div>`).join("");
-  const vinculo = l.client_id && (a.clients || []).find(c => c._id === l.client_id);
   const hito = (t, f) => f ? `<li><b>${esc(t)}</b><span>${esc(postDate(f))}</span></li>` : "";
   const puedeConfirmar = l.status === "nuevo" || l.status === "revisado";
-  return `<div class="ld-scrim ${CC.anim?'entra':''}" data-leadback></div>
-  <aside class="ld-drawer ${CC.anim?'entra':''}" tabindex="-1" role="dialog" aria-modal="true" aria-label="Solicitud de ${esc(l.full_name || "cliente")}">
-    <header class="ld-dh">
-      <span class="ld-av lg">${initials(l.full_name || "?")}</span>
-      <div class="ld-dh-t"><h3>${esc(l.full_name || "Sin nombre")}</h3><small>${esc([l.phone, l.email].filter(Boolean).join(" · ") || "Sin contacto")}</small></div>
-      <button class="ld-x" data-leadback aria-label="Cerrar">✕</button>
-    </header>
+  return marco(`
     <div class="ld-quick">
-      ${wa ? `<button class="ld-wa big" data-leadwa="${esc(l.id)}">${WA_SVG}<span>${puedeConfirmar ? "Confirmar por WhatsApp" : "Abrir WhatsApp"}</span></button>` : ""}
+      ${wa ? `<button class="ld-wa big" data-leadwa="${esc(l.id)}">${WA_SVG}<span>${puedeConfirmar ? "Confirmar por WhatsApp" : "Abrir WhatsApp"}</span></button>`
+           : `<button class="ld-wa big is-add" data-leadedit="${esc(l.id)}">${WA_SVG}<span>Agregar WhatsApp</span></button>`}
       ${l.phone ? `<a class="btn ghost sm" href="tel:${esc(l.phone)}">☎ Llamar</a>` : ""}
       ${l.email ? `<a class="btn ghost sm" href="mailto:${esc(l.email)}">✉ Correo</a>` : ""}
     </div>
     <div class="ld-dsec"><span class="ld-lbl">Etapa</span>${leadEtapaSelect(l, "wide")}</div>
-    <div class="ld-dsec"><span class="ld-lbl">El muro</span>
+    ${leadTallerHTML(a, l)}
+    <div class="ld-dsec"><span class="ld-lbl">El muro <button class="ld-mini" data-leadedit="${esc(l.id)}">✎ Editar</button></span>
       ${dato("Ubicación", l.city)}${dato("Medidas", l.measures)}${dato("Idea del diseño", l.idea)}${dato("Fotos", l.photos_via)}
       ${!(l.city||l.measures||l.idea||l.photos_via) ? `<p class="muted" style="margin:4px 0 0;font-size:13px">No dejó datos del muro.</p>` : ""}
     </div>
@@ -393,9 +477,8 @@ function vLeadPanel(a, l){
     <div class="ld-dsec"><span class="ld-lbl">Historial</span><ul class="ld-time">
       ${hito("Llegó", l.lead_created_at)}${hito("La leíste", l.reviewed_at)}${hito("Contactada", l.contacted_at)}${hito("Cotizada", l.quoted_at)}${hito("Ganada", l.won_at)}
     </ul>
-      <p class="muted" style="font-size:12px;margin:8px 0 0">${esc([LEAD_ORIGEN_T[leadOrigen(l)], l.campaign_name, l.ad_name].filter(Boolean).join(" · "))}${vinculo ? " · Vínculo: " + esc(vinculo.name) : ""}</p>
-    </div>
-  </aside>`;
+      <p class="muted" style="font-size:12px;margin:8px 0 0">${esc([LEAD_ORIGEN_T[leadOrigen(l)], l.campaign_name, l.ad_name].filter(Boolean).join(" · "))}</p>
+    </div>`);
 }
 
 /* ---------- acciones ---------- */
@@ -405,12 +488,13 @@ function CC_open(id){
   if(l.status === "nuevo"){
     leadPatch(id, { status:"revisado", reviewed_at:new Date().toISOString() }).catch(e => console.error(e));
   }
+  CC.edit = false; CC.nuevo = false;
   CC.anim = true; state.leadOpen = id; leadsRefresh(true); CC.anim = false;
   requestAnimationFrame(() => { const d = document.querySelector(".ld-drawer"); if(d) d.focus && d.focus(); });
 }
 function CC_close(){
   const d = document.querySelector(".ld-drawer"), s = document.querySelector(".ld-scrim");
-  const cerrar = () => { state.leadOpen = null; leadsRefresh(true); };
+  const cerrar = () => { state.leadOpen = null; CC.edit = false; CC.nuevo = false; leadsRefresh(true); };
   if(!d || matchMedia("(prefers-reduced-motion: reduce)").matches){ cerrar(); return; }
   d.classList.add("sale"); if(s) s.classList.add("sale");
   setTimeout(cerrar, 180);
@@ -420,7 +504,17 @@ async function leadCambiarEtapa(id, st){
   const l = leadById(id); if(!l || !LEAD_ESTADOS[st]) return;
   const patch = { status: st }, sello = LEAD_SELLO[st];
   if(sello && !l[sello]) patch[sello] = new Date().toISOString();
-  try{ await leadPatch(id, patch); leadsRefresh(true); }
+  try{
+    await leadPatch(id, patch);
+    /* El Taller sigue a la etapa: cotizada abre su proyecto en «Cotizando»,
+       ganada lo pasa a «Aprobado» si aún esperaba. */
+    if(st === "cotizado" && !leadProyecto(me(), l)){ await leadAProyecto(l); toast("✓ Cotizada · proyecto creado en el Taller"); }
+    if(st === "ganado"){
+      const pr = leadProyecto(me(), l) || (await leadAProyecto(l), leadProyecto(me(), l));
+      if(pr && flowOf(pr.p.st) === "Cotizando"){ await setProjectStatus(pr.i, "Aprobado"); toast("✓ Ganada · el proyecto pasó a «Aprobado»"); }
+    }
+    leadsRefresh(true);
+  }
   catch(err){ toast("No se pudo guardar: " + (err.message || err)); }
 }
 
@@ -465,6 +559,156 @@ async function leadAVinculo(l){
   const row = await Cloud.insertRow("clients", { alma_id:a.almaId, name:l.full_name || "Cliente sin nombre", phone:l.phone || null, email:l.email || null, notes:notas, kind:"cliente" });
   (a.clients || (a.clients = [])).unshift({ _id:row.id, name:row.name, email:row.email, phone:row.phone, notes:row.notes, kind:"Cliente", role:"", created:row.created_at });
   return row.id;
+}
+
+/* ---------- conexión con el Taller ---------- */
+function leadVinculo(a, l){
+  const L = a.clients || [];
+  let i = l.client_id ? L.findIndex(c => c._id === l.client_id) : -1;
+  if(i < 0){ const tel = leadWaNumero(l.phone); if(tel) i = L.findIndex(c => leadWaNumero(c.phone) === tel); }
+  return i >= 0 ? { c: L[i], i } : null;
+}
+function leadProyecto(a, l){
+  if(!l.project_id) return null;
+  const i = (a.projects || []).findIndex(p => p._id === l.project_id);
+  return i >= 0 ? { p: a.projects[i], i } : null;
+}
+function leadCotizacion(l){
+  const Q = state.cloudQuotes || [];
+  return (l.quote_id && Q.find(q => q.id === l.quote_id)) || (l.project_id && Q.find(q => q.project_id === l.project_id)) || null;
+}
+/* Desde Vínculos y Proyectos: la solicitud que los originó. */
+function leadDeVinculo(c){ return c && leadsList().find(l => (c._id && l.client_id === c._id) || (c.phone && leadWaNumero(l.phone) && leadWaNumero(l.phone) === leadWaNumero(c.phone))) || null; }
+function leadDeProyecto(p){ return p && p._id && leadsList().find(l => l.project_id === p._id) || null; }
+
+/* Botón de WhatsApp reutilizable (Vínculos, Proyectos). */
+function waBoton(phone, nombre, cls){
+  const n = leadWaNumero(phone); if(!n) return "";
+  return `<a class="ld-wa ${cls||""}" href="https://wa.me/${n}" target="_blank" rel="noopener" title="Escribir a ${esc(leadPrimerNombre(nombre) || "este contacto")} por WhatsApp">${WA_SVG}<span>WhatsApp</span></a>`;
+}
+/* Línea «Llegó por…» con enlace a la solicitud, para las fichas del Taller. */
+function leadOrigenHTML(l){
+  if(!l) return "";
+  const est = LEAD_ESTADOS[l.status] || LEAD_ESTADOS.nuevo;
+  return `<button class="ld-origen" data-leadgo="${esc(l.id)}"><span class="ld-origen-i" aria-hidden="true">✦</span><span><small>Llegó por el Centro de clientes · ${esc(postDate(l.lead_created_at))}</small><b>${esc(leadCampana(l) || LEAD_ORIGEN_T[leadOrigen(l)])}</b></span><span class="lb ${est.cls}">${esc(est.t)}</span></button>`;
+}
+function leadIrA(id){
+  state.leadOpen = null; CC.edit = CC.nuevo = false;
+  go("centro"); setTimeout(() => CC_open(id), 0);
+}
+
+/* Crea la Unidad de Trabajo de la solicitud (en «Cotizando») y la enlaza. */
+async function leadAProyecto(l){
+  const a = me();
+  const ya = leadProyecto(a, l); if(ya) return ya.p._id;
+  const client_id = await leadAVinculo(l);
+  const cli = (a.clients || []).find(c => c._id === client_id);
+  const nombre = (cli && cli.name) || l.full_name || "Cliente";
+  const desc = [l.measures && "Medidas: " + l.measures, l.idea && "Idea: " + l.idea, l.city && "Ubicación: " + l.city,
+                leadCampana(l) && "Origen: " + leadCampana(l)].filter(Boolean).join("\n");
+  const hoy = new Date().toISOString().slice(0, 10);
+  const v = { t: nombre + (leadCiudad(l) ? " · " + leadCiudad(l) : ""), client: nombre, st: "Cotizando", pct: 0, paid: 0, desc,
+              city: leadCiudad(l) || null, context: "Personal", owner: "Mi Taller", responsible: a.name || "" };
+  let row;
+  try{ row = await Cloud.insertRow("projects", { ...EDITORS.proyecto.toRow(v), client_id, history: [{ st: "Cotizando", at: hoy }], alma_id: a.almaId }); }
+  catch(e){ row = await insertRecordRow(EDITORS.proyecto, v, a.almaId); }
+  (a.projects || (a.projects = [])).unshift({ _id: row.id, t: v.t, st: "Cotizando", pct: 0, client: nombre, client_id, desc, city: v.city,
+    context: "Personal", owner: "Mi Taller", responsible: v.responsible, created: row.created_at, paid: 0, abonos: [], checklist: [], hist: [{ st: "Cotizando", at: hoy }] });
+  const patch = { project_id: row.id, client_id };
+  if(LEAD_ESTADOS[l.status].i < LEAD_ESTADOS.cotizado.i){ patch.status = "cotizado"; if(!l.quoted_at) patch.quoted_at = new Date().toISOString(); }
+  await leadPatch(l.id, patch);
+  try{ save(); }catch(e){}
+  return row.id;
+}
+
+/* Cotizar: Vínculo + proyecto listos y el Cotizador abierto con todo puesto. */
+async function leadCotizar(id){
+  const l = leadById(id); if(!l) return;
+  const q = leadCotizacion(l);
+  CC.busy = "cotizar"; leadsRefresh(true);
+  try{
+    const project_id = await leadAProyecto(l);
+    const a = me(), cli = (a.clients || []).find(c => c._id === l.client_id);
+    state.leadOpen = null; CC.busy = "";
+    go("cotizador");
+    if(q){ qLoad(q.id); quoteDraft.lead_id = l.id; return; }
+    quoteDraft = blankQuote();
+    Object.assign(quoteDraft, {
+      client: (cli && cli.name) || l.full_name || "", client_id: l.client_id || null, project_id, lead_id: l.id,
+      title: "Cotización · " + ((cli && cli.name) || l.full_name || "cliente"),
+      notes: [l.city && "Ubicación: " + l.city, l.measures && "Medidas: " + l.measures, l.idea && "Idea: " + l.idea].filter(Boolean).join("\n")
+    });
+    state.cotMode = "editor"; state.cotTab = "contenido";
+    renderAll();
+  }catch(e){ CC.busy = ""; toast("No se pudo preparar la cotización: " + (e.message || e)); leadsRefresh(true); }
+}
+
+/* Lo llama el Cotizador al guardar: la solicitud de ese cliente queda
+   cotizada y enlazada a la cotización y al proyecto. */
+async function leadTrasCotizar(d, total){
+  if(!d || !d.id) return;
+  /* Mientras el proyecto está en «Cotizando», su valor total es el de la cotización. */
+  const a = me(), pi = d.project_id ? (a.projects || []).findIndex(p => p._id === d.project_id) : -1;
+  if(pi >= 0 && total > 0 && flowOf(a.projects[pi].st) === "Cotizando" && +a.projects[pi].budget !== total){
+    a.projects[pi].budget = total; await patchProject(a.projects[pi], { budget: total });
+  }
+  if(!Array.isArray(CC.leads)) return;
+  const l = (d.lead_id && leadById(d.lead_id)) || (d.project_id && leadsList().find(x => x.project_id === d.project_id))
+         || (d.client_id && leadsList().find(x => x.client_id === d.client_id && x.status !== "descartado"));
+  if(!l) return;
+  const patch = {};
+  if(l.quote_id !== d.id) patch.quote_id = d.id;
+  if(d.project_id && !l.project_id) patch.project_id = d.project_id;
+  if(d.client_id && !l.client_id) patch.client_id = d.client_id;
+  if(LEAD_ESTADOS[l.status].i < LEAD_ESTADOS.cotizado.i){ patch.status = "cotizado"; if(!l.quoted_at) patch.quoted_at = new Date().toISOString(); }
+  if(!Object.keys(patch).length) return;
+  try{ await leadPatch(l.id, patch); try{ renderNav(); }catch(e){} }catch(e){ console.error("ANIMA · lead tras cotizar", e); }
+}
+/* Lo llama setProjectStatus: si el proyecto se aprueba, la solicitud se gana. */
+async function leadTrasProyecto(p){
+  const l = leadDeProyecto(p); if(!l) return;
+  if(flowOf(p.st) === "Cotizando" || l.status === "ganado" || l.status === "descartado") return;
+  try{ await leadPatch(l.id, { status: "ganado", won_at: l.won_at || new Date().toISOString() }); try{ renderNav(); }catch(e){} }
+  catch(e){ console.error("ANIMA · lead tras proyecto", e); }
+}
+
+/* Guardar la edición (o el alta manual). Nombre y contacto se copian al
+   Vínculo y al proyecto enlazados, para que no queden dos versiones. */
+async function leadGuardar(id){
+  const a = me(), g = k => ((document.getElementById("ldf_" + k) || {}).value || "").trim();
+  const f = {}; LEAD_CAMPOS.forEach(([k]) => f[k] = g(k) || null);
+  if(!f.full_name && !f.phone && !f.email){ toast("Escribe al menos un nombre o un contacto."); return; }
+  if(f.phone && leadWaNumero(f.phone).length < 10){ toast("Ese teléfono no parece válido para WhatsApp (ej: +56 9 1234 5678)."); return; }
+  CC.busy = "save"; leadsRefresh(true);
+  try{
+    if(!id){
+      const nid = crypto.randomUUID(); CC.propios.add(nid);
+      const row = { id: nid, alma_id: a.almaId, source: "manual", status: "revisado", reviewed_at: new Date().toISOString(), ...f };
+      const { data, error } = await Cloud.client.from("client_leads").insert(row).select().single();
+      if(error) throw error;
+      if(!leadById(nid)) (CC.leads || (CC.leads = [])).unshift(data);
+      CC.nuevo = false; state.leadOpen = nid;
+      toast("✓ " + (f.full_name || "Cliente") + " quedó en el Centro de clientes");
+    } else {
+      const l = leadById(id); if(!l) return;
+      const antes = l.full_name;
+      await leadPatch(id, f);
+      const cli = leadVinculo(a, l);
+      if(cli && l.client_id){
+        const cp = { name: f.full_name || cli.c.name, phone: f.phone, email: f.email };
+        await Cloud.updateRow("clients", cli.c._id, cp);
+        Object.assign(cli.c, cp);
+      }
+      const pr = leadProyecto(a, l);
+      if(pr && f.full_name && f.full_name !== antes && pr.p.client === antes){
+        pr.p.client = f.full_name; await patchProject(pr.p, { client: f.full_name });
+      }
+      try{ save(); }catch(e){}
+      toast("✓ Datos guardados" + (cli && l.client_id ? " · también en Vínculos" : ""));
+    }
+    CC.edit = false;
+  }catch(e){ toast("No se pudo guardar: " + (e.message || e)); }
+  CC.busy = ""; leadsRefresh(true);
 }
 
 async function leadSync(){
@@ -585,9 +829,31 @@ document.addEventListener("click", e => {
   const lt = t.closest("[data-leadtab]"); if(lt){ state.leadTab = lt.dataset.leadtab; renderView(); return; }
   const lwg = t.closest("[data-leadwago]"); if(lwg){ leadWhatsappRapido(lwg.dataset.leadwago); return; }
   const lw = t.closest("[data-leadwa]"); if(lw){ leadConfirmar(lw.dataset.leadwa); return; }
+  const le = t.closest("[data-leadedit]"); if(le){
+    if(String(state.leadOpen) !== String(le.dataset.leadedit)){ CC_open(le.dataset.leadedit); }
+    CC.edit = true; leadsRefresh(true);
+    requestAnimationFrame(() => { const i = document.getElementById(leadById(le.dataset.leadedit) && !leadById(le.dataset.leadedit).phone ? "ldf_phone" : "ldf_full_name"); if(i) i.focus(); });
+    return; }
   const lo = t.closest("[data-leadopen]"); if(lo){ CC_open(lo.dataset.leadopen); return; }
   if(t.closest("[data-leadback]")){ CC_close(); return; }
-  if(t.closest("[data-leadlimpiar]")){ CC.ciudad = CC.origen = CC.fecha = ""; renderView(); return; }
+  if(t.closest("[data-leadlimpiar]")){ CC.ciudad = CC.origen = CC.fecha = CC.campana = CC.desde = CC.hasta = ""; renderView(); return; }
+  const lc = t.closest("[data-leadcamp]"); if(lc){ CC.campana = CC.campana === lc.dataset.leadcamp ? "" : lc.dataset.leadcamp; renderView(); return; }
+  if(t.closest("[data-leadnuevo]")){ state.leadOpen = null; CC.edit = false; CC.nuevo = true; CC.anim = true; leadsRefresh(true); CC.anim = false;
+    setTimeout(() => { const i = document.getElementById("ldf_full_name"); if(i) i.focus(); }, 60); return; }
+  if(t.closest("[data-leadeditcancel]")){ if(CC.nuevo){ CC_close(); return; } CC.edit = false; leadsRefresh(true); return; }
+  const ls = t.closest("[data-leadsave]"); if(ls){ leadGuardar(ls.dataset.leadsave); return; }
+  const lq = t.closest("[data-leadcotizar]"); if(lq){ leadCotizar(lq.dataset.leadcotizar); return; }
+  const lpr = t.closest("[data-leadproyecto]"); if(lpr){ const l = leadById(lpr.dataset.leadproyecto); if(!l) return;
+    CC.busy = "proyecto"; leadsRefresh(true);
+    leadAProyecto(l).then(() => toast("✓ Proyecto creado en «Cotizando»")).catch(err => toast("No se pudo crear el proyecto: " + (err.message || err)))
+      .finally(() => { CC.busy = ""; leadsRefresh(true); }); return; }
+  const lvi = t.closest("[data-leadvinculo]"); if(lvi){ const l = leadById(lvi.dataset.leadvinculo); if(!l) return;
+    leadAVinculo(l).then(cid => leadPatch(l.id, { client_id: cid })).then(() => { toast("✓ Guardado en Vínculos"); leadsRefresh(true); })
+      .catch(err => toast("No se pudo guardar el vínculo: " + (err.message || err))); return; }
+  const gv = t.closest("[data-leadgovin]"); if(gv){ state.leadOpen = null; go("clientes"); openDetail("vin", +gv.dataset.leadgovin); return; }
+  const gp = t.closest("[data-leadgoproj]"); if(gp){ state.leadOpen = null; go("proyectos"); openDetail("proj", +gp.dataset.leadgoproj); return; }
+  const gq = t.closest("[data-leadgoquote]"); if(gq){ state.leadOpen = null; go("cotizador"); qLoad(gq.dataset.leadgoquote); return; }
+  const lg = t.closest("[data-leadgo]"); if(lg){ leadIrA(lg.dataset.leadgo); return; }
   const mm = t.closest(".ld-menu button"); if(mm){ const d = mm.closest("details"); if(d) d.open = false; }
   if(t.closest("[data-leadsync]")){ leadSync(); return; }
   if(t.closest("[data-leadconnect]")){ CC.connectOpen = !CC.connectOpen; CC.tplOpen = false; CC.pick = null; renderView(); return; }
@@ -608,6 +874,7 @@ document.addEventListener("change", e => {
   const el = e.target; if(!el || !el.closest) return;
   const st = el.closest("[data-leadstage]"); if(st){ leadCambiarEtapa(st.dataset.leadstage, st.value); return; }
   const fi = el.closest("[data-leadfiltro]"); if(fi){ CC[fi.dataset.leadfiltro] = fi.value; renderView(); return; }
+  const fr = el.closest("[data-leadrango]"); if(fr){ CC[fr.dataset.leadrango] = fr.value; renderView(); return; }
   if(el.closest("[data-leadorden]")){ state.leadOrden = el.value; save(); renderView(); return; }
   const nt = el.closest("[data-leadnotes]"); if(nt){
     leadPatch(nt.dataset.leadnotes, { notes: nt.value.trim() || null }).then(() => toast("✓ Nota guardada")).catch(err => toast("No se pudo guardar la nota: " + (err.message || err)));
@@ -617,7 +884,8 @@ document.addEventListener("change", e => {
 document.addEventListener("input", e => { if(e.target && e.target.id === "leadQ"){ CC.q = e.target.value; leadAplicarBusqueda(); } });
 document.addEventListener("keydown", e => {
   if(state.view !== "centro") return;
-  if(e.key === "Escape" && state.leadOpen){ CC_close(); return; }
+  if(e.key === "Escape" && CC.edit && !CC.nuevo){ CC.edit = false; leadsRefresh(true); return; }
+  if(e.key === "Escape" && (state.leadOpen || CC.nuevo)){ CC_close(); return; }
   if(e.key === "Enter" && e.target.matches && e.target.matches(".ld-row[data-leadopen]")) CC_open(e.target.dataset.leadopen);
 });
 /* Si llegó algo nuevo mientras escribías, la lista se redibuja al soltar el campo. */

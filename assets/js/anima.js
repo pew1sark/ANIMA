@@ -1761,11 +1761,15 @@ function vProyectoDetalle(a, i){
       </div>
     </div>`;
   // Ficha — los datos del trabajo, sus fechas y su historia.
+  const pCli=(a.clients||[]).find(c=>(p.client_id&&c._id===p.client_id)||(p.client&&String(c.name||"").toLowerCase()===String(p.client).toLowerCase()));
+  const pLead=(typeof leadDeProyecto==="function")?leadDeProyecto(p):null;
+  const pWa=(typeof waBoton==="function")?waBoton((pCli&&pCli.phone)||(pLead&&pLead.phone),p.client,"sm"):"";
   const side=`<div class="card proj-info">
+      ${pLead?leadOrigenHTML(pLead):""}
       <div class="pd-sec">Ficha</div>
       <div class="pd-grid2">
         <div><span class="pd-k">Contexto</span><b>${projectContextBadge(a,p)}</b></div>
-        <div><span class="pd-k">Cliente</span><b>${esc(p.client||"—")}</b></div>
+        <div><span class="pd-k">Cliente</span><b>${esc(p.client||"—")}</b>${pWa?`<div style="margin-top:6px">${pWa}</div>`:""}</div>
         <div><span class="pd-k">Plantilla</span><b>${esc(tpl||"Sin plantilla")}</b></div>
         <div><span class="pd-k">Categoría</span><b>${esc(p.category||"—")}</b></div>
         <div><span class="pd-k">Responsable</span><b>${esc(p.responsible||"—")}</b></div>
@@ -1870,6 +1874,7 @@ async function setProjectStatus(i,st){
   if(!Array.isArray(p.hist)) p.hist=[];
   if(!p.hist.length || p.hist[p.hist.length-1].st!==st) p.hist.push({ st, at:new Date().toISOString().slice(0,10) });
   await patchProject(p, {status:st, history:p.hist}, {status:st});
+  if(typeof leadTrasProyecto==="function") await leadTrasProyecto(p);   // Centro de clientes: aprobado → ganada
   save(); renderAll();
 }
 const PROJECT_DATE_COLUMN={created:"created_at",start:"started_at",due:"due_at"};
@@ -2467,6 +2472,8 @@ function filterVinculos(){
 }
 function vVinculoDetalle(a, i){
   const c=a.clients[i]; const colab=vinIsColab(c); const L=vinLinks(a,c);
+  const lead=(typeof leadDeVinculo==="function")?leadDeVinculo(c):null;
+  const wa=(typeof waBoton==="function")?waBoton(c.phone,c.name):"";
   const contact=[c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:"",c.phone?esc(c.phone):""].filter(Boolean).join(" · ")||"Sin datos de contacto";
   const projRows=L.projs.length?L.projs.map(({p,i})=>`<div class="tk-row proj-litem" data-projgo="${i}">
       <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
@@ -2482,7 +2489,8 @@ function vVinculoDetalle(a, i){
     </div>
     <div class="card s5 proj-info">
       ${c.role?`<div class="pd-block"><span class="pd-k">Rol / oficio</span><b>${esc(c.role)}</b></div>`:""}
-      <div class="pd-block"><span class="pd-k">Contacto</span><b style="font-size:14px">${contact}</b></div>
+      <div class="pd-block"><span class="pd-k">Contacto</span><b style="font-size:14px">${contact}</b>${wa?`<div style="margin-top:8px">${wa}</div>`:""}</div>
+      ${lead?leadOrigenHTML(lead):""}
       <div class="pd-grid3"><div><span class="pd-k">Proyectos</span><b>${L.projs.length}</b></div><div><span class="pd-k">Facturado</span><b>${esc(money(L.billed))}</b></div><div><span class="pd-k">Cotizaciones</span><b>${L.quotes.length}</b></div></div>
       ${c.notes?`<div class="pd-block" style="margin-top:6px"><span class="pd-k">Notas</span><p style="margin:4px 0 0;font-size:14px">${esc(c.notes)}</p></div>`:""}
     </div>
@@ -2756,6 +2764,7 @@ async function qSaveCloud(a){
     if(quoteDraft.id){ await Cloud.updateRow("quotes",quoteDraft.id,payload); }
     else { const qrow=await Cloud.insertRow("quotes",payload); quoteDraft.id=qrow.id; }
     quoteDraft.client_id=clientId; quoteDraft.project_id=projectId;
+    if(typeof leadTrasCotizar==="function") await leadTrasCotizar(quoteDraft, Math.round(t.total));   // Centro de clientes: queda cotizada
     state.cloudQuotes=await Cloud.quotes(a.almaId);
     // LUMBRE · Obsidian (Etapa 1): solo la primera vez que nace la cotización.
     if(wasNew && (typeof LumbrePermissions!=="undefined") && LumbrePermissions.canUseRealLumbre()
