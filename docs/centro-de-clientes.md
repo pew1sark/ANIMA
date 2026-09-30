@@ -18,6 +18,29 @@ confirmar, la persona queda también en Vínculos.
 Las solicitudes viven en memoria (`CC`), no en `state`: `save()` vuelca `state` a
 localStorage y no queremos datos de terceros guardados en el teléfono.
 
+## Conectado al Taller (migración 0136)
+
+Cada solicitud guarda `client_id` (Vínculo), `project_id` (Proyecto) y `quote_id`
+(Cotización). El recorrido es de ida y vuelta:
+
+| Acción | Qué pasa |
+|---|---|
+| Confirmar por WhatsApp | Abre `wa.me` con el mensaje, pasa a «Contactada» y crea/enlaza el Vínculo. |
+| **✎ Cotizar** (panel) | Vínculo + Proyecto en «Cotizando» (título `Nombre · Ciudad`, notas con medidas e idea) y abre el Cotizador con cliente, proyecto y notas puestos. |
+| Guardar la cotización | La solicitud queda «Cotizada» con `quote_id`; si el proyecto sigue en «Cotizando», su valor total pasa a ser el de la cotización. |
+| Etapa «Cotizada» a mano | Si no tenía proyecto, se crea. |
+| Etapa «Ganada» a mano | El proyecto pasa de «Cotizando» a «Aprobado». |
+| Proyecto a «Aprobado» o más | La solicitud queda «Ganada» (`leadTrasProyecto`, desde `setProjectStatus`). |
+| Editar nombre/contacto | Se copia al Vínculo enlazado y al nombre de cliente del proyecto. |
+
+Las fichas de Vínculo y de Proyecto muestran de qué solicitud (y campaña) vinieron,
+con botón de WhatsApp; tocarla vuelve al Centro de clientes con la solicitud abierta.
+
+**＋ Nuevo cliente** crea una solicitud `source='manual'` (Instagram, WhatsApp,
+recomendado…) con el mismo formulario de edición. Filtros: campaña de Meta (y
+tarjetas de rendimiento por campaña: llegadas, cotizadas, ganadas), días (hoy,
+ayer, 3/7/14/30/90 días) o un rango de fechas.
+
 ## Conectar la página (una vez)
 
 1. developers.facebook.com → Mis apps → crear app tipo **Negocios**.
