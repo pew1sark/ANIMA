@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Ícono de la app instalada (PWA). Cuadrado a sangre: iOS y Android le
+       ponen su propio redondeo. La ∧ queda dentro de la zona segura de los
+       íconos «maskable» (círculo del 80 %). -->
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#23201c"/>
+      <stop offset=".55" stop-color="#141312"/>
+      <stop offset="1" stop-color="#0a0a0b"/>
+    </linearGradient>
+    <radialGradient id="luz" cx="512" cy="430" r="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d0aa63" stop-opacity=".30"/>
+      <stop offset=".55" stop-color="#d0aa63" stop-opacity=".07"/>
+      <stop offset="1" stop-color="#d0aa63" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="linea" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#d0aa63" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#e2c48a"/>
+      <stop offset="1" stop-color="#d0aa63" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#fondo)"/>
+  <rect width="1024" height="1024" fill="url(#luz)"/>
+  <path d="M302 676 L512 292 L722 676" fill="none" stroke="#f7f5f0" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="397" y="740" width="230" height="9" rx="4.5" fill="url(#linea)"/>
+</svg>
