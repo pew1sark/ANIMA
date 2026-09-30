@@ -9,6 +9,7 @@ import { Consola } from '@/components/Consola';
 import { Cargando } from '@/components/Cargando';
 import { NuevaContrasena } from '@/components/NuevaContrasena';
 import { env } from '@/config/env';
+import { Oscuro } from '@/components/Oscuro';
 
 type Destino = 'company' | 'consola';
 
@@ -93,7 +94,7 @@ function irAStudio() { window.location.href = env.studio; }
 function SinAcceso() {
   const { user, signOut } = useAuth();
   return (
-    <div className="min-h-full grid place-items-center p-6">
+    <Oscuro className="min-h-full grid place-items-center p-6">
       <div className="max-w-md text-center">
         <h1 className="text-2xl font-extrabold tracking-tight">Todavía no tienes acceso</h1>
         <p className="text-[14px] text-muted mt-2">
@@ -102,7 +103,7 @@ function SinAcceso() {
         </p>
         <button onClick={signOut} className="b b-sec mt-6">Salir</button>
       </div>
-    </div>
+    </Oscuro>
   );
 }
 
@@ -110,7 +111,7 @@ function SinAcceso() {
 function SinOrganizacion({ volver }: { volver?: () => void }) {
   const { user, signOut } = useAuth();
   return (
-    <div className="min-h-full grid place-items-center p-6">
+    <Oscuro className="min-h-full grid place-items-center p-6">
       <div className="max-w-md text-center">
         <h1 className="text-2xl font-extrabold tracking-tight">Todavía no tienes acceso</h1>
         <p className="text-[14px] text-muted mt-2">
@@ -122,7 +123,7 @@ function SinOrganizacion({ volver }: { volver?: () => void }) {
           <button onClick={signOut} className="b b-sec">Salir</button>
         </div>
       </div>
-    </div>
+    </Oscuro>
   );
 }
 

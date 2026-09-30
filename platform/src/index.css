@@ -701,3 +701,163 @@ body {
   .tarjeta, .cifra-tarjeta { break-inside: avoid; box-shadow: none; }
   .desliza { overflow: visible; background: none; }
 }
+
+/* =========================================================================
+   EL PORTAL — la entrada de ANIMA es oscura.
+   -------------------------------------------------------------------------
+   Entrar, elegir la puerta y esperar se ven como la portada del sitio:
+   negro profundo, un resplandor arriba y dos haces de luz que dibujan la ∧.
+   Adentro (COMPANY, la consola) todo sigue claro: ahí se trabaja.
+
+   No se reescribe ningún componente para oscurecerlo. `.portal` redefine las
+   variables de color del tema y cada `bg-surface`, `text-ink` o `border-line`
+   se da vuelta solo. Lo que no se resuelve con variables (el botón negro, el
+   vidrio de los campos) se ajusta aquí abajo, dentro de `.portal`.
+   ========================================================================= */
+.portal {
+  --color-bg: #070708;
+  --color-surface: rgba(255,255,255,.045);
+  --color-sunk: rgba(255,255,255,.035);
+  --color-ink: #f4f2ed;
+  --color-ink-2: #d8d4cb;
+  --color-muted: #a09c93;
+  --color-faint: #6f6c66;
+  --color-line: rgba(255,255,255,.11);
+  --color-accent: #d6b36e;
+  --color-accent-deep: #e4c78e;
+  --color-ok: #6cc596;
+  --color-danger: #f08a8a;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100%;
+  overflow: hidden;
+  color: var(--color-ink);
+  background: #070708;
+  color-scheme: dark;
+}
+/* El resplandor vive detrás de todo, fijo a la pantalla; los haces van en
+   .portal-haces (un elemento propio, porque son dos y giran distinto). */
+.portal::before {
+  content: ""; position: fixed; pointer-events: none; z-index: -1;
+  top: -18vmax; left: 50%; width: 92vmax; height: 92vmax; transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(255,255,255,.11), rgba(214,179,110,.05) 34%, transparent 62%);
+  filter: blur(34px);
+  animation: portal-respira 9s ease-in-out infinite;
+}
+@keyframes portal-respira { 0%,100% { opacity: .55; } 50% { opacity: .95; } }
+
+/* Los dos haces, girados como las patas de la ∧ (el ::after es uno solo). */
+.portal-haces { position: fixed; inset: 0; pointer-events: none; z-index: -1; overflow: hidden; }
+.portal-haces::before,
+.portal-haces::after {
+  content: ""; position: absolute; top: 10%; bottom: -12%; left: 50%; width: 38vmax;
+  background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.02) 60%, transparent);
+  filter: blur(24px); opacity: .5; transform-origin: top center;
+}
+.portal-haces::before { transform: translateX(-50%) rotate(12deg); }
+.portal-haces::after  { transform: translateX(-50%) rotate(-12deg); }
+
+/* Botón principal: en el portal es de luz, no de tinta. */
+.portal .b-pri {
+  background: linear-gradient(180deg, #ffffff, #e7e4de 70%);
+  color: #0b0b0c; border-color: #ffffff;
+  --realce: inset 0 1px 0 rgba(255,255,255,.7);
+  --sombra: 0 1px 2px rgba(0,0,0,.4);
+  --sombra-alta: 0 12px 30px rgba(255,255,255,.14);
+}
+.portal .b-pri:not(:disabled):hover { background: #ffffff; }
+.portal .b-sec { background: rgba(255,255,255,.05); }
+.portal .b-sec:not(:disabled):hover { border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.08); }
+.portal .b-fan:not(:disabled):hover { background: rgba(255,255,255,.06); }
+.portal .b { --sombra: 0 1px 2px rgba(0,0,0,.35); }
+
+/* Vidrio: tarjetas y campos dejan pasar la luz de atrás. */
+.portal .vidrio,
+.portal .tarjeta {
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+  border: 1px solid rgba(255,255,255,.1);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  backdrop-filter: blur(22px) saturate(1.2);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 30px 80px rgba(0,0,0,.45);
+}
+.portal .campo { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.12); color: var(--color-ink); }
+.portal .campo:hover:not(:disabled):not(:focus) { border-color: rgba(255,255,255,.24); }
+.portal .campo:focus { background: rgba(255,255,255,.07); }
+.portal .campo:-webkit-autofill {
+  -webkit-text-fill-color: var(--color-ink);
+  -webkit-box-shadow: 0 0 0 40px #17171a inset;
+  caret-color: var(--color-ink);
+}
+.portal .anima-cargando path { stroke: #f4f2ed; }
+
+/* El título del portal: la serif liviana de la portada. */
+.portal-titulo {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 300; letter-spacing: -.015em; line-height: 1.02;
+}
+.portal-titulo em { font-style: italic; }
+.portal-rotulo {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .26em; text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+/* La ∧ luminosa que se traza al llegar. */
+.portal-marca { filter: drop-shadow(0 0 22px rgba(255,255,255,.35)); }
+.portal-marca path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: portal-traza 1.1s .1s cubic-bezier(.65,0,.35,1) forwards; }
+@keyframes portal-traza { to { stroke-dashoffset: 0; } }
+
+/* Una puerta: vidrio alto con luz que sube desde el umbral al acercarse. */
+.puerta {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: flex; flex-direction: column; text-align: left;
+  min-height: 250px; padding: 22px; border-radius: 26px;
+  color: var(--color-ink);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  border: 1px solid rgba(255,255,255,.1);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+  transition: transform .45s cubic-bezier(.22,.61,.36,1), border-color .45s, box-shadow .45s;
+}
+.puerta::before {           /* el umbral: luz que viene de abajo */
+  content: ""; position: absolute; left: 50%; bottom: -40%; width: 120%; aspect-ratio: 1;
+  transform: translateX(-50%); z-index: -1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(214,179,110,.34), rgba(214,179,110,.08) 38%, transparent 64%);
+  opacity: .35; transition: opacity .5s, transform .6s cubic-bezier(.22,.61,.36,1);
+}
+.puerta::after {            /* el marco: una línea de luz arriba */
+  content: ""; position: absolute; top: 0; left: 18%; right: 18%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  opacity: .5; transition: opacity .45s;
+}
+.puerta:hover { transform: translateY(-4px); border-color: rgba(255,255,255,.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 30px 70px rgba(0,0,0,.5), 0 0 60px rgba(214,179,110,.08); }
+.puerta:hover::before { opacity: 1; transform: translateX(-50%) translateY(-8%); }
+.puerta:hover::after  { opacity: 1; }
+.puerta:active { transform: translateY(-1px) scale(.995); }
+.puerta:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.puerta .glifo {
+  width: 52px; height: 52px; border-radius: 17px; display: grid; place-items: center;
+  border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: #fff;
+  transition: background .4s, color .4s, box-shadow .4s;
+}
+.puerta:hover .glifo { background: #fff; color: #0b0b0c; box-shadow: 0 0 30px rgba(255,255,255,.25); }
+
+@media (max-width: 640px) {
+  .puerta { min-height: 0; padding: 18px; border-radius: 22px; }
+  .puerta .glifo { width: 46px; height: 46px; border-radius: 15px; }
+}
+
+/* Lo que entra, entra en orden. */
+/* Se usa `translate` (no `transform`): una animación con `forwards` deja
+   fijo lo que anima, y si fuera `transform` le ganaría al levantarse de las
+   puertas al pasar por encima. */
+.portal .sube { opacity: 0; translate: 0 12px; filter: blur(4px);
+  animation: portal-sube .8s cubic-bezier(.22,.61,.36,1) forwards; animation-delay: calc(var(--d, 0) * 80ms + 150ms); }
+@keyframes portal-sube { to { opacity: 1; translate: 0 0; filter: blur(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .portal::before, .portal-marca path, .portal .sube { animation: none; }
+  .portal-marca path { stroke-dashoffset: 0; }
+  .portal .sube { opacity: 1; translate: 0 0; filter: none; }
+}
