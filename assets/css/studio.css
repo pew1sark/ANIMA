@@ -531,16 +531,20 @@
    Alma…" con pixel art: eso solo tenía sentido dentro del mundo de la Alpha.
    El sistema es uno, así que la espera también lo es. La plataforma repite
    esta misma figura en React (components: Cargando). */
-#animaBoot{position:fixed;inset:0;z-index:10000;background:#f7f7f8;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:16px;opacity:1;transition:opacity .5s ease}
-#animaBoot.fade{opacity:0;pointer-events:none}
-#animaBoot .ab-mark{width:42px;height:42px;display:block}
-#animaBoot .ab-mark path{fill:none;stroke:#0a0a0b;stroke-width:6.5;stroke-linecap:round;stroke-linejoin:round;
+/* La espera es parte del portal: oscura, con la ∧ de luz. Al terminar se
+   desvanece hacia el Taller, que es claro — se sale del portal al trabajo. */
+#animaBoot{position:fixed;inset:0;z-index:10000;background:#070708;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;opacity:1;transition:opacity .6s ease,filter .6s ease}
+#animaBoot::before{content:"";position:absolute;top:50%;left:50%;width:70vmax;height:70vmax;transform:translate(-50%,-56%);
+  background:radial-gradient(circle,rgba(255,255,255,.1),rgba(214,179,110,.05) 30%,transparent 60%);filter:blur(30px);pointer-events:none}
+#animaBoot.fade{opacity:0;filter:blur(6px);pointer-events:none}
+#animaBoot .ab-mark{width:44px;height:44px;display:block;position:relative;filter:drop-shadow(0 0 18px rgba(255,255,255,.4))}
+#animaBoot .ab-mark path{fill:none;stroke:#fff;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;
   stroke-dasharray:145;stroke-dashoffset:145;animation:abDraw 1.7s ease-in-out infinite}
 @keyframes abDraw{0%{stroke-dashoffset:145}45%,55%{stroke-dashoffset:0}100%{stroke-dashoffset:-145}}
-#animaBoot .ab-name{font-size:12.5px;letter-spacing:.36em;font-weight:600;color:#0a0a0b;padding-left:.36em}
+#animaBoot .ab-name{position:relative;font-size:12.5px;letter-spacing:.36em;font-weight:500;color:#fff;padding-left:.36em}
 #animaBoot .ab-label{font-family:ui-monospace,"DejaVu Sans Mono",monospace;font-size:9.5px;letter-spacing:.3em;
-  text-transform:uppercase;color:#9a9aa0}
+  text-transform:uppercase;color:#6f6c66;position:relative}
 @media (prefers-reduced-motion: reduce){
   #animaBoot .ab-mark path{animation:none;stroke-dashoffset:0}
 }
@@ -1306,6 +1310,48 @@ body:has(.ld-drawer){overflow:hidden}
   .ld-tabs{margin:14px -16px 0;padding:0 10px}
   .ld-table{margin:0 -16px}
 }
+/* Campañas de Meta: rendimiento y filtro rápido */
+.ld-camps{display:flex;gap:8px;overflow-x:auto;padding:0 0 12px;scrollbar-width:none}
+.ld-camps::-webkit-scrollbar{display:none}
+.ld-camp{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:2px;font:inherit;text-align:left;border:1px solid var(--line);border-radius:14px;padding:9px 13px;background:#fff;cursor:pointer;max-width:260px;transition:border-color .15s,background .15s}
+.ld-camp b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.ld-camp span{font-size:11.5px;color:var(--muted)}
+.ld-camp:hover{border-color:rgba(21,21,26,.3)}
+.ld-camp.on{border-color:#15151a;background:rgba(21,21,26,.05)}
+.ld-rango{display:inline-flex;align-items:center;gap:6px;flex:none}
+.ld-rango input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:999px;padding:7px 11px;background:#fff;color:var(--text,#15151a)}
+.ld-rango span{color:var(--muted);font-size:12px}
+/* WhatsApp: también como enlace y como «agregar» */
+a.ld-wa{text-decoration:none}
+.ld-wa.sm{font-size:12px;padding:6px 11px 6px 8px}
+.ld-wa.sm svg{width:15px;height:15px}
+.ld-wa.is-add{background:rgba(0,0,0,.05);color:#3f3c37}
+.ld-wa.is-add:hover{background:#15151a;color:#fff}
+.ld-wa.big.is-add{background:rgba(18,140,74,.1);color:#0f6e37;border:1px dashed rgba(18,140,74,.5)}
+.ld-wa.big.is-add:hover{background:#128c4a;color:#fff}
+/* Panel: editar, Taller */
+.ld-x.ld-ed{font-size:15px}
+.ld-mini{float:right;font:inherit;font-family:inherit;letter-spacing:0;text-transform:none;font-size:11.5px;font-weight:650;color:var(--muted);background:none;border:0;cursor:pointer;padding:0}
+.ld-mini:hover{color:#15151a;text-decoration:underline}
+.ld-form{padding-top:18px}
+.ld-form-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.ld-links{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.ld-links:empty{display:none}
+.ld-link{display:flex;align-items:center;gap:11px;width:100%;font:inherit;text-align:left;border:1px solid var(--line);border-radius:12px;padding:9px 12px;background:#fff;cursor:pointer;color:inherit}
+.ld-link:hover{border-color:rgba(21,21,26,.3);background:rgba(0,0,0,.02)}
+.ld-link-i{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:rgba(21,21,26,.06);font-size:14px}
+.ld-link-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.ld-link-t small{font-size:11px;color:var(--muted);margin:0}
+.ld-link-t b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld-taller-acts{display:flex;gap:8px;flex-wrap:wrap}
+/* Origen de un Vínculo o Proyecto (Vínculos, Proyectos) */
+.ld-origen{display:flex;align-items:center;gap:11px;width:100%;font:inherit;text-align:left;border:1px solid rgba(184,150,90,.35);border-radius:12px;padding:9px 12px;margin:0 0 12px;background:rgba(184,150,90,.08);cursor:pointer;color:inherit}
+.ld-origen:hover{background:rgba(184,150,90,.14)}
+.ld-origen-i{flex:none;color:#8a6a2a;font-size:15px}
+.ld-origen>span:nth-child(2){flex:1;min-width:0;display:flex;flex-direction:column}
+.ld-origen small{font-size:11px;color:var(--muted)}
+.ld-origen b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld-origen .lb{flex:none;font-size:11px;font-weight:750;border-radius:999px;padding:4px 9px}
 @media (prefers-reduced-motion:reduce){
   .ld-drawer.entra,.ld-scrim.entra,.ld-drawer.sale,.ld-scrim.sale{animation:none}
 }
