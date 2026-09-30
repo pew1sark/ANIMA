@@ -5109,6 +5109,29 @@ async function refreshAuth(){
     location.replace("home.html");
   }
 }
+/* Recargar (tirar hacia abajo, F5 o el botón del navegador) vuelve a la misma
+   pantalla: al salir se anota en sessionStorage —vive solo en esta pestaña y no
+   sobrevive a cerrar la app— y loadMyAlma la retoma en vez de ir a Mi Alma.
+   Los permisos de la vista los sigue revisando renderView. */
+const RESUME_KEY="anima_resume";
+function guardarPantalla(){
+  try{ sessionStorage.setItem(RESUME_KEY, JSON.stringify({ view:state.view, almaTab:state.almaTab, projOpen:state.projOpen, vinOpen:state.vinOpen,
+    leadOpen:state.leadOpen, y:window.scrollY||0, at:Date.now() })); }catch(e){}
+}
+window.addEventListener("pagehide", guardarPantalla);
+function retomarPantalla(){
+  let r=null; try{ r=JSON.parse(sessionStorage.getItem(RESUME_KEY)||"null"); sessionStorage.removeItem(RESUME_KEY); }catch(e){}
+  if(!r || !r.view || r.view==="mialma" && !r.almaTab || Date.now()-(r.at||0)>30*60000) return null;
+  state.view=r.view; if(r.almaTab) state.almaTab=r.almaTab;
+  if(r.view==="cotizador") state.cotMode="galeria";
+  if(r.view==="centro" && r.leadOpen) state.leadOpen=r.leadOpen;
+  return ()=>{
+    const a=me();
+    if(r.projOpen!=null && a.projects && a.projects[r.projOpen]) openDetail("proj", r.projOpen);
+    else if(r.vinOpen!=null && a.clients && a.clients[r.vinOpen]) openDetail("vin", r.vinOpen);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>scrollTopNow(r.y||0)));
+  };
+}
 async function loadMyAlma(){
   const row=await Cloud.myAlma(); if(!row) return;
   /* Todos cruzan el Umbral: si esta Alma aún no completó su Primer Despertar
@@ -5120,7 +5143,10 @@ async function loadMyAlma(){
   try{ state.cloudQuotes=await Cloud.quotes(row.id); }catch(e){ state.cloudQuotes=[]; }
   try{ const p=await Cloud.getPrefs(row.id); if(p) localStorage.setItem("anima_cfg_"+row.id, JSON.stringify(p)); }catch(e){}
   state.almas=[a];   // tu Alma viva, limpia (las de muestra no se mezclan)
-  state.currentId=a.id; state.view="mialma"; state.chat=[]; renderAll();
+  state.currentId=a.id; state.view="mialma"; state.chat=[];
+  const volver=retomarPantalla();   // recargar deja en la misma pantalla, no en Mi Alma
+  renderAll();
+  if(volver) volver();
   // Experiencia: carga montos y otorga Esencia de bienvenida + ingreso diario.
   await loadRewardConfig();
   rewardOnce("crear_alma",100,"Naciste en ANIMA");        // servidor: 1 sola vez por Alma
@@ -5353,7 +5379,7 @@ function setupPullToRefresh(){
     if(lbl) lbl.textContent=h>=TRIG*0.5?"Suelta para actualizar":"Tira para actualizar"; },{passive:true});
   window.addEventListener("touchend",()=>{ if(!pulling) return; pulling=false;
     if(ind.offsetHeight>=TRIG*0.5){ ind.classList.add("spin"); ind.style.height="52px"; if(lbl) lbl.textContent="Actualizando…";
-      setTimeout(()=>location.reload(),450); } else { ind.style.height="0px"; } });
+      guardarPantalla(); setTimeout(()=>location.reload(),450); } else { ind.style.height="0px"; } });
 }
 
 /* ---------- Deslizar para navegar entre moradas (móvil) ----------
