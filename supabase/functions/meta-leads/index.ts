@@ -122,7 +122,7 @@ function iguales(a: string, b: string) {
 // De un lead de Meta a una fila de client_leads
 // ---------------------------------------------------------------
 const sinTildes = (s: string) =>
-  (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[_¿?¡!.,:;()]/g, " ");
+  (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[_¿?¡!.,:;()]/g, " ");
 
 function fechaMeta(s: string) {
   // Graph entrega "2026-09-29T18:20:31+0000"; Date quiere "+00:00".
@@ -305,6 +305,10 @@ async function conectar(almaId: string, body: any) {
 
   await guardarSecreto(tokenDe(almaId), pageToken);
   if (appSecret) await guardarSecreto("meta_app_secret", appSecret);   // para firmar el webhook
+  if (appId) await guardarSecreto("meta_app_id", appId);
+  // El token de la persona también sirve para leer sus anuncios (meta-ads):
+  // así el Panel de anuncios se conecta sin volver a pegar nada.
+  if (!esPagina) await guardarSecreto(`meta_user_token_${almaId}`, token);
 
   // ¿Vence? Solo se puede saber con la app.
   let vence: string | null = null;
@@ -413,6 +417,7 @@ Deno.serve(async (req) => {
         return json(await sincronizar(almaId));
       case "disconnect": {
         await admin.rpc("meta_secret_forget", { p_name: tokenDe(almaId) });
+        await admin.rpc("meta_secret_forget", { p_name: `meta_user_token_${almaId}` });
         await admin.from("meta_lead_connections").delete().eq("alma_id", almaId);
         return json({ ok: true });
       }
