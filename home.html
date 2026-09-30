@@ -6,7 +6,8 @@
   <meta name="theme-color" content="#f5f5f7" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="assets/img/icon.svg" />
+  <link rel="icon" href="assets/img/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/img/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="ANIMA" />
@@ -19,6 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/umbral.css" />
+  <link rel="stylesheet" href="assets/css/home.css?v=home-v1" />
   <style>
     /* HOME minimalista — mismo diseño en todo dispositivo, solo adaptado. */
     .world-line{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
@@ -34,9 +36,19 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase.js?v=nucleo-v11"></script>
   <script src="assets/js/anima-state.js?v=nucleo-v12"></script>
+  <script src="assets/js/icons.js?v=nucleo-v17"></script>
 </head>
-<body class="rite" style="display:block;align-items:stretch;justify-content:flex-start">
+<body class="rite h2" style="display:block;align-items:stretch;justify-content:flex-start">
   <div class="field"><div class="core"></div></div>
+
+  <!-- Intro: la ∧ se traza y el Home sube. Solo la primera vez de la sesión. -->
+  <div class="intro" id="intro" aria-hidden="true">
+    <div class="intro-in">
+      <svg class="intro-mark" viewBox="23 27 54 48"><path pathLength="1" d="M28 72 L50 30 L72 72"/></svg>
+      <div class="intro-word">ANIMA</div>
+      <div class="intro-line"></div>
+    </div>
+  </div>
 
   <main class="home-wrap" id="home"><!-- inyectado --></main>
 
@@ -51,7 +63,29 @@
   var CREATOR_EMAIL = "sarkgraff@gmail.com";
   var home = document.getElementById("home");
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
-  var PEAK = '<svg viewBox="23 27 54 48" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var PEAK = '<svg viewBox="23 27 54 48" fill="none"><path d="M28 72 L50 30 L72 72" stroke="#141416" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function IC(nombre, respaldo){ return (window.ANIMA_ICON ? ANIMA_ICON(nombre, respaldo) : respaldo); }
+
+  /* ---------- Intro ----------
+     La primera vez de la sesión la ∧ se traza (≈1,2 s) mientras se cargan la
+     sesión y el Alma; el Home sube cuando ambas cosas terminaron. Después, o
+     con «reducir movimiento», entra directo con un fundido corto. */
+  var INTRO_T0 = Date.now();
+  var introVista = false;
+  try { introVista = sessionStorage.getItem("anima_intro") === "1"; sessionStorage.setItem("anima_intro", "1"); } catch (e) {}
+  var sinMovimiento = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  (function () { var el = document.getElementById("intro"); if (el && (introVista || sinMovimiento)) el.remove(); })();
+  function revelar(){
+    var espera = document.getElementById("intro") ? Math.max(0, 1250 - (Date.now() - INTRO_T0)) : 0;
+    setTimeout(function () {
+      var el = document.getElementById("intro");
+      if (el) { el.classList.add("fuera"); setTimeout(function () { el.remove(); }, 520); }
+      requestAnimationFrame(function () { document.body.classList.add("listo"); });
+      setTimeout(function () { document.body.classList.add("listo"); }, 80);   // por si el navegador demora el frame
+    }, espera);
+  }
+  function saludoHora(){ var h = new Date().getHours(); return h < 6 ? "Buenas noches" : h < 13 ? "Buenos días" : h < 20 ? "Buenas tardes" : "Buenas noches"; }
+  function hoyLargo(){ try { return new Date().toLocaleDateString("es-CL", { weekday:"long", day:"numeric", month:"long" }); } catch (e) { return ""; } }
 
   /* Tiempo que el Alma llevaba sin entrar (se lee ANTES de re-sellar la hora). */
   var SLEPT = AnimaState.sleptText(AnimaState.lastSeen());
@@ -166,19 +200,19 @@
     var nameFirst = (s.name || "Alma").split(" ")[0];
     var right = ctx.signedIn
       ? (variasPuertas()
-          ? '<a class="home-puertas" href="app/" title="Volver a elegir plataforma">⇄ Plataformas</a>'
+          ? '<a class="home-puertas" href="app/" title="Volver a elegir plataforma" aria-label="Plataformas">⇄<span class="pt"> Plataformas</span></a>'
           : '') +
         '<div class="alma-pill" id="almaPill"><span class="adot"></span>' + esc(nameFirst) +
           '<span class="acaret">⌄</span><div class="alma-pop" id="almaPop">' + menuHTML() + '</div></div>'
-      : '<a class="cbtn" href="app/" style="padding:10px 18px;font-size:13.5px">Entrar a mi Alma</a>';
+      : '<a class="h-btn pri h-btn-sm" href="app/">Entrar</a>';
     return '<div class="home-top">' +
         '<div class="home-brand"><span class="m">' + PEAK + '</span>ANIMA</div>' +
-        right +
+        '<div class="h-der">' + right + '</div>' +
       '</div>';
   }
 
   function foot(){
-    return '<div class="home-foot">' +
+    return '<div class="home-foot rv" style="--d:9">' +
         '<strong>ANIMA TSC</strong> · Technology System Connection<br>' +
         '<a href="arbol.html">Árbol de Almas</a>·<a href="planes.html">Planes</a>·<a href="legal.html#privacidad">Privacidad</a>' +
       '</div>';
@@ -187,68 +221,89 @@
   /* ---------- Sin sesión: Almas actuales + Estado del Mundo ---------- */
   function renderGuest(){
     home.innerHTML =
-      topBar() +
-
-      '<div class="home-hero" style="text-align:center">' +
-        '<h1>Un mundo está despertando.</h1>' +
-        '<p style="margin-left:auto;margin-right:auto">ANIMA es un mundo vivo habitado por Almas.</p>' +
+      '<div class="rv" style="--d:0">' + topBar() + '</div>' +
+      '<div class="h-hero h-guest">' +
+        '<div class="h-eyebrow rv" style="--d:1">ANIMA STUDIO · Era del Origen</div>' +
+        '<h1 class="h-title rv" style="--d:2">Un mundo está <em>despertando</em>.</h1>' +
+        '<p class="h-sub rv" style="--d:3">ANIMA es un mundo vivo habitado por Almas: tu taller, tu memoria y tu clan en un solo lugar.</p>' +
+        '<div class="h-cupo rv" style="--d:4">' +
+          '<div class="num"><span id="homeSouls" style="font-size:inherit;color:inherit">·</span> <span>/ 100 Almas</span></div>' +
+          '<div class="barra"><i id="homeSoulsBar"></i></div>' +
+          '<small id="homeSoulsSub">El Umbral de ANIMA.</small>' +
+        '</div>' +
+        '<div class="h-cta rv" style="--d:5">' +
+          '<a class="h-btn pri" href="app/">Entrar a mi Alma</a>' +
+          '<a class="h-btn sec" href="umbral.html">Despertar una nueva Alma</a>' +
+        '</div>' +
       '</div>' +
-
-      '<div class="hcard" style="text-align:center">' +
-        '<div class="label">Almas del Origen</div>' +
-        '<div class="big" style="font-size:40px;margin-top:4px"><span id="homeSouls">·</span> <span style="color:var(--muted);font-size:20px;font-weight:700">/ 100</span></div>' +
-        '<div class="ebar" style="margin-top:14px"><span id="homeSoulsBar" style="background:linear-gradient(90deg,var(--gold,#d0aa63),var(--gold-deep,#7b5920))"></span></div>' +
-        '<div class="world-line"><span>Era del Origen</span><span class="pip"></span><span>El Árbol: Despertando</span></div>' +
-        '<div class="hint" id="homeSoulsSub" style="margin-top:10px">El Umbral de ANIMA.</div>' +
-      '</div>' +
-
-      '<div class="home-cta">' +
-        '<a class="cbtn gold" href="app/" style="padding:12px 22px">Entrar a mi Alma</a>' +
-        '<a class="cbtn ghost" href="umbral.html" style="padding:12px 22px">✦ Despertar una nueva Alma</a>' +
-      '</div>' +
-
       foot();
-
     fillSouls();
+    revelar();
   }
 
-  /* ---------- Con sesión: tiempo sin entrar + accesos ---------- */
+  /* ---------- Con sesión: saludo + accesos ---------- */
   function renderSignedIn(){
     var s = AnimaState.get();
     var nameFirst = (s.name || "Alma").split(" ")[0];
 
-    function entry(level, glyph, title, desc, href){
+    function entry(level, icono, title, desc, href, d){
       var ok = planAllows(level);
-      if (ok) return '<a class="entry open" href="' + href + '"><span class="eg">' + glyph + '</span>' +
-        '<b>' + title + '</b><small>' + desc + '</small><span class="ego">Entrar →</span></a>';
-      return '<div class="entry locked"><span class="lock">🔒</span><span class="eg">' + glyph + '</span>' +
-        '<b>' + title + '</b><small>' + desc + '</small>' +
-        '<a class="ego" href="planes.html">Desbloquear plan →</a></div>';
+      if (ok) return '<a class="h-card rv" style="--d:' + d + '" href="' + href + '"><span class="ic">' + IC(icono, "◆") + '</span>' +
+        '<span class="flecha" aria-hidden="true">→</span><div class="txt"><b>' + title + '</b><small>' + desc + '</small></div></a>';
+      return '<div class="h-card bloq rv" style="--d:' + d + '"><span class="ic">' + IC(icono, "◆") + '</span>' +
+        '<span class="flecha" aria-hidden="true">' + IC("lock", "🔒") + '</span><div class="txt"><b>' + title + '</b><small>' + desc + '</small>' +
+        '<a href="planes.html">Desbloquear con un plan →</a></div></div>';
     }
     var entries =
-      entry("ALMA", "✦", "Mi Alma", "Tu espacio privado: identidad, proyectos y memoria.", "studio.html") +
-      entry("CLAN", "❂", "Clan", "Tu equipo (2–8 Almas): agenda y memoria colectiva.", "studio.html#go=clanpanel") +
-      entry("SANTUARIO", "🜁", "Santuario", "La organización (8+): múltiples Clanes.", "studio.html#go=santuario");
+      entry("ALMA", "alma", "Mi Alma", "Tu espacio: proyectos, clientes, cotizaciones y memoria.", "studio.html", 4) +
+      entry("CLAN", "constelacion", "Clan", "Tu equipo de 2 a 8 Almas: agenda y memoria compartidas.", "studio.html#go=clanpanel", 5) +
+      entry("SANTUARIO", "santuario", "Santuario", "La organización: varios Clanes coordinados.", "studio.html#go=santuario", 6);
 
-    var sleepLine = SLEPT
-      ? '<div class="soul-sleep"><span class="moon">☽</span><div>Tu Alma durmió por <b>' + esc(SLEPT) + '</b>. Bienvenida de vuelta, ' + esc(nameFirst) + '.</div></div>'
+    function chip(v, icono, t, extra){ return '<a class="h-chip" href="studio.html#go=' + v + '">' + IC(icono, "◆") + t + (extra || '') + '</a>'; }
+    var nuevas = ctx.leadsNuevas || 0;
+    var atajos =
+      '<div class="h-atajos rv" style="--d:7"><div class="h-eyebrow">Ir directo al Taller</div><div class="h-chips">' +
+        chip("centro", "enlace", "Centro de clientes", nuevas ? '<span class="n">' + (nuevas > 9 ? "9+" : nuevas) + '</span>' : '') +
+        chip("proyectos", "proceso", "Proyectos") +
+        chip("cotizador", "documento", "Cotizador") +
+        chip("agenda", "agenda", "Agenda") +
+        chip("finanzas", "raiz", "Raíz") +
+      '</div></div>';
+
+    var aviso = nuevas
+      ? '<a class="h-aviso rv" style="--d:3" href="studio.html#go=centro"><span class="ic">' + IC("enlace", "✉") + '</span>' +
+          '<div><b>' + nuevas + (nuevas === 1 ? ' solicitud nueva' : ' solicitudes nuevas') + '</b><small>Llegaron desde tus anuncios · Centro de clientes</small></div>' +
+          '<span class="go" aria-hidden="true">→</span></a>'
       : '';
 
+    var sub = SLEPT
+      ? 'Tu Alma durmió ' + esc(SLEPT) + '. Qué bueno verte de nuevo.'
+      : 'Elige por dónde entrar hoy.';
+
     home.innerHTML =
-      topBar() +
-
-      '<div class="home-hero">' +
-        '<h1>Hola, ' + esc(nameFirst) + '.</h1>' +
-        '<p>Elige por dónde entrar hoy en ANIMA.</p>' +
+      '<div class="rv" style="--d:0">' + topBar() + '</div>' +
+      '<div class="h-hero">' +
+        '<div class="h-eyebrow rv" style="--d:1">' + esc(hoyLargo()) + '</div>' +
+        '<h1 class="h-title rv" style="--d:2">' + saludoHora() + ',<br><em>' + esc(nameFirst) + '</em>.</h1>' +
+        '<p class="h-sub rv" style="--d:3">' + sub + '</p>' +
       '</div>' +
-
-      sleepLine +
-
-      '<div class="entry-grid">' + entries + '</div>' +
-
+      aviso +
+      '<div class="h-grid">' + entries + '</div>' +
+      atajos +
       foot();
 
     wireAlmaMenu();
+    revelar();
+  }
+
+  /* Solicitudes nuevas del Centro de clientes (las mismas que cuenta el menú
+     de STUDIO). Si la consulta falla, el Home se dibuja igual sin el aviso. */
+  async function contarSolicitudes(almaId){
+    try {
+      if (!almaId || typeof Cloud === "undefined" || !Cloud.client) return 0;
+      var r = await Cloud.client.from("client_leads").select("id", { count: "exact", head: true }).eq("alma_id", almaId).eq("status", "nuevo");
+      return r.count || 0;
+    } catch (e) { return 0; }
   }
 
   function wireAlmaMenu(){
@@ -299,7 +354,7 @@
       : n >= 90 ? "El Umbral está casi completo."
       : "Quedan " + (100 - n) + " lugares en ANIMA.";
     var b = document.getElementById("homeSoulsBar");
-    if (b) setTimeout(function(){ b.style.width = Math.max(2, Math.round(n)) + "%"; }, 260);
+    if (b) setTimeout(function(){ b.style.width = Math.max(2, Math.round(n)) + "%"; }, 900);
   }
 
   /* Init: reconcilia con la nube (sesión/plan) y pinta una vez. */
@@ -317,6 +372,7 @@
           var row = await Cloud.myAlma();
           if (row) {
             ctx.plan = row.plan || "ALMA";
+            ctx.leadsNuevas = await contarSolicitudes(row.id);
             var st = AnimaState.get();
             if (row.name) st.name = row.name;
             if (row.affinity) st.affinity = row.affinity;
