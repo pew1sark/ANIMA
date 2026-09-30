@@ -237,6 +237,34 @@ async function sincronizar(almaId: string) {
 // ---------------------------------------------------------------
 // Conectar una página
 // ---------------------------------------------------------------
+const SIN_PAGINAS =
+  "Meta no le dio acceso a ninguna página a este token. Genera el token de nuevo y, " +
+  "en la ventana de Facebook, toca «Editar acceso» y marca la página Sarkpew1. " +
+  "Si la página está en un portfolio comercial, agrega también el permiso business_management.";
+
+// Las páginas que el token puede usar. /me/accounts solo trae las que la
+// persona autorizó en la ventana de Facebook; una página que vive en un
+// portfolio comercial aparece recién por /{business}/owned_pages (permiso
+// business_management). Se prueban las dos y se juntan sin repetir.
+async function paginasDelUsuario(token: string) {
+  const paginas: any[] = [];
+  const sumar = (lista: any[]) => {
+    for (const p of lista) if (p?.access_token && !paginas.some((x) => x.id === p.id)) paginas.push(p);
+  };
+  try { sumar(await graphAll("/me/accounts", token, { fields: "id,name,access_token", limit: "100" })); } catch (_) { /* sigue */ }
+  if (!paginas.length) {
+    try {
+      const negocios = await graphAll("/me/businesses", token, { fields: "id,name", limit: "50" });
+      for (const b of negocios) {
+        for (const borde of ["owned_pages", "client_pages"]) {
+          try { sumar(await graphAll(`/${b.id}/${borde}`, token, { fields: "id,name,access_token", limit: "100" })); } catch (_) { /* sin permiso */ }
+        }
+      }
+    } catch (_) { /* sin business_management */ }
+  }
+  return paginas;
+}
+
 async function conectar(almaId: string, body: any) {
   let token = String(body.token || "").trim();
   const appId = String(body.app_id || "").trim();
@@ -252,14 +280,17 @@ async function conectar(almaId: string, body: any) {
     if (r.access_token) token = r.access_token;
   }
 
-  const yo = await graph("/me", token, { fields: "id,name,category" });
+  // ¿Token de persona o de página? `category` solo existe en Page y pedirlo
+  // sobre un User hace fallar la llamada (#100), así que se pregunta el tipo
+  // del nodo con metadata=1.
+  const yo = await graph("/me", token, { fields: "id,name", metadata: "1" });
+  const esPagina = yo?.metadata?.type === "page";
   let pageId: string, pageName: string, pageToken: string;
-  if (yo.category !== undefined) {
-    // Ya es un token de página.
+  if (esPagina) {
     pageId = yo.id; pageName = yo.name; pageToken = token;
   } else {
-    const paginas = await graphAll("/me/accounts", token, { fields: "id,name,access_token", limit: "100" });
-    if (!paginas.length) return json({ ok: false, msg: "Esta cuenta no administra ninguna página de Facebook." }, 400);
+    const paginas = await paginasDelUsuario(token);
+    if (!paginas.length) return json({ ok: false, msg: SIN_PAGINAS }, 400);
     const elegida = body.page_id ? paginas.find((p: any) => p.id === String(body.page_id))
       : paginas.length === 1 ? paginas[0] : null;
     if (!elegida) return json({ ok: false, elegir: paginas.map((p: any) => ({ id: p.id, name: p.name })) });
