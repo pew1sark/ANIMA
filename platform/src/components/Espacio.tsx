@@ -60,7 +60,13 @@ export function Espacio({ volver }: { volver?: () => void }) {
   /* Cambiar de organización sí devuelve a Inicio: la pestaña donde estabas
      era de la otra empresa. Recargar el mismo espacio —moneda, módulos— no,
      porque entonces cambiar algo en Configuración te sacaría de ahí. */
-  useEffect(() => { setVista('miespacio'); setDestino(null); }, [cid]);
+  /* …salvo al recargar: la última vista de ESTA empresa se retoma desde
+     sessionStorage (vive solo en esta pestaña). */
+  useEffect(() => {
+    setVista((cid && sessionStorage.getItem('anima_vista_' + cid)) || 'miespacio');
+    setDestino(null);
+  }, [cid]);
+  useEffect(() => { if (cid) sessionStorage.setItem('anima_vista_' + cid, vista); }, [cid, vista]);
 
   /* Un resultado de la búsqueda global lleva al módulo Y a la pestaña. Si se
      vuelve a buscar la misma cosa, el destino tiene que cambiar de identidad
@@ -85,6 +91,12 @@ export function Espacio({ volver }: { volver?: () => void }) {
     m.slug !== 'core' && (MOSTRAR_TODOS_LOS_MODULOS || m.disponible));
   const bloqueados  = (esp?.modulos ?? []).filter(m => m.encendido && !m.disponible);
   const esAdmin = (esp?.mi_rol?.nivel ?? 0) >= 80;
+  /* Una vista retomada de una recarga que ya no está en el plan vuelve a Mi espacio. */
+  useEffect(() => {
+    if (!esp || ['miespacio','inicio','miplan','informes','config'].includes(vista)) return;
+    if (!disponibles.some(m => m.slug === vista)) setVista('miespacio');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [esp, vista]);
 
   /* Cuál de los dos paneles es la portada. Se decide con `disponible` —lo
      contratado Y encendido—, que es el mismo criterio con el que se arma el
