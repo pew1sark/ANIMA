@@ -236,6 +236,7 @@ const NAV_TREE = [
   ]},
   // 2 · TALLER — lo que creo.
   { type:"reino", key:"taller", ico:"₵", ic:"taller", t:"Taller", children:[
+      {v:"centro",     ico:"✉",ic:"enlace",t:"Centro de clientes"},
       {v:"proyectos",  ico:"◷",ic:"proceso",t:"Proyectos"},
       {v:"tareas",     ico:"✓",ic:"obra",t:"Tareas"},
       {v:"clientes",   ico:"☺",ic:"constelacion",t:"Vínculos"},
@@ -253,7 +254,9 @@ const NAV_TREE = [
   ]}
   // 4 · MUNDO y 5 · MI PLAN se construyen en renderNav (dependen de plan/consejo/creador).
 ];
-function navItem(n, sub){ return `<div class="nav-item ${sub?'sub':''} ${state.view===n.v?'active':''}" data-view="${n.v}"><span class="ico">${ANIMA_ICON(n.ic, n.ico)}</span>${n.t}</div>`; }
+/* El Centro de clientes lleva el contador de solicitudes nuevas (centro-clientes.js). */
+function navBadge(v){ return (v==="centro" && typeof leadsBadge==="function") ? leadsBadge() : ""; }
+function navItem(n, sub){ return `<div class="nav-item ${sub?'sub':''} ${state.view===n.v?'active':''}" data-view="${n.v}"><span class="ico">${ANIMA_ICON(n.ic, n.ico)}</span>${n.t}${navBadge(n.v)}</div>`; }
 /* Los reinos arrancan ABIERTOS: el menú está descubierto al entrar. El Alma
    puede colapsarlos si quiere (se recuerda su preferencia por reino). */
 function reinoOpen(key){ if(!state.navOpen) state.navOpen={}; return state.navOpen[key]!==false; }
@@ -290,7 +293,7 @@ function sectionOfView(v){
   // Mi Plan vive DENTRO de Mi Alma. Clan y Santuario son moradas propias del menú,
   // visibles SOLO si el Alma tiene acceso a esa Forma. No viven dentro de Mundo.
   if(["mialma","trayectoria","portafolio","cronologia","insignias","estadisticas","visibilidad","memoria","biblioteca","miplan"].includes(v)) return "mialma";
-  if(["taller","proyectos","tareas","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
+  if(["taller","centro","proyectos","tareas","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
   if(["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "clan";
   if(SANT_VIEWS.includes(v)) return "santuario";
   if(["mundo","comunidad","consejo","cronica","world_wandering_traces"].includes(v)) return "mundo";
@@ -396,6 +399,7 @@ const TITLES = {
   trayectoria:["Trayectoria","La historia de tu Alma, hito a hito."],
   portafolio:["Portafolio","Las obras que te representan."],
   taller:["Taller","Proyectos, vínculos, dinero y agenda de un vistazo."],
+  centro:["Centro de clientes","Las solicitudes de tus anuncios llegan aquí: léelas, confírmalas y conversa por WhatsApp."],
   proyectos:["Proyectos","Lo que está vivo ahora mismo."],
   tareas:["Tareas","Lo que hay que hacer, por prioridad."],
   finanzas:["Raíz","Abonos, pagos realizados, egresos y ganancia — privado. El sustento del Alma."],
@@ -581,7 +585,7 @@ function moradaTabs(view){
      desliza con el dedo y se ven todas a la vez: antes había un paso a paso
      ‹ 1/10 › que obligaba a tocar nueve veces para llegar a la última. */
   return `<nav class="morada-tabs" aria-label="${esc(label)}"><span class="morada-tabs-label">${esc(label)}</span><div class="morada-tabs-row">`+
-    kids.map(c=>`<button type="button" class="morada-tab ${state.view===c.v?'on':''}" data-view="${c.v}"${state.view===c.v?' aria-current="page"':''}><span class="mt-ico">${ANIMA_ICON(c.ic,c.ico||"◆")}</span>${esc(c.t)}</button>`).join("")+
+    kids.map(c=>`<button type="button" class="morada-tab ${state.view===c.v?'on':''}" data-view="${c.v}"${state.view===c.v?' aria-current="page"':''}><span class="mt-ico">${ANIMA_ICON(c.ic,c.ico||"◆")}</span>${esc(c.t)}${navBadge(c.v)}</button>`).join("")+
     `</div></nav>`;
 }
 /* Deja la pestaña activa a la vista, centrada en su fila. Se mueve la fila y no
@@ -605,7 +609,7 @@ function renderView(){
   // Consejo de Almas: reservado a las Almas Fundadoras (Consejo) y al Creador.
   if(state.view==="consejo" && !(me().council || (isCreator && !state.viewAs))) state.view="mialma";
   const fn = { mialma:vMiAlma, taller:vTaller, mundo:vMundo, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
-    finanzas:vFinanzas, clientes:vClientes, cotizador:vCotizador, agenda:vAgenda, tareas:vTareas, memoria:vMemoria, biblioteca:vBiblioteca,
+    finanzas:vFinanzas, clientes:vClientes, centro:(typeof vCentro==="function"?vCentro:vMiAlma), cotizador:vCotizador, agenda:vAgenda, tareas:vTareas, memoria:vMemoria, biblioteca:vBiblioteca,
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, world_wandering_traces:vWanderingTraces, santuario:vSantuario,
@@ -5125,6 +5129,7 @@ async function loadMyAlma(){
   ensureLocation(a);             // sincroniza la ubicación del Alma (automática)
   loadFollows();                 // mis vínculos y Constelaciones (mutuos)
   loadWhispers();                // susurros (notificaciones) del Alma
+  if(typeof loadLeads==="function") loadLeads();   // Centro de clientes: contador + solicitudes en directo
   maybeAutoTour();               // tutorial único por Alma (solo la primera vez)
 }
 /* ===========================================================
