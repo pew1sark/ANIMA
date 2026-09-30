@@ -30,7 +30,16 @@ type Destino = 'company' | 'consola';
 function Portal() {
   const { user, loading: authLoading, isPlatformAdmin, recuperando } = useAuth();
   const { memberships, current, lineas, loading: tenantLoading, select } = useTenant();
-  const [destino, setDestino] = useState<Destino | null>(null);
+  /* La puerta abierta se recuerda en esta pestaña (sessionStorage): recargar
+     deja donde estabas en vez de devolver al portal. Cerrar la app sí la olvida. */
+  const [destino, setDestinoCrudo] = useState<Destino | null>(() => {
+    const d = sessionStorage.getItem('anima_puerta');
+    return d === 'company' || d === 'consola' ? d : null;
+  });
+  const setDestino = (d: Destino | null) => {
+    if (d) sessionStorage.setItem('anima_puerta', d); else sessionStorage.removeItem('anima_puerta');
+    setDestinoCrudo(d);
+  };
 
   const deCompany = memberships.filter(m => m.company.linea?.slug === 'company');
 
