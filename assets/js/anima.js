@@ -1189,27 +1189,6 @@ function projectVisibleForFilter(a,p){
   if(f==="archivados") return archived;
   return !archived;
 }
-function projectSelectFilters(ps){
-  const opt=(label,arr,cur)=>`<option value="" ${cur?'':'selected'}>${label}</option>`+arr.map(x=>`<option value="${esc(x)}" ${cur===x?'selected':''}>${esc(x)}</option>`).join("");
-  const templates=[...new Set(ps.map(p=>p.template||"").filter(Boolean))].sort();
-  const cats=[...new Set(ps.map(p=>p.category||"").filter(Boolean))].sort();
-  const owners=[...new Set(ps.map(p=>p.responsible||p.owner||"").filter(Boolean))].sort();
-  const comunas=[...new Set(ps.map(p=>String(p.comuna||"").trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,"es"));
-  const d=state.projDetailFilter||{};
-  /* Los atajos van en su propia línea y rotulados: pegados a los filtros de
-     contexto, "Todo" y "Todos" se leen como el mismo botón. */
-  return `<div class="per-row"><span class="per-lbl">Periodo</span>${periodQuick("pj",d.desde||"",d.hasta||"")}${periodMonthPicker("pj",d.desde||"",d.hasta||"")}</div>
-    <div class="proj-filters">
-    <select data-projfilter2="template">${opt("Plantilla",templates,d.template||"")}</select>
-    <select data-projfilter2="category">${opt("Categoría",cats,d.category||"")}</select>
-    <select data-projfilter2="responsible">${opt("Responsable",owners,d.responsible||"")}</select>
-    <select data-projfilter2="comuna">${opt("Comuna",comunas,d.comuna||"")}</select>
-    <select data-projfilter2="status">${opt("Estado",FLOW,d.status||"")}</select>
-    <select data-projfilter2="dateField">${PROJECT_DATE_FIELDS.map(f=>`<option value="${f.k}" ${projectDateField()===f.k?'selected':''}>Fecha · ${f.t}</option>`).join("")}</select>
-    <label class="pf-date"><span>Desde</span><input type="date" data-projfilter2="desde" value="${esc(d.desde||"")}"></label>
-    <label class="pf-date"><span>Hasta</span><input type="date" data-projfilter2="hasta" value="${esc(d.hasta||"")}"></label>
-  </div>`;
-}
 /* Con qué fecha se mide una unidad. La de creación la tiene toda —nace con
    ella—; inicio y entrega se escriben a mano y la mayoría quedan vacías, así
    que filtrar por esas esconde justo lo que nadie llenó. Por eso creación es
@@ -1296,17 +1275,6 @@ function projectInPeriod(p){
   return true;
 }
 function fechaCorta(d){ const x=String(d||"").slice(0,10).split("-"); return x.length===3?`${x[2]}-${x[1]}-${x[0]}`:String(d||""); }
-/* Con un tramo puesto, el resumen de arriba ya no habla de todo: que diga de
-   qué periodo habla, o las cifras mienten por omisión. */
-function projectPeriodLine(n){
-  const f=state.projDetailFilter||{}; if(!f.desde && !f.hasta) return "";
-  const campo=(PROJECT_DATE_FIELDS.find(x=>x.k===projectDateField())||PROJECT_DATE_FIELDS[0]).t.toLowerCase();
-  const tramo=f.desde&&f.hasta?`del ${fechaCorta(f.desde)} al ${fechaCorta(f.hasta)}`
-             :f.desde?`desde el ${fechaCorta(f.desde)}`:`hasta el ${fechaCorta(f.hasta)}`;
-  return `<div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(110,110,115,.06)">
-      <b style="font-size:13px">Resumen por fecha de ${esc(campo)} ${esc(tramo)}</b>
-      <small class="muted">${n} unidad${n===1?"":"es"} en el tramo</small></div>`;
-}
 function projectMatchesDetail(p){
   const f=state.projDetailFilter||{};
   if(f.template && p.template!==f.template) return false;
@@ -1620,15 +1588,6 @@ function toggleTaskDone(i){ const a=me(); const t=(a.tasks||[])[i]; if(!t) retur
 /* Etapa → clase de color del badge. */
 function projStageClass(st){ const s=flowOf(st);
   return ({"Cotizando":"st-cot","Aprobado":"st-apr","En producción":"st-pro","Revisión":"st-rev","Entregado":"st-ent","Cerrado":"st-cer"})[s]||"st-cot"; }
-/* Cuántos filtros finos están puestos (el contexto Todos/Mi Taller/… va aparte).
-   Con el panel plegado, este número es lo único que avisa que hay algo filtrado. */
-function projectDetailFilterCount(){
-  const d=state.projDetailFilter||{};
-  return ["template","category","responsible","comuna","status"].filter(k=>d[k]).length + ((d.desde||d.hasta)?1:0);
-}
-/* El panel de filtros abre solo en pantallas grandes. En el teléfono arranca
-   plegado: antes había que bajar cinco filas de filtros para ver un proyecto. */
-function projFiltersOpen(){ return state.projFiltersOpen!=null ? !!state.projFiltersOpen : window.innerWidth>960; }
 function projectLate(p){ const s=flowOf(p.st); return !!(p.due && p.due<isoDay(new Date()) && s!=="Entregado" && s!=="Cerrado"); }
 /* La plata de una tarjeta en una línea: lo cotizado si aún no se aprueba; lo
    abonado y lo que falta si ya se aprobó; "Pagado" cuando no falta nada. */
@@ -1643,6 +1602,63 @@ function projectMoneyChips(p){
 /* Solo se marca el contexto cuando no es el tuyo: "Mi Taller" en cada tarjeta
    era ruido, un Clan o un Santuario sí conviene verlo. */
 function projectCtxMark(a,p){ return projectContext(p)==="Personal" ? "" : projectContextBadge(a,p); }
+/* ---- Barra de filtros de Proyectos ----
+   Una sola fila: buscar, qué mostrar, periodo, estado y «Más filtros».
+   Lo que está puesto se ve como chips que se quitan con un toque. */
+const MESES_ES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+function projPeriodValue(){
+  const d=state.projDetailFilter||{};
+  if(!d.desde && !d.hasta) return state.projPeriodCustom?"custom":"todo";
+  /* Lo que se eligió manda: el 30 de septiembre «Septiembre 2026», «Este mes»
+     y «Últimos 30 días» son el mismo tramo, y el menú debe decir el elegido. */
+  const sel=state.projPeriodSel;
+  if(sel && sel!=="custom"){ const r=sel.startsWith("m:")?monthBounds(sel.slice(2)):periodRange(sel); if(r.desde===d.desde && r.hasta===d.hasta) return sel; }
+  if(state.projPeriodCustom) return "custom";
+  const k=periodPreset(d.desde||"",d.hasta||"");
+  if(k!=="custom") return k;
+  const m=periodMonth(d.desde||"",d.hasta||"");
+  return m?"m:"+m:"custom";
+}
+/* Los meses que de verdad tienen trabajos (por la fecha elegida), del más nuevo al más viejo. */
+function projMesesOpciones(all){
+  const campo=projectDateField();
+  const set=new Set(all.map(p=>projectDate(p,campo).slice(0,7)).filter(Boolean));
+  const cur=projPeriodValue(); if(cur.startsWith("m:")) set.add(cur.slice(2));
+  return [...set].sort().reverse().slice(0,18).map(ym=>{ const [y,m]=ym.split("-"); return [ym, MESES_ES[+m-1]+" "+y]; });
+}
+/* Cuántos de los filtros escondidos en «Más filtros» están puestos. */
+function projectMoreCount(){ const d=state.projDetailFilter||{}; return ["template","category","responsible","comuna"].filter(k=>d[k]).length; }
+function projectMoreFilters(ps){
+  const d=state.projDetailFilter||{};
+  const lista=f=>[...new Set(ps.map(f).map(x=>String(x||"").trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,"es"));
+  const sel=(k,label,vals)=>vals.length||d[k]?`<label class="ph-f"><span>${label}</span><select data-projfilter2="${k}"><option value="">Todas</option>${vals.map(x=>`<option value="${esc(x)}" ${d[k]===x?"selected":""}>${esc(x)}</option>`).join("")}</select></label>`:"";
+  const campos=[
+    sel("category","Categoría",lista(p=>p.category)),
+    sel("comuna","Comuna",lista(p=>p.comuna)),
+    sel("responsible","Responsable",lista(p=>p.responsible||p.owner)),
+    sel("template","Plantilla",lista(p=>p.template))
+  ].join("");
+  return `<div class="ph-adv-in">${campos||`<span class="muted" style="font-size:12.5px">Tus unidades aún no tienen categoría, comuna ni responsable para filtrar.</span>`}
+    <label class="ph-f"><span>El periodo cuenta por</span><select data-projfilter2="dateField">${PROJECT_DATE_FIELDS.map(f=>`<option value="${f.k}" ${projectDateField()===f.k?'selected':''}>Fecha de ${f.t.toLowerCase()} · ${esc(f.d)}</option>`).join("")}</select></label></div>`;
+}
+function projectActiveChips(n, total, buscando){
+  const d=state.projDetailFilter||{}, out=[];
+  const chip=(k,t)=>out.push(`<button class="ph-chip" data-projchip="${k}" aria-label="Quitar filtro ${esc(t)}">${esc(t)}<i aria-hidden="true">✕</i></button>`);
+  const ctx={personal:"Mi Taller",clan:"Clanes",cerrados:"Cerrados",archivados:"Archivados"}[state.projFilter||""];
+  if(ctx) chip("ctx",ctx);
+  if(d.desde||d.hasta){
+    const pv=projPeriodValue(), campo=(PROJECT_DATE_FIELDS.find(x=>x.k===projectDateField())||{}).t||"";
+    const t=pv.startsWith("m:")?(()=>{ const [y,m]=pv.slice(2).split("-"); return MESES_ES[+m-1]+" "+y; })()
+      :({"7d":"Últimos 7 días","30d":"Últimos 30 días",mes:"Este mes",ano:"Este año"})[pv]||periodWords(d.desde,d.hasta);
+    chip("periodo",t+" · "+campo.toLowerCase());
+  }
+  if(d.status) chip("status",d.status);
+  for(const [k,l] of [["category",""],["comuna","⌖ "],["responsible",""],["template",""]]) if(d[k]) chip(k,l+d[k]);
+  if(buscando) return `<div class="ph-chips"><span class="ph-note">Buscando <b>${esc(state.projQuery)}</b> en las ${total} unidades, también cerradas y archivadas.</span><button class="ph-clear" data-projqclear>Borrar búsqueda</button></div>`;
+  if(!out.length) return "";
+  const ocultas=total-n;
+  return `<div class="ph-chips">${out.join("")}<button class="ph-clear" data-projclear>Limpiar todo</button>${ocultas>0?`<span class="ph-note">${n} de ${total} unidades</span>`:""}</div>`;
+}
 function vProyectos(a){
   // Vista de detalle cuando hay un proyecto abierto.
   if(state.projOpen!=null && a.projects[state.projOpen]) return vProyectoDetalle(a, state.projOpen);
@@ -1652,47 +1668,54 @@ function vProyectos(a){
     ? all.map((p,i)=>({p,i})).filter(x=>projectMatchesQuery(x.p))
     : all.map((p,i)=>({p,i})).filter(x=>projectVisibleForFilter(a,x.p)).filter(x=>projectMatchesDetail(x.p));
   const ps=entries.map(x=>x.p);
-  /* Un filtro que esconde en silencio es un dato perdido: mientras haya algo
-     a la vista nadie se entera de lo que falta. Por eso se cuenta siempre. */
-  const ocultas=all.length-entries.length;
-  const avisoOcultas=(!buscando && ocultas>0 && entries.length)
-    ? `<div class="proj-aviso">${ocultas} unidad${ocultas===1?"":"es"} más ${ocultas===1?"no aparece":"no aparecen"} con los filtros de ahora.<button class="btn ghost sm" data-projclear>Limpiar filtros</button></div>` : "";
-  const avisoBuscando=buscando
-    ? `<div class="proj-aviso">Buscando <b>${esc(q)}</b> en las ${all.length} unidades — también cerradas, archivadas y fuera del tramo.<button class="btn ghost sm" data-projqclear>Borrar búsqueda</button></div>` : "";
   const summary=projectSummary(ps);
   const pagadoPct=summary.totalBudget>0?Math.round(summary.totalPaid/summary.totalBudget*100):0;
-  const sub=t=>`<span class="stat-sub">${t}</span>`;
-  const summaryCards=`<div class="card s3 kpi-card"><div class="stat"><span class="num" style="color:var(--aviso,#b8862f)">${money(summary.enCotizacion)}</span><span class="lbl">En cotización</span>
-      ${sub(summary.nCotizando?`${summary.nCotizando} ${summary.nCotizando===1?"unidad esperando":"unidades esperando"} aprobación`:"Nada esperando aprobación")}</div></div>
-    <div class="card s3 kpi-card"><div class="stat"><span class="num">${money(summary.totalBudget)}</span><span class="lbl">Contratado</span>
-      ${sub(summary.nAprobados?`${summary.nAprobados} ${summary.nAprobados===1?"unidad aprobada":"unidades aprobadas"}`:"Sin unidades aprobadas")}</div></div>
-    <div class="card s3 kpi-card"><div class="stat"><span class="num" style="color:var(--ok)">${money(summary.totalPaid)}</span><span class="lbl">Abonado</span>
-      ${sub(summary.totalBudget?`${pagadoPct}% de lo contratado`:"—")}</div></div>
-    <div class="card s3 kpi-card"><div class="stat"><span class="num" style="color:var(--danger)">${money(summary.balance)}</span><span class="lbl">Saldo pendiente</span>
-      ${sub("Sólo de unidades aprobadas")}</div></div>`;
+  /* El dinero en una franja, dentro de la misma tarjeta: antes eran cuatro
+     tarjetas sueltas sobre los filtros y la pantalla empezaba por los montos. */
+  const stat=(cls,v,k,s)=>`<div class="ph-stat"><span>${k}</span><b class="${cls}">${v}</b><small>${s}</small></div>`;
+  const summaryCards=`<div class="ph-stats">
+      ${stat("ph-cot",money(summary.enCotizacion),"En cotización",summary.nCotizando?`${summary.nCotizando} esperando aprobación`:"Nada esperando")}
+      ${stat("",money(summary.totalBudget),"Contratado",summary.nAprobados?`${summary.nAprobados} aprobada${summary.nAprobados===1?"":"s"}`:"Sin aprobadas")}
+      ${stat("ph-ok",money(summary.totalPaid),"Abonado",summary.totalBudget?`${pagadoPct}% de lo contratado`:"—")}
+      ${stat("ph-due",money(summary.balance),"Saldo pendiente","De las aprobadas")}
+    </div>`;
   const fab=`<button class="fab" data-addproject="Personal" title="Nueva unidad" aria-label="Nueva unidad">＋<span>Nueva unidad</span></button>`;
-  const segBtn=(k,t)=>`<button class="seg-b ${view===k?'on':''}" data-projview="${k}">${t}</button>`;
-  const filterBtn=(k,t)=>`<button class="seg-b ${(state.projFilter||"todos")===k?'on':''}" data-projfilter="${k}">${t}</button>`;
-  const fOpen=projFiltersOpen(), nF=projectDetailFilterCount();
+  const segBtn=(k,t,ic)=>`<button class="seg-b ${view===k?'on':''}" data-projview="${k}" title="${t}" aria-label="Ver como ${t}">${ic}<span>${t}</span></button>`;
+  const fOpen=!!state.projFiltersOpen;
+  const d=state.projDetailFilter||{};
+  const opt=(v,t,cur)=>`<option value="${esc(v)}" ${v===cur?"selected":""}>${esc(t)}</option>`;
+  const ctx=state.projFilter||"todos";
+  const CTX=[["todos","Activos"],["personal","Mi Taller"],["clan","Clanes"],["cerrados","Cerrados"],["archivados","Archivados"]];
+  const per=projPeriodValue();
+  const meses=projMesesOpciones(all);
+  const toolbar=`<div class="ph-bar">
+      <label class="ph-q"><span aria-hidden="true">⌕</span><input class="proj-search" type="search" data-projquery placeholder="Buscar por nombre, cliente o comuna" value="${esc(q)}" autocomplete="off" enterkeyhint="search"></label>
+      <div class="ph-sels">
+        <select class="ph-sel ${ctx!=="todos"?"on":""}" data-projctx aria-label="Mostrar">${CTX.map(([k,t])=>opt(k,t,ctx)).join("")}</select>
+        <select class="ph-sel ${per!=="todo"?"on":""}" data-projperiod aria-label="Periodo">
+          ${opt("todo","Cualquier fecha",per)}${opt("7d","Últimos 7 días",per)}${opt("30d","Últimos 30 días",per)}${opt("mes","Este mes",per)}${opt("ano","Este año",per)}
+          ${meses.length?`<optgroup label="Por mes">${meses.map(([k,t])=>opt("m:"+k,t,per)).join("")}</optgroup>`:""}
+          ${opt("custom","Elegir fechas…",per)}</select>
+        <select class="ph-sel ${d.status?"on":""}" data-projfilter2="status" aria-label="Estado">${opt("","Estado",d.status||"")}${FLOW.map(x=>opt(x,x,d.status||"")).join("")}</select>
+        <button type="button" class="ph-more ${fOpen?'on':''} ${projectMoreCount()?'has':''}" data-projftoggle aria-expanded="${fOpen}">${ANIMA_ICON("config","")}<span>Más filtros</span>${projectMoreCount()?`<i>${projectMoreCount()}</i>`:""}</button>
+      </div>
+    </div>
+    ${per==="custom"?`<div class="ph-fechas"><label><span>Desde</span><input type="date" data-projfilter2="desde" value="${esc(d.desde||"")}"></label><label><span>Hasta</span><input type="date" data-projfilter2="hasta" value="${esc(d.hasta||"")}"></label></div>`:""}
+    <div class="ph-adv"${fOpen?"":" hidden"}>${projectMoreFilters(all)}</div>`;
+  const chips=projectActiveChips(ps.length, all.length, buscando);
   const head=`<div class="card s12 proj-head">
       <div class="ph-top">
-        <div class="ph-title"><h2>Unidades de Trabajo</h2><span class="ph-count">${ps.length} ${ps.length===1?"unidad":"unidades"}${ps.length?` · avance ${summary.avgPct}%`:""}</span></div>
-        <div class="seg ph-views">${segBtn("tarjetas","Tarjetas")}${segBtn("lista","Lista")}${segBtn("kanban","Kanban")}</div>
+        <div class="ph-title"><h2>Proyectos</h2><span class="ph-count">${ps.length} ${ps.length===1?"unidad":"unidades"}${ps.length?` · avance promedio ${summary.avgPct}%`:""}</span></div>
+        <div class="seg ph-views">${segBtn("tarjetas","Tarjetas","▦")}${segBtn("lista","Lista","☰")}${segBtn("kanban","Kanban","▥")}</div>
         <button class="btn sm ph-new" data-addproject="Personal">＋ Nueva unidad</button>
       </div>
-      <div class="ph-search">
-        <input class="proj-search" type="search" data-projquery placeholder="Buscar por nombre, cliente, comuna…" value="${esc(q)}" autocomplete="off" enterkeyhint="search">
-        <button type="button" class="btn secondary sm ph-ftoggle ${fOpen?'on':''}" data-projftoggle aria-expanded="${fOpen}">${ANIMA_ICON("config","")}<span>Filtros</span>${nF?`<span class="seg-n">${nF}</span>`:""}</button>
-      </div>
-      <div class="seg ctx-seg">${filterBtn("todos","Todos")}${filterBtn("personal","Mi Taller")}${filterBtn("clan","Clanes")}${filterBtn("cerrados","Cerrados")}${filterBtn("archivados","Archivados")}</div>
-      <div class="proj-adv"${fOpen?"":" hidden"}>${projectSelectFilters(all)}</div>
-      <div class="proj-notes">${buscando?"":projectPeriodLine(ps.length)}${avisoBuscando}${avisoOcultas}</div></div>`;
+      ${toolbar}${chips}${summaryCards}</div>`;
   if(!ps.length){
     const hasProjects=all.length>0;
     const vacio=buscando
       ? `Ninguna de tus ${all.length} unidades dice <b>${esc(q)}</b>. Puede estar escrito de otra forma, o la comuna quedó vacía al crearla.`
       : (hasProjects?"Hay proyectos guardados, pero el filtro actual no los muestra. Limpia filtros o revisa Cerrados y Archivados.":"No hay unidades todavía. Crea la primera con <b>＋ Nueva unidad</b>.");
-    return `<div class="grid">${summaryCards}${head}<div class="card s12"><p class="muted">${vacio}</p>${buscando?`<button class="btn sm secondary" data-projqclear>Borrar búsqueda</button>`:(hasProjects?`<button class="btn sm secondary" data-projclear>Limpiar filtros</button>`:"")}</div></div>${fab}`;
+    return `<div class="grid">${head}<div class="card s12"><p class="muted">${vacio}</p>${buscando?`<button class="btn sm secondary" data-projqclear>Borrar búsqueda</button>`:(hasProjects?`<button class="btn sm secondary" data-projclear>Limpiar filtros</button>`:"")}</div></div>${fab}`;
   }
   const pct=p=>clampPct(p.pct);
   const dueTxt=p=>p.due?`<span class="${projectLate(p)?'pd-late':''}">⌛ ${esc(tallerDate(p.due))}</span>`:`<span>Sin fecha</span>`;
@@ -1726,7 +1749,7 @@ function vProyectos(a){
         ${projectMoneyChips(p)?`<div class="proj-money">${projectMoneyChips(p)}</div>`:""}
       </button>`).join("")}</div>`;
   }
-  return `<div class="grid">${summaryCards}${head}${body}</div>${fab}`;
+  return `<div class="grid">${head}${body}</div>${fab}`;
 }
 function vProyectoDetalle(a, i){
   const p=a.projects[i]; const pct=clampPct(p.pct), fin=projectMoney(p);
@@ -5791,8 +5814,8 @@ document.addEventListener("click", e=>{
   const op=e.target.closest("[data-openpost]"); if(op){ openPost(op.dataset.openpost); return; }
   const pv=e.target.closest("[data-projview]"); if(pv){ state.projView=pv.dataset.projview; save(); renderView(); return; }
   /* Plegar/desplegar los filtros sin redibujar: la lista no se mueve. */
-  const pft=e.target.closest("[data-projftoggle]"); if(pft){ const open=!projFiltersOpen(); state.projFiltersOpen=open; save();
-    const adv=document.querySelector(".proj-adv"); if(adv) adv.hidden=!open;
+  const pft=e.target.closest("[data-projftoggle]"); if(pft){ const open=!state.projFiltersOpen; state.projFiltersOpen=open; save();
+    const adv=document.querySelector(".ph-adv"); if(adv) adv.hidden=!open;
     pft.classList.toggle("on",open); pft.setAttribute("aria-expanded",String(open)); return; }
   const ptg=e.target.closest("[data-pertoggle]"); if(ptg){ const ns=ptg.dataset.pertoggle; state.perOpen=Object.assign({},state.perOpen,{[ns]:!perCustomOpen(ns)}); save(); renderView(); return; }
   const pf=e.target.closest("[data-projfilter]"); if(pf){ state.projFilter=pf.dataset.projfilter; state.projOpen=null; renderView(); return; }
@@ -5801,7 +5824,13 @@ document.addEventListener("click", e=>{
   if(e.target.closest("[data-tlclear]")){ state.tallerPeriod={desde:"",hasta:""}; renderView(); return; }
   const pjp=e.target.closest("[data-pjpreset]"); if(pjp){ const r=periodRange(pjp.dataset.pjpreset);
     state.projDetailFilter=Object.assign({},state.projDetailFilter,{desde:r.desde,hasta:r.hasta}); state.projOpen=null; renderView(); return; }
-  if(e.target.closest("[data-projclear]")){ state.projFilter="todos"; state.projDetailFilter={}; state.projOpen=null; renderView(); return; }
+  if(e.target.closest("[data-projclear]")){ state.projFilter="todos"; state.projDetailFilter={dateField:(state.projDetailFilter||{}).dateField}; state.projPeriodCustom=false; state.projOpen=null; renderView(); return; }
+  /* Quitar un filtro desde su chip. */
+  const pch=e.target.closest("[data-projchip]"); if(pch){ const k=pch.dataset.projchip, d=Object.assign({},state.projDetailFilter);
+    if(k==="ctx") state.projFilter="todos";
+    else if(k==="periodo"){ d.desde=""; d.hasta=""; state.projPeriodCustom=false; }
+    else d[k]="";
+    state.projDetailFilter=d; state.projOpen=null; save(); renderView(); return; }
   if(e.target.closest("[data-projqclear]")){ state.projQuery=""; state.projOpen=null; renderView(); return; }
   const pa=e.target.closest("[data-addproject]"); if(pa){ openProjectRecord(pa.dataset.addproject); return; }
   if(e.target.closest("[data-finclear]")){ state.finPeriod="all"; state.finCat="all"; renderView(); return; }
@@ -5935,6 +5964,12 @@ document.addEventListener("change", e=>{
   const ks=e.target.closest(".kstatus"); if(ks){ setProjectStatus(+ks.dataset.pstatus, ks.value); return; }
   const kp=e.target.closest(".kpct"); if(kp){ updateProjectField(+kp.dataset.pct, "pct", kp.value); return; }
   const tks=e.target.closest(".tk-status"); if(tks){ setTaskStatus(+tks.dataset.tstatus, tks.value); return; }
+  const pctx=e.target.closest("[data-projctx]"); if(pctx){ state.projFilter=pctx.value; state.projOpen=null; save(); renderView(); return; }
+  const pper=e.target.closest("[data-projperiod]"); if(pper){ const v=pper.value, d=Object.assign({},state.projDetailFilter);
+    state.projPeriodSel=v;
+    if(v==="custom"){ state.projPeriodCustom=true; }
+    else { state.projPeriodCustom=false; const r=v.startsWith("m:")?monthBounds(v.slice(2)):periodRange(v); d.desde=r.desde; d.hasta=r.hasta; }
+    state.projDetailFilter=d; state.projOpen=null; save(); renderView(); return; }
   const pf2=e.target.closest("[data-projfilter2]"); if(pf2){ state.projDetailFilter=state.projDetailFilter||{}; state.projDetailFilter[pf2.dataset.projfilter2]=pf2.value; state.projOpen=null; renderView(); return; }
   const pdt=e.target.closest("[data-pdate]"); if(pdt){ const [pi,campo]=pdt.dataset.pdate.split(":"); setProjectDate(+pi,campo,pdt.value); return; }
   const tlm=e.target.closest("[data-tlmonth]"); if(tlm){ state.tallerPeriod=monthBounds(tlm.value); renderView(); return; }
