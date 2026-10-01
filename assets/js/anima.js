@@ -435,7 +435,7 @@ const TITLES = {
   cronica:["Crónica de ANIMA","Lo que vamos integrando y mejorando — para que tu Alma esté al tanto."],
   santuario:["Santuario","La organización completa de ANIMA."]
 };
-function renderTop(){ const [t,s]=TITLES[state.view]||["ANIMA",""]; document.getElementById("topTitle").innerHTML=`<h1>${t}</h1><div class="sub">${s}</div>`; renderDiscreetBtn(); }
+function renderTop(){ const [t,s]=TITLES[state.view]||["ANIMA",""]; document.getElementById("topTitle").innerHTML=`<h1>${t}</h1><div class="sub">${s}</div>`; renderDiscreetBtn(); if(typeof avPintarBoton==="function") avPintarBoton(); }
 /* Ocultar montos — vive arriba, a mano en todas las pantallas (antes estaba
    solo en la cabecera de Mi Alma, con un mono 🙈 por icono). El icono dice lo
    que hace el botón: ojo tachado para ocultar, ojo abierto para volver a ver. */
@@ -1803,6 +1803,7 @@ function vProyectoDetalle(a, i){
         <div><span class="pd-k">Comuna</span><b>${esc(p.comuna||"—")}</b></div>
       </div>
 
+      ${typeof avRecordatoriosHTML==="function"?avRecordatoriosHTML(p):""}
       <div class="pd-sec">Fechas</div>
       <div class="pd-dates">
         ${PROJECT_DATE_FIELDS.map(f=>{
@@ -5172,6 +5173,8 @@ async function loadMyAlma(){
   const volver=retomarPantalla();   // recargar deja en la misma pantalla, no en Mi Alma
   renderAll();
   if(volver) volver();
+  if(typeof avDeepLink==="function") avDeepLink();      // venir tocando una notificación
+  if(typeof avCargar==="function") avCargar();          // estado de los avisos en este dispositivo
   // Experiencia: carga montos y otorga Esencia de bienvenida + ingreso diario.
   await loadRewardConfig();
   rewardOnce("crear_alma",100,"Naciste en ANIMA");        // servidor: 1 sola vez por Alma

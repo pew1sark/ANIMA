@@ -134,6 +134,7 @@ function ensureLeadsRealtime(){
 function leadAvisoDispositivo(quien, row){
   try{
     if(!("Notification" in window) || Notification.permission !== "granted" || !document.hidden) return;
+    if(typeof AV !== "undefined" && AV.sub) return;     // ya llega por push: no avisar dos veces
     const n = new Notification("ANIMA · Nueva solicitud", { body: [quien, row.city].filter(Boolean).join(" · "), tag: "lead-"+row.id });
     n.onclick = () => { window.focus(); state.view = "centro"; CC_open(row.id); };
   }catch(e){}
@@ -322,7 +323,7 @@ function vCentro(a){
           <details class="ld-more"><summary class="btn ghost sm" aria-label="Más opciones">⋯</summary><div class="ld-menu">
             <button data-leadcsv>⇪ Importar CSV de Meta</button>
             <button data-leadconnect>⚙ Conexión con Meta</button>
-            ${("Notification" in window) && Notification.permission === "default" ? `<button data-leadnotif>🔔 Avisarme en este dispositivo</button>` : ""}
+            <button data-avisosopen>🔔 Avisos al teléfono</button>
           </div></details>
         </div>
       </div>
@@ -863,7 +864,6 @@ document.addEventListener("click", e => {
   if(t.closest("[data-leadtplsave]")){ leadTplSet((document.getElementById("leadTplText") || {}).value || ""); CC.tplOpen = false; toast("✓ Mensaje guardado"); renderView(); return; }
   if(t.closest("[data-leadtplreset]")){ leadTplSet(""); const ta = document.getElementById("leadTplText"); if(ta) ta.value = LEAD_TPL_DEFAULT; return; }
   if(t.closest("[data-leadcsv]")){ const f = document.getElementById("leadCsv"); if(f) f.click(); return; }
-  if(t.closest("[data-leadnotif]")){ try{ Notification.requestPermission().then(() => renderView()); }catch(err){} return; }
   /* Un clic fuera del menú «⋯» lo cierra. */
   document.querySelectorAll(".ld-more[open]").forEach(d => { if(!d.contains(t)) d.open = false; });
 });

@@ -26,6 +26,7 @@
     /* 05 · Interacciones del Alma */
     esencia:["....X....","....X....","...XXX...",".X.XXX.X.","XXXXXXXXX",".X.XXX.X.","...XXX...","....X....","....X...."],
     eco:    [".XXXXXXX.","XX.....XX","X.......X","X.X.X.X.X","X.......X","XX.....XX",".XXXXXXX.","..XX.....",".XX......"],
+    campana:["....X....","...XXX...","..XXXXX..","..XXXXX..","..XXXXX..",".XXXXXXX.","XXXXXXXXX",".........","...XXX..."],
     enlace: [".........","..XXX....",".X...X...",".X..XXX..","..XXX..X.","...X...X.","....XXX..",".........","........."],
     obra:   ["XXXXXXXXX","X.......X","X..X....X","X.X.X...X","X......XX","X....XX.X","X..XX...X","X.X.....X","XXXXXXXXX"],
     proceso:["..XXXXX..",".X.....X.","X.......X","X.......X","X.......X","X.......X",".X.....X.","..XXXXX..","........."],
