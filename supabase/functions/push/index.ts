@@ -190,7 +190,7 @@ const pesos = (n: number) => "$" + Math.round(n).toLocaleString("es-CL");
 
 async function resumenDe(almaId: string, hoy: string) {
   const manana = sumarDia(hoy, 1);
-  const { data: ps } = await admin.from("projects").select("id,title,client,status,due_at,budget,paid,payments,created_at,archive").eq("alma_id", almaId);
+  const { data: ps } = await admin.from("projects").select("id,title,client,status,due_at,budget,paid,payments,created_at,archive").eq("alma_id", almaId).is("deleted_at", null);
   const vivos = (ps || []).filter((p: any) => !p.archive);
   const abierto = (p: any) => !["Entregado", "Cerrado"].includes(ETAPA(p.status));
   const nombre = (p: any) => p.title || p.client || "Proyecto";
@@ -221,7 +221,11 @@ async function tick() {
     const { data: marcado } = await admin.from("project_reminders").update({ sent_at: ahora }).eq("id", r.id).is("sent_at", null).select("id");
     if (!marcado?.length) continue;
     let titulo = "Recordatorio";
-    if (r.project_id) { const { data: p } = await admin.from("projects").select("title").eq("id", r.project_id).maybeSingle(); if (p?.title) titulo = `⏰ ${p.title}`; }
+    if (r.project_id) {
+      const { data: p } = await admin.from("projects").select("title,deleted_at").eq("id", r.project_id).maybeSingle();
+      if (p?.deleted_at) continue;                    // proyecto en la papelera: el recordatorio no suena
+      if (p?.title) titulo = `⏰ ${p.title}`;
+    }
     await enviarAlma(r.alma_id, { title: titulo, body: r.text, url: `${SITIO}/studio.html?ir=proyectos${r.project_id ? "&proyecto=" + r.project_id : ""}`, tag: `rec-${r.id}` });
     recordados++;
   }
