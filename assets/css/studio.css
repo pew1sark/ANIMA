@@ -2021,3 +2021,55 @@ a.ld-wa{text-decoration:none}
   .ad-crea img{width:96px;height:96px}
   .ad-des-r{grid-template-columns:92px minmax(0,1fr) 108px}
 }
+
+/* ===========================================================
+   AVISOS AL TELÉFONO (campana de la barra superior)
+   =========================================================== */
+#avisosBtn{position:relative}
+.av-dot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:#b8862f;box-shadow:0 0 0 2px var(--card-solid,#fff)}
+.av-ico svg{width:20px;height:20px}
+.av-drawer{width:min(460px,100vw)}
+.av-estado{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.av-estado>div{flex:1;min-width:0;display:flex;flex-direction:column}
+.av-estado b{font-size:14px}
+.av-estado small{font-size:12px;color:var(--muted)}
+.av-led{flex:none;width:10px;height:10px;border-radius:50%;background:#c9c6bf}
+.av-estado.on{border-color:rgba(30,107,65,.35);background:#f2faf5}
+.av-estado.on .av-led{background:#1e8a50;box-shadow:0 0 0 4px rgba(30,138,80,.15)}
+.av-msg{margin:0;font-size:13.5px;line-height:1.5;padding:12px 14px;border-radius:14px;background:rgba(184,134,47,.1)}
+.av-ios ol{margin:8px 0 6px;padding-left:20px}
+.av-ios small{color:var(--muted)}
+.av-sw{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.06);cursor:pointer}
+.av-sw>span{flex:1;display:flex;flex-direction:column;gap:2px}
+.av-sw b{font-size:14px}
+.av-sw small{font-size:12.5px;color:var(--muted);line-height:1.4}
+.av-sw input{position:absolute;opacity:0;pointer-events:none}
+.av-sw i{flex:none;width:42px;height:24px;border-radius:999px;background:#d6d3cc;position:relative;transition:background .15s}
+.av-sw i::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.av-sw input:checked+i{background:#15151a}
+.av-sw input:checked+i::after{transform:translateX(18px)}
+.av-sw input:focus-visible+i{outline:2px solid #b8965a;outline-offset:2px}
+.av-hora{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:10px}
+.av-hora select{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:#fff}
+.av-hora small{color:var(--muted)}
+.av-nota{font-size:12px;margin:10px 0 0}
+.av-devs,.av-rems{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.av-devs li,.av-rems li{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.av-devs li>span{flex:1;min-width:0;display:flex;flex-direction:column}
+.av-devs b{font-size:13px}
+.av-devs small{font-size:11.5px;color:var(--muted)}
+.av-devs .ld-x,.av-rems .ld-x{width:28px;height:28px;font-size:11px}
+.av-when{flex:none;font-size:11.5px;font-weight:750;color:#7b5920;background:rgba(184,150,90,.14);border-radius:8px;padding:4px 8px;white-space:nowrap}
+.av-what{flex:1;min-width:0;display:flex;flex-direction:column}
+.av-what b{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.av-what small{font-size:11.5px;color:var(--muted)}
+/* Dentro de la ficha del proyecto */
+.av-prem{display:flex;flex-direction:column;gap:8px}
+.av-txt{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:#fff;width:100%;box-sizing:border-box}
+.av-quick{display:flex;gap:6px;flex-wrap:wrap}
+.av-quick .per-b{font-size:12px;border:1px solid var(--line);background:#fff;color:#3f3c37}
+.av-quick .per-b:hover{border-color:rgba(21,21,26,.35);color:#15151a}
+.av-quick .per-b.on{background:#15151a;color:#fff;border-color:#15151a}
+.av-otra{display:flex;gap:8px;flex-wrap:wrap}
+.av-otra input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:#fff;flex:1;min-width:0}
+.av-hint{align-self:flex-start;font:inherit;font-size:12px;font-weight:650;color:#7b5920;background:none;border:0;padding:2px 0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
