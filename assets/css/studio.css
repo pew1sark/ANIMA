@@ -2073,3 +2073,88 @@ a.ld-wa{text-decoration:none}
 .av-otra{display:flex;gap:8px;flex-wrap:wrap}
 .av-otra input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:#fff;flex:1;min-width:0}
 .av-hint{align-self:flex-start;font:inherit;font-size:12px;font-weight:650;color:#7b5920;background:none;border:0;padding:2px 0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+/* ===========================================================
+   CALENDARIO (Taller → Calendario). Cada tipo tiene su color y
+   siempre va con texto (leyenda + etiqueta en la fila).
+   =========================================================== */
+.cal-card{padding:20px 22px}
+.cal-head{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap}
+.cal-nav{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.cal-nav h2{margin:0;font-size:22px;letter-spacing:-.03em;text-transform:capitalize;min-width:170px;text-align:center}
+.cal-nav .ld-x{font-size:18px;line-height:1}
+.cal-tools{display:flex;align-items:center;gap:8px}
+.cal-ley{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.cal-chip{flex:none;white-space:nowrap;line-height:1.2;display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:12.5px;font-weight:650;color:#3f3c37;border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 11px;cursor:pointer}
+.cal-chip i{width:9px;height:9px;border-radius:3px;flex:none}
+.cal-chip span{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cal-chip.off{opacity:.45;text-decoration:line-through}
+.cal-sync-cta{margin-top:12px;font:inherit;font-size:13px;font-weight:650;color:#5b3fa6;background:rgba(124,92,191,.08);border:1px dashed rgba(124,92,191,.45);border-radius:12px;padding:10px 14px;cursor:pointer;width:100%;text-align:left}
+.cal-grid{margin-top:14px}
+.cal-sem{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:0 0 6px}
+.cal-sem span{padding-left:8px}
+.cal-dias{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.cal-d{display:flex;flex-direction:column;align-items:stretch;gap:3px;min-height:104px;min-width:0;padding:6px;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff;font:inherit;text-align:left;cursor:pointer;color:inherit}
+.cal-d:hover{background:rgba(0,0,0,.02)}
+.cal-d.fuera{background:rgba(0,0,0,.018)}
+.cal-d.fuera .cal-n{color:#b7b4ad}
+.cal-n{font-size:12.5px;font-weight:700;width:24px;height:24px;display:grid;place-items:center;border-radius:50%}
+.cal-d.hoy .cal-n{background:#15151a;color:#fff}
+.cal-d.sel{box-shadow:inset 0 0 0 2px #b8965a}
+.cal-pills{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cal-pill{display:block;font-size:11px;line-height:1.35;padding:2px 6px;border-radius:5px;background:color-mix(in srgb,var(--c) 13%,#fff);border-left:3px solid var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#2a2925}
+.cal-pill b{font-weight:750}
+.cal-pill.late{background:color-mix(in srgb,#c2410c 22%,#fff)}
+.cal-pill.done{opacity:.55}
+.cal-mas{font-size:10.5px;color:var(--muted);padding-left:6px}
+.cal-dots{display:none;gap:3px;justify-content:center}
+.cal-dots i{width:6px;height:6px;border-radius:50%}
+.cal-dia{padding:18px 18px;align-self:start;position:sticky;top:84px}
+.cal-dia-h{display:flex;flex-direction:column;margin-bottom:10px}
+.cal-dia-h b{font-size:17px;letter-spacing:-.02em}
+.cal-dia-h small{font-size:12px;color:var(--muted)}
+.cal-fila{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:10px;border-left:3px solid var(--c);background:color-mix(in srgb,var(--c) 7%,#fff);margin-bottom:6px}
+.cal-fila[role=button]{cursor:pointer}
+.cal-fila[role=button]:hover{background:color-mix(in srgb,var(--c) 13%,#fff)}
+.cal-h{flex:none;width:62px;font-size:11.5px;font-weight:750;color:#3f3c37;font-variant-numeric:tabular-nums;padding-top:1px}
+.cal-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.cal-t b{font-size:13.5px;font-weight:650;overflow-wrap:anywhere}
+.cal-t small{font-size:11.5px;color:var(--muted)}
+.cal-lista{margin-top:14px;display:flex;flex-direction:column;gap:14px}
+.cal-ld-h{display:block;font-size:12.5px;margin-bottom:6px;text-transform:capitalize}
+.cal-ld-h.hoy{color:#7b5920}
+/* Panel de sincronización */
+.cal-drawer{width:min(500px,100vw)}
+.cal-bts{display:flex;gap:8px;flex-wrap:wrap}
+.cal-bts .btn{text-decoration:none}
+.cal-p{font-size:12.5px;line-height:1.5;margin:10px 0 6px}
+.cal-help{margin-top:8px;font-size:13px}
+.cal-help summary{cursor:pointer;font-weight:650;color:#3f3c37;padding:4px 0}
+.cal-help ol{margin:6px 0;padding-left:20px;line-height:1.55}
+.cal-help p{margin:6px 0;font-size:12.5px;line-height:1.5}
+.cal-fuentes{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:6px}
+.cal-fuentes li{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.cal-fuentes li>i{width:10px;height:10px;border-radius:3px;flex:none}
+.cal-fuentes li>span{flex:1;min-width:0;display:flex;flex-direction:column}
+.cal-fuentes b{font-size:13px}
+.cal-fuentes small{font-size:11.5px;color:var(--muted)}
+.cal-fuentes .ld-x{width:28px;height:28px;font-size:12px}
+.cal-err{color:#a3322a!important}
+.cal-sw{display:flex;gap:6px;margin:2px 0 12px}
+@media (max-width:1180px){
+  .cal-card,.cal-dia{grid-column:span 12}
+  .cal-dia{position:static}
+}
+@media (max-width:1400px){ .cal-pill b{display:none} }
+@media (max-width:720px){
+  .cal-card{padding:16px 12px}
+  .cal-nav h2{font-size:18px;min-width:0;flex:1}
+  .cal-tools{width:100%}
+  .cal-tools .seg{flex:1}
+  .cal-lbl{display:none}
+  .cal-d{min-height:54px;padding:4px 2px;align-items:center}
+  .cal-pills{display:none}
+  .cal-dots{display:flex}
+  .cal-sem span{padding-left:0;text-align:center}
+  .cal-ley{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+}
