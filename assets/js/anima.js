@@ -1662,6 +1662,7 @@ function projectActiveChips(n, total, buscando){
 function vProyectos(a){
   // Vista de detalle cuando hay un proyecto abierto.
   if(state.projOpen!=null && a.projects[state.projOpen]) return vProyectoDetalle(a, state.projOpen);
+  if(state.projFilter==="papelera") return vPapeleraProyectos(a);
   const view=state.projView||"tarjetas"; const all=a.projects||[];
   const q=String(state.projQuery||"").trim(), buscando=!!q;
   const entries=buscando
@@ -1685,7 +1686,8 @@ function vProyectos(a){
   const d=state.projDetailFilter||{};
   const opt=(v,t,cur)=>`<option value="${esc(v)}" ${v===cur?"selected":""}>${esc(t)}</option>`;
   const ctx=state.projFilter||"todos";
-  const CTX=[["todos","Activos"],["personal","Mi Taller"],["clan","Clanes"],["cerrados","Cerrados"],["archivados","Archivados"]];
+  const nPap=(a.projectsTrash||[]).length;
+  const CTX=[["todos","Activos"],["personal","Mi Taller"],["clan","Clanes"],["cerrados","Cerrados"],["archivados","Archivados"],["papelera",`Eliminados${nPap?` (${nPap})`:""}`]];
   const per=projPeriodValue();
   const meses=projMesesOpciones(all);
   const toolbar=`<div class="ph-bar">
@@ -5025,9 +5027,18 @@ async function interconnectProject(a, v){
 }
 async function deleteRecord(kind,idx){
   const cfg=EDITORS[kind]; const a=me(); const arr=cfg.get(a); const item=arr[idx];
-  if(!confirm("¿Eliminar este elemento?")) return;
+  /* Un proyecto no se borra: va a la papelera (migración 0140) y se restaura
+     desde Proyectos → Mostrar → Eliminados. El 1 oct 2026 se perdió así el
+     valor y los abonos de «BILIGAY». */
+  const papelera=kind==="proyecto";
+  if(!confirm(papelera?`¿Mover «${item&&item.t||"este proyecto"}» a la papelera?\n\nPodrás restaurarlo desde Proyectos → Mostrar → Eliminados.`:"¿Eliminar este elemento?")) return;
   try{
-    if(a.live && item && item._id){ await Cloud.deleteRow(cfg.table,item._id); }
+    if(papelera){
+      const ahora=new Date().toISOString();
+      if(a.live && item && item._id) await Cloud.updateRow("projects",item._id,{deleted_at:ahora});
+      (a.projectsTrash||(a.projectsTrash=[])).unshift(Object.assign(item,{deleted:ahora}));
+    }
+    else if(a.live && item && item._id){ await Cloud.deleteRow(cfg.table,item._id); }
     arr.splice(idx,1);
     /* Borrar desde la ficha abierta: se vuelve a la lista. Antes el índice
        abierto seguía apuntando al mismo número y la ficha pasaba a mostrar,
@@ -5038,7 +5049,41 @@ async function deleteRecord(kind,idx){
       else if(state[openKey]>idx) state[openKey]--;
     }
     save(); closeRecord(); renderAll();
+    if(papelera) animaToast(`«${item.t}» quedó en la papelera de Proyectos.`);
   }catch(e){ alert("No se pudo eliminar: "+(e.message||e)); }
+}
+/* ---- Papelera de proyectos ---- */
+async function restaurarProyecto(i){
+  const a=me(), p=(a.projectsTrash||[])[i]; if(!p) return;
+  try{
+    if(a.live && p._id) await Cloud.updateRow("projects",p._id,{deleted_at:null});
+    a.projectsTrash.splice(i,1); delete p.deleted; a.projects.unshift(p);
+    if(!a.projectsTrash.length) state.projFilter="todos";     // papelera vacía: de vuelta a Proyectos
+    save(); renderAll(); animaToast(`↺ «${p.t}» volvió a Proyectos.`);
+  }catch(e){ alert("No se pudo restaurar: "+(e.message||e)); }
+}
+async function borrarProyectoParaSiempre(i){
+  const a=me(), p=(a.projectsTrash||[])[i]; if(!p) return;
+  if(!confirm(`¿Eliminar «${p.t}» para siempre?\n\nSe pierden su valor, abonos, etapas e historial. Esto no se puede deshacer.`)) return;
+  try{
+    if(a.live && p._id) await Cloud.deleteRow("projects",p._id);
+    a.projectsTrash.splice(i,1); save(); renderView();
+  }catch(e){ alert("No se pudo eliminar: "+(e.message||e)); }
+}
+function vPapeleraProyectos(a){
+  const L=a.projectsTrash||[];
+  const filas=L.map((p,i)=>`<div class="tk-row pap-row">
+      <span class="proj-badge ${projStageClass(p.st)}">${esc(flowOf(p.st))}</span>
+      <div class="grow"><b>${esc(p.t)}</b><small class="muted pl-meta">${esc(p.client||"Sin vínculo")}${p.budget?" · "+esc(money(p.budget)):""} · eliminado ${esc(p.deleted?"hace "+timeAgo(p.deleted):"")}</small></div>
+      <button class="btn sm" data-projrestore="${i}">↺ Restaurar</button>
+      <button class="btn ghost sm pd-del" data-projpurge="${i}" title="Eliminar para siempre">✕<span> Para siempre</span></button>
+    </div>`).join("");
+  return `<div class="grid"><div class="card s12 proj-head">
+      <div class="ph-top"><div class="ph-title"><h2>Papelera</h2><span class="ph-count">${L.length} proyecto${L.length===1?"":"s"} eliminado${L.length===1?"":"s"}</span></div>
+        <button class="btn ghost sm" data-projctxset="todos">← Volver a Proyectos</button></div>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Lo que eliminas de Proyectos queda aquí con todos sus datos —valor, abonos, etapas— hasta que lo restaures o lo elimines para siempre.</p>
+    </div>
+    <div class="card s12 proj-list">${filas||`<p class="muted" style="margin:6px 0">La papelera está vacía.</p>`}</div></div>`;
 }
 /* ===========================================================
    EXPORTAR PDF — Dossier del Alma
@@ -5829,6 +5874,9 @@ document.addEventListener("click", e=>{
     state.projDetailFilter=Object.assign({},state.projDetailFilter,{desde:r.desde,hasta:r.hasta}); state.projOpen=null; renderView(); return; }
   if(e.target.closest("[data-projclear]")){ state.projFilter="todos"; state.projDetailFilter={dateField:(state.projDetailFilter||{}).dateField}; state.projPeriodCustom=false; state.projOpen=null; renderView(); return; }
   /* Quitar un filtro desde su chip. */
+  const prs=e.target.closest("[data-projrestore]"); if(prs){ restaurarProyecto(+prs.dataset.projrestore); return; }
+  const ppg=e.target.closest("[data-projpurge]"); if(ppg){ borrarProyectoParaSiempre(+ppg.dataset.projpurge); return; }
+  const pcs=e.target.closest("[data-projctxset]"); if(pcs){ state.projFilter=pcs.dataset.projctxset; save(); renderView(); return; }
   const pch=e.target.closest("[data-projchip]"); if(pch){ const k=pch.dataset.projchip, d=Object.assign({},state.projDetailFilter);
     if(k==="ctx") state.projFilter="todos";
     else if(k==="periodo"){ d.desde=""; d.hasta=""; state.projPeriodCustom=false; }

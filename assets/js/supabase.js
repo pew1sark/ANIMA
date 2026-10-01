@@ -11,7 +11,7 @@ const SB_KEY = "sb_publishable_vrVyAVt19nSsedXoCzYr-g_QFQc9w_R";
 let _sb = null;
 const ALMA_FIELDS = "id,user_id,slug,name,role,city,country,bio,color,xp,clan,santuario,tags,plan,team_role,crew_role,avatar_url,banner_url,discipline,specialty,handle,territory,website,instagram,portfolio_url,shop_url,headline,availability,sparks,created_at,council,world_access,essence,affinity,visibility,is_founding,origin_soul,origin_number,era,awakening_completed";
 const MODULE_FIELDS = {
-  projects:"id,title,client,status,pct,description,started_at,due_at,budget,paid,deliverables,tags,client_id,owner_type,owner,context,template,category,responsible,archive,payments,checklist,history,color,city,comuna,created_at",
+  projects:"id,title,client,status,pct,description,started_at,due_at,budget,paid,deliverables,tags,client_id,owner_type,owner,context,template,category,responsible,archive,payments,checklist,history,color,city,comuna,created_at,deleted_at",
   finance_entries:"id,title,amount,period,category,occurred_at,method,notes,kind",
   trajectory:"id,year,title,detail",
   portfolio:"id,title,kind,color,year,link,description,images,category",
@@ -463,6 +463,7 @@ const Cloud = {
 window.Cloud = Cloud;
 
 /* DB → forma en memoria que usan las vistas */
+const PROYECTO_DESDE_FILA = x => ({ _id:x.id, t:x.title, st:x.status, created:x.created_at, pct:x.pct, client:x.client, desc:x.description, start:x.started_at, due:x.due_at, budget:x.budget, paid:x.paid, deliverables:x.deliverables, tags:x.tags, client_id:x.client_id, owner_type:x.owner_type, owner:x.owner, context:x.context, template:x.template, category:x.category, responsible:x.responsible, archive:x.archive, color:x.color, city:x.city, comuna:x.comuna, abonos:Array.isArray(x.payments)?x.payments:[], checklist:Array.isArray(x.checklist)?x.checklist:[], hist:Array.isArray(x.history)?x.history:[] });
 function dbAlmaToState(row, m){
   return {
     id: "me-"+row.id, almaId: row.id, live: true,
@@ -482,7 +483,10 @@ function dbAlmaToState(row, m){
       income:  (m.income  || []).map(x => ({ _id:x.id, t:x.title, a:Number(x.amount), d:x.period, cat:x.category, on:x.occurred_at, method:x.method, notes:x.notes })),
       expense: (m.expense || []).map(x => ({ _id:x.id, t:x.title, a:Number(x.amount), d:x.period, cat:x.category, on:x.occurred_at, method:x.method, notes:x.notes }))
     },
-    projects:   (m.projects   || []).map(x => ({ _id:x.id, t:x.title, st:x.status, created:x.created_at, pct:x.pct, client:x.client, desc:x.description, start:x.started_at, due:x.due_at, budget:x.budget, paid:x.paid, deliverables:x.deliverables, tags:x.tags, client_id:x.client_id, owner_type:x.owner_type, owner:x.owner, context:x.context, template:x.template, category:x.category, responsible:x.responsible, archive:x.archive, color:x.color, city:x.city, comuna:x.comuna, abonos:Array.isArray(x.payments)?x.payments:[], checklist:Array.isArray(x.checklist)?x.checklist:[], hist:Array.isArray(x.history)?x.history:[] })),
+    /* Los eliminados van aparte (papelera, migración 0140): todo lo que recorre
+       a.projects —resumen, Raíz, calendario— sigue viendo solo los vivos. */
+    projects:   (m.projects   || []).filter(x => !x.deleted_at).map(PROYECTO_DESDE_FILA),
+    projectsTrash: (m.projects || []).filter(x => x.deleted_at).map(x => ({ ...PROYECTO_DESDE_FILA(x), deleted:x.deleted_at })),
     trajectory: (m.trajectory || []).map(x => ({ _id:x.id, y:x.year, t:x.title, d:x.detail })),
     portfolio:  (m.portfolio  || []).map(x => ({ _id:x.id, t:x.title, k:x.kind, c:x.color, year:x.year, link:x.link, desc:x.description })),
     memories:   (m.memories   || []).map(x => ({ _id:x.id, t:x.title, d:x.detail })),
