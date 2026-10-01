@@ -243,7 +243,7 @@ const NAV_TREE = [
       {v:"clientes",   ico:"☺",ic:"constelacion",t:"Vínculos"},
       {v:"cotizador",  ico:"₵",ic:"documento",t:"Cotizador"},
       {v:"finanzas",   ico:"🌱",ic:"raiz",t:"Raíz"},
-      {v:"agenda",     ico:"☰",ic:"agenda",t:"Agenda"}
+      {v:"agenda",     ico:"☰",ic:"agenda",t:"Calendario"}
   ]},
   // 3 · CLAN — con quién creo (solo en planes Clan/Santuario; gating por planAllows).
   { type:"reino", key:"clan", ico:"❂", ic:"constelacion", t:"Clan", children:[
@@ -407,7 +407,7 @@ const TITLES = {
   finanzas:["Raíz","Abonos, pagos realizados, egresos y ganancia — privado. El sustento del Alma."],
   clientes:["Vínculos","Tu cartera de vínculos y contactos."],
   cotizador:["Centro documental","Cotizaciones, propuestas y documentos profesionales · exporta en PDF."],
-  agenda:["Agenda","Tu día, ordenado."],
+  agenda:["Calendario","Citas, entregas, recordatorios y tu iPhone o Google en un solo lugar."],
   memoria:["Memorias","Ideas, frases y referencias que no quieres perder."],
   biblioteca:["Biblioteca","Tus documentos y archivos."],
   cronologia:["Cronología","Porque ANIMA recordará. La historia viva de tu Alma."],
@@ -611,7 +611,7 @@ function renderView(){
   // Consejo de Almas: reservado a las Almas Fundadoras (Consejo) y al Creador.
   if(state.view==="consejo" && !(me().council || (isCreator && !state.viewAs))) state.view="mialma";
   const fn = { mialma:vMiAlma, taller:vTaller, mundo:vMundo, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
-    finanzas:vFinanzas, clientes:vClientes, centro:(typeof vCentro==="function"?vCentro:vMiAlma), anuncios:(typeof vAnuncios==="function"?vAnuncios:vMiAlma), cotizador:vCotizador, agenda:vAgenda, tareas:vTareas, memoria:vMemoria, biblioteca:vBiblioteca,
+    finanzas:vFinanzas, clientes:vClientes, centro:(typeof vCentro==="function"?vCentro:vMiAlma), anuncios:(typeof vAnuncios==="function"?vAnuncios:vMiAlma), cotizador:vCotizador, agenda:(typeof vCalTaller==="function"?vCalTaller:vAgenda), tareas:vTareas, memoria:vMemoria, biblioteca:vBiblioteca,
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, world_wandering_traces:vWanderingTraces, santuario:vSantuario,

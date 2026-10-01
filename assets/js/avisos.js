@@ -251,7 +251,7 @@ function avIrA(url){
   } else if(ir === "proyectos" && q.get("proyecto")){
     const i = (me().projects || []).findIndex(x => x._id === q.get("proyecto"));
     go("proyectos"); if(i >= 0) openDetail("proj", i);
-  } else if(["centro", "proyectos", "anuncios"].includes(ir)) go(ir);
+  } else if(["centro", "proyectos", "anuncios", "agenda", "tareas"].includes(ir)) go(ir);
 }
 function avDeepLink(){
   if(!/[?&]ir=/.test(location.search)) return;
