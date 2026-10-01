@@ -107,7 +107,7 @@ async function ics(token: string) {
   const [{ data: alma }, { data: ag }, { data: ps }, { data: rs }, { data: ts }] = await Promise.all([
     admin.from("almas").select("name").eq("id", almaId).maybeSingle(),
     admin.from("agenda").select("id,title,on_date,at_time,notes").eq("alma_id", almaId).gte("on_date", desde),
-    admin.from("projects").select("id,title,client,status,due_at,started_at,archive,comuna,city").eq("alma_id", almaId),
+    admin.from("projects").select("id,title,client,status,due_at,started_at,archive,comuna,city").eq("alma_id", almaId).is("deleted_at", null),
     admin.from("project_reminders").select("id,text,at,project_id").eq("alma_id", almaId).gte("at", desde + "T00:00:00Z"),
     admin.from("tasks").select("id,title,due_at,status,project").eq("alma_id", almaId).gte("due_at", desde),
   ]);
