@@ -2158,3 +2158,8 @@ a.ld-wa{text-decoration:none}
   .cal-sem span{padding-left:0;text-align:center}
   .cal-ley{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
 }
+
+/* Papelera de proyectos */
+.pap-row{display:flex;align-items:center;gap:10px}
+.pap-row .btn{flex:none}
+@media(max-width:720px){ .pap-row{flex-wrap:wrap} .pap-row .grow{flex:1 1 calc(100% - 110px)} .pap-row .pd-del span{display:none} }
