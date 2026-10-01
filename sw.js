@@ -1,7 +1,7 @@
 /* ANIMA — Service Worker (PWA)
    Network-first para archivos propios (siempre lo último), con
    respaldo a caché cuando no hay conexión. No intercepta Supabase ni CDNs. */
-const CACHE = "anima-v79";
+const CACHE = "anima-v80";
 const ASSETS = [
   "./", "index.html", "studio.html", "portfolio.html", "legal.html", "manifest.webmanifest",
   "umbral.html", "despertar.html", "home.html", "planes.html",
