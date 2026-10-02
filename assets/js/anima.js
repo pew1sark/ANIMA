@@ -5236,10 +5236,9 @@ function retomarPantalla(){
 }
 async function loadMyAlma(){
   const row=await Cloud.myAlma(); if(!row) return;
-  /* Todos cruzan el Umbral: si esta Alma aún no completó su Primer Despertar
-     (campo en la nube), la enviamos al rito. Solo redirige cuando el flag es
-     explícitamente false → sin bucles (el rito lo deja en true antes de volver). */
-  if(row.awakening_completed === false){ location.replace("despertar.html"); return; }
+  /* El rito del Despertar ya no existe (la cuenta se crea en /app/). Un Alma
+     que aún no lo tenía marcado se marca aquí, sin pantallas de por medio. */
+  if(row.awakening_completed === false){ try{ await Cloud.completeAwakening(); }catch(e){} }
   const mods=await Cloud.loadModules(row.id); const a=dbAlmaToState(row,mods);
   try{ a.clients=(await Cloud.clients(row.id)).map(c=>({_id:c.id,name:c.name,email:c.email,phone:c.phone,notes:c.notes,kind:((c.kind||"cliente").toLowerCase()==="colaborador"?"Colaborador":"Cliente"),role:c.role||"",created:c.created_at})); }catch(e){ a.clients=[]; }
   try{ state.cloudQuotes=await Cloud.quotes(row.id); }catch(e){ state.cloudQuotes=[]; }

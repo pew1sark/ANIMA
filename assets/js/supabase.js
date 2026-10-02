@@ -54,10 +54,10 @@ const Cloud = {
   async session(){ if(!_sb) return null; const { data } = await _sb.auth.getSession(); return data.session; },
   async user(){ if(!_sb) return null; const { data } = await _sb.auth.getUser(); return data.user; },
   /* emailRedirectTo: si el proyecto pide confirmar el correo, el enlace vuelve
-     al rito (despertar.html) con la sesión abierta. Debe estar en las Redirect
-     URLs de Supabase Auth; si no lo está, Supabase usa la Site URL. */
+     a /app/ con la sesión abierta. Debe estar en las Redirect URLs de Supabase
+     Auth; si no lo está, Supabase usa la Site URL. */
   signUp(email, password, name, affinity){ return _sb.auth.signUp({ email, password, options:{ data:{ name, affinity:affinity||null },
-    emailRedirectTo: location.origin + "/despertar.html" } }); },
+    emailRedirectTo: location.origin + "/app/" } }); },
   signIn(email, password){ return _sb.auth.signInWithPassword({ email, password }); },
   signOut(){ return _sb.auth.signOut(); },
   onAuth(cb){ if(_sb) _sb.auth.onAuthStateChange((_e, s)=>cb(s)); },
