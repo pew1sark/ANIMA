@@ -199,10 +199,10 @@ function planAllows(view){
    entero desde el primer día: lo único que reserva ventanas es el
    plan (ver planAllows) y, dentro del Clan, el rol.
    =========================================================== */
-/* Fundar un Clan o Santuario. Antes exigía haber crecido en el Árbol hasta
-   cierto nivel; ahora basta con tener Alma viva. El día que el plan decida
-   esto, es esta línea la que cambia. */
-function canFound(){ return !!me().live || (isCreator && !state.viewAs); }
+/* Fundar un Clan pide Pro o Max (migración 0141: la base lo exige y no sube
+   el plan). El Starter ve «Mejorar plan» en vez de «Fundar». */
+function canFound(){ return (isCreator && !state.viewAs) || (!!me().live && almaPlan(me())!=="ALMA"); }
+const PLAN_ANCLA = { CLAN:"planes.html#studio-pro", SANTUARIO:"planes.html#studio-max" };
 /* ¿La sesión puede gestionar el equipo? (Líder, Admin o Creador) */
 function canLead(){
   if(isCreator && !state.viewAs) return true;
@@ -4268,13 +4268,15 @@ function vMiPlan(a){
       <ul class="feat">${PLAN_PICK_FEATURES[k].map(f=>`<li><span class="ck">✦</span> ${f}</li>`).join("")}</ul>
       ${on?`<span class="pill ok" style="width:max-content">Tu Forma actual</span>`
           :k==='ALMA'?`<span class="pill" style="width:max-content">Tu Forma de origen</span>`
-          :(admin||canFound())
-              ?`<button class="btn ${k==='CLAN'?'gold':'secondary'}" data-pickplan="${k}">${admin?'Asignar':'Fundar'} ${m.t}</button>`
-              :`<span class="pill" style="width:max-content">Entra a tu Alma para fundarlo</span>`}
+          :admin
+              ?`<button class="btn ${k==='CLAN'?'gold':'secondary'}" data-pickplan="${k}">Asignar ${m.t}</button>`
+              :PLAN_ORDER.indexOf(k)>PLAN_ORDER.indexOf(cur)
+                ?`<a class="btn ${k==='CLAN'?'gold':'secondary'}" href="${PLAN_ANCLA[k]}">Mejorar a ${m.sub.split(" ·")[0]} →</a>`
+                :`<span class="pill" style="width:max-content">Incluido en tu plan</span>`}
     </div>`; };
   const intro = admin
     ? `<p class="muted" style="max-width:640px">Como Creador, asignas la Forma de cada Alma desde la <b>Consola</b>. Aquí puedes asignar la tuya.</p>`
-    : `<p class="muted" style="max-width:640px">Tu Forma define cómo habitas ANIMA. Toda Alma nace como <b>Alma</b>. Cuando quieras crear junto a otras, puedes <b>fundar tu propio Clan</b> —y, con él, un <b>Santuario</b>.</p>`;
+    : `<p class="muted" style="max-width:640px">Tu Forma define cómo habitas ANIMA y la da tu plan. Toda Alma nace como <b>Alma</b> (Starter). El <b>Clan</b> viene con el plan Pro y el <b>Santuario</b> con el Max.</p>`;
   return `<div class="grid">
     ${barras}
     <div class="card s12" style="background:linear-gradient(145deg,rgba(208,170,99,.14),rgba(255,255,255,.7))">
@@ -4632,6 +4634,8 @@ async function delSantReport(id){
 /* --- Acciones de planes, roles y herramientas de Clan --- */
 async function pickPlan(plan){
   const a=me(); if(!a.live){ alert("Entra a tu Alma en la nube para activar tu Forma."); return; }
+  // El plan lo asigna ANIMA (Consola). Un Alma que pide uno superior va a la página de planes.
+  if(!(isCreator && !state.viewAs) && PLAN_ORDER.indexOf(plan)>PLAN_ORDER.indexOf(almaPlan(a))){ location.href=PLAN_ANCLA[plan]||"planes.html"; return; }
   // Fundar un Clan o Santuario requiere un Alma viva (o ser el Creador).
   if((plan==="CLAN"||plan==="SANTUARIO") && !canFound()){
     alert("Entra a tu Alma para fundar un "+(plan==="SANTUARIO"?"Santuario":"Clan")+"."); return;
@@ -4663,9 +4667,9 @@ async function joinClanCode(){
   const el=document.getElementById("joinCode"); const code=(el?el.value:"").trim(); if(!code) return;
   try{ const clan=await Cloud.joinByCode(code);
     try{ state.cloudAlmas=await Cloud.allAlmas(); const meRow=(state.cloudAlmas||[]).find(x=>x.id===a.almaId);
-      if(meRow){ a.clan=meRow.clan; a.team_role=meRow.team_role; a.santuario=meRow.santuario; } }catch(e){}
+      if(meRow){ a.clan=meRow.clan; a.team_role=meRow.team_role; a.santuario=meRow.santuario; a.plan=meRow.plan; } }catch(e){}
     a.clan=a.clan||clan;
-    if(almaPlan(a)==="ALMA"){ try{ await Cloud.updateAlma(a.almaId,{plan:"CLAN"}); a.plan="CLAN"; }catch(e){} }
+    // El asiento del Clan (plan CLAN) lo asigna join_clan_by_code en la base.
     await syncTeam(a.clan); save(); state.view="clanpanel"; renderAll(); alert("Te uniste al Clan "+clan+" ✓");
   }catch(e){ alert("No se pudo unir: "+(e.message||e)); }
 }
@@ -4685,7 +4689,7 @@ async function createClan(){
   if(msg) msg.textContent="Creando…";
   try{
     await Cloud.clanCreate(name, emoji, desc);
-    a.clan=name; a.team_role="ADMIN"; if(almaPlan(a)==="ALMA") a.plan="CLAN";
+    a.clan=name; a.team_role="ADMIN";
     try{ state.cloudAlmas=await Cloud.allAlmas(); }catch(e){}
     await loadClanMeta(name); await syncTeam(name);
     state.view="clanpanel"; save(); renderAll();
