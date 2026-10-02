@@ -93,6 +93,7 @@ async function loadLeads(){
   CC.loading = false;
   leadsRefresh();
   ensureLeadsRealtime();
+  leadTraerVinculos();
 }
 /* Redibuja la pantalla, salvo que estés escribiendo en ella: Realtime puede
    traer una solicitud nueva a mitad de una nota y no hay que borrártela. */
@@ -117,6 +118,7 @@ function ensureLeadsRealtime(){
         if(CC.leads.some(x => x.id === row.id)) return;
         CC.leads.unshift(row);
         if(CC.propios.has(row.id)){ leadsRefresh(); return; }
+        leadTraerVinculos();
         const quien = row.full_name || "alguien";
         toast("✦ Nueva solicitud de " + quien);
         leadAvisoDispositivo(quien, row);
@@ -126,7 +128,7 @@ function ensureLeadsRealtime(){
         const row = p.new; if(!row || !Array.isArray(CC.leads)) return;
         const i = CC.leads.findIndex(x => x.id === row.id); if(i < 0) return;
         CC.leads[i] = { ...CC.leads[i], ...row };
-        leadsRefresh();
+        leadsRefresh(); leadTraerVinculos();
       })
       .subscribe();
   }catch(e){ window.__leadsSub = null; }
@@ -189,6 +191,24 @@ function leadWaNumero(p){
 
 /* ---------- filtros y orden ---------- */
 function leadCiudad(l){ return String(l.city || "").split(/[,·]/)[0].trim(); }
+/* Los «Chat automático» de Messenger/Instagram no traen nombre ni teléfono:
+   la persona está en la conversación de Meta, no en un formulario. */
+function leadEsChat(l){ return /chat/i.test(l.form_name || "") && !l.phone && !l.email; }
+function leadNombre(l){ return l.full_name || (leadEsChat(l) ? "Chat de Messenger" : "Sin nombre"); }
+const LEAD_INBOX = "https://business.facebook.com/latest/inbox/all";
+/* Claves de nombre, teléfono y correo en cualquier idioma (la base ya las copia a sus columnas, migración 0142). */
+const LEAD_CLAVE_CONTACTO = /^(full_name|first_name|last_name|nombre(_completo|_y_apellidos?|_de_pila)?|apellidos?|name|phone(_number)?|numero_de_(telefono|celular|whatsapp|movil)|telefono|celular|whatsapp|movil|e?_?mail|work_email|correo(_electronico)?)$/;
+const leadClaveNorm = k => deburr(String(k || "")).replace(/[\s-]+/g, "_");
+/* Los Vínculos que la base crea sola (0142) aún no están en a.clients si STUDIO ya estaba abierto. */
+async function leadTraerVinculos(){
+  const a = me(); if(!a || !a.live || !Cloud.client) return;
+  const faltan = [...new Set(leadsList().map(l => l.client_id).filter(id => id && !(a.clients || []).some(c => c._id === id)))];
+  if(!faltan.length) return;
+  const { data } = await Cloud.client.from("clients").select("id,name,email,phone,notes,kind,role,created_at").in("id", faltan.slice(0, 200));
+  for(const c of data || []) (a.clients || (a.clients = [])).push({ _id:c.id, name:c.name, email:c.email, phone:c.phone, notes:c.notes,
+    kind:(String(c.kind || "cliente").toLowerCase() === "colaborador" ? "Colaborador" : "Cliente"), role:c.role || "", created:c.created_at });
+  if(data && data.length) leadsRefresh();
+}
 function leadOrigen(l){ return l.source === "csv" ? "csv" : l.source === "manual" ? "manual" : (l.platform === "ig" ? "ig" : "fb"); }
 const LEAD_ORIGEN_T = { ig:"Instagram", fb:"Facebook", csv:"CSV de Meta", manual:"Manual" };
 function leadTexto(l){ return deburr([l.full_name, l.phone, l.email, l.city, l.idea, l.measures, l.campaign_name, l.ad_name].filter(Boolean).join(" ")); }
@@ -298,13 +318,14 @@ function vCentro(a){
     const est = LEAD_ESTADOS[l.status] || LEAD_ESTADOS.nuevo;
     const wa = leadWaNumero(l.phone);
     return `<div class="ld-row ${l.status==='nuevo'?'is-new':''} ${String(state.leadOpen)===String(l.id)?'is-open':''}" role="row" tabindex="0" data-leadopen="${esc(l.id)}" data-q="${esc(leadTexto(l))}">
-      <div class="ld-c ld-name" role="cell"><span class="ld-av">${initials(l.full_name || "?")}</span><div><b>${esc(l.full_name || "Sin nombre")}</b><small>${esc(l.phone || l.email || "Sin contacto")}</small></div></div>
+      <div class="ld-c ld-name" role="cell"><span class="ld-av ${leadEsChat(l) ? "is-chat" : ""}">${leadEsChat(l) ? "💬" : initials(l.full_name || "?")}</span><div><b>${esc(leadNombre(l))}</b><small>${esc(l.phone || l.email || (leadEsChat(l) ? "Responde en el chat de Meta" : "Sin contacto"))}</small></div></div>
       <div class="ld-c ld-etapa" role="cell">${leadEtapaSelect(l)}</div>
       <div class="ld-c ld-city" role="cell" data-med="${l.measures ? " · " + esc(l.measures) : ""}">${esc(l.city || "—")}</div>
       <div class="ld-c ld-med" role="cell">${esc(l.measures || "—")}</div>
       <div class="ld-c ld-idea" role="cell">${esc(l.idea || "")}</div>
       <div class="ld-c ld-when" role="cell"><b>${esc(postDate(l.lead_created_at))}</b><small title="${esc(leadCampana(l))}">${esc(leadCampana(l) || LEAD_ORIGEN_T[leadOrigen(l)])}</small></div>
-      <div class="ld-c ld-acts" role="cell">${wa ? `<button class="ld-wa" data-leadwago="${esc(l.id)}" title="Escribir a ${esc(leadPrimerNombre(l.full_name) || "este cliente")} por WhatsApp">${WA_SVG}<span>WhatsApp</span></button>` : `<button class="ld-wa is-add" data-leadedit="${esc(l.id)}" title="Agregar el teléfono">${WA_SVG}<span>＋ Teléfono</span></button>`}</div>
+      <div class="ld-c ld-acts" role="cell">${wa ? `<button class="ld-wa" data-leadwago="${esc(l.id)}" title="Escribir a ${esc(leadPrimerNombre(l.full_name) || "este cliente")} por WhatsApp">${WA_SVG}<span>WhatsApp</span></button>` : leadEsChat(l) ? `<a class="ld-wa is-chat" href="${LEAD_INBOX}" target="_blank" rel="noopener" title="Responder en la bandeja de Meta">💬<span>Messenger</span></a>`
+         : `<button class="ld-wa is-add" data-leadedit="${esc(l.id)}" title="Agregar el teléfono">${WA_SVG}<span>＋ Teléfono</span></button>`}</div>
     </div>`;
   }).join("");
 
@@ -437,7 +458,7 @@ function vLeadPanel(a, l){
   const editando = nuevo || CC.edit;
   const cab = `<header class="ld-dh">
       <span class="ld-av lg">${initials((l && l.full_name) || "+")}</span>
-      <div class="ld-dh-t"><h3>${nuevo ? "Nuevo cliente" : esc(l.full_name || "Sin nombre")}</h3><small>${nuevo ? "Alguien que te escribió por otro lado: Instagram, WhatsApp, una recomendación…" : esc([l.phone, l.email].filter(Boolean).join(" · ") || "Sin contacto")}</small></div>
+      <div class="ld-dh-t"><h3>${nuevo ? "Nuevo cliente" : esc(leadNombre(l))}</h3><small>${nuevo ? "Alguien que te escribió por otro lado: Instagram, WhatsApp, una recomendación…" : esc([l.phone, l.email].filter(Boolean).join(" · ") || "Sin contacto")}</small></div>
       ${!nuevo && !CC.edit ? `<button class="ld-x ld-ed" data-leadedit="${esc(l.id)}" aria-label="Editar datos" title="Editar nombre y contacto">✎</button>` : ""}
       <button class="ld-x" data-leadback aria-label="Cerrar">✕</button>
     </header>`;
@@ -447,7 +468,7 @@ function vLeadPanel(a, l){
 
   const wa = leadWaNumero(l.phone);
   const dato = (k, v) => v ? `<div class="ld-kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>` : "";
-  const extra = (l.answers || []).filter(x => !["full_name","first_name","last_name","phone_number","email"].includes(x.key))
+  const extra = (l.answers || []).filter(x => !LEAD_CLAVE_CONTACTO.test(leadClaveNorm(x.key)) && !LEAD_CLAVE_CONTACTO.test(leadClaveNorm(x.label)))
     .map(x => `<div class="ld-kv"><span>${esc(x.label || x.key)}</span><b>${esc(x.value || "—")}</b></div>`).join("");
   const hito = (t, f) => f ? `<li><b>${esc(t)}</b><span>${esc(postDate(f))}</span></li>` : "";
   const puedeConfirmar = l.status === "nuevo" || l.status === "revisado";
