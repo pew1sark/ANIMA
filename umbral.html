@@ -3,65 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f5f5f7" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml" />
-  <link rel="icon" href="assets/img/favicon-32.png" sizes="32x32" type="image/png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="assets/img/apple-touch-icon.png" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="ANIMA" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <!-- Pantalla de la aplicación, no del sitio: fuera de los buscadores. -->
+  <meta name="theme-color" content="#0b0b0c" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>El Umbral — ANIMA</title>
-  <meta name="description" content="Toda Alma deja una Huella. Pero pocas despiertan. Cruza el umbral de ANIMA." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/css/umbral.css" />
-  <script src="assets/js/anima-state.js?v=nucleo-v12"></script>
-</head>
-<body class="rite">
-  <div class="field"><div class="core"></div></div>
-
-  <main class="rite-wrap">
-    <span class="eyebrow"><span class="ln"></span>El Umbral<span class="ln"></span></span>
-
-    <div class="lumbre-core">
-      <span class="halo"></span>
-      <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
-      <img src="assets/img/lumbre.svg" width="120" height="142" alt="LUMBRE, la chispa de ANIMA" />
-    </div>
-
-    <p class="rite-sub" style="margin-top:2px">Soy <b style="color:var(--gold)">LUMBRE</b>, la chispa de ANIMA.<br>Te he estado esperando.</p>
-
-    <p class="rite-lede">Toda Alma deja una Huella.<br>Pero pocas despiertan.</p>
-
-    <div class="actions">
-      <a class="cbtn" href="despertar.html" id="despertarBtn">Despertar ✦</a>
-    </div>
-
-    <div class="glyph-row">✶ ▦ ☽ ➶ ♟</div>
-    <p class="seal">🜂 ANIMA TSC · Acceso por invitación</p>
-  </main>
-
-  <script src="assets/js/rite.js"></script>
+  <title>ANIMA</title>
+  <style>html,body{margin:0;height:100%;background:#0b0b0c;color:#f4f2ed;font:14px/1.5 Inter,system-ui,sans-serif}
+    body{display:grid;place-items:center}a{color:inherit}</style>
   <script>
-    // Enlace de invitación (umbral.html?invitacion=CÓDIGO): se guarda para que
-    // despertar.html lo use sin pedirlo. Rite.go cambia de página sin la query.
-    try {
+    /* El Umbral de la Alpha ya no existe: crear cuenta vive en /app/, con la
+       estética de la plataforma. Esta página queda para que los enlaces de
+       invitación ya enviados (umbral.html?invitacion=CÓDIGO) sigan sirviendo. */
+    (function () {
       var q = new URLSearchParams(location.search), inv = q.get("invitacion") || q.get("codigo") || q.get("code");
-      if (inv) localStorage.setItem("anima_invitacion", inv.trim().toUpperCase());
-    } catch (e) {}
-
-    // Si esta Alma ya despertó, no repetimos el rito (req. 11).
-    if (AnimaState.isCompleted()) location.replace("home.html");
-
-    document.getElementById("despertarBtn").addEventListener("click", function (e) {
-      e.preventDefault();
-      Rite.go("despertar.html");
-    });
+      if (!inv) { try { inv = localStorage.getItem("anima_invitacion"); } catch (e) {} }
+      location.replace("app/" + (inv ? "?invitacion=" + encodeURIComponent(inv) : ""));
+    })();
   </script>
-</body>
+</head>
+<body><a href="app/">Entrar a ANIMA →</a></body>
 </html>

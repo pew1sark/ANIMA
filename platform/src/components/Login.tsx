@@ -1,11 +1,11 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useAuth } from '@/core/auth/AuthContext';
 import { Marca, Apex, ApexCompany } from '@/components/Marca';
-import { accesoService, correoParaRecuperar } from '@/services/acceso.service';
+import { accesoService, correoParaRecuperar, invitacionStudio } from '@/services/acceso.service';
 import { env } from '@/config/env';
 import { Oscuro } from '@/components/Oscuro';
 
-type Vista = 'entrar' | 'activar' | 'recuperar' | 'solicitar' | 'pausa';
+type Vista = 'entrar' | 'crear' | 'activar' | 'recuperar' | 'solicitar' | 'pausa';
 
 /* La puerta de ANIMA TSC. Cuatro cosas se pueden hacer sin sesión: entrar,
    activar una invitación, recuperar la contraseña y pedir acceso. Registrarse
@@ -22,7 +22,10 @@ export function Login() {
      enlace que se le pasa a quien no puede entrar, para no tener que explicarle
      tres pasos por teléfono. */
   const correo = correoParaRecuperar();
-  const [vista, setVista] = useState<Vista>(correo === null ? 'entrar' : 'recuperar');
+  /* `?invitacion=CÓDIGO` es el enlace que se manda a quien entra a STUDIO:
+     abre directo en crear cuenta. */
+  const [vista, setVista] = useState<Vista>(
+    correo !== null ? 'recuperar' : invitacionStudio() ? 'crear' : 'entrar');
 
   return (
     <Oscuro className="min-h-full grid lg:grid-cols-[1.04fr_.96fr]">
@@ -32,6 +35,7 @@ export function Login() {
         <div className="w-full max-w-[430px] aparece">
           <Tarjeta>
             {vista === 'entrar'    && <Entrar irA={setVista} />}
+            {vista === 'crear'     && <Crear irA={setVista} />}
             {vista === 'activar'   && <Activar volver={() => setVista('entrar')} irA={setVista} />}
             {vista === 'recuperar' && <Recuperar volver={() => setVista('entrar')} irA={setVista}
                                                    correoInicial={correo ?? ''} />}
@@ -235,6 +239,111 @@ const OjoCerrado = () => (
     <path d="M3 3l18 18M10.6 10.7a3 3 0 0 0 4.2 4.2M9.9 5.2A9.6 9.6 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.7A17 17 0 0 0 2 12s3.5 7 10 7a9.9 9.9 0 0 0 3.4-.6" />
   </svg>
 );
+
+// ----------------------------------------------------------------- crear
+
+/* Crear cuenta en STUDIO, con el enlace de invitación.
+   ---------------------------------------------------------------------------
+   Reemplaza al rito de la Alpha (umbral.html → despertar.html): mismo
+   resultado —una cuenta con su Alma, plan Starter— en una sola tarjeta y con
+   la estética de la plataforma. Con sesión, App ve la línea STUDIO en
+   `mis_lineas()` y la lleva directo a su Home. */
+function Crear({ irA }: { irA: (v: Vista) => void }) {
+  const [nombre, setNombre] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [verClave, setVerClave] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [yaExiste, setYaExiste] = useState(false);
+  const [revisarCorreo, setRevisarCorreo] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (password.length < 8) { setError('La contraseña necesita al menos 8 caracteres.'); return; }
+    setBusy(true); setError(null); setYaExiste(false);
+    try {
+      const { conSesion } = await accesoService.crearCuentaStudio(email, password, nombre);
+      /* Con sesión no hay nada más que hacer aquí: AuthContext la recibe y
+         App lleva a STUDIO. Sin sesión, el proyecto pidió confirmar el correo. */
+      if (!conSesion) { setRevisarCorreo(true); setBusy(false); }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (/already|registered|exists/i.test(msg)) setYaExiste(true);
+      else if (/password/i.test(msg)) setError('Esa contraseña no sirve: prueba con una más larga o menos común.');
+      else setError('No se pudo crear la cuenta. Inténtalo de nuevo en unos minutos.');
+      setBusy(false);
+    }
+  }
+
+  if (revisarCorreo) return (
+    <div className="aparece">
+      <Cabecera titulo="Revisa tu correo"
+        texto={`Te enviamos un enlace a ${email.trim()}. Ábrelo desde este dispositivo y entras directo a ANIMA STUDIO. Mira también en spam.`} />
+      <button onClick={() => irA('entrar')} className="b b-pri b-lg b-blq">Ya lo confirmé · Entrar</button>
+    </div>
+  );
+
+  return (
+    <form onSubmit={submit}>
+      <Cabecera titulo="Crear cuenta"
+        texto="Te invitaron a ANIMA STUDIO: tus proyectos, clientes, cotizaciones y portafolio en un solo lugar." />
+
+      <div className="flex items-center gap-3 rounded-2xl border border-accent/30 bg-accent/[.07] px-4 py-3 mb-5">
+        <Apex className="w-[18px] h-[18px] shrink-0" />
+        <span className="leading-tight">
+          <b className="block text-[12px] font-extrabold tracking-[.06em]">ANIMA STUDIO</b>
+          <span className="block text-[11.5px] text-muted">Invitación válida · plan Starter</span>
+        </span>
+      </div>
+
+      <label className="etiqueta" htmlFor="c-nombre">Nombre</label>
+      <input id="c-nombre" required value={nombre} onChange={e => setNombre(e.target.value)}
+             autoComplete="name" autoFocus className="campo mb-4" />
+
+      <label className="etiqueta" htmlFor="c-correo">Correo</label>
+      <input id="c-correo" type="email" required value={email} onChange={e => setEmail(e.target.value)}
+             autoComplete="email" className="campo mb-4" />
+
+      <label className="etiqueta" htmlFor="c-clave">Contraseña</label>
+      <div className="relative mb-5">
+        <input id="c-clave" type={verClave ? 'text' : 'password'} required minLength={8} value={password}
+               onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres"
+               autoComplete="new-password" className="campo pr-12" />
+        <button type="button" onClick={() => setVerClave(v => !v)}
+                aria-label={verClave ? 'Ocultar la contraseña' : 'Ver la contraseña'}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg grid place-items-center
+                           text-faint hover:text-ink hover:bg-sunk transition">
+          {verClave ? <OjoCerrado /> : <Ojo />}
+        </button>
+      </div>
+
+      {error && <Aviso tipo="mal">{error}</Aviso>}
+      {yaExiste && (
+        <Aviso tipo="mal">
+          Ese correo ya tiene una cuenta.{' '}
+          <button type="button" onClick={() => irA('entrar')} className="font-bold underline">Entra con tu contraseña</button>
+        </Aviso>
+      )}
+
+      <Enviar busy={busy} esperando="Creando tu cuenta…">Crear cuenta y entrar</Enviar>
+
+      <p className="text-[12.5px] text-muted text-center mt-4">
+        ¿Ya tienes cuenta?{' '}
+        <button type="button" onClick={() => irA('entrar')} className="font-bold text-ink hover:underline">
+          Entrar
+        </button>
+      </p>
+
+      <p className="text-[10.5px] text-faint mt-5 leading-relaxed">
+        Al crear la cuenta aceptas los{' '}
+        <a href={env.sitio + 'legal.html#terminos'} className="underline hover:text-muted">términos</a>{' '}
+        y la{' '}
+        <a href={env.sitio + 'legal.html#privacidad'} className="underline hover:text-muted">política de privacidad</a>.
+      </p>
+    </form>
+  );
+}
 
 // --------------------------------------------------------------- activar
 

@@ -18,7 +18,40 @@ export interface Solicitud {
   promo?: 'mes-extra' | null;
 }
 
+/* Invitación a STUDIO: animatsc.com/app/?invitacion=CÓDIGO
+   ---------------------------------------------------------------------------
+   Abre «Crear cuenta» en vez de «Entrar». La cuenta nace en STUDIO con plan
+   Starter: handle_new_user le crea el Alma (plan ALMA) y la base no deja que
+   el Alma se suba de plan sola (migración 0141). Sin el enlace, aquí no se
+   puede crear una cuenta. */
+const CODIGO_STUDIO = 'ANIMA-2026';
+export function invitacionStudio(): boolean {
+  const q = new URLSearchParams(location.search);
+  const codigo = (q.get('invitacion') ?? q.get('codigo') ?? '').trim().toUpperCase();
+  return codigo === CODIGO_STUDIO;
+}
+
 export const accesoService = {
+  /* Crea la cuenta de quien llegó con el enlace de invitación a STUDIO.
+     Devuelve si quedó con sesión: si el proyecto pide confirmar el correo, no
+     la hay todavía, y el enlace del correo vuelve a /app/ ya con sesión. */
+  async crearCuentaStudio(email: string, password: string, nombre: string) {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: {
+        data: { name: nombre.trim() || null },
+        emailRedirectTo: location.origin + env.sitio + 'app/'
+      }
+    });
+    if (error) throw error;
+    /* Ya no hay rito de bienvenida: el Alma queda despierta de una vez, para
+       que STUDIO no la mande a una pantalla que ya no existe. */
+    if (data.session) await supabase.rpc('complete_awakening').then(() => {}, () => {});
+    return { conSesion: !!data.session };
+  },
+
+
   /* Supabase manda el correo. Vuelve a esta misma app con una sesión de
      recuperación en la URL, y ahí se fija la contraseña nueva. */
   async pedirEnlace(email: string) {
