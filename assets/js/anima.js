@@ -300,11 +300,18 @@ function sectionOfView(v){
   if(["mundo","comunidad","consejo","cronica","world_wandering_traces"].includes(v)) return "mundo";
   return null;
 }
+/* MUNDO — próxima apertura. La morada sigue en el menú (para que se sepa que
+   viene), pero lo que se abre es el aviso, no el Árbol ni el Muro. Solo el
+   Creador lo ve por dentro, y nunca mientras previsualiza un plan: así prueba
+   lo mismo que ve un Alma nueva. Para abrirlo a todos, esta línea devuelve true. */
+function mundoAbierto(){ return isCreator && !state.viewAs; }
+const PRONTO_TAG = `<span class="pronto-tag">Pronto</span>`;
 /* Ítem de morada en la barra: navega a su vista por defecto y se marca activo
    cuando estás en cualquiera de sus pestañas. */
 function navSectionItem(id, ico, ic, t, defView){
   const active = sectionOfView(state.view)===id;
-  return `<div class="nav-item ${active?'active':''}" data-view="${defView}"><span class="ico">${ANIMA_ICON(ic, ico)}</span>${t}</div>`;
+  const tag = (id==="mundo" && !mundoAbierto()) ? PRONTO_TAG : "";
+  return `<div class="nav-item ${active?'active':''}" data-view="${defView}"><span class="ico">${ANIMA_ICON(ic, ico)}</span>${t}${tag}</div>`;
 }
 /* Solo 3 moradas en la barra. Todo lo demás vive en pestañas del dashboard:
    Mi Plan dentro de Mi Alma · Clan dentro de Mundo. */
@@ -364,7 +371,7 @@ function renderBottomNav(stage){
     {id:"taller",ic:"taller",ico:"₵",t:"Taller",v:"taller"},
     {id:"mundo", ic:"nucleo",ico:"❂",t:"Mundo", v:"mundo"}
   ];
-  let items=core.map(s=>`<button type="button" class="botnav-item ${cur===s.id?'on':''}" data-view="${s.v}"><span class="bi">${ANIMA_ICON(s.ic,s.ico)}</span><span class="bl">${esc(s.t)}</span></button>`);
+  let items=core.map(s=>`<button type="button" class="botnav-item ${cur===s.id?'on':''}" data-view="${s.v}"><span class="bi">${ANIMA_ICON(s.ic,s.ico)}</span><span class="bl">${esc(s.t)}</span>${(s.id==="mundo"&&!mundoAbierto())?'<span class="pronto-dot" aria-label="Próxima apertura"></span>':''}</button>`);
   if(planAllows("clanpanel")) items.push(`<button type="button" class="botnav-item ${cur==='clan'?'on':''}" data-view="clanpanel"><span class="bi">${ANIMA_ICON('constelacion','❂')}</span><span class="bl">Clan</span></button>`);
   if(planAllows("santuario")) items.push(`<button type="button" class="botnav-item ${cur==='santuario'?'on':''}" data-view="santuario"><span class="bi">${ANIMA_ICON('santuario','🜁')}</span><span class="bl">Santuario</span></button>`);
   items.push(`<button type="button" class="botnav-item botnav-lumbre" id="botLumbre"><span class="bi"><img src="assets/img/lumbre.svg" width="22" height="24" alt=""></span><span class="bl">LUMBRE</span></button>`);
@@ -435,7 +442,7 @@ const TITLES = {
   cronica:["Crónica de ANIMA","Lo que vamos integrando y mejorando — para que tu Alma esté al tanto."],
   santuario:["Santuario","La organización completa de ANIMA."]
 };
-function renderTop(){ const [t,s]=TITLES[state.view]||["ANIMA",""]; document.getElementById("topTitle").innerHTML=`<h1>${t}</h1><div class="sub">${s}</div>`; renderDiscreetBtn(); if(typeof avPintarBoton==="function") avPintarBoton(); }
+function renderTop(){ const [t,s]=(sectionOfView(state.view)==="mundo" && !mundoAbierto()) ? ["Mundo","Próxima apertura."] : (TITLES[state.view]||["ANIMA",""]); document.getElementById("topTitle").innerHTML=`<h1>${t}</h1><div class="sub">${s}</div>`; renderDiscreetBtn(); if(typeof avPintarBoton==="function") avPintarBoton(); }
 /* Ocultar montos — vive arriba, a mano en todas las pantallas (antes estaba
    solo en la cabecera de Mi Alma, con un mono 🙈 por icono). El icono dice lo
    que hace el botón: ojo tachado para ocultar, ojo abierto para volver a ver. */
@@ -562,6 +569,7 @@ function moradaKids(sec){
   if(sec==="mialma"){ kids=NAV_TREE[0].children.slice(); kids.push({v:"miplan",t:"Forma",ico:"❖",ic:"forma"}); }   // Mi Plan plegado aquí
   else if(sec==="taller"){ kids=[{v:"taller",t:"Resumen",ico:"₵",ic:"taller"}].concat(NAV_TREE[1].children.slice()); }
   else if(sec==="mundo"){
+    if(!mundoAbierto()) return [];                                                                // próxima apertura: sin pestañas
     kids.push({v:"mundo",t:"Resumen",ico:"❂",ic:"nucleo"});
     if(planAllows("comunidad")) kids.push({v:"comunidad",t:"Muro",ico:"❂",ic:"constelacion"});
     kids.push({v:"world_wandering_traces",t:"Huellas Errantes",ico:"✦",ic:"huellas"});
@@ -610,7 +618,10 @@ function renderView(){
   if(!planAllows(state.view)) state.view="mialma";
   // Consejo de Almas: reservado a las Almas Fundadoras (Consejo) y al Creador.
   if(state.view==="consejo" && !(me().council || (isCreator && !state.viewAs))) state.view="mialma";
-  const fn = { mialma:vMiAlma, taller:vTaller, mundo:vMundo, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
+  // MUNDO cerrado: cualquiera de sus vistas (Resumen, Muro, Huellas, Crónica,
+  // Consejo) lleva al aviso de próxima apertura.
+  if(sectionOfView(state.view)==="mundo" && !mundoAbierto()) state.view="mundo";
+  const fn = (state.view==="mundo" && !mundoAbierto()) ? vMundoPronto : { mialma:vMiAlma, taller:vTaller, mundo:vMundo, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
     finanzas:vFinanzas, clientes:vClientes, centro:(typeof vCentro==="function"?vCentro:vMiAlma), anuncios:(typeof vAnuncios==="function"?vAnuncios:vMiAlma), cotizador:vCotizador, agenda:(typeof vCalTaller==="function"?vCalTaller:vAgenda), tareas:vTareas, memoria:vMemoria, biblioteca:vBiblioteca,
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
@@ -627,7 +638,7 @@ function renderView(){
   document.getElementById("view").innerHTML = previewBanner() + moradaTabs(state.view) + bodyHTML;
   centerActiveTab();
   if(state.view==="clientes" && state.vinQuery) filterVinculos();
-  if(state.view==="mundo" && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
+  if(state.view==="mundo" && mundoAbierto() && window.WorldTree){ requestAnimationFrame(initWorldTreeView); }
   if(state.view==="finanzas"){ requestAnimationFrame(updateConvOut); if(isCreator && !state.viewAs && state.flowLiq===undefined) requestAnimationFrame(loadFlowLiq); }
   if(state.view==="consola"){ if(state.creatorClans==null && state.creatorSantuarios==null) requestAnimationFrame(loadCreatorGroups); requestAnimationFrame(loadWorldMonitor); requestAnimationFrame(loadRewardPanel); }
 }
@@ -2888,6 +2899,22 @@ function worldCompute(a){
   return {list,clan,members,feed,sz,n,counts,countriesArr,ecos,ecosToday,clanesCount,santuariosCount,paisesCount,newWeek,tstage};
 }
 
+/* MUNDO · próxima apertura — lo que ve toda Alma mientras el Mundo está
+   cerrado. Nada que cargar: es un aviso, y lleva de vuelta a donde sí se trabaja. */
+function vMundoPronto(){
+  return `<div class="grid"><div class="card s12 mundo-pronto">
+    <div class="mp-glyph">❂</div>
+    <span class="pronto-tag">Próxima apertura</span>
+    <h2>El Mundo está por abrir</h2>
+    <p class="muted">Aquí vivirán el Árbol de Almas, los Ecos, el Muro, las Huellas Errantes y la Crónica.
+      Lo estamos preparando para que, cuando abra, haya un mundo de verdad que recorrer.</p>
+    <p class="muted">Mientras tanto, tu Alma y tu Taller ya están listos.</p>
+    <div class="mp-actions">
+      <button class="btn" data-view="taller">Ir al Taller →</button>
+      <button class="btn ghost" data-view="mialma">Mi Alma</button>
+    </div>
+  </div></div>`;
+}
 /* MUNDO — portada/resumen de la morada: el Árbol vivo, las cifras del Mundo,
    tu Constelación, y un vistazo al Muro y a la Crónica con acceso directo. */
 function vMundo(a){
@@ -5713,7 +5740,7 @@ window.addEventListener("popstate", ()=>{
   _detailPushed=false;
 });
 function go(view){ if(_detailPushed){ _detailPushed=false; try{ history.back(); }catch(e){} }
-  state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; state.projOpen=null; state.vinOpen=null; save(); renderAll(); scrollTopNow(0); closeSide(); closeAlmaMenu(); if(view==="comunidad"||view==="mundo"){ loadPosts(); loadCommunityExtras(); loadNotices(); loadChangelog(); } if(view==="world_wandering_traces"){ if(state.wtPool==null) loadWanderingTraces(); else { wtPickOne(); wtPickConstel(); renderView(); } } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
+  state.view=view; if(view==="cotizador") state.cotMode="galeria"; state.pfEdit=false; state.projOpen=null; state.vinOpen=null; save(); renderAll(); scrollTopNow(0); closeSide(); closeAlmaMenu(); if((view==="comunidad"||view==="mundo") && mundoAbierto()){ loadPosts(); loadCommunityExtras(); loadNotices(); loadChangelog(); } if(view==="world_wandering_traces" && mundoAbierto()){ if(state.wtPool==null) loadWanderingTraces(); else { wtPickOne(); wtPickConstel(); renderView(); } } if(sectionOfView(view)==="santuario") loadSant(me().santuario); if(["equipo","recordatorios","calendario","proyectos_clan","clanpanel"].includes(view)){ syncTeam(me().clan); if(view==="clanpanel") loadInvites(me().clan); } }
 function switchAlma(id){ state.currentId=id; state.view="mialma"; state.chat=[]; save(); renderAll(); renderLumbre(); }
 const drawer=()=>document.getElementById("drawer"), dbg=()=>document.getElementById("drawerBg");
 /* LUMBRE aún no despierta: el chat permanece desactivado. Al tocarla, en vez de
@@ -6112,7 +6139,7 @@ const TOUR=[
   {sel:"#nav", selMobile:".botnav", title:"Tu menú", text:"Aquí cambias de morada. En el celular vive abajo (como Instagram): Mi Alma, Taller y Mundo. Cada una guarda sus pestañas dentro."},
   {sel:".tabbar", title:"Tu Alma", text:"Mi Alma tiene pestañas: Resumen, Identidad (tu foto y datos), Vista pública (qué muestras) y Ajustes."},
   {sel:".esencia-mini", title:"Tu Esencia", text:"Cada obra, proyecto o memoria que registras suma Esencia: es la cuenta de tu actividad aquí. Tócala para ver el detalle."},
-  {sel:'[data-view="mundo"]', selMobile:'.botnav [data-view="mundo"]', title:"El mundo", text:"En Mundo vive el Árbol de Almas: el mapa de quienes habitan ANIMA, los Ecos en vivo, y un vistazo al Muro y a la Crónica. Toca una Alma para visitarla."},
+  {sel:'[data-view="mundo"]', selMobile:'.botnav [data-view="mundo"]', title:"El mundo", text:"Mundo abre pronto: ahí vivirán el Árbol de Almas, los Ecos, el Muro y la Crónica. Por ahora, tu Alma y tu Taller ya están listos para trabajar."},
   {sel:"#lumbreFab", selMobile:"#botLumbre", title:"LUMBRE ✦", text:"Tu chispa compañera. Aún está despertando: reunirá voz cuando el mundo y tu Alma junten más Esencia. ¡Bienvenida a ANIMA!"}
 ];
 function startTour(){ closeLumbre(); closeSide(); state.view="mialma"; state.almaTab="resumen"; renderAll(); setTimeout(()=>tourStep(0),360); }

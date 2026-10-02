@@ -2163,3 +2163,16 @@ a.ld-wa{text-decoration:none}
 .pap-row{display:flex;align-items:center;gap:10px}
 .pap-row .btn{flex:none}
 @media(max-width:720px){ .pap-row{flex-wrap:wrap} .pap-row .grow{flex:1 1 calc(100% - 110px)} .pap-row .pd-del span{display:none} }
+
+/* MUNDO · próxima apertura */
+.pronto-tag{display:inline-block;margin-left:auto;padding:2px 7px;border-radius:999px;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:rgba(208,170,99,.16);color:#8a6a2c;line-height:1.5}
+.nav-item .pronto-tag{margin-left:8px}
+.nav-item.active .pronto-tag{background:rgba(255,255,255,.16);color:#fff}
+.botnav-item{position:relative}
+.pronto-dot{position:absolute;top:6px;right:calc(50% - 16px);width:7px;height:7px;border-radius:50%;background:var(--gold,#d0aa63)}
+.mundo-pronto{text-align:center;padding:44px 22px}
+.mundo-pronto .mp-glyph{font-size:42px;line-height:1;margin-bottom:14px;color:var(--gold,#d0aa63)}
+.mundo-pronto .pronto-tag{margin:0 0 12px}
+.mundo-pronto h2{margin:0 0 10px}
+.mundo-pronto p{max-width:520px;margin:6px auto}
+.mundo-pronto .mp-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}

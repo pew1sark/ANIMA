@@ -48,6 +48,13 @@
 
   <script src="assets/js/rite.js"></script>
   <script>
+    // Enlace de invitación (umbral.html?invitacion=CÓDIGO): se guarda para que
+    // despertar.html lo use sin pedirlo. Rite.go cambia de página sin la query.
+    try {
+      var q = new URLSearchParams(location.search), inv = q.get("invitacion") || q.get("codigo") || q.get("code");
+      if (inv) localStorage.setItem("anima_invitacion", inv.trim().toUpperCase());
+    } catch (e) {}
+
     // Si esta Alma ya despertó, no repetimos el rito (req. 11).
     if (AnimaState.isCompleted()) location.replace("home.html");
 
