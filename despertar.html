@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cormorant+Garamond:wght@300;500&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/js/supabase.js?v=nucleo-v11"></script>
+  <script src="assets/js/supabase.js?v=nucleo-v12"></script>
   <script src="assets/js/anima-state.js?v=nucleo-v12"></script>
   <style>
     :root{
@@ -133,6 +133,22 @@
   var form = { name:"", email:"", pass:"", code:"" };
   var ctx  = { existing:false };     // existing = sesión sin despertar (no recrear cuenta)
   var ALPHA = (window.AnimaState && AnimaState.ALPHA_CODE) || "ANIMA-2026";
+
+  /* ENLACE DE INVITACIÓN — https://www.animatsc.com/umbral.html?invitacion=CÓDIGO
+     El código viaja en el enlace y se guarda aquí (umbral.html también lo
+     guarda), así que la persona invitada nunca tiene que escribirlo, y sobrevive
+     al ir y volver del correo de confirmación. El código ya no se muestra en
+     pantalla: quien llega sin enlace tiene que tenerlo. */
+  var INV_KEY = "anima_invitacion";
+  function codigoValido(c){ return window.AnimaState ? AnimaState.checkAlphaCode(c) : (String(c||"").trim().toUpperCase()===ALPHA); }
+  (function(){
+    try{
+      var q=new URLSearchParams(location.search), c=q.get("invitacion")||q.get("codigo")||q.get("code");
+      if(c) localStorage.setItem(INV_KEY, c.trim().toUpperCase());
+    }catch(e){}
+  })();
+  function invitacionGuardada(){ try{ var c=localStorage.getItem(INV_KEY)||""; return codigoValido(c)?c:""; }catch(e){ return ""; } }
+  form.code = invitacionGuardada();
 
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
   function bind(id, fn){ var e=document.getElementById(id); if(e) e.addEventListener("click", fn); }
@@ -256,7 +272,7 @@
       '<div class="eyebrow mono">Serán recordadas para siempre</div>'+
       '<p class="big">Las primeras 50 Almas<br><em>serán recordadas para siempre.</em></p>'+
       '<div class="mono" style="margin-top:34px;letter-spacing:.4em">Almas del Origen</div>'+
-      '<div class="word" id="originCount" style="font-size:clamp(30px,9vw,64px);margin-top:6px">— / 30</div>'+
+      '<div class="word" id="originCount" style="font-size:clamp(30px,9vw,64px);margin-top:6px">— / 50</div>'+
       '<div class="actions"><button class="cbtn" id="b4">Deseo habitar ANIMA</button></div>',
       function(){
         bind("b4", sPacto);
@@ -297,8 +313,10 @@
       '<form class="form" id="crearForm" autocomplete="on" novalidate>'+
         '<div class="field"><label>Correo</label><input id="f_email" name="email" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" /></div>'+
         '<div class="field"><label>Contraseña</label><input id="f_pass" name="password" type="password" placeholder="Una clave secreta (mín. 6)" autocomplete="new-password" /></div>'+
-        '<div class="field"><label>Código del Origen</label><input id="f_code" name="code" placeholder="'+esc(ALPHA)+'" autocomplete="off" /></div>'+
-        '<div style="text-align:center;margin:4px 0 2px"><span class="code-chip">'+esc(ALPHA)+'</span></div>'+
+        (invitacionGuardada()
+          ? '<input id="f_code" type="hidden" />'+
+            '<div style="text-align:center;margin:4px 0 2px"><span class="code-chip">✓ Invitación válida</span></div>'
+          : '<div class="field"><label>Código de invitación</label><input id="f_code" name="code" placeholder="Viene en tu enlace de invitación" autocomplete="off" /></div>')+
         '<div class="err" id="f_err"></div>'+
         '<div class="actions" style="margin-top:14px">'+
           '<button type="button" class="cbtn ghost" id="b_back">Volver</button>'+
@@ -323,8 +341,8 @@
     var err=document.getElementById("f_err");
     if(!form.email || !/.+@.+\..+/.test(form.email)){ err.textContent="Necesitamos un correo válido."; return; }
     if(!form.pass || form.pass.length<6){ err.textContent="Tu clave debe tener al menos 6 caracteres."; return; }
-    var okCode = window.AnimaState ? AnimaState.checkAlphaCode(form.code) : (form.code.toUpperCase()===ALPHA);
-    if(!okCode){ err.textContent="Código inválido. Esta Alma aún no ha sido convocada."; return; }
+    if(!codigoValido(form.code)){ err.textContent="Código inválido. Para entrar necesitas tu enlace de invitación."; return; }
+    try{ localStorage.setItem(INV_KEY, form.code.toUpperCase()); }catch(e){}
 
     var btn=document.getElementById("b_nacer"); btn.disabled=true; btn.textContent="Naciendo…"; err.textContent="";
     if(typeof Cloud==="undefined" || !Cloud.enabled){ err.textContent="Sin conexión a la nube. Intenta más tarde."; btn.disabled=false; btn.textContent="Crear Alma"; return; }
@@ -338,10 +356,31 @@
       } else if(res && res.error){
         err.textContent="No pudimos crear tu Alma: "+(res.error.message||"intenta de nuevo."); btn.disabled=false; btn.textContent="Crear Alma"; return;
       } else if(!hasSession){
-        try{ await Cloud.signIn(form.email, form.pass); }catch(e2){}
+        // Sin sesión: o el proyecto pide confirmar el correo, o hubo una
+        // demora. Se intenta entrar; si no se puede, se explica en vez de
+        // seguir al final del rito sin cuenta (y rebotar al HOME sin saber por qué).
+        var si2=null; try{ si2=await Cloud.signIn(form.email, form.pass); }catch(e2){}
+        if(!(si2 && si2.data && si2.data.session)){
+          sConfirmar(form.email); return;
+        }
       }
     }catch(e){ err.textContent="Algo falló al crear tu Alma. Intenta de nuevo."; btn.disabled=false; btn.textContent="Crear Alma"; return; }
     sFinal();
+  }
+
+  /* ---------- CONFIRMAR EL CORREO ----------
+     Si Supabase pide confirmar el correo, el enlace del mensaje trae de vuelta
+     a despertar.html con la sesión abierta, y el rito sigue donde quedó. */
+  function sConfirmar(email){
+    render(
+      '<div class="eyebrow mono">Un paso más</div>'+
+      '<div class="pix-wrap">'+px(SPR.chispa,{size:7})+'</div>'+
+      '<p class="big">Revisa tu correo</p>'+
+      '<p class="sub">Te enviamos un enlace a <b>'+esc(email)+'</b>. Ábrelo desde este dispositivo y tu Alma terminará de despertar.</p>'+
+      '<p class="sub" style="font-size:13px">¿No llegó? Mira en spam o promociones.</p>'+
+      '<div class="actions"><button class="cbtn ghost" id="cf_login">Ya lo confirmé · Entrar</button></div>',
+      function(){ bind("cf_login", sLogin); }
+    );
   }
 
   /* ---------- ENTRAR A UN ALMA EXISTENTE ---------- */
