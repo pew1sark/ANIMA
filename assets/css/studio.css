@@ -2176,3 +2176,8 @@ a.ld-wa{text-decoration:none}
 .mundo-pronto h2{margin:0 0 10px}
 .mundo-pronto p{max-width:520px;margin:6px auto}
 .mundo-pronto .mp-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+
+/* Centro de clientes: chats de Messenger (sin nombre ni teléfono) */
+.ld-av.is-chat{background:rgba(0,132,255,.12);font-size:14px}
+.ld-wa.is-chat{background:rgba(0,132,255,.12);color:#0a5cc2;text-decoration:none}
+.ld-wa.is-chat:hover{background:#0a7cff;color:#fff}
