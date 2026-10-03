@@ -28,7 +28,8 @@
 
 const CC = { leads: undefined, conn: undefined, loading: false, busy: "", pick: null, draft: null, connectOpen: false, tplOpen: false,
              q: "", ciudad: "", origen: "", fecha: "", campana: "", desde: "", hasta: "",
-             edit: false, nuevo: false, propios: new Set() };
+             edit: false, nuevo: false, propios: new Set(),
+             sel: new Set(), alias: new Map(), campEdit: null };
 
 /* Rango de días: se mide en días del calendario local, no en horas. */
 const LEAD_FECHAS = [
@@ -81,13 +82,15 @@ async function loadLeads(){
   if(!Cloud.enabled || !Cloud.client || !a || !a.live || !a.almaId){ CC.leads = []; CC.conn = null; return; }
   CC.loading = true;
   try{
-    const [l, c] = await Promise.all([
+    const [l, c, n] = await Promise.all([
       Cloud.client.from("client_leads").select("*").eq("alma_id", a.almaId).order("lead_created_at", { ascending:false }).limit(300),
-      Cloud.client.from("meta_lead_connections").select("*").eq("alma_id", a.almaId).maybeSingle()
+      Cloud.client.from("meta_lead_connections").select("*").eq("alma_id", a.almaId).maybeSingle(),
+      Cloud.client.from("lead_campaign_names").select("campaign_name,alias").eq("alma_id", a.almaId)
     ]);
     if(l.error) throw l.error;
     CC.leads = l.data || [];
     CC.conn = c.data || null;
+    CC.alias = new Map((n && !n.error && n.data || []).map(r => [r.campaign_name, r.alias]));
     CC.almaId = a.almaId;
   }catch(e){ console.error("ANIMA · centro de clientes", e); CC.leads = null; }
   CC.loading = false;
@@ -211,8 +214,13 @@ async function leadTraerVinculos(){
 }
 function leadOrigen(l){ return l.source === "csv" ? "csv" : l.source === "manual" ? "manual" : (l.platform === "ig" ? "ig" : "fb"); }
 const LEAD_ORIGEN_T = { ig:"Instagram", fb:"Facebook", csv:"CSV de Meta", manual:"Manual" };
-function leadTexto(l){ return deburr([l.full_name, l.phone, l.email, l.city, l.idea, l.measures, l.campaign_name, l.ad_name].filter(Boolean).join(" ")); }
-function leadCampana(l){ return String(l.campaign_name || "").trim(); }
+function leadTexto(l){ return deburr([l.full_name, l.phone, l.email, l.city, l.idea, l.measures, l.campaign_name, leadCampana(l), l.ad_name].filter(Boolean).join(" ")); }
+/* La campaña tal como llega de Meta, y el nombre propio que le puso el Alma.
+   Todo lo que se muestra o se filtra usa el propio: dos campañas con el
+   mismo nombre propio se ven como una sola. */
+function leadCampanaMeta(l){ return String(l.campaign_name || "").trim(); }
+function leadCampana(l){ const k = leadCampanaMeta(l); return k ? (CC.alias.get(k) || k) : ""; }
+function leadCampanasMeta(nombre){ return [...new Set(leadsList().map(leadCampanaMeta).filter(k => k && (CC.alias.get(k) || k) === nombre))]; }
 
 /* [desde, hasta) en milisegundos para el filtro de fecha elegido. */
 function leadVentana(){
@@ -251,6 +259,92 @@ function leadAplicarBusqueda(){
   document.querySelectorAll(".ld-row[data-q]").forEach(el => { const ok = q.every(w => el.dataset.q.includes(w)); el.hidden = !ok; if(ok) n++; });
   const c = document.getElementById("ldCount"); if(c) c.textContent = n + (n === 1 ? " solicitud" : " solicitudes");
   const v = document.getElementById("ldNone"); if(v) v.hidden = n > 0;
+  leadSelPintar();
+}
+
+/* ---------- selección de varias ---------- */
+function leadFilasVisibles(){ return [...document.querySelectorAll(".ld-row[data-leadopen]")].filter(el => !el.hidden).map(el => el.dataset.leadopen); }
+function leadSelPintar(){
+  const bar = document.getElementById("ldSelBar"); if(!bar) return;
+  const vis = leadFilasVisibles(), n = CC.sel.size, todas = vis.length > 0 && vis.every(id => CC.sel.has(id));
+  document.querySelectorAll("[data-leadsel]").forEach(i => { const on = CC.sel.has(i.dataset.leadsel); i.checked = on; const r = i.closest(".ld-row"); if(r) r.classList.toggle("is-sel", on); });
+  const all = document.querySelector("[data-leadselall]");
+  if(all){ all.checked = todas; all.indeterminate = n > 0 && !todas; }
+  document.querySelector(".ld-table") && document.querySelector(".ld-table").classList.toggle("is-selecting", n > 0);
+  bar.hidden = !n;
+  if(!n){ bar.innerHTML = ""; return; }
+  if(CC.busy === "masivo") return;
+  bar.innerHTML = `<b>${n} seleccionada${n===1?"":"s"}</b>
+    ${!todas && vis.length > n ? `<button class="ld-selbtn" data-leadselvis>Seleccionar las ${vis.length}</button>` : ""}
+    <label class="ld-selmove"><span>Mover a</span><select data-leadselstage aria-label="Cambiar la etapa de las seleccionadas"><option value="">Elegir etapa…</option>${LEAD_ETAPAS.map(([k, t]) => `<option value="${k}">${t}</option>`).join("")}</select></label>
+    <button class="ld-selbtn is-out" data-leadseldescartar>Descartar</button>
+    <button class="ld-selbtn is-x" data-leadselnone aria-label="Quitar la selección">✕</button>`;
+}
+
+/* Cambia la etapa de todas juntas. Cotizada y ganada siguen creando su
+   proyecto en el Taller, como cuando se cambia una sola. */
+async function leadEtapaVarias(ids, st){
+  const ls = ids.map(leadById).filter(l => l && l.status !== st);
+  if(!ls.length || !LEAD_ESTADOS[st]){ toast("Ya estaban en «" + (LEAD_ESTADOS[st] || {}).t + "»."); return; }
+  const taller = (st === "cotizado" || st === "ganado") ? ls.filter(l => !leadProyecto(me(), l)).length : 0;
+  if(taller > 1 && !confirm(`Se crearán ${taller} proyectos en el Taller (uno por cliente). ¿Seguir?`)) return;
+  const antes = ls.map(l => ({ id: l.id, status: l.status }));
+  CC.busy = "masivo";
+  const bar = document.getElementById("ldSelBar"); if(bar) bar.innerHTML = `<b><span class="ld-spin"></span>Moviendo ${ls.length}…</b>`;
+  try{
+    const sello = LEAD_SELLO[st], ahora = new Date().toISOString();
+    const conSello = sello ? ls.filter(l => !l[sello]).map(l => l.id) : [];
+    const sinSello = ls.map(l => l.id).filter(id => !conSello.includes(id));
+    ls.forEach(l => { l.status = st; if(sello && !l[sello]) l[sello] = ahora; });
+    const up = (xs, patch) => xs.length ? Cloud.client.from("client_leads").update(patch).in("id", xs).then(r => { if(r.error) throw r.error; }) : null;
+    await Promise.all([up(conSello, { status: st, [sello]: ahora }), up(sinSello, { status: st })]);
+    for(const l of ls){
+      if(st === "cotizado" && !leadProyecto(me(), l)) await leadAProyecto(l);
+      if(st === "ganado"){
+        const pr = leadProyecto(me(), l) || (await leadAProyecto(l), leadProyecto(me(), l));
+        if(pr && flowOf(pr.p.st) === "Cotizando") await setProjectStatus(pr.i, "Aprobado");
+      }
+    }
+    CC.sel.clear(); CC.busy = "";
+    leadsRefresh(true);
+    leadToastDeshacer(`✓ ${ls.length} movida${ls.length===1?"":"s"} a «${LEAD_ESTADOS[st].t}»${taller ? " · " + taller + " proyecto" + (taller===1?"":"s") + " en el Taller" : ""}`, taller ? null : antes);
+  }catch(err){ CC.busy = ""; toast("No se pudieron mover: " + (err.message || err)); loadLeads(); }
+}
+/* Deshacer un cambio masivo: vuelve cada una a la etapa que tenía. */
+function leadToastDeshacer(msg, antes){
+  toast(msg);
+  if(!antes) return;
+  const t = document.getElementById("wtToast"); if(!t) return;
+  const b = document.createElement("button"); b.className = "ld-undo"; b.textContent = "Deshacer";
+  b.style.cssText = "margin-left:12px;font:inherit;font-weight:600;color:#d0aa63;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline";
+  clearTimeout(t._h); t._h = setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateX(-50%)"; b.remove(); }, 7000);
+  b.onclick = async () => {
+    b.disabled = true;
+    try{
+      const grupos = new Map(); antes.forEach(x => { if(!grupos.has(x.status)) grupos.set(x.status, []); grupos.get(x.status).push(x.id); });
+      for(const [st, ids] of grupos){ ids.forEach(id => { const l = leadById(id); if(l) l.status = st; });
+        const r = await Cloud.client.from("client_leads").update({ status: st }).in("id", ids); if(r.error) throw r.error; }
+      leadsRefresh(true); toast("↺ Listo, quedaron como estaban");
+    }catch(err){ toast("No se pudo deshacer: " + (err.message || err)); }
+  };
+  t.appendChild(b);
+}
+
+/* ---------- nombre propio de una campaña ---------- */
+async function leadCampRenombrar(nombre, nuevo){
+  const meta = leadCampanasMeta(nombre); nuevo = String(nuevo || "").trim().slice(0, 80);
+  if(!meta.length) return;
+  const a = me(), quitar = [], poner = [];
+  meta.forEach(m => (!nuevo || nuevo === m) ? quitar.push(m) : poner.push(m));
+  const otra = nuevo && nuevo !== nombre && [...new Set(leadsList().map(leadCampana))].includes(nuevo);
+  try{
+    if(poner.length){ const r = await Cloud.client.from("lead_campaign_names").upsert(poner.map(m => ({ alma_id: a.almaId, campaign_name: m, alias: nuevo, updated_at: new Date().toISOString() })), { onConflict: "alma_id,campaign_name" }); if(r.error) throw r.error; }
+    if(quitar.length){ const r = await Cloud.client.from("lead_campaign_names").delete().eq("alma_id", a.almaId).in("campaign_name", quitar); if(r.error) throw r.error; }
+    poner.forEach(m => CC.alias.set(m, nuevo)); quitar.forEach(m => CC.alias.delete(m));
+    if(CC.campana === nombre) CC.campana = nuevo || (meta.length === 1 ? meta[0] : "");
+    CC.campEdit = null; renderView();
+    toast(otra ? `✓ Unida con «${nuevo}»` : nuevo && poner.length ? `✓ Ahora se llama «${nuevo}»` : "✓ Volvió al nombre de Meta");
+  }catch(err){ toast("No se pudo guardar el nombre: " + (err.message || err)); }
 }
 
 /* Tiempo promedio entre que llega y se contacta: el dato que Meta pone arriba. */
@@ -309,16 +403,27 @@ function vCentro(a){
      Tocar una la deja como filtro. */
   const camps = campanas.length ? `<div class="ld-camps" aria-label="Campañas de Meta">${campanas.map(([k, xs]) => {
       const cot = xs.filter(l => ["cotizado","ganado"].includes(l.status)).length, won = xs.filter(l => l.status === "ganado").length;
-      return `<button class="ld-camp ${CC.campana===k?'on':''}" data-leadcamp="${esc(k)}" title="Filtrar por esta campaña"><b>${esc(k)}</b><span>${xs.length} solicitud${xs.length===1?"":"es"}${cot ? " · " + cot + " cotizada" + (cot===1?"":"s") : ""}${won ? " · " + won + " ganada" + (won===1?"":"s") : ""}</span></button>`;
+      const meta = leadCampanasMeta(k), propio = meta.some(m => CC.alias.has(m));
+      const orig = meta.join(" + ");
+      if(CC.campEdit === k) return `<form class="ld-camp ld-camp-form" data-leadcampform="${esc(k)}">
+          <input id="ldCampName" value="${esc(k)}" maxlength="80" aria-label="Nombre de la campaña" autocomplete="off" enterkeyhint="done">
+          <small title="${esc(orig)}">En Meta: ${esc(orig)}</small>
+          <span class="ld-camp-btns"><button type="submit" class="btn sm">Guardar</button>${propio ? `<button type="button" class="btn ghost sm" data-leadcamporig="${esc(k)}">Volver al de Meta</button>` : ""}<button type="button" class="btn ghost sm" data-leadcampcancel>Cancelar</button></span>
+        </form>`;
+      return `<div class="ld-camp-w ${CC.campana===k?'on':''}"><button class="ld-camp ${CC.campana===k?'on':''}" data-leadcamp="${esc(k)}" title="${esc(propio ? "En Meta: " + orig : "Filtrar por esta campaña")}"><b>${esc(k)}</b><span>${xs.length} solicitud${xs.length===1?"":"es"}${cot ? " · " + cot + " cotizada" + (cot===1?"":"s") : ""}${won ? " · " + won + " ganada" + (won===1?"":"s") : ""}</span></button><button class="ld-camp-ed" data-leadcampedit="${esc(k)}" title="Ponerle tu nombre a esta campaña" aria-label="Renombrar ${esc(k)}">✎</button></div>`;
     }).join("")}</div>` : "";
 
   const lista = leadsFiltrados();
-  if(CC.q) requestAnimationFrame(leadAplicarBusqueda);
+  /* Solo quedan seleccionadas las que siguen en esta lista. */
+  const enLista = new Set(lista.map(l => String(l.id)));
+  CC.sel.forEach(id => { if(!enLista.has(id)) CC.sel.delete(id); });
+  requestAnimationFrame(() => { if(CC.q) leadAplicarBusqueda(); leadSelPintar(); });
   const filas = lista.map(l => {
     const est = LEAD_ESTADOS[l.status] || LEAD_ESTADOS.nuevo;
     const wa = leadWaNumero(l.phone);
-    return `<div class="ld-row ${l.status==='nuevo'?'is-new':''} ${String(state.leadOpen)===String(l.id)?'is-open':''}" role="row" tabindex="0" data-leadopen="${esc(l.id)}" data-q="${esc(leadTexto(l))}">
-      <div class="ld-c ld-name" role="cell"><span class="ld-av ${leadEsChat(l) ? "is-chat" : ""}">${leadEsChat(l) ? "💬" : initials(l.full_name || "?")}</span><div><b>${esc(leadNombre(l))}</b><small>${esc(l.phone || l.email || (leadEsChat(l) ? "Responde en el chat de Meta" : "Sin contacto"))}</small></div></div>
+    const sel = CC.sel.has(String(l.id));
+    return `<div class="ld-row ${l.status==='nuevo'?'is-new':''} ${String(state.leadOpen)===String(l.id)?'is-open':''} ${sel?'is-sel':''}" role="row" tabindex="0" data-leadopen="${esc(l.id)}" data-q="${esc(leadTexto(l))}">
+      <div class="ld-c ld-name" role="cell"><label class="ld-chk" data-leadchk title="Seleccionar"><input type="checkbox" data-leadsel="${esc(l.id)}" ${sel?"checked":""} aria-label="Seleccionar a ${esc(leadNombre(l))}"></label><span class="ld-av ${leadEsChat(l) ? "is-chat" : ""}">${leadEsChat(l) ? "💬" : initials(l.full_name || "?")}</span><div><b>${esc(leadNombre(l))}</b><small>${esc(l.phone || l.email || (leadEsChat(l) ? "Responde en el chat de Meta" : "Sin contacto"))}</small></div></div>
       <div class="ld-c ld-etapa" role="cell">${leadEtapaSelect(l)}</div>
       <div class="ld-c ld-city" role="cell" data-med="${l.measures ? " · " + esc(l.measures) : ""}">${esc(l.city || "—")}</div>
       <div class="ld-c ld-med" role="cell">${esc(l.measures || "—")}</div>
@@ -355,8 +460,9 @@ function vCentro(a){
       ${CC.connectOpen ? leadConectarHTML() : ""}
       ${CC.tplOpen ? leadPlantillaHTML() : ""}
       ${lista.length ? `<div class="ld-table" role="table" aria-label="Solicitudes">
-        <div class="ld-row ld-th" role="row"><span role="columnheader">Nombre</span><span role="columnheader">Etapa</span><span role="columnheader">Ubicación</span><span role="columnheader">Medidas</span><span role="columnheader">Idea</span><span role="columnheader">Llegó</span><span role="columnheader"></span></div>
+        <div class="ld-row ld-th" role="row"><span role="columnheader" class="ld-th-name"><label class="ld-chk" data-leadchk title="Seleccionar todas las que se ven"><input type="checkbox" data-leadselall aria-label="Seleccionar todas las que se ven"></label>Nombre</span><span role="columnheader">Etapa</span><span role="columnheader">Ubicación</span><span role="columnheader">Medidas</span><span role="columnheader">Idea</span><span role="columnheader">Llegó</span><span role="columnheader"></span></div>
         ${filas}</div>
+        <div class="ld-selbar" id="ldSelBar" hidden></div>
         <div class="ld-foot"><span id="ldCount">${lista.length} solicitud${lista.length===1?"":"es"}</span><span id="ldNone" class="muted" hidden>· ninguna coincide con la búsqueda</span></div>` : vacio}
     </div>
   </div>
@@ -420,7 +526,7 @@ const LEAD_CAMPOS = [
 ];
 function leadFormHTML(l){
   const v = l || {};
-  const camps = [...new Set(leadsList().map(leadCampana).filter(Boolean))];
+  const camps = [...new Set(leadsList().map(leadCampanaMeta).filter(Boolean))];
   return `<div class="ld-dsec ld-form">
     ${LEAD_CAMPOS.map(([k, t, tipo, ph, ac]) => tipo === "textarea"
       ? `<label class="lead-f">${t}<textarea id="ldf_${k}" rows="3" placeholder="${esc(ph)}">${esc(v[k] || "")}</textarea></label>`
@@ -844,8 +950,17 @@ function leadsBadge(){ const n = leadsPendientes(); return n ? `<span class="nav
 document.addEventListener("click", e => {
   const t = e.target;
   if(t.closest("[data-leadstage]")) return;                 // el selector de etapa no abre la ficha
+  if(t.closest("[data-leadchk]")) return;                   // ni la casilla de selección
+  if(t.closest("[data-leadselvis]")){ leadFilasVisibles().forEach(id => CC.sel.add(id)); leadSelPintar(); return; }
+  if(t.closest("[data-leadselnone]")){ CC.sel.clear(); leadSelPintar(); return; }
+  if(t.closest("[data-leadseldescartar]")){ leadEtapaVarias([...CC.sel], "descartado"); return; }
+  if(t.closest("[data-leadselstage]") || t.closest("#ldSelBar")) return;
+  const ce = t.closest("[data-leadcampedit]"); if(ce){ CC.campEdit = ce.dataset.leadcampedit; renderView();
+    requestAnimationFrame(() => { const i = document.getElementById("ldCampName"); if(i){ i.focus(); i.select(); } }); return; }
+  if(t.closest("[data-leadcampcancel]")){ CC.campEdit = null; renderView(); return; }
+  const co = t.closest("[data-leadcamporig]"); if(co){ leadCampRenombrar(co.dataset.leadcamporig, ""); return; }
   if(t.closest("[data-leadreload]")){ CC.leads = undefined; renderView(); return; }
-  const lt = t.closest("[data-leadtab]"); if(lt){ state.leadTab = lt.dataset.leadtab; renderView(); return; }
+  const lt = t.closest("[data-leadtab]"); if(lt){ state.leadTab = lt.dataset.leadtab; CC.sel.clear(); renderView(); return; }
   const lwg = t.closest("[data-leadwago]"); if(lwg){ leadWhatsappRapido(lwg.dataset.leadwago); return; }
   const lw = t.closest("[data-leadwa]"); if(lw){ leadConfirmar(lw.dataset.leadwa); return; }
   const le = t.closest("[data-leadedit]"); if(le){
@@ -891,6 +1006,9 @@ document.addEventListener("click", e => {
 document.addEventListener("change", e => {
   const el = e.target; if(!el || !el.closest) return;
   const st = el.closest("[data-leadstage]"); if(st){ leadCambiarEtapa(st.dataset.leadstage, st.value); return; }
+  const cs = el.closest("[data-leadsel]"); if(cs){ cs.checked ? CC.sel.add(cs.dataset.leadsel) : CC.sel.delete(cs.dataset.leadsel); leadSelPintar(); return; }
+  if(el.closest("[data-leadselall]")){ const vis = leadFilasVisibles(); el.checked ? vis.forEach(id => CC.sel.add(id)) : vis.forEach(id => CC.sel.delete(id)); leadSelPintar(); return; }
+  const sst = el.closest("[data-leadselstage]"); if(sst){ const v = sst.value; sst.value = ""; if(v) leadEtapaVarias([...CC.sel], v); return; }
   const fi = el.closest("[data-leadfiltro]"); if(fi){ CC[fi.dataset.leadfiltro] = fi.value; renderView(); return; }
   const fr = el.closest("[data-leadrango]"); if(fr){ CC[fr.dataset.leadrango] = fr.value; renderView(); return; }
   if(el.closest("[data-leadorden]")){ state.leadOrden = el.value; save(); renderView(); return; }
@@ -899,9 +1017,15 @@ document.addEventListener("change", e => {
     return; }
   if(el.id === "leadCsv" && el.files && el.files[0]){ leadImportarCsv(el.files[0]); el.value = ""; }
 });
+document.addEventListener("submit", e => {
+  const f = e.target.closest && e.target.closest("[data-leadcampform]"); if(!f) return;
+  e.preventDefault(); leadCampRenombrar(f.dataset.leadcampform, (document.getElementById("ldCampName") || {}).value);
+});
 document.addEventListener("input", e => { if(e.target && e.target.id === "leadQ"){ CC.q = e.target.value; leadAplicarBusqueda(); } });
 document.addEventListener("keydown", e => {
   if(state.view !== "centro") return;
+  if(e.key === "Escape" && CC.campEdit){ CC.campEdit = null; renderView(); return; }
+  if(e.key === "Escape" && CC.sel.size && !state.leadOpen && !CC.nuevo){ CC.sel.clear(); leadSelPintar(); return; }
   if(e.key === "Escape" && CC.edit && !CC.nuevo){ CC.edit = false; leadsRefresh(true); return; }
   if(e.key === "Escape" && (state.leadOpen || CC.nuevo)){ CC_close(); return; }
   if(e.key === "Enter" && e.target.matches && e.target.matches(".ld-row[data-leadopen]")) CC_open(e.target.dataset.leadopen);
