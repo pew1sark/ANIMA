@@ -2262,6 +2262,8 @@ a.ld-wa{text-decoration:none}
 .dsh-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
 .dsh-legend b{color:#15151a;font-weight:750}
 .dsh-legend-g{margin-left:auto}
+.dsh-nota{font-size:11.5px;color:#9a5b00;background:rgba(237,161,0,.1);border-radius:10px;padding:7px 10px;margin:-6px 0 12px;line-height:1.45}
+.dsh-link{font:inherit;font-weight:650;color:#7b5920;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
 .dsh-bars{position:relative;height:210px;padding-left:46px}
 .dsh-grid-y{position:absolute;left:46px;right:0;top:0;bottom:22px;pointer-events:none}
 .dsh-grid-y span{position:absolute;left:0;right:0;border-top:1px solid rgba(0,0,0,.06)}
