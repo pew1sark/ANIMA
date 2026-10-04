@@ -488,7 +488,9 @@ function vAlmaResumen(a){
   const diaHoy = new Date().getDate();
   const hastaHoy = x => { const m = String(x.on || "").match(/^\d{4}-\d{2}-(\d{2})/); return !m || +m[1] <= diaHoy; };
   const cobradoMes = mI(kAct), cobradoAnt = inc.filter(x => finMonthKey(x) === kAnt && hastaHoy(x)).reduce((t, x) => t + (+x.a || 0), 0);
-  const aprob = activos.filter(projectAprobado);
+  /* Por cobrar: todo lo aprobado que no se ha cerrado, entregado incluido (lo
+     mismo que cuenta el Resumen del Taller). */
+  const aprob = projects.filter(p => projectAprobado(p) && !projectClosed(p));
   const saldo = aprob.reduce((t, p) => t + projectMoney(p).balance, 0), conSaldo = aprob.filter(p => projectMoney(p).balance > 0).length;
   const cot = projects.filter(p => flowOf(p.st) === "Cotizando" && !projectArchived(p)), enCot = cot.reduce((t, p) => t + projectMoney(p).budget, 0);
   const ganAnio = (() => { const y = String(new Date().getFullYear()); return Object.entries(porMes).filter(([k]) => k.startsWith(y)).reduce((t, [, v]) => t + v.i - v.e, 0); })();
@@ -510,7 +512,7 @@ function vAlmaResumen(a){
   const kpis = cfg.cards.kpis !== false ? `
     ${dshKpi({ ico: "✦", lbl: "Cobrado en " + dshMesNombre(kAct).toLowerCase(), val: money(cobradoMes), tone: "ok", go: "finanzas",
       delta: (cobradoMes || cobradoAnt) ? { v: delta(cobradoMes, cobradoAnt), bueno: true, txt: "vs 1–" + diaHoy + " " + dshMesNombre(kAnt).toLowerCase() } : null, sub: (cobradoMes || cobradoAnt) ? "" : "sin abonos este mes ni el anterior a esta fecha", spark: dshSpark(meses.map(mI), "#2a78d6") })}
-    ${dshKpi({ ico: "◔", lbl: "Por cobrar", val: money(saldo), tone: saldo > 0 ? "warn" : "", go: "proyectos", sub: conSaldo ? `en ${conSaldo} trabajo${conSaldo === 1 ? "" : "s"} aprobado${conSaldo === 1 ? "" : "s"}` : "todo al día" })}
+    ${dshKpi({ ico: "◔", lbl: "Por cobrar", val: money(saldo), tone: saldo > 0 ? "warn" : "", go: "proyectos", sub: conSaldo ? `en ${conSaldo} trabajo${conSaldo === 1 ? "" : "s"} con saldo` : "todo al día" })}
     ${dshKpi({ ico: "₵", lbl: "En cotización", val: money(enCot), go: "proyectos", sub: `${cot.length} propuesta${cot.length === 1 ? "" : "s"} esperando respuesta` })}
     ${dshKpi({ ico: "◷", lbl: "Trabajos activos", val: String(activos.length), go: "proyectos", sub: `${enProd.length} en producción · ${urgentes} entrega${urgentes === 1 ? "" : "s"} ≤ 14 días`, tone: urgentes ? "" : "" })}` : ``;
 
