@@ -1,12 +1,12 @@
 /* ANIMA — Service Worker (PWA)
    Network-first para archivos propios (siempre lo último), con
    respaldo a caché cuando no hay conexión. No intercepta Supabase ni CDNs. */
-const CACHE = "anima-v88";
+const CACHE = "anima-v89";
 const ASSETS = [
   "./", "index.html", "studio.html", "portfolio.html", "legal.html", "manifest.webmanifest",
   "umbral.html", "despertar.html", "home.html", "planes.html",
   "assets/css/anima.css", "assets/css/studio.css", "assets/css/home.css", "assets/css/umbral.css", "assets/css/world-tree.css", "assets/css/identity.css",
-  "assets/js/seed.js", "assets/js/supabase.js", "assets/js/centro-clientes.js", "assets/js/anuncios.js", "assets/js/avisos.js", "assets/js/calendario.js", "assets/js/anima.js", "assets/js/portfolio.js",
+  "assets/js/seed.js", "assets/js/supabase.js", "assets/js/centro-clientes.js", "assets/js/anuncios.js", "assets/js/avisos.js", "assets/js/calendario.js", "assets/js/dashboard.js", "assets/js/anima.js", "assets/js/portfolio.js",
   "assets/js/anima-state.js", "assets/js/rite.js", "assets/js/world-tree.js", "assets/js/icons.js",
   "assets/img/icon.svg", "assets/img/icon-app.svg", "assets/img/apple-touch-icon.png", "assets/img/icon-192.png", "assets/img/badge-96.png", "assets/img/icon-512.png", "assets/img/lumbre.svg", "assets/img/og-anima.png"
 ];
