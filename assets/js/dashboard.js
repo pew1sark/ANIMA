@@ -93,7 +93,12 @@ function dshBarrasMes(incL, expL, meses){
   const tope = (() => { const p = Math.pow(10, Math.floor(Math.log10(max))), n = max / p; return (n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; })();
   const hoy = dshMesKey(new Date());
   const tot = rows.reduce((t, r) => ({ i: t.i + r.i, e: t.e + r.e }), { i:0, e:0 });
+  /* Lo que no tiene fecha cuenta en los totales pero no cae en ningún mes:
+     se dice, para que la tarjeta y el gráfico no parezcan contradecirse. */
+  const sinI = (incL || []).filter(x => !finMonthKey(x)), sinE = (expL || []).filter(x => !finMonthKey(x));
+  const sinTxt = [sinI.length ? `${sinI.length} abono${sinI.length === 1 ? "" : "s"} (${dshCorto(sum(sinI))})` : "", sinE.length ? `${sinE.length} egreso${sinE.length === 1 ? "" : "s"} (${dshCorto(sum(sinE))})` : ""].filter(Boolean).join(" y ");
   return `<div class="dsh-legend"><span><i style="background:#2a78d6"></i>Abonos y pagos <b>${dshCorto(tot.i)}</b></span><span><i style="background:#eb6834"></i>Egresos <b>${dshCorto(tot.e)}</b></span><span class="dsh-legend-g">Ganancia <b>${dshCorto(tot.i - tot.e)}</b></span></div>
+  ${sinTxt ? `<p class="dsh-nota">${sinTxt} sin fecha no aparece${sinI.length + sinE.length === 1 ? "" : "n"} en el gráfico. <button class="dsh-link" data-go="finanzas">Ponles fecha en Raíz →</button></p>` : ""}
   <div class="dsh-bars" role="img" aria-label="Abonos y egresos por mes">
     <div class="dsh-grid-y">${[1, .5, 0].map(f => `<span style="bottom:${f * 100}%"><em>${f ? dshCorto(tope * f) : ""}</em></span>`).join("")}</div>
     <div class="dsh-cols" style="--n:${rows.length}">${rows.map(r => {
@@ -245,7 +250,8 @@ function dshLugarLocal(clave){
   return null;
 }
 /* Cómo se ve el lugar escrito: «Providencia, Santiago». */
-function dshLugarTexto(comuna, city){ return [comuna, city].map(x => String(x || "").trim()).filter(Boolean).filter((x, i, xs) => xs.findIndex(y => deburr(y) === deburr(x)) === i).join(", "); }
+const dshTitulo = t => t === t.toLowerCase() ? t.replace(/(^|\s)(\S)/g, (m, e, c) => e + c.toUpperCase()) : t;
+function dshLugarTexto(comuna, city){ return [comuna, city].map(x => dshTitulo(String(x || "").trim())).filter(Boolean).filter((x, i, xs) => xs.findIndex(y => deburr(y) === deburr(x)) === i).join(", "); }
 /* Un texto muy largo no es un lugar («Quiero un mural para mi empresa»). */
 const DSH_NO_LUGAR = /\b(quiero|quisiera|necesito|hola|mural|murales|para|empresa|cotiza\w*|precio|gracias|casa|pared|muro)\b/;
 function dshPareceLugar(t){ const s = String(t || "").trim(); return s.length > 1 && s.length <= 48 && s.split(/\s+/).length <= 5 && !/[?¿!¡@]/.test(s) && !DSH_NO_LUGAR.test(deburr(s)); }
@@ -613,7 +619,7 @@ function vTaller(a){
     ${k({ ico: "✓", lbl: "Tasa de cierre", val: cierre + "%", go: "proyectos", sub: ticket ? `ticket ${dshCorto(ticket)}` : `${decididos.length} de ${projects.length}` })}
   </div>`;
 
-  const graf = `<div class="card s8 dsh-card"><div class="section-title"><h2>Raíz por mes</h2><div class="spacer"></div><button class="btn ghost sm" data-go="finanzas">Ver Raíz →</button></div>${dshBarrasMes(incL, expL, dshMesesDe(D, H))}</div>`;
+  const graf = `<div class="card s8 dsh-card"><div class="section-title"><h2>Raíz ${ranged ? "por mes" : "· últimos 12 meses"}</h2><div class="spacer"></div><button class="btn ghost sm" data-go="finanzas">Ver Raíz →</button></div>${dshBarrasMes(incL, expL, dshMesesDe(D, H))}</div>`;
   const etapas = `<div class="card s4 dsh-card"><div class="section-title"><h2>Proyectos por etapa</h2><div class="spacer"></div><button class="btn ghost sm" data-go="proyectos">Ver →</button></div>${dshEtapas(projects, true)}</div>`;
   const mapa = dshMapaHTML(a, {});
   const prox = `<div class="card s6 dsh-card"><div class="section-title"><h2>Entregas ${ranged ? "en el tramo" : "próximas"}</h2><div class="spacer"></div><span class="dsh-badge">${upcoming.length}</span></div>${dshEntregas(a, upcoming, 6)}</div>`;
