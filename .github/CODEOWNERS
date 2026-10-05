@@ -1,0 +1,43 @@
+# Quién tiene que aprobar qué.
+#
+# Esto solo obliga si la protección de rama de `main` y `develop` tiene
+# activado «Require review from Code Owners» (ver CONTRIBUTING.md).
+# La última regla que coincide es la que manda.
+
+# Por defecto, todo pasa por SARK: cualquier cosa que llegue a `main` llega a
+# animatsc.com.
+*                                   @pew1sark
+
+# Base de datos, Edge Functions y migraciones: siempre SARK.
+/supabase/                          @pew1sark
+
+# Núcleo de la plataforma: sesión, organización, permisos, registro de módulos.
+/platform/src/core/                 @pew1sark
+/platform/src/config/               @pew1sark
+/platform/src/lib/supabase.ts       @pew1sark
+
+# Configuración, CI y despliegue.
+/.github/                           @pew1sark
+/platform/vite.config.ts            @pew1sark
+/platform/package.json              @pew1sark
+/platform/package-lock.json         @pew1sark
+/CNAME                              @pew1sark
+/sw.js                              @pew1sark
+
+# ANIMA STUDIO (sitio de la raíz): solo SARK.
+/*.html                             @pew1sark
+/assets/                            @pew1sark
+
+# Integraciones (Meta, push, calendario, LUMBRE) viven en supabase/functions:
+# cubiertas arriba. Bsale NO está en este repositorio.
+
+# ---------------------------------------------------------------------------
+# Andrés — co-owner de Casa Click / Real Estate Intelligence.
+# Descomentar reemplazando ANDRES_GITHUB por su usuario de GitHub, después de
+# que acepte la invitación al repo (un usuario sin acceso invalida la línea).
+# ---------------------------------------------------------------------------
+# /platform/src/components/inmobiliaria/       @pew1sark @ANDRES_GITHUB
+# /platform/src/services/inmobiliaria.service.ts @pew1sark @ANDRES_GITHUB
+# /platform/src/modules/casa-click/            @pew1sark @ANDRES_GITHUB
+# /docs/real-estate-intelligence.md            @pew1sark @ANDRES_GITHUB
+# /docs/brokerage.md                           @pew1sark @ANDRES_GITHUB

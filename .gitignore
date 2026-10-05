@@ -43,3 +43,6 @@ backups/
 # aquí y NUNCA se versionan. El sitio donde esos datos pertenecen es la
 # base de Supabase, que es privada.
 supabase/datos-clientes/
+
+# Build de comprobación local (npm run build:check); el publicado va en app/
+platform/.build-check/

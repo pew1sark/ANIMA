@@ -1,0 +1,124 @@
+# Comprobaciones de cada PR.
+#
+# No publica nada: eso lo hace `publicar.yml`, y solo desde `main`. Este
+# workflow existe para que un PR roto se vea rojo ANTES de llegar a `main`,
+# porque llegar a `main` es llegar a animatsc.com.
+#
+# Lo que todavía no hay y no se finge: linter y tests de frontend. Cuando se
+# agreguen (Fase 2), van como pasos de `plataforma`.
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plataforma:
+    name: Plataforma (tipos y build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Tipos
+        run: npm run typecheck
+      # Compila a una carpeta temporal, nunca a ../app: el build publicado no
+      # se toca desde CI. Las variables son ficticias a propósito; el build
+      # exige que existan, no que sean reales.
+      - name: Build
+        env:
+          VITE_SUPABASE_URL: https://ci.invalid
+          VITE_SUPABASE_ANON_KEY: ci-sin-clave
+        run: npx vite build --outDir "$RUNNER_TEMP/build" --emptyOutDir
+
+  sitio:
+    name: Sitio y STUDIO (sintaxis JS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: node --check
+        run: |
+          fallo=0
+          for f in assets/js/*.js assets/js/*/*.js sw.js; do
+            node --check "$f" || fallo=1
+          done
+          exit $fallo
+
+  migraciones:
+    name: Migraciones
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reglas de migraciones
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          cambios=$(git diff --name-status "$BASE"...HEAD -- supabase/migrations/)
+          [ -z "$cambios" ] && { echo "Sin cambios en migraciones."; exit 0; }
+          echo "$cambios"
+          fallo=0
+          # 1. Una migración aplicada no se edita ni se borra: se escribe otra.
+          while IFS=$'\t' read -r estado archivo resto; do
+            case "$estado" in
+              A) ;;
+              *) echo "::error file=$archivo::Las migraciones existentes no se modifican ni se borran ($estado). Escribe una nueva."; fallo=1 ;;
+            esac
+          done <<< "$cambios"
+          # 2. Nombre: NNNN_descripcion.sql (minúsculas, sin acentos).
+          for f in $(git diff --name-only --diff-filter=A "$BASE"...HEAD -- supabase/migrations/); do
+            n=$(basename "$f")
+            if ! [[ "$n" =~ ^[0-9]{4}[a-z]?_[a-z0-9_]+\.sql$ ]]; then
+              echo "::error file=$f::Nombre inválido. Formato: 0145_descripcion_en_minusculas.sql"; fallo=1
+            fi
+            # 3. El número no puede repetir uno que ya exista en la base del PR.
+            num=${n%%_*}
+            if git ls-tree --name-only "$BASE" supabase/migrations/ | xargs -n1 basename | grep -q "^${num}_"; then
+              echo "::error file=$f::El número $num ya existe. Usa el siguiente libre."; fallo=1
+            fi
+          done
+          exit $fallo
+
+  secretos:
+    name: Secretos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Busca formas reconocibles de credenciales en los archivos versionados.
+      # La clave publicable (sb_publishable_) es pública por diseño y no cuenta.
+      # El build de app/ queda fuera: es código minificado de terceros.
+      - name: Buscar credenciales
+        run: |
+          patron='sb_secret_[A-Za-z0-9]{10,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-ant-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|EAA[A-Za-z0-9]{60,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|postgres(ql)?://[^:@ ]+:[^@\[ ]{6,}@'
+          if git grep -nIE "$patron" -- . ':!app/assets' ':!platform/package-lock.json'; then
+            echo "::error::Hay algo con forma de credencial. Sácalo del PR y rota la clave si era real."
+            exit 1
+          fi
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'; then
+            echo "::error::Hay un archivo .env versionado."
+            exit 1
+          fi
+          echo "Limpio."
