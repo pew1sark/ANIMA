@@ -1,6 +1,6 @@
 # Arquitectura de `platform/` (ANIMA COMPANY)
 
-> Fase 2 · en curso. Complementa [`architecture.md`](architecture.md), que
+> Fase 2 · terminada el 5 de octubre de 2026. Complementa [`architecture.md`](architecture.md), que
 > explica la plataforma multiempresa y la base. Este documento es sobre cómo
 > se ordena el **código** del frontend.
 
@@ -18,7 +18,8 @@ platform/src/
 │   ├── ajustes/        empresa, equipo, marca, campos propios, plan, cuotas
 │   └── Novedades.tsx
 ├── core/            lo que necesita cualquier pantalla para existir
-│   ├── auth/  tenant/  modules/  datos/
+│   ├── auth/  tenant/  modules/
+│   └── datos/       motor declarativo: esquemas, servicio y vista/ (tabla, ficha, líneas, campos)
 ├── ui/              piezas de interfaz compartidas, sin datos propios
 │   ├── cifras/  panel/  graficos/  mapa/
 │   └── Periodo, Marca, Oscuro, Cargando
@@ -26,7 +27,6 @@ platform/src/
 │   ├── capital/        Capital Intelligence
 │   ├── inmobiliaria/   Real Estate Intelligence + Brokerage (Casa Click)
 │   └── analisis/       Análisis financiero (addon)
-├── components/datos/  motor declarativo: tabla y ficha (pasa a core/ en el bloque 3)
 ├── services/        acceso a datos compartido (resumen, perfil, acceso, cuotas, datos)
 ├── lib/  config/  types/
 └── vitrina/         pantallas con datos falsos para diseñar sin Supabase
@@ -75,9 +75,20 @@ también en CI.
 | Shell: `acceso/`, `consola/`, `espacio/` (inicio, informes, ajustes, novedades) | ✅ | bundle idéntico |
 | `modules/analisis` (análisis financiero) | ✅ | bundle idéntico |
 | Código muerto: 7 archivos, 407 líneas (`components/Panel.tsx`, `platform`, `audit`, `companies`, `members` service, `useModuleGuard`, `permissions`) | ✅ borrado | nadie los importaba; bundle idéntico sin ellos |
-| Motor de datos (`components/datos/`) → `core/datos/` | ⏳ bloque 3 | — |
+| Motor de datos → `core/datos/vista/`; `components/` deja de existir | ✅ | bundle idéntico |
 | Plantilla `modules/_template/` | ⏳ Fase 5 | — |
 | Router por URL (enlaces directos, botón atrás) | ⏳ Fase 4: cambia comportamiento, no es un movimiento | — |
+
+## Pendiente fuera de esta fase
+
+- **Router por URL** (Fase 4): hoy la navegación es estado en `espacio/Espacio.tsx`.
+  `react-router-dom` está instalado y sin uso; se queda para esa fase.
+  `@tanstack/react-query` también está sin uso: decidir en la Fase 4 si se
+  adopta para la caché de datos o se quita.
+- **Plantilla `modules/_template/`** (Fase 5).
+- **Bundle único de 913 KB**: con los módulos ya separados, Capital, Real
+  Estate y Análisis se pueden cargar bajo demanda (`React.lazy`). Cambia cómo
+  se carga, así que va en la Fase 4 con su propia verificación.
 
 ## Cómo crear un módulo (provisional, hasta la plantilla de la Fase 5)
 

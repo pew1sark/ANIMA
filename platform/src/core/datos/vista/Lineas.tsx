@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { datosService } from '@/core/datos/datos.service';
 import type { Detalle, Fila, Opcion } from '@/core/datos/tipos';
-import { Editor, Muestra, money } from '@/components/datos/campos';
+import { Editor, Muestra, money } from '@/core/datos/vista/campos';
 
 /* Las líneas de un documento: los productos de un pedido, los ítems de una
    compra. Aquí es donde el sistema se sincroniza de verdad — cada línea que

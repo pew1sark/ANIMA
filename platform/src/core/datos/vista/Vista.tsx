@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { datosService } from '@/core/datos/datos.service';
 import type { Campo, Esquema, Fila, Opcion } from '@/core/datos/tipos';
 import { valor as leer } from '@/core/datos/tipos';
-import { Muestra, Editor } from '@/components/datos/campos';
-import { Ficha } from '@/components/datos/Ficha';
+import { Muestra, Editor } from '@/core/datos/vista/campos';
+import { Ficha } from '@/core/datos/vista/Ficha';
 
 type Modo = 'tabla' | 'tablero';
 
