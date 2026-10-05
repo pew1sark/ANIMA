@@ -232,7 +232,9 @@ aislamiento documentada 13/13 (22-08) y script en `supabase/tests/`.
   pero ninguna aparece en `schema_migrations`: se aplicaron desde el SQL
   Editor. Consecuencia: `supabase db push` o una branch nueva **no las
   reproduciría igual**.
-- **Conclusión:** hoy **no se puede levantar una base de staging fiel desde el
+- **Actualización (5-oct):** resuelto. Ver [`MIGRACIONES.md`](MIGRACIONES.md):
+  el repo reconstruye producción y CI lo comprueba en cada PR.
+- **Conclusión original:** hoy **no se puede levantar una base de staging fiel desde el
   repo** sin antes reconciliar el historial. Es el bloqueo principal de la Fase 1.
 
 ### Seed

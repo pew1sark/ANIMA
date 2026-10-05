@@ -53,8 +53,16 @@ npm run build:check    # build de comprobación, no toca app/
 npm run vitrina        # pantallas de Capital con datos falsos, sin Supabase
 ```
 
-No hay linter ni tests de frontend todavía. Las pruebas de aislamiento de la
-base están en `supabase/tests/` (se corren en staging).
+No hay linter ni tests de frontend todavía.
+
+Base de datos (Postgres desechable, nunca staging ni producción):
+
+```bash
+PGHOST=localhost PGUSER=postgres supabase/tests/reconstruir/reconstruir.sh
+# migraciones desde cero + seed.sql + 15 pruebas de aislamiento
+```
+
+Estado de las migraciones y cómo preparar staging: `docs/MIGRACIONES.md`.
 
 ## Estructura de `platform/src`
 

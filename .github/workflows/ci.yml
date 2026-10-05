@@ -122,3 +122,26 @@ jobs:
             exit 1
           fi
           echo "Limpio."
+
+  base:
+    name: Base (reconstrucción, seed y aislamiento)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      # Un Postgres vacío, sin nada de Supabase salvo lo que imita
+      # supabase_minimo.sql. Nunca toca staging ni producción.
+      - name: Migraciones desde cero + seed + aislamiento
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: supabase/tests/reconstruir/reconstruir.sh
