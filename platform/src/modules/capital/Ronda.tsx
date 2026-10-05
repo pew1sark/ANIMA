@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { cargarRonda, simularDilucion, listarRondas, listarProyectos,
          type Ronda as Datos, type Dilucion, type RondaBreve,
-         type ProyectoBreve, ETAPAS } from '@/services/capital.service';
-import { TarjetaCifra, Avisos, Elige, Cabecera, escribe } from '@/components/capital/Cifra';
-import { Columnas } from '@/components/graficos/Columnas';
+         type ProyectoBreve, ETAPAS } from '@/modules/capital/capital.service';
+import { TarjetaCifra, Avisos, Elige, Cabecera, escribe } from '@/ui/cifras/Cifra';
+import { Columnas } from '@/ui/graficos/Columnas';
 import { dineroLlano, dineroCorto, cantidad, diaCorto } from '@/lib/formato';
 
 /* LA RONDA

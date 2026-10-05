@@ -1,5 +1,5 @@
 import { MUNICIPIOS, NOMBRE_DEPARTAMENTO, type MunicipioColombia }
-  from '@/components/mapa/colombia';
+  from '@/ui/mapa/colombia';
 
 /* Del nombre que alguien escribió al municipio que existe.
    ---------------------------------------------------------------------------

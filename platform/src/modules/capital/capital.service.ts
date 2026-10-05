@@ -13,29 +13,10 @@ import type { Cifra, ListaResumen, SerieResumen, Formato } from '@/services/resu
    La pantalla no reconstruye la explicación, la muestra. */
 
 // ------------------------------------------------------------ trazabilidad
-
-export interface Insumo { etiqueta: string; valor: number | null; formato: Formato }
-
-/** Una cifra con su explicación pegada. Es lo que devuelven tanto los
- *  indicadores del modelo como las tarjetas del panel. */
-export interface Indicador {
-  clave: string;
-  etiqueta: string;
-  valor: number | null;
-  formato: Formato;
-  formula: string;
-  insumos: Insumo[];
-  /** Solo en el panel: cómo se pinta la tarjeta. */
-  tono?: 'ok' | 'aviso' | 'malo';
-  nota?: string | null;
-}
-
-export interface Aviso {
-  clave: string;
-  nivel: 'aviso' | 'bloqueante';
-  titulo: string;
-  detalle: string;
-}
+// Las formas viven en la UI compartida (las usa también Real Estate); aquí se
+// reexportan para que las pantallas de Capital sigan importando de un lugar.
+import type { Insumo, Indicador, Aviso } from '@/ui/cifras/trazabilidad';
+export type { Insumo, Indicador, Aviso };
 
 // ------------------------------------------------------------------ panel
 

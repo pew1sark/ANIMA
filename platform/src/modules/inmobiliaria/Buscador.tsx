@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { buscar, type GrupoBusqueda } from '@/services/inmobiliaria.service';
+import { buscar, type GrupoBusqueda } from '@/modules/inmobiliaria/inmobiliaria.service';
 
 /* BÚSQUEDA GLOBAL · §46
    ---------------------------------------------------------------------------

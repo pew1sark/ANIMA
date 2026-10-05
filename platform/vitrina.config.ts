@@ -12,13 +12,13 @@ import path from 'node:path';
 
      npx vite --config vitrina.config.ts
 
-   El truco es una sola línea: `@/services/capital.service` apunta al doble.
+   El truco es una sola línea: `@/modules/capital/capital.service` apunta al doble.
    Las pantallas no se enteran. */
 export default defineConfig({
   plugins: [react(), tailwind()],
   resolve: {
     alias: [
-      { find: /^@\/services\/capital\.service$/,
+      { find: /^@\/modules\/capital\/capital\.service$/,
         replacement: path.resolve(__dirname, './src/vitrina/capital.doble.ts') },
       { find: '@', replacement: path.resolve(__dirname, './src') }
     ]

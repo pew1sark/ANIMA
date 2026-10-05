@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { cargarModelo, listarModelos, listarProyectos, validarModelo,
          marcarValidado, nuevaVersion, regenerar,
          type ModeloCalculado, type ModeloBreve, type ProyectoBreve,
-         type Aviso, type LineaModelo, type Naturaleza } from '@/services/capital.service';
-import { TarjetaCifra, Avisos, Elige, Cabecera } from '@/components/capital/Cifra';
+         type Aviso, type LineaModelo, type Naturaleza } from '@/modules/capital/capital.service';
+import { TarjetaCifra, Avisos, Elige, Cabecera } from '@/ui/cifras/Cifra';
 import { dinero, dineroCorto, cantidad, mesCorto } from '@/lib/formato';
 
 /* EL MODELO FINANCIERO

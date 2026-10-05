@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cargarPanel, type Panel } from '@/services/panel.service';
-import { Serie } from '@/components/graficos/Serie';
-import { Columnas } from '@/components/graficos/Columnas';
-import { Tramos } from '@/components/graficos/Tramos';
-import { MapaChile } from '@/components/mapa/MapaChile';
-import { MapaColombia } from '@/components/mapa/MapaColombia';
-import { ListaLugares } from '@/components/mapa/ListaLugares';
+import { Serie } from '@/ui/graficos/Serie';
+import { Columnas } from '@/ui/graficos/Columnas';
+import { Tramos } from '@/ui/graficos/Tramos';
+import { MapaChile } from '@/ui/mapa/MapaChile';
+import { MapaColombia } from '@/ui/mapa/MapaColombia';
+import { ListaLugares } from '@/ui/mapa/ListaLugares';
 import { hayMapa, vocabulario } from '@/core/datos/pais';
 import { dinero, dineroCorto, cantidad, variacion, mesCorto, diaCorto, cuando } from '@/lib/formato';
 import { Cuotas } from '@/components/company/Cuotas';

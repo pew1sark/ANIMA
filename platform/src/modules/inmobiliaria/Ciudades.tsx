@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { cargarCiudades, type Ciudades } from '@/services/inmobiliaria.service';
-import { Cabecera } from '@/components/capital/Cifra';
-import { Periodo, type Rango } from '@/components/capital/Periodo';
+import { cargarCiudades, type Ciudades } from '@/modules/inmobiliaria/inmobiliaria.service';
+import { Cabecera } from '@/ui/cifras/Cifra';
+import { Periodo, type Rango } from '@/ui/Periodo';
 import { dinero, cantidad, mesCorto } from '@/lib/formato';
 
 /* PANEL CIUDAD POR CIUDAD · §14

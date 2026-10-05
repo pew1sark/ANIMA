@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { cargarLevantamiento, responder, cerrarLevantamiento,
          listarRequisitos, sembrarRequisitos, actualizarRequisito,
          type Levantamiento as Datos, type Pregunta, type Requisito,
-         type EstadoRequisito } from '@/services/capital.service';
-import { Cabecera } from '@/components/capital/Cifra';
+         type EstadoRequisito } from '@/modules/capital/capital.service';
+import { Cabecera } from '@/ui/cifras/Cifra';
 import { diaCorto } from '@/lib/formato';
 
 /* LEVANTAMIENTO

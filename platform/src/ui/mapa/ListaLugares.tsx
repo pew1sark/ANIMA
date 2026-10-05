@@ -1,4 +1,4 @@
-import type { FilaComuna } from '@/components/mapa/MapaChile';
+import type { FilaComuna } from '@/ui/mapa/MapaChile';
 
 /* Dónde está el negocio, sin mapa.
    ---------------------------------------------------------------------------

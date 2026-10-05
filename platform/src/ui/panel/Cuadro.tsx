@@ -1,5 +1,5 @@
-import { Columnas } from '@/components/graficos/Columnas';
-import { escribe } from '@/components/capital/Cifra';
+import { Columnas } from '@/ui/graficos/Columnas';
+import { escribe } from '@/ui/cifras/Cifra';
 import { dineroCorto, mesCorto, diaCorto } from '@/lib/formato';
 import type { Formato, ListaResumen, SerieResumen } from '@/services/resumen.service';
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { DEPARTAMENTOS, MAPA_ANCHO, MAPA_ALTO } from '@/components/mapa/colombia';
-import { ubicarMunicipio } from '@/components/mapa/ubicar';
+import { DEPARTAMENTOS, MAPA_ANCHO, MAPA_ALTO } from '@/ui/mapa/colombia';
+import { ubicarMunicipio } from '@/ui/mapa/ubicar';
 
 /* Dónde está el negocio, en Colombia.
    ---------------------------------------------------------------------------

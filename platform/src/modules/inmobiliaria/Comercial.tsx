@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cargarComercial, corredores, opcionesDeFiltro, cargarRegistros,
          type PanelComercial, type FiltrosComercial, type Corredor,
-         type OpcionesFiltro, type PeldanoEmbudo, type Registros } from '@/services/inmobiliaria.service';
-import { TarjetaCifra, Avisos, Elige, Cabecera } from '@/components/capital/Cifra';
-import { Periodo, type Rango } from '@/components/capital/Periodo';
-import { Grafico, Lista } from '@/components/panel/Cuadro';
+         type OpcionesFiltro, type PeldanoEmbudo, type Registros } from '@/modules/inmobiliaria/inmobiliaria.service';
+import { TarjetaCifra, Avisos, Elige, Cabecera } from '@/ui/cifras/Cifra';
+import { Periodo, type Rango } from '@/ui/Periodo';
+import { Grafico, Lista } from '@/ui/panel/Cuadro';
 import { cantidad, mesCorto, dinero, diaCorto } from '@/lib/formato';
 
 /* EL PANEL COMERCIAL
