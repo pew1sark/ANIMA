@@ -371,7 +371,15 @@ decidir qué hacer con los puntos de seguridad de la sección 9.
 
 ---
 
-## 11. Decisiones que necesita SARK antes de la Fase 1
+## 11. Decisiones (respondidas el 5-oct)
+
+- **Andrés** es el socio y desarrollador; su cuenta en `asesoria-andres` es
+  de cliente y no se usa para desarrollar.
+- **STUDIO y COMPANY se separan**: repo privado y Supabase propio para
+  COMPANY, sin puerta cruzada, lo compartido por copia. Plan en
+  [`SEPARACION.md`](SEPARACION.md).
+
+## 11b. Decisiones originales planteadas antes de la Fase 1
 
 1. **Studio y Andrés.** Opciones: (a) mantener un solo repo y proteger STUDIO
    con CODEOWNERS + protección de rama — Andrés puede leerlo pero no fusionar

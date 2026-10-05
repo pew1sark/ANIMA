@@ -24,6 +24,12 @@ Documentos clave: `docs/AUDITORIA.md` (estado real y riesgos),
 
 ## Reglas que no se rompen
 
+0. **STUDIO y COMPANY son plataformas separadas. Nunca mezclarlas.** Solo
+   comparten interfaz y mecánicas reutilizables, y por **copia**: ninguna
+   importa, enlaza ni lee datos de la otra. COMPANY se va a su propio repo
+   privado y su propio Supabase (`docs/SEPARACION.md`). Mientras conviven
+   aquí, nada nuevo puede cruzarlas.
+
 1. **Producción es intocable.** Nunca push a `main`; nunca aplicar migraciones,
    `execute_sql` de escritura ni deploy de Edge Functions contra
    `jwxeowowuxmijuexdrua` sin que SARK lo pida explícitamente en ese momento.
