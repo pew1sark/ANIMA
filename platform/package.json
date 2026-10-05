@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:check": "vite build --outDir .build-check --emptyOutDir",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "vitrina": "vite --config vitrina.config.ts"
