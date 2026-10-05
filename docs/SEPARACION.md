@@ -12,6 +12,9 @@
 | Base y cuentas | COMPANY tendrá **su propio proyecto Supabase** con sus usuarios. STUDIO se queda en `jwxeowowuxmijuexdrua`. |
 | Entrada | La app de COMPANY deja de mostrar STUDIO: sin puerta, sin alta de Almas, sin `ANIMA-2026`. |
 | Lo compartido | Tokens de diseño y patrones se **copian** (base: `docs/REFERENCIA_STUDIO.md`). Nada se importa entre plataformas. |
+| Base | **Supabase plan Pro** (contratado por SARK): proyecto de COMPANY y su staging ahí. |
+| Hosting | **GitHub Pages con GitHub Pro** desde el repo privado de COMPANY (sin Vercel). |
+| Dominio | **`company.animatsc.com`**. `animatsc.com/app/` redirige durante la transición. |
 | Equipo | Andrés (socio, desarrollador) trabaja solo en el repo de COMPANY. Su cuenta en la organización `asesoria-andres` es de cliente y no se usa para desarrollar. |
 
 ## Dónde están mezcladas hoy
@@ -76,8 +79,10 @@ espera la aprobación de SARK.
 ### 5 · Repo privado y hosting de COMPANY
 - `anima-company` (privado) con la historia de `platform/` y lo de COMPANY en
   `supabase/`, `docs/`, CI, CODEOWNERS, `CLAUDE.md`.
-- Hosting propio con previews por PR; dominio propio de COMPANY.
-- `animatsc.com/app/` redirige al dominio nuevo durante la transición.
+- GitHub Pages (GitHub Pro) desde el repo privado, con su workflow de
+  publicación y dominio `company.animatsc.com` (CNAME en el DNS de
+  animatsc.com).
+- `animatsc.com/app/` redirige a `company.animatsc.com` durante la transición.
 
 ### 6 · Limpieza
 - Del repo de STUDIO salen `platform/`, `app/` y la documentación de COMPANY.
@@ -89,5 +94,5 @@ espera la aprobación de SARK.
 | Para | Hace falta |
 |---|---|
 | Etapas 1-3 | Nada: se trabaja en el repo y en la base desechable local |
-| Etapa 4 | Reautorizar el conector de Supabase en claude.ai. El plan gratuito de Supabase permite **2 proyectos gratuitos activos** y ya están los dos (ANIMA y JLIZ): el proyecto de COMPANY (y su staging) requiere pasar a plan **Pro** (verificar el límite vigente en el panel de Supabase) |
-| Etapa 5 | Elegir hosting (GitHub Pages en repo privado requiere GitHub Pro; Vercel o Cloudflare Pages lo hacen gratis y con previews) y el dominio de COMPANY |
+| Etapa 4 | Plan Pro de Supabase ✅. Falta reautorizar el conector de Supabase en claude.ai para crear el proyecto desde aquí |
+| Etapa 5 | GitHub Pro en la cuenta `pew1sark` (Pages en repo privado) y el registro DNS `company` → GitHub Pages |
