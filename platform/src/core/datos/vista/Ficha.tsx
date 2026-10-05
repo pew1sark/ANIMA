@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react';
 import type { Campo, Esquema, Fila, Opcion } from '@/core/datos/tipos';
 import { dinero } from '@/lib/formato';
 import { valor as leer } from '@/core/datos/tipos';
-import { Editor } from '@/components/datos/campos';
-import { Lineas } from '@/components/datos/Lineas';
+import { Editor } from '@/core/datos/vista/campos';
+import { Lineas } from '@/core/datos/vista/Lineas';
 import { esCupoAgotado } from '@/services/cuotas.service';
 
 /* La ficha de una fila. No está escrita a mano: sale del esquema, así que un

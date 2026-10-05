@@ -70,7 +70,7 @@ Estado de las migraciones y cómo preparar staging: `docs/MIGRACIONES.md`.
 - `core/auth`, `core/tenant` — sesión y organización activa (`useAuth`, `useTenant`).
 - `core/modules/registry.ts` — catálogo de módulos. Qué ve cada empresa lo
   decide la base (`plan_modules` + `company_modules`), no el código.
-- `core/modules/pestanas.ts` + `core/datos/esquemas.ts` + `components/datos/Vista.tsx`
+- `core/modules/pestanas.ts` + `core/datos/esquemas.ts` + `core/datos/vista/Vista.tsx`
   — motor declarativo: una entidad nueva es un esquema, no una pantalla.
 - `modules/<modulo>/` — un módulo vertical con sus pantallas y su servicio
   (`capital`, `inmobiliaria`, `analisis`). **Un módulo nunca importa de otro**; lo común va
@@ -80,7 +80,6 @@ Estado de las migraciones y cómo preparar staging: `docs/MIGRACIONES.md`.
 - `acceso/` (antes de entrar), `consola/` (super admin) y `espacio/` (el
   shell de una organización: inicio, informes, ajustes). El shell monta
   módulos; un módulo nunca importa del shell.
-- `components/datos/` — pantallas del motor declarativo (pasan a `core/datos`).
 - `services/<dominio>.service.ts` — acceso a datos compartido.
 - `index.css` — sistema visual (tokens en `@theme`, clases `.b`, `.campo`,
   `.tarjeta`, `.tabla`, `.aparece`…).

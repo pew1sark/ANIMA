@@ -36,7 +36,7 @@ import { PrefactibilidadProyecto } from '@/modules/inmobiliaria/Prefactibilidad'
 import { pestanasDe } from '@/core/modules/pestanas';
 import { localizarEsquema } from '@/core/datos/pais';
 import { fijarMoneda } from '@/lib/formato';
-import { Vista } from '@/components/datos/Vista';
+import { Vista } from '@/core/datos/vista/Vista';
 import type { ModuleSlug } from '@/types/core';
 
 /* El espacio de trabajo del cliente. La navegación NO está escrita a mano:
