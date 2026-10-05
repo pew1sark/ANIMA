@@ -98,7 +98,8 @@ Tipos: `feat`, `fix`, `ui`, `refactor`, `docs`, `chore`, `test`.
 2. Llenar la plantilla: qué, por qué, capturas antes/después si hay UI, cómo
    probarlo, checklist.
 3. CI tiene que estar verde: tipos, build, sintaxis de STUDIO, reglas de
-   migraciones y búsqueda de secretos.
+   migraciones, reconstrucción de la base con seed y aislamiento, y búsqueda
+   de secretos.
 4. Revisión: CODEOWNERS pide a quien corresponde. Todo lo que toque
    `supabase/`, `platform/src/core/`, configuración o STUDIO lo aprueba SARK.
 5. Se fusiona con **squash** a `develop`.
@@ -127,8 +128,12 @@ Si se tocó STUDIO, subir la versión del service worker (`anima-vNN` en
 - Ninguna política se debilita. Funciones `SECURITY DEFINER` con
   `set search_path` y sin `EXECUTE` para `anon` salvo que sean públicas a
   propósito (ver [`SECURITY.md`](SECURITY.md)).
+- Antes del PR, `supabase/tests/reconstruir/reconstruir.sh` tiene que pasar
+  en local: todas las migraciones desde cero, el seed y el aislamiento. CI lo
+  vuelve a correr (job *Base*).
 - Orden: se escribe → se aplica en **staging** → PR → SARK revisa → SARK la
   aplica en producción. Nadie más aplica nada en producción.
+- Datos de prueba: solo en `supabase/seed.sql`, ficticios y con dominio `.test`.
 - Datos reales de clientes **nunca** en una migración del repo: el repo es
   público.
 
