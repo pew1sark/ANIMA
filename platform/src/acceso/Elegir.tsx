@@ -1,6 +1,6 @@
 import { useTenant } from '@/core/tenant/TenantContext';
 import { useAuth } from '@/core/auth/AuthContext';
-import { Marca } from '@/components/Marca';
+import { Marca } from '@/ui/Marca';
 import type { Membership } from '@/types/core';
 
 /* Las organizaciones de ANIMA COMPANY. La lista llega filtrada por línea: el

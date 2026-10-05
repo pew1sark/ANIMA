@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { cargarPanel, type Panel } from '@/services/panel.service';
+import { cargarPanel, type Panel } from '@/espacio/inicio/panel.service';
 import { Serie } from '@/ui/graficos/Serie';
 import { Columnas } from '@/ui/graficos/Columnas';
 import { Tramos } from '@/ui/graficos/Tramos';
@@ -8,7 +8,7 @@ import { MapaColombia } from '@/ui/mapa/MapaColombia';
 import { ListaLugares } from '@/ui/mapa/ListaLugares';
 import { hayMapa, vocabulario } from '@/core/datos/pais';
 import { dinero, dineroCorto, cantidad, variacion, mesCorto, diaCorto, cuando } from '@/lib/formato';
-import { Cuotas } from '@/components/company/Cuotas';
+import { Cuotas } from '@/espacio/ajustes/Cuotas';
 
 /* La pantalla de inicio de ANIMA COMPANY.
    ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { Oscuro } from '@/components/Oscuro';
+import { Oscuro } from '@/ui/Oscuro';
 
 /* Esperar se ve igual en todo ANIMA.
    Es la misma figura que dibuja el sitio en `showBootLoader()` (anima.js, con

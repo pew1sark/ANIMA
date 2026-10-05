@@ -1,7 +1,7 @@
 import { useEffect, type CSSProperties } from 'react';
-import { Oscuro } from '@/components/Oscuro';
+import { Oscuro } from '@/ui/Oscuro';
 import { useAuth } from '@/core/auth/AuthContext';
-import { Marca, Apex, ApexCompany } from '@/components/Marca';
+import { Marca, Apex, ApexCompany } from '@/ui/Marca';
 import { env } from '@/config/env';
 
 /* El primer lugar después de entrar. ANIMA es una sola cuenta y dos mundos:

@@ -73,16 +73,18 @@ Estado de las migraciones y cómo preparar staging: `docs/MIGRACIONES.md`.
 - `core/modules/pestanas.ts` + `core/datos/esquemas.ts` + `components/datos/Vista.tsx`
   — motor declarativo: una entidad nueva es un esquema, no una pantalla.
 - `modules/<modulo>/` — un módulo vertical con sus pantallas y su servicio
-  (`capital`, `inmobiliaria`). **Un módulo nunca importa de otro**; lo común va
+  (`capital`, `inmobiliaria`, `analisis`). **Un módulo nunca importa de otro**; lo común va
   a `ui/` o `core/`. `npm run fronteras` lo comprueba (también en CI).
 - `ui/` — piezas compartidas de interfaz: cifras con trazabilidad, período,
   cuadros de panel, gráficos y mapas. No importa de ningún módulo.
-- `components/` — pantallas del espacio y de COMPANY que aún no pasan a
-  módulo (en migración, ver `docs/ARQUITECTURA.md`).
+- `acceso/` (antes de entrar), `consola/` (super admin) y `espacio/` (el
+  shell de una organización: inicio, informes, ajustes). El shell monta
+  módulos; un módulo nunca importa del shell.
+- `components/datos/` — pantallas del motor declarativo (pasan a `core/datos`).
 - `services/<dominio>.service.ts` — acceso a datos compartido.
 - `index.css` — sistema visual (tokens en `@theme`, clases `.b`, `.campo`,
   `.tarjeta`, `.tabla`, `.aparece`…).
-- No hay router: la navegación es estado en `components/Espacio.tsx`.
+- No hay router: la navegación es estado en `espacio/Espacio.tsx`.
 
 ## Convenciones
 

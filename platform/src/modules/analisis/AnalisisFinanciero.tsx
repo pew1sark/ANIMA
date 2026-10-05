@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cargarAnalisis, type Analisis, type Tramo,
-         type ClienteAnalisis, type ProductoAnalisis } from '@/services/analisis.service';
+         type ClienteAnalisis, type ProductoAnalisis } from '@/modules/analisis/analisis.service';
 import { Columnas } from '@/ui/graficos/Columnas';
 import { Tramos } from '@/ui/graficos/Tramos';
 import { dinero, dineroCorto, cantidad, variacion, mesCorto } from '@/lib/formato';

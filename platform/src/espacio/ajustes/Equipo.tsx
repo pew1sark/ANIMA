@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { equipoService, ROLES, type Invitacion, type Miembro } from '@/services/equipo.service';
+import { equipoService, ROLES, type Invitacion, type Miembro } from '@/espacio/ajustes/equipo.service';
 
 /* Quién trabaja en la empresa. Sin esto un cliente de COMPANY tiene un solo
    usuario, que es lo mismo que decir que no puede usarlo.

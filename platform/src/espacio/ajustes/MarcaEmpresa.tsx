@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTenant } from '@/core/tenant/TenantContext';
-import { marcaService } from '@/services/marca.service';
-import { MarcaCliente, PieAnima } from '@/components/Marca';
+import { marcaService } from '@/espacio/ajustes/marca.service';
+import { MarcaCliente, PieAnima } from '@/ui/Marca';
 
 /* Donde el cliente pone su cara. Es a propósito lo más simple posible: un logo
    y nada más. Un panel de personalización con veinte controles termina en

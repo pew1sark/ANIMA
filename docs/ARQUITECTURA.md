@@ -8,28 +8,33 @@
 
 ```
 platform/src/
+├── App.tsx          el portal: decide qué se dibuja según sesión y puertas
+├── acceso/          antes de entrar: Login, nueva contraseña, puertas, elegir organización
+├── consola/         consola de la plataforma (super admin) y su servicio
+├── espacio/         el espacio de trabajo de una organización (el «shell»)
+│   ├── Espacio.tsx     menú por módulos del plan, cabecera, búsqueda global
+│   ├── inicio/         panel de inicio y «mi espacio»
+│   ├── informes/       informes y resumen por módulo
+│   ├── ajustes/        empresa, equipo, marca, campos propios, plan, cuotas
+│   └── Novedades.tsx
 ├── core/            lo que necesita cualquier pantalla para existir
-│   ├── auth/        sesión (useAuth)
-│   ├── tenant/      organización activa (useTenant)
-│   ├── modules/     registro de módulos y sus pestañas
-│   ├── datos/       motor declarativo: esquemas → tabla + ficha
-│   └── permissions/
+│   ├── auth/  tenant/  modules/  datos/
 ├── ui/              piezas de interfaz compartidas, sin datos propios
-│   ├── cifras/      tarjeta de cifra con fórmula e insumos, avisos, cabecera
-│   ├── panel/       cuadros de panel (gráfico y lista de un resumen)
-│   ├── graficos/    columnas, serie, tramos (SVG propio)
-│   ├── mapa/        Chile y Colombia (SVG propio)
-│   └── Periodo.tsx  selector de rango
+│   ├── cifras/  panel/  graficos/  mapa/
+│   └── Periodo, Marca, Oscuro, Cargando
 ├── modules/         un módulo vertical por carpeta, aislado
-│   ├── capital/        Capital Intelligence (pantallas + capital.service)
-│   └── inmobiliaria/   Real Estate Intelligence + Brokerage (Casa Click)
-├── components/      espacio de trabajo y pantallas de COMPANY aún sin migrar
-├── services/        acceso a datos compartido (resumen, equipo, marca…)
-├── lib/  config/  types/  hooks/
+│   ├── capital/        Capital Intelligence
+│   ├── inmobiliaria/   Real Estate Intelligence + Brokerage (Casa Click)
+│   └── analisis/       Análisis financiero (addon)
+├── components/datos/  motor declarativo: tabla y ficha (pasa a core/ en el bloque 3)
+├── services/        acceso a datos compartido (resumen, perfil, acceso, cuotas, datos)
+├── lib/  config/  types/
 └── vitrina/         pantallas con datos falsos para diseñar sin Supabase
 ```
 
 ```
+            ┌──── espacio/ · acceso/ · consola/ ───┐   el shell monta módulos
+            └───────────────┬──────────────────────┘
             ┌──────────── modules/ ────────────┐
             │  capital      inmobiliaria   …   │   ✗ nunca entre sí
             └───────┬──────────────┬───────────┘
@@ -41,12 +46,13 @@ platform/src/
 
 ## Reglas
 
-1. **Un módulo no importa de otro módulo.** Si dos módulos necesitan lo mismo,
+1. **Un módulo no importa de otro módulo**, ni del shell (`espacio/`,
+   `acceso/`, `consola/`): el shell monta módulos, no al revés. Si dos módulos necesitan lo mismo,
    eso sube a `ui/` (si es interfaz) o a `core/`/`services/` (si es datos o
    sesión). Así se pudo separar Real Estate de Capital: usaba la tarjeta de
    cifra y el selector de período de Capital, que ahora están en `ui/`.
 2. **Lo compartido no depende de lo particular.** `core/`, `ui/`, `lib/`,
-   `services/`, `config/`, `types/` y `hooks/` no importan de `modules/`.
+   `services/`, `config/` y `types/` no importan de `modules/` ni del shell.
 3. **La lógica de un cliente no entra en `core/`.** Casa Click es una
    organización que usa el módulo `inmobiliaria`; lo que sea solo suyo irá en
    su propio módulo.
@@ -66,9 +72,10 @@ también en CI.
 | UI compartida (`ui/`): cifras, período, cuadros, gráficos, mapas | ✅ | bundle idéntico (md5) |
 | `modules/capital` | ✅ | bundle idéntico; vitrina compila con su doble |
 | `modules/inmobiliaria` | ✅ | bundle idéntico |
-| Pantallas de COMPANY (`components/company/`: inicio, informes, equipo, marca, campos propios, plan, cuotas, análisis financiero) | ⏳ siguiente PR | — |
-| Motor de datos y sus pantallas (`components/datos/`) → `core/datos` + `ui/` | ⏳ | — |
-| Shell del espacio (`Espacio`, `Login`, `Puertas`, `Consola`, `MenuCuenta`…) → `app/` o `core/` | ⏳ | — |
+| Shell: `acceso/`, `consola/`, `espacio/` (inicio, informes, ajustes, novedades) | ✅ | bundle idéntico |
+| `modules/analisis` (análisis financiero) | ✅ | bundle idéntico |
+| Código muerto: 7 archivos, 407 líneas (`components/Panel.tsx`, `platform`, `audit`, `companies`, `members` service, `useModuleGuard`, `permissions`) | ✅ borrado | nadie los importaba; bundle idéntico sin ellos |
+| Motor de datos (`components/datos/`) → `core/datos/` | ⏳ bloque 3 | — |
 | Plantilla `modules/_template/` | ⏳ Fase 5 | — |
 | Router por URL (enlaces directos, botón atrás) | ⏳ Fase 4: cambia comportamiento, no es un movimiento | — |
 

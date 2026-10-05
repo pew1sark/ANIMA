@@ -343,6 +343,13 @@ decidir qué hacer con los puntos de seguridad de la sección 9.
 
 ### 🟡 Baja
 
+- **Código muerto confirmado (5-oct, Fase 2):** `components/Panel.tsx` (sin
+  uso desde el portal común, commit `2b8d399`), `services/platform.service`
+  (solo lo usaba ese panel), `audit.service`, `companies.service`,
+  `members.service`, `hooks/useModuleGuard` y `core/permissions/permissions`.
+  Ningún archivo los importa y el bundle sale idéntico sin ellos. Borrados en
+  la Fase 2.
+
 12. Dependencias sin uso (`react-router-dom`, `@tanstack/react-query`).
 13. Sin linter, formateador ni tests de frontend.
 14. Ramas remotas abandonadas o sin fusionar.
