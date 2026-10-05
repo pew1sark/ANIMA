@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/core/auth/AuthContext';
 import { perfilService, type Aviso, type Perfil } from '@/services/perfil.service';
-import { Cuotas } from '@/components/company/Cuotas';
+import { Cuotas } from '@/espacio/ajustes/Cuotas';
 import { MODULES } from '@/core/modules/registry';
 import { dinero, cuando } from '@/lib/formato';
 import type { Espacio } from '@/core/tenant/Espacio';

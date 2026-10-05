@@ -1,9 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useAuth } from '@/core/auth/AuthContext';
-import { Marca, Apex, ApexCompany } from '@/components/Marca';
+import { Marca, Apex, ApexCompany } from '@/ui/Marca';
 import { accesoService, correoParaRecuperar, invitacionStudio } from '@/services/acceso.service';
 import { env } from '@/config/env';
-import { Oscuro } from '@/components/Oscuro';
+import { Oscuro } from '@/ui/Oscuro';
 
 type Vista = 'entrar' | 'crear' | 'activar' | 'recuperar' | 'solicitar' | 'pausa';
 

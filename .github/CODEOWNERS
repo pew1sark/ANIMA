@@ -15,6 +15,10 @@
 /platform/src/core/                 @pew1sark
 # Sistema de diseño compartido: lo usan todos los módulos.
 /platform/src/ui/                   @pew1sark
+# Shell: entrada, consola de plataforma y espacio de trabajo.
+/platform/src/acceso/               @pew1sark
+/platform/src/consola/              @pew1sark
+/platform/src/espacio/              @pew1sark
 /platform/scripts/                  @pew1sark
 /platform/src/config/               @pew1sark
 /platform/src/lib/supabase.ts       @pew1sark

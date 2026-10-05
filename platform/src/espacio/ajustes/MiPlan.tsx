@@ -1,4 +1,4 @@
-import { Cuotas } from '@/components/company/Cuotas';
+import { Cuotas } from '@/espacio/ajustes/Cuotas';
 import { MODULES } from '@/core/modules/registry';
 import { dinero } from '@/lib/formato';
 import { env } from '@/config/env';

@@ -122,7 +122,8 @@ Abrir el PR contra **`develop`**, ver CI en verde y pedir revisión a SARK.
 |---|---|---|
 | `platform/src/modules/inmobiliaria/`, futuro `modules/casa-click/` | libre | SARK o Andrés |
 | `platform/src/ui/` (sistema de diseño compartido) | propone | **SARK obligatorio** |
-| `platform/src/components/` (resto), `services/`, `docs/` | libre | SARK |
+| `platform/src/modules/` (otros módulos), `services/`, `docs/` | libre | SARK |
+| `platform/src/espacio/`, `acceso/`, `consola/` (shell) | propone | **SARK obligatorio** |
 | `platform/src/core/`, `config/`, `lib/supabase.ts` | con cuidado | **SARK obligatorio** |
 | `supabase/` (migraciones, funciones) | propone | **SARK obligatorio** y SARK aplica |
 | `.github/`, `vite.config.ts`, `package.json` | propone | **SARK obligatorio** |

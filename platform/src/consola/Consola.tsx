@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useBarra } from '@/components/Oscuro';
+import { useBarra } from '@/ui/Oscuro';
 import { useAuth } from '@/core/auth/AuthContext';
-import { Marca } from '@/components/Marca';
+import { Marca } from '@/ui/Marca';
 import {
   consolaService, senalesDe, gravedadDe, diasSin,
   type EstadoCliente, type Gravedad, type PlanDisponible, type SolicitudAcceso
-} from '@/services/consola.service';
+} from '@/consola/consola.service';
 import { dinero, cantidad, diaCorto } from '@/lib/formato';
 
 /* La consola de plataforma: el centro de control de ANIMA TSC.

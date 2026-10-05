@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { Oscuro } from '@/components/Oscuro';
+import { Oscuro } from '@/ui/Oscuro';
 import { useAuth } from '@/core/auth/AuthContext';
-import { Marca } from '@/components/Marca';
+import { Marca } from '@/ui/Marca';
 import { accesoService, vieneDeInvitacion, limpiarMarcaDeInvitacion } from '@/services/acceso.service';
 
 /* Se llega aquí solo desde el enlace del correo. Hay sesión, pero todavía no se

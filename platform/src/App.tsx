@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from '@/core/auth/AuthContext';
 import { TenantProvider, useTenant } from '@/core/tenant/TenantContext';
-import { Login } from '@/components/Login';
-import { Puertas, EntrandoAStudio } from '@/components/Puertas';
-import { Elegir } from '@/components/Elegir';
-import { Espacio } from '@/components/Espacio';
-import { Consola } from '@/components/Consola';
-import { Cargando } from '@/components/Cargando';
-import { NuevaContrasena } from '@/components/NuevaContrasena';
+import { Login } from '@/acceso/Login';
+import { Puertas, EntrandoAStudio } from '@/acceso/Puertas';
+import { Elegir } from '@/acceso/Elegir';
+import { Espacio } from '@/espacio/Espacio';
+import { Consola } from '@/consola/Consola';
+import { Cargando } from '@/ui/Cargando';
+import { NuevaContrasena } from '@/acceso/NuevaContrasena';
 import { env } from '@/config/env';
-import { Oscuro } from '@/components/Oscuro';
+import { Oscuro } from '@/ui/Oscuro';
 
 type Destino = 'company' | 'consola';
 
