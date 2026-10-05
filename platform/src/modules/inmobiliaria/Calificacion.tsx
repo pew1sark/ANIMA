@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { cargarMatriz, calificar, descalificar,
-         type Matriz, type CriterioMatriz, type OportunidadMatriz } from '@/services/inmobiliaria.service';
-import { Avisos, Cabecera } from '@/components/capital/Cifra';
+         type Matriz, type CriterioMatriz, type OportunidadMatriz } from '@/modules/inmobiliaria/inmobiliaria.service';
+import { Avisos, Cabecera } from '@/ui/cifras/Cifra';
 import { dineroLlano, cantidad } from '@/lib/formato';
 
 /* LA MATRIZ DE CALIFICACIÓN

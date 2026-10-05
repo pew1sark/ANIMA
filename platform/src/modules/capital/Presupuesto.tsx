@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { cargarPresupuesto, listarModelos, listarProyectos,
          type Presupuesto as Datos, type FilaPresupuesto,
-         type ModeloBreve, type ProyectoBreve, type Naturaleza } from '@/services/capital.service';
-import { Elige, Cabecera, TarjetaCifra } from '@/components/capital/Cifra';
-import { Periodo, type Rango } from '@/components/capital/Periodo';
-import { Columnas } from '@/components/graficos/Columnas';
+         type ModeloBreve, type ProyectoBreve, type Naturaleza } from '@/modules/capital/capital.service';
+import { Elige, Cabecera, TarjetaCifra } from '@/ui/cifras/Cifra';
+import { Periodo, type Rango } from '@/ui/Periodo';
+import { Columnas } from '@/ui/graficos/Columnas';
 import { dineroLlano, dineroCorto, cantidad, mesCorto } from '@/lib/formato';
-import type { Indicador } from '@/services/capital.service';
+import type { Indicador } from '@/modules/capital/capital.service';
 
 /* PRESUPUESTO CONTRA EJECUCIÓN REAL
    ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { MapaColombia, type PuntoMapa } from '@/components/mapa/MapaColombia';
-import type { MapaREI } from '@/services/inmobiliaria.service';
+import { MapaColombia, type PuntoMapa } from '@/ui/mapa/MapaColombia';
+import type { MapaREI } from '@/modules/inmobiliaria/inmobiliaria.service';
 
 /* Dónde está el inventario y dónde está la demanda.
    ---------------------------------------------------------------------------

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cargarPanel, listarPortafolios, listarProyectos,
          type Panel as Datos, type Filtros,
-         type PortafolioBreve, type ProyectoBreve } from '@/services/capital.service';
-import { TarjetaCifra, Avisos, Elige, Cabecera } from '@/components/capital/Cifra';
-import { Periodo, type Rango } from '@/components/capital/Periodo';
+         type PortafolioBreve, type ProyectoBreve } from '@/modules/capital/capital.service';
+import { TarjetaCifra, Avisos, Elige, Cabecera } from '@/ui/cifras/Cifra';
+import { Periodo, type Rango } from '@/ui/Periodo';
 /* La curva y la tabla las comparte con el panel de Real Estate Intelligence:
    los dos resúmenes devuelven la misma forma desde la base, así que dibujarla
    dos veces solo habría servido para que empezaran a diferir. */
-import { Grafico, Lista } from '@/components/panel/Cuadro';
+import { Grafico, Lista } from '@/ui/panel/Cuadro';
 import { mesCorto } from '@/lib/formato';
 
 /* EL PANEL EJECUTIVO

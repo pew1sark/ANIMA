@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { cargarPanel, cargarMapa, opcionesDeFiltro, ponerEnMarcha,
          type PanelREI, type FiltrosREI, type OpcionesFiltro,
-         type MapaREI } from '@/services/inmobiliaria.service';
-import { TarjetaCifra, Avisos, Elige, Cabecera } from '@/components/capital/Cifra';
-import { Periodo, type Rango } from '@/components/capital/Periodo';
-import { Grafico, Lista } from '@/components/panel/Cuadro';
-import { MapaMunicipios } from '@/components/inmobiliaria/Mapa';
+         type MapaREI } from '@/modules/inmobiliaria/inmobiliaria.service';
+import { TarjetaCifra, Avisos, Elige, Cabecera } from '@/ui/cifras/Cifra';
+import { Periodo, type Rango } from '@/ui/Periodo';
+import { Grafico, Lista } from '@/ui/panel/Cuadro';
+import { MapaMunicipios } from '@/modules/inmobiliaria/Mapa';
 import { mesCorto } from '@/lib/formato';
 
 /* EL PANEL INMOBILIARIO

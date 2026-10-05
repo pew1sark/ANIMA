@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { listarDesarrollos, listarModelos, crearModelo, guardarModelo,
          cargarPrefactibilidad, guardarPeriodo, borrarPeriodo, sembrarCurva,
-         type DesarrolloBreve, type ModeloREI, type Prefactibilidad as Datos } from '@/services/inmobiliaria.service';
-import { TarjetaCifra, Avisos, Elige, Cabecera, escribe } from '@/components/capital/Cifra';
+         type DesarrolloBreve, type ModeloREI, type Prefactibilidad as Datos } from '@/modules/inmobiliaria/inmobiliaria.service';
+import { TarjetaCifra, Avisos, Elige, Cabecera, escribe } from '@/ui/cifras/Cifra';
 import { cantidad } from '@/lib/formato';
 
 /* LA HOJA DE PREFACTIBILIDAD

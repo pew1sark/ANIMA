@@ -39,6 +39,8 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Tipos
         run: npm run typecheck
+      - name: Fronteras entre módulos
+        run: npm run fronteras
       # Compila a una carpeta temporal, nunca a ../app: el build publicado no
       # se toca desde CI. Las variables son ficticias a propósito; el build
       # exige que existan, no que sean reales.

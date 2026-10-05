@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Indicador, Aviso } from '@/services/capital.service';
+import type { Indicador, Aviso } from '@/ui/cifras/trazabilidad';
 import type { ListaResumen, SerieResumen } from '@/services/resumen.service';
 
 /* Real Estate Intelligence, del lado del navegador.
@@ -16,7 +16,7 @@ import type { ListaResumen, SerieResumen } from '@/services/resumen.service';
    —`ci_indicador()` construye las cifras de los dos módulos— y declararlo dos
    veces habría creado dos verdades para una sola forma. */
 
-export type { Indicador, Insumo, Aviso } from '@/services/capital.service';
+export type { Indicador, Insumo, Aviso } from '@/ui/cifras/trazabilidad';
 
 // ------------------------------------------------------------------ panel
 

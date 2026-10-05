@@ -36,6 +36,10 @@ línea es del tenant, no de la persona.
 
 ## Organización del repositorio
 
+> El orden del código de `platform/src` (módulos aislados, `ui/` compartida y
+> sus reglas) está en [`ARQUITECTURA.md`](ARQUITECTURA.md). El árbol de abajo
+> es el de agosto de 2026.
+
 ```
 /                       sitio ANIMA actual (estático) — sigue publicándose igual
 /platform               la plataforma SaaS

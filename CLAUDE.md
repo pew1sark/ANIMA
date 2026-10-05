@@ -49,6 +49,7 @@ cd platform
 npm ci
 npm run dev            # http://localhost:5180/app/
 npm run typecheck
+npm run fronteras      # ningún módulo importa de otro
 npm run build:check    # build de comprobación, no toca app/
 npm run vitrina        # pantallas de Capital con datos falsos, sin Supabase
 ```
@@ -71,8 +72,14 @@ Estado de las migraciones y cómo preparar staging: `docs/MIGRACIONES.md`.
   decide la base (`plan_modules` + `company_modules`), no el código.
 - `core/modules/pestanas.ts` + `core/datos/esquemas.ts` + `components/datos/Vista.tsx`
   — motor declarativo: una entidad nueva es un esquema, no una pantalla.
-- `components/<dominio>/` — pantallas (company, capital, inmobiliaria…).
-- `services/<dominio>.service.ts` — acceso a datos.
+- `modules/<modulo>/` — un módulo vertical con sus pantallas y su servicio
+  (`capital`, `inmobiliaria`). **Un módulo nunca importa de otro**; lo común va
+  a `ui/` o `core/`. `npm run fronteras` lo comprueba (también en CI).
+- `ui/` — piezas compartidas de interfaz: cifras con trazabilidad, período,
+  cuadros de panel, gráficos y mapas. No importa de ningún módulo.
+- `components/` — pantallas del espacio y de COMPANY que aún no pasan a
+  módulo (en migración, ver `docs/ARQUITECTURA.md`).
+- `services/<dominio>.service.ts` — acceso a datos compartido.
 - `index.css` — sistema visual (tokens en `@theme`, clases `.b`, `.campo`,
   `.tarjeta`, `.tabla`, `.aparece`…).
 - No hay router: la navegación es estado en `components/Espacio.tsx`.

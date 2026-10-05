@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { cargarCalidad, type Calidad, type FilaArreglar } from '@/services/inmobiliaria.service';
-import { Cabecera } from '@/components/capital/Cifra';
+import { cargarCalidad, type Calidad, type FilaArreglar } from '@/modules/inmobiliaria/inmobiliaria.service';
+import { Cabecera } from '@/ui/cifras/Cifra';
 import { cantidad } from '@/lib/formato';
 
 /* CALIDAD DE DATO · §48

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { dineroLlano, cantidad } from '@/lib/formato';
-import type { Indicador, Insumo, Formato, Aviso } from '@/services/capital.service';
+import type { Formato } from '@/services/resumen.service';
+import type { Indicador, Insumo, Aviso } from '@/ui/cifras/trazabilidad';
 
 /* Una cifra que se puede abrir.
    ---------------------------------------------------------------------------

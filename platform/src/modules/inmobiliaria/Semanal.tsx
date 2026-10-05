@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { cargarSemanal, type InformeSemanal } from '@/services/inmobiliaria.service';
-import { Cabecera } from '@/components/capital/Cifra';
+import { cargarSemanal, type InformeSemanal } from '@/modules/inmobiliaria/inmobiliaria.service';
+import { Cabecera } from '@/ui/cifras/Cifra';
 import { dinero, cantidad, diaCorto } from '@/lib/formato';
 
 /* WEEKLY MANAGEMENT REPORT · §11 y §49

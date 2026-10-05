@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { REGIONES, MAPA_ANCHO, MAPA_ALTO, reconoceRegion } from '@/components/mapa/chile';
+import { REGIONES, MAPA_ANCHO, MAPA_ALTO, reconoceRegion } from '@/ui/mapa/chile';
 
 /* Dónde está el negocio.
 

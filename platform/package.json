@@ -10,6 +10,7 @@
     "build:check": "vite build --outDir .build-check --emptyOutDir",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "fronteras": "node scripts/fronteras.mjs",
     "vitrina": "vite --config vitrina.config.ts"
   },
   "dependencies": {

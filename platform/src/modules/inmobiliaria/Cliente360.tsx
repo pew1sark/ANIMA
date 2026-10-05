@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { cargarCliente360, buscar, type Cliente360, type GrupoBusqueda } from '@/services/inmobiliaria.service';
-import { Cabecera } from '@/components/capital/Cifra';
+import { cargarCliente360, buscar, type Cliente360, type GrupoBusqueda } from '@/modules/inmobiliaria/inmobiliaria.service';
+import { Cabecera } from '@/ui/cifras/Cifra';
 import { dinero, cantidad, diaCorto, cuando } from '@/lib/formato';
 
 /* CLIENT 360 · §16 a §18

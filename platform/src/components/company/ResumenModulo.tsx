@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { cargarResumen, type Resumen, type Formato, type Tono,
          type ListaResumen, type SerieResumen } from '@/services/resumen.service';
-import { Columnas } from '@/components/graficos/Columnas';
+import { Columnas } from '@/ui/graficos/Columnas';
 import { dinero, dineroCorto, cantidad, mesCorto, diaCorto } from '@/lib/formato';
 
 /* Dibuja el resumen de CUALQUIER módulo.

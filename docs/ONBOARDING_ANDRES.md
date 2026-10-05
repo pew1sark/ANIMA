@@ -120,7 +120,8 @@ Abrir el PR contra **`develop`**, ver CI en verde y pedir revisión a SARK.
 
 | Zona | Andrés | Revisión |
 |---|---|---|
-| `platform/src/components/inmobiliaria/`, `services/inmobiliaria.service.ts`, futuro `modules/casa-click/` | libre | SARK o Andrés |
+| `platform/src/modules/inmobiliaria/`, futuro `modules/casa-click/` | libre | SARK o Andrés |
+| `platform/src/ui/` (sistema de diseño compartido) | propone | **SARK obligatorio** |
 | `platform/src/components/` (resto), `services/`, `docs/` | libre | SARK |
 | `platform/src/core/`, `config/`, `lib/supabase.ts` | con cuidado | **SARK obligatorio** |
 | `supabase/` (migraciones, funciones) | propone | **SARK obligatorio** y SARK aplica |
