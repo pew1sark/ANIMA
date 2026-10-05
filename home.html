@@ -34,7 +34,7 @@
     @media(max-width:680px){ .home-cta .cbtn{flex:1;text-align:center} }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/js/supabase.js?v=nucleo-v13"></script>
+  <script src="assets/js/supabase.js?v=nucleo-v14"></script>
   <script src="assets/js/anima-state.js?v=nucleo-v12"></script>
   <script src="assets/js/icons.js?v=nucleo-v17"></script>
 </head>
@@ -93,12 +93,7 @@
   var SLEPT = AnimaState.sleptText(AnimaState.lastSeen());
 
   var ctx = { signedIn: false, email: "", plan: "ALMA", isCreator: false,
-              perfil: null, verIdiomas: false, lineas: [] };
-
-  /* ¿Esta persona tiene más de una plataforma? Lo decide `mis_lineas()` en la
-     base —el mismo dato con el que el portal dibuja las puertas—, así que el
-     botón de cambiar aparece exactamente cuando hay a dónde ir. */
-  function variasPuertas(){ return (ctx.lineas || []).length > 1; }
+              perfil: null, verIdiomas: false };
 
   /* El menú de la cuenta es EL MISMO en las tres pantallas donde aparece: aquí,
      en el Taller (studio.html) y en COMPANY. Mismo orden y mismas filas al
@@ -137,12 +132,11 @@
     h.push('<div class="apop-sep"></div>');
 
     /* Dónde entro */
-    h.push('<a class="apop-item" href="app/">✦ Mi Alma</a>');
+    h.push('<a class="apop-item" href="studio.html">✦ Mi Alma</a>');
     if (planAllows("CLAN"))      h.push('<a class="apop-item" href="studio.html#go=clanpanel">❂ Mi Clan</a>');
     if (planAllows("SANTUARIO")) h.push('<a class="apop-item" href="studio.html#go=santuario">🜁 Santuario</a>');
     h.push('<a class="apop-item" href="studio.html#go=miplan">❖ Mi plan</a>');
     h.push('<a class="apop-item" href="planes.html">↑ Mejorar plan</a>');
-    if (variasPuertas()) h.push('<a class="apop-item" href="app/">⇄ Cambiar de plataforma</a>');
     h.push('<div class="apop-sep"></div>');
 
     /* Los cinco de siempre, en el mismo orden que en COMPANY */
@@ -174,12 +168,7 @@
   async function cargarPerfil(){
     if (ctx.perfil || typeof Cloud === "undefined" || !Cloud.enabled) return;
     try {
-      var r = await Promise.all([Cloud.perfil(), Cloud.lineas()]);
-      ctx.perfil = r[0];
-      /* Si la consulta falla o vuelve vacía, se conserva lo que ya se sabía:
-         una respuesta a medias no debería hacer desaparecer el botón de
-         cambiar de plataforma delante de quien lo estaba mirando. */
-      if ((r[1] || []).length) ctx.lineas = r[1];
+      ctx.perfil = await Cloud.perfil();
       pintarMenu();
     } catch (e) {}
   }
@@ -201,12 +190,9 @@
     var s = AnimaState.get();
     var nameFirst = (s.name || "Alma").split(" ")[0];
     var right = ctx.signedIn
-      ? (variasPuertas()
-          ? '<a class="home-puertas" href="app/" title="Volver a elegir plataforma" aria-label="Plataformas">⇄<span class="pt"> Plataformas</span></a>'
-          : '') +
-        '<div class="alma-pill" id="almaPill"><span class="adot"></span>' + esc(nameFirst) +
+      ? '<div class="alma-pill" id="almaPill"><span class="adot"></span>' + esc(nameFirst) +
           '<span class="acaret">⌄</span><div class="alma-pop" id="almaPop">' + menuHTML() + '</div></div>'
-      : '<a class="h-btn pri h-btn-sm" href="app/">Entrar</a>';
+      : '<a class="h-btn pri h-btn-sm" href="entrar.html">Entrar</a>';
     return '<div class="home-top">' +
         '<div class="home-brand"><span class="m">' + PEAK + '</span>ANIMA</div>' +
         '<div class="h-der">' + right + '</div>' +
@@ -234,8 +220,8 @@
           '<small id="homeSoulsSub">El Umbral de ANIMA.</small>' +
         '</div>' +
         '<div class="h-cta rv" style="--d:5">' +
-          '<a class="h-btn pri" href="app/">Entrar a mi Alma</a>' +
-          '<a class="h-btn sec" href="app/">Pedir acceso</a>' +
+          '<a class="h-btn pri" href="entrar.html">Entrar a mi Alma</a>' +
+          '<a class="h-btn sec" href="entrar.html#pedir">Pedir acceso</a>' +
         '</div>' +
       '</div>' +
       foot();
@@ -368,9 +354,6 @@
           ctx.signedIn = true;
           ctx.email = (session.user && session.user.email || "").toLowerCase();
           ctx.isCreator = ctx.email === CREATOR_EMAIL;
-          /* Las puertas se piden acá y no al abrir el menú: el botón de
-             plataformas vive en la cabecera, y la cabecera se dibuja una vez. */
-          try { ctx.lineas = await Cloud.lineas(); } catch (e) {}
           var row = await Cloud.myAlma();
           if (row) {
             ctx.plan = row.plan || "ALMA";

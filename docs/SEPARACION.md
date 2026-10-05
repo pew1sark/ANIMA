@@ -46,12 +46,24 @@ filas y su propia copia del esquema.
 Ninguna corta producción. Cada una es un PR (o una ventana coordinada, la 4) y
 espera la aprobación de SARK.
 
-### 1 · STUDIO entra por su propia puerta *(repo actual)*
-- Login y alta de cuentas propias en STUDIO (`entrar.html`), con la invitación
-  `ANIMA-2026` y `complete_awakening` que hoy viven en `/app/`.
-- `home.html`, `umbral.html`, `despertar.html`, `index.html`: «Entrar» y las
-  invitaciones de STUDIO llevan a la entrada de STUDIO, no a `/app/`.
-- COMPANY sigue igual. Se puede probar sin tocar la base.
+### 1 · STUDIO entra por su propia puerta *(repo actual)* — ✅ hecha (PR de etapa 1)
+- `entrar.html` tiene tres modos: entrar, **crear cuenta con invitación**
+  (`?invitacion=CÓDIGO`, validada en la base con `check_invite`; se canjea con
+  `redeem_invite`) y **pedir acceso** (`#pedir`, a `access_requests` con
+  `linea='studio'`).
+- `umbral.html` → `entrar.html?invitacion=…`; `despertar.html` → `home.html`
+  (conserva el `#` de los enlaces de confirmación antiguos).
+- `home.html` y `studio.html`: sin «Cambiar de plataforma» ni enlaces a
+  `/app/`; «Mi Alma» lleva a `studio.html`. `Cloud.lineas()` (que leía las
+  plataformas de COMPANY) se eliminó.
+- El alta confirma el correo hacia `home.html`, no hacia `/app/`.
+- **Antes de liberar:** agregar `https://animatsc.com/home.html` (y
+  `https://www.animatsc.com/home.html`) a *Authentication → URL
+  Configuration → Redirect URLs* en Supabase. Sin eso, el correo de
+  confirmación vuelve a la Site URL.
+- **Pendiente de decisión:** la portada (`index.html`, `planes.html`,
+  `legal.html`) presenta las dos plataformas y su «Entrar» sigue llevando a
+  `/app/`. ¿Dos entradas separadas, una por plataforma?
 
 ### 2 · COMPANY sin STUDIO *(repo actual, `platform/`)*
 - Fuera `Puertas` de STUDIO, `EntrandoAStudio`, `crearCuentaStudio`,
