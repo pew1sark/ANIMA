@@ -15,8 +15,8 @@ import { env } from '@/config/env';
    La consola va aparte, debajo de la línea: no es un tercer producto ni un
    lugar donde se trabaje. Es el panel desde donde se mira el negocio del
    software. */
-export function Puertas({ studio, company, consola }:
-  { studio?: () => void; company?: () => void; consola?: () => void }) {
+export function Puertas({ studio, company, anteriores, consola }:
+  { studio?: () => void; company?: () => void; anteriores?: () => void; consola?: () => void }) {
   const { user, signOut } = useAuth();
   const h = new Date().getHours();
   const saludo = h < 6 ? 'Buenas noches' : h < 13 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches';
@@ -56,6 +56,13 @@ export function Puertas({ studio, company, consola }:
               glifo={<ApexCompany className="w-[24px] h-[24px]" />}
             />}
           </div>
+
+          {anteriores && (
+            <p className="text-center text-[12px] text-muted mt-3 sube" style={retraso(6)}>
+              ¿Buscas un espacio anterior de COMPANY?{' '}
+              <button onClick={anteriores} className="font-semibold text-ink underline underline-offset-2 hover:text-accent-deep">Abrirlo aquí</button>
+            </p>
+          )}
 
           {consola && (
             <button onClick={consola} style={retraso(6)}
@@ -105,6 +112,21 @@ function Puerta({ onClick, titulo, lema, texto, glifo, d }: {
         </span>
       </span>
     </button>
+  );
+}
+
+/* Quien solo tiene COMPANY va directo al sitio nuevo. */
+export function EntrandoACompany() {
+  useEffect(() => { window.location.replace(env.company); }, []);
+  return (
+    <Oscuro className="min-h-full grid place-items-center p-6">
+      <div className="text-center">
+        <p className="text-[13px] text-muted">Entrando a ANIMA COMPANY…</p>
+        <a href={env.company} className="text-[13px] font-bold text-accent-deep hover:underline mt-2 inline-block">
+          Si no pasa nada, entra aquí
+        </a>
+      </div>
+    </Oscuro>
   );
 }
 
