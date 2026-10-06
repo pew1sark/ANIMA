@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from '@/core/auth/AuthContext';
 import { TenantProvider, useTenant } from '@/core/tenant/TenantContext';
 import { Login } from '@/components/Login';
-import { Puertas, EntrandoAStudio } from '@/components/Puertas';
+import { Puertas, EntrandoAStudio, EntrandoACompany } from '@/components/Puertas';
 import { Elegir } from '@/components/Elegir';
 import { Espacio } from '@/components/Espacio';
 import { Consola } from '@/components/Consola';
@@ -41,15 +41,20 @@ function Portal() {
     setDestinoCrudo(d);
   };
 
-  const deCompany = memberships.filter(m => m.company.linea?.slug === 'company');
+  /* COMPANY ahora vive en company.animatsc.com (otro repo, otra base). Aquí solo
+     quedan los espacios anteriores de esta base —p. ej. la asesoría de Andrés—
+     para no dejar a nadie sin acceso. El Casa Click antiguo ya no se abre desde
+     aquí: su sucesor es el del sitio nuevo. */
+  const deCompany = memberships.filter(m => m.company.linea?.slug === 'company' && m.company.slug !== 'casa-click');
 
   const puedeStudio  = lineas.has('studio');
   const puedeCompany = lineas.has('company');
   /* Cuántos lugares distintos hay a los que ir. Con uno solo no se pregunta. */
   const puertas = (puedeStudio ? 1 : 0) + (puedeCompany ? 1 : 0) + (isPlatformAdmin ? 1 : 0);
 
+  const hayAnteriores = deCompany.length > 0;
   const abierto: Destino | null = destino ?? (
-    puertas > 1 ? null : puedeCompany ? 'company' : isPlatformAdmin ? 'consola' : null
+    puertas > 1 ? null : puedeCompany ? (hayAnteriores ? 'company' : null) : isPlatformAdmin ? 'consola' : null
   );
 
   const activa = deCompany.find(m => m.company.id === current?.company.id) ?? null;
@@ -70,10 +75,12 @@ function Portal() {
   if (!abierto) {
     if (puertas === 0) return <SinAcceso />;
     if (puertas === 1 && puedeStudio) return <EntrandoAStudio />;
+    if (puertas === 1 && puedeCompany) return <EntrandoACompany />;
     return (
       <Puertas
         studio={puedeStudio ? irAStudio : undefined}
-        company={puedeCompany ? () => setDestino('company') : undefined}
+        company={puedeCompany ? irACompany : undefined}
+        anteriores={puedeCompany && hayAnteriores ? () => setDestino('company') : undefined}
         consola={isPlatformAdmin ? () => setDestino('consola') : undefined}
       />
     );
@@ -97,6 +104,7 @@ function Portal() {
 }
 
 function irAStudio() { window.location.href = env.studio; }
+function irACompany() { window.location.href = env.company; }
 
 /* Ni Alma ni plan: la cuenta existe y no está en ningún lado. Es lo que ve
    alguien recién creado en Auth y en nada más. */
