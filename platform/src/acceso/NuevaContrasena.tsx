@@ -1,0 +1,73 @@
+import { useState, type FormEvent } from 'react';
+import { Oscuro } from '@/ui/Oscuro';
+import { useAuth } from '@/core/auth/AuthContext';
+import { Marca } from '@/ui/Marca';
+import { accesoService, vieneDeInvitacion, limpiarMarcaDeInvitacion } from '@/services/acceso.service';
+
+/* Se llega aquí solo desde el enlace del correo. Hay sesión, pero todavía no se
+   entra a ninguna parte: primero la contraseña nueva.
+
+   Se llega por dos caminos distintos y conviene no confundirlos en la copia:
+   quien RECUPERA ya conocía ANIMA y perdió la llave; quien ACTIVA su
+   invitación está entrando por primera vez y no tiene ninguna contraseña que
+   «cambiar». Es la misma pantalla y el mismo paso, con otras palabras. */
+export function NuevaContrasena() {
+  const estrenando = vieneDeInvitacion();
+  const { terminarRecuperacion, signOut } = useAuth();
+  const [clave, setClave] = useState('');
+  const [repetida, setRepetida] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (clave.length < 8) { setError('Usa al menos 8 caracteres.'); return; }
+    if (clave !== repetida) { setError('Las dos contraseñas no coinciden.'); return; }
+    setBusy(true); setError(null);
+    try {
+      await accesoService.fijarContrasena(clave);
+      /* Se limpia el hash del enlace para que recargar no vuelva a esta
+         pantalla, y se sigue adentro con la sesión ya válida. */
+      history.replaceState(null, '', limpiarMarcaDeInvitacion());
+      terminarRecuperacion();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar la contraseña.');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Oscuro className="min-h-full grid place-items-center p-6">
+      <form onSubmit={submit}
+        className="w-full max-w-[420px] aparece vidrio rounded-3xl p-8">
+        <Marca />
+        <h1 className="portal-titulo text-[36px] mt-7">
+          {estrenando ? 'Elige tu contraseña' : 'Nueva contraseña'}
+        </h1>
+        <p className="text-[13px] text-muted mt-1.5 mb-6 leading-relaxed">
+          Elige una que no uses en otra parte. Con esto entras a ANIMA TSC.
+        </p>
+
+        <label className="etiqueta" htmlFor="clave-nueva">Contraseña</label>
+        <input id="clave-nueva" type="password" required autoFocus value={clave}
+               onChange={e => setClave(e.target.value)}
+               autoComplete="new-password" className="campo mb-4" />
+
+        <label className="etiqueta" htmlFor="clave-repetida">Repítela</label>
+        <input id="clave-repetida" type="password" required value={repetida}
+               onChange={e => setRepetida(e.target.value)}
+               autoComplete="new-password" className="campo mb-5" />
+
+        {error && (
+          <p role="alert" className="entra text-[13px] text-danger bg-danger/10 border border-danger/20
+                                     rounded-xl px-3.5 py-2.5 mb-4">{error}</p>
+        )}
+
+        <button type="submit" disabled={busy} className="b b-pri b-lg b-blq">
+          {busy ? <><span className="girito" />Guardando…</> : 'Guardar y entrar'}
+        </button>
+        <button type="button" onClick={signOut} className="b b-fan b-blq mt-2">Cancelar</button>
+      </form>
+    </Oscuro>
+  );
+}

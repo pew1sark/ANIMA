@@ -9,9 +9,9 @@
 import type {
   Panel, Filtros, Indicador, Aviso, ModeloCalculado, ModeloBreve, ProyectoBreve,
   PortafolioBreve, Presupuesto, Levantamiento, Requisito, Ronda, RondaBreve, Dilucion
-} from '../services/capital.service';
+} from '../modules/capital/capital.service';
 
-export type * from '../services/capital.service';
+export type * from '../modules/capital/capital.service';
 
 const espera = <T,>(v: T, ms = 120): Promise<T> =>
   new Promise(r => setTimeout(() => r(v), ms));

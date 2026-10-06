@@ -232,7 +232,9 @@ aislamiento documentada 13/13 (22-08) y script en `supabase/tests/`.
   pero ninguna aparece en `schema_migrations`: se aplicaron desde el SQL
   Editor. Consecuencia: `supabase db push` o una branch nueva **no las
   reproduciría igual**.
-- **Conclusión:** hoy **no se puede levantar una base de staging fiel desde el
+- **Actualización (5-oct):** resuelto. Ver [`MIGRACIONES.md`](MIGRACIONES.md):
+  el repo reconstruye producción y CI lo comprueba en cada PR.
+- **Conclusión original:** hoy **no se puede levantar una base de staging fiel desde el
   repo** sin antes reconciliar el historial. Es el bloqueo principal de la Fase 1.
 
 ### Seed
@@ -341,6 +343,13 @@ decidir qué hacer con los puntos de seguridad de la sección 9.
 
 ### 🟡 Baja
 
+- **Código muerto confirmado (5-oct, Fase 2):** `components/Panel.tsx` (sin
+  uso desde el portal común, commit `2b8d399`), `services/platform.service`
+  (solo lo usaba ese panel), `audit.service`, `companies.service`,
+  `members.service`, `hooks/useModuleGuard` y `core/permissions/permissions`.
+  Ningún archivo los importa y el bundle sale idéntico sin ellos. Borrados en
+  la Fase 2.
+
 12. Dependencias sin uso (`react-router-dom`, `@tanstack/react-query`).
 13. Sin linter, formateador ni tests de frontend.
 14. Ramas remotas abandonadas o sin fusionar.
@@ -362,7 +371,15 @@ decidir qué hacer con los puntos de seguridad de la sección 9.
 
 ---
 
-## 11. Decisiones que necesita SARK antes de la Fase 1
+## 11. Decisiones (respondidas el 5-oct)
+
+- **Andrés** es el socio y desarrollador; su cuenta en `asesoria-andres` es
+  de cliente y no se usa para desarrollar.
+- **STUDIO y COMPANY se separan**: repo privado y Supabase propio para
+  COMPANY, sin puerta cruzada, lo compartido por copia. Plan en
+  [`SEPARACION.md`](SEPARACION.md).
+
+## 11b. Decisiones originales planteadas antes de la Fase 1
 
 1. **Studio y Andrés.** Opciones: (a) mantener un solo repo y proteger STUDIO
    con CODEOWNERS + protección de rama — Andrés puede leerlo pero no fusionar

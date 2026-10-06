@@ -24,6 +24,12 @@ Documentos clave: `docs/AUDITORIA.md` (estado real y riesgos),
 
 ## Reglas que no se rompen
 
+0. **STUDIO y COMPANY son plataformas separadas. Nunca mezclarlas.** Solo
+   comparten interfaz y mecánicas reutilizables, y por **copia**: ninguna
+   importa, enlaza ni lee datos de la otra. COMPANY se va a su propio repo
+   privado y su propio Supabase (`docs/SEPARACION.md`). Mientras conviven
+   aquí, nada nuevo puede cruzarlas.
+
 1. **Producción es intocable.** Nunca push a `main`; nunca aplicar migraciones,
    `execute_sql` de escritura ni deploy de Edge Functions contra
    `jwxeowowuxmijuexdrua` sin que SARK lo pida explícitamente en ese momento.
@@ -49,25 +55,41 @@ cd platform
 npm ci
 npm run dev            # http://localhost:5180/app/
 npm run typecheck
+npm run fronteras      # ningún módulo importa de otro
 npm run build:check    # build de comprobación, no toca app/
 npm run vitrina        # pantallas de Capital con datos falsos, sin Supabase
 ```
 
-No hay linter ni tests de frontend todavía. Las pruebas de aislamiento de la
-base están en `supabase/tests/` (se corren en staging).
+No hay linter ni tests de frontend todavía.
+
+Base de datos (Postgres desechable, nunca staging ni producción):
+
+```bash
+PGHOST=localhost PGUSER=postgres supabase/tests/reconstruir/reconstruir.sh
+# migraciones desde cero + seed.sql + 15 pruebas de aislamiento
+```
+
+Estado de las migraciones y cómo preparar staging: `docs/MIGRACIONES.md`.
 
 ## Estructura de `platform/src`
 
 - `core/auth`, `core/tenant` — sesión y organización activa (`useAuth`, `useTenant`).
 - `core/modules/registry.ts` — catálogo de módulos. Qué ve cada empresa lo
   decide la base (`plan_modules` + `company_modules`), no el código.
-- `core/modules/pestanas.ts` + `core/datos/esquemas.ts` + `components/datos/Vista.tsx`
+- `core/modules/pestanas.ts` + `core/datos/esquemas.ts` + `core/datos/vista/Vista.tsx`
   — motor declarativo: una entidad nueva es un esquema, no una pantalla.
-- `components/<dominio>/` — pantallas (company, capital, inmobiliaria…).
-- `services/<dominio>.service.ts` — acceso a datos.
+- `modules/<modulo>/` — un módulo vertical con sus pantallas y su servicio
+  (`capital`, `inmobiliaria`, `analisis`). **Un módulo nunca importa de otro**; lo común va
+  a `ui/` o `core/`. `npm run fronteras` lo comprueba (también en CI).
+- `ui/` — piezas compartidas de interfaz: cifras con trazabilidad, período,
+  cuadros de panel, gráficos y mapas. No importa de ningún módulo.
+- `acceso/` (antes de entrar), `consola/` (super admin) y `espacio/` (el
+  shell de una organización: inicio, informes, ajustes). El shell monta
+  módulos; un módulo nunca importa del shell.
+- `services/<dominio>.service.ts` — acceso a datos compartido.
 - `index.css` — sistema visual (tokens en `@theme`, clases `.b`, `.campo`,
   `.tarjeta`, `.tabla`, `.aparece`…).
-- No hay router: la navegación es estado en `components/Espacio.tsx`.
+- No hay router: la navegación es estado en `espacio/Espacio.tsx`.
 
 ## Convenciones
 

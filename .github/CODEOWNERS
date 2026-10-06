@@ -13,6 +13,13 @@
 
 # Núcleo de la plataforma: sesión, organización, permisos, registro de módulos.
 /platform/src/core/                 @pew1sark
+# Sistema de diseño compartido: lo usan todos los módulos.
+/platform/src/ui/                   @pew1sark
+# Shell: entrada, consola de plataforma y espacio de trabajo.
+/platform/src/acceso/               @pew1sark
+/platform/src/consola/              @pew1sark
+/platform/src/espacio/              @pew1sark
+/platform/scripts/                  @pew1sark
 /platform/src/config/               @pew1sark
 /platform/src/lib/supabase.ts       @pew1sark
 
@@ -36,8 +43,7 @@
 # Descomentar reemplazando ANDRES_GITHUB por su usuario de GitHub, después de
 # que acepte la invitación al repo (un usuario sin acceso invalida la línea).
 # ---------------------------------------------------------------------------
-# /platform/src/components/inmobiliaria/       @pew1sark @ANDRES_GITHUB
-# /platform/src/services/inmobiliaria.service.ts @pew1sark @ANDRES_GITHUB
+# /platform/src/modules/inmobiliaria/          @pew1sark @ANDRES_GITHUB
 # /platform/src/modules/casa-click/            @pew1sark @ANDRES_GITHUB
 # /docs/real-estate-intelligence.md            @pew1sark @ANDRES_GITHUB
 # /docs/brokerage.md                           @pew1sark @ANDRES_GITHUB

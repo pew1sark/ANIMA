@@ -46,3 +46,4 @@ supabase/datos-clientes/
 
 # Build de comprobación local (npm run build:check); el publicado va en app/
 platform/.build-check/
+supabase/tests/reconstruir/.error

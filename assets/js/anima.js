@@ -5055,7 +5055,7 @@ function retomarPantalla(){
 }
 async function loadMyAlma(){
   const row=await Cloud.myAlma(); if(!row) return;
-  /* El rito del Despertar ya no existe (la cuenta se crea en /app/). Un Alma
+  /* El rito del Despertar ya no existe (la cuenta se crea en entrar.html). Un Alma
      que aún no lo tenía marcado se marca aquí, sin pantallas de por medio. */
   if(row.awakening_completed === false){ try{ await Cloud.completeAwakening(); }catch(e){} }
   const mods=await Cloud.loadModules(row.id); const a=dbAlmaToState(row,mods);
@@ -5159,9 +5159,6 @@ function renderAlmaMenu(){
   if(planAllows("santuario")) items.push(`<button class="apop-item" data-almago="santuario">🜁 Santuario</button>`);
   items.push(`<button class="apop-item" data-almago="miplan">❖ Mi plan</button>`);
   items.push(`<a class="apop-item" href="planes.html" target="_blank" rel="noreferrer">↑ Mejorar plan</a>`);
-  /* Moverse a COMPANY sin cerrar sesión. Solo si de verdad hay a dónde ir:
-     ofrecerle cambiar de plataforma a quien solo tiene una es ruido. */
-  if((state.lineas||[]).length > 1) items.push(`<a class="apop-item" href="app/">⇄ Cambiar de plataforma</a>`);
   items.push(`<div class="apop-sep"></div>`);
 
   /* Ajustes de la cuenta — los mismos cinco que en COMPANY */
@@ -5194,14 +5191,12 @@ function renderAlmaMenu(){
   pop.innerHTML=items.join("");
 }
 
-/* El perfil y las puertas se piden una vez, al abrir el menú por primera vez. */
+/* El perfil se pide una vez, al abrir el menú por primera vez. STUDIO no
+   ofrece "cambiar de plataforma": COMPANY es otra plataforma, aparte. */
 async function loadPerfil(){
   if(!Cloud.enabled || state.perfil) return;
   try{
-    const [perfil, lineas] = await Promise.all([Cloud.perfil(), Cloud.lineas()]);
-    state.perfil = perfil;
-    /* Una respuesta vacía no borra lo que ya se sabía. */
-    if((lineas||[]).length) state.lineas = lineas;
+    state.perfil = await Cloud.perfil();
     renderAlmaMenu();
   }catch(e){}
 }

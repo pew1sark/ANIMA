@@ -54,10 +54,12 @@ const Cloud = {
   async session(){ if(!_sb) return null; const { data } = await _sb.auth.getSession(); return data.session; },
   async user(){ if(!_sb) return null; const { data } = await _sb.auth.getUser(); return data.user; },
   /* emailRedirectTo: si el proyecto pide confirmar el correo, el enlace vuelve
-     a /app/ con la sesión abierta. Debe estar en las Redirect URLs de Supabase
-     Auth; si no lo está, Supabase usa la Site URL. */
+     al Home de STUDIO con la sesión abierta (supabase.js la recoge del enlace).
+     STUDIO y COMPANY son plataformas separadas: una cuenta de STUDIO nunca
+     pasa por /app/. Debe estar en las Redirect URLs de Supabase Auth; si no lo
+     está, Supabase usa la Site URL. */
   signUp(email, password, name, affinity){ return _sb.auth.signUp({ email, password, options:{ data:{ name, affinity:affinity||null },
-    emailRedirectTo: location.origin + "/app/" } }); },
+    emailRedirectTo: location.origin + "/home.html" } }); },
   signIn(email, password){ return _sb.auth.signInWithPassword({ email, password }); },
   signOut(){ return _sb.auth.signOut(); },
   onAuth(cb){ if(_sb) _sb.auth.onAuthStateChange((_e, s)=>cb(s)); },
@@ -213,13 +215,17 @@ const Cloud = {
     }catch(e){}
   },
 
-  /* Qué plataformas abre el plan de esta persona: ['studio'], ['company'] o
-     las dos. Lo decide `mis_lineas()` en la base, no el navegador — el mismo
-     dato con el que el portal dibuja las puertas. Sirve para no ofrecer
-     "cambiar de plataforma" a quien solo tiene una. */
-  async lineas(){
-    try{ const { data, error } = await _sb.rpc("mis_lineas"); if(error) return []; return data||[]; }
-    catch(e){ return []; }
+  /* Pedir acceso a STUDIO sin cuenta. No crea nada: deja la petición anotada
+     para que SARK la revise y abra la puerta a mano. Pedir dos veces no es un
+     error (hay un índice único sobre las pendientes): ya está pedido. */
+  async pedirAcceso({ email, nombre, mensaje }){
+    if(!_sb) throw new Error("Sin conexión a la nube.");
+    const limpio = v => { const x = String(v||"").trim(); return x === "" ? null : x; };
+    const { error } = await _sb.from("access_requests").insert({
+      email: String(email||"").trim().toLowerCase(), nombre: limpio(nombre),
+      mensaje: limpio(mensaje), linea: "studio", fuente: "login"
+    });
+    if(error && !/duplicate key|unique/i.test(error.message)) throw error;
   },
 
   /* Uso y tope de cada cuota del plan contratado. Lista vacía = sin topes,

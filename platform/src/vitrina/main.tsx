@@ -3,11 +3,11 @@ import { createRoot } from 'react-dom/client';
 import '@/index.css';
 import { fijarMoneda } from '@/lib/formato';
 import { pestanasDe } from '@/core/modules/pestanas';
-import { LevantamientoCapital } from '@/components/capital/Levantamiento';
-import { PanelCapital } from '@/components/capital/Panel';
-import { ModeloFinanciero } from '@/components/capital/Modelo';
-import { PresupuestoVsReal } from '@/components/capital/Presupuesto';
-import { RondaCapital } from '@/components/capital/Ronda';
+import { LevantamientoCapital } from '@/modules/capital/Levantamiento';
+import { PanelCapital } from '@/modules/capital/Panel';
+import { ModeloFinanciero } from '@/modules/capital/Modelo';
+import { PresupuestoVsReal } from '@/modules/capital/Presupuesto';
+import { RondaCapital } from '@/modules/capital/Ronda';
 import { MODULES } from '@/core/modules/registry';
 
 /* La vitrina. Las cuatro pantallas de Capital Intelligence con datos falsos,

@@ -9,11 +9,11 @@
   <style>html,body{margin:0;height:100%;background:#0b0b0c;color:#f4f2ed;font:14px/1.5 Inter,system-ui,sans-serif}
     body{display:grid;place-items:center}a{color:inherit}</style>
   <script>
-    /* El rito del Despertar ya no existe: crear cuenta y entrar viven en /app/.
-       Se conserva la query y el fragmento: un enlace de confirmación de correo
-       antiguo trae aquí la sesión en el #, y /app/ la recoge. */
-    location.replace("app/" + location.search + location.hash);
+    /* El rito del Despertar ya no existe. Se conserva la query y el fragmento:
+       un enlace de confirmación de correo antiguo trae aquí la sesión en el #,
+       y el Home de STUDIO la recoge (supabase.js lee el enlace al cargar). */
+    location.replace("home.html" + location.search + location.hash);
   </script>
 </head>
-<body><a href="app/">Entrar a ANIMA →</a></body>
+<body><a href="home.html">Entrar a ANIMA STUDIO →</a></body>
 </html>

@@ -19,7 +19,8 @@ Hay una rama vieja `development` sin uso: borrarla para no confundir.
   - [ ] Require review from Code Owners
   - [ ] Dismiss stale approvals when new commits are pushed
 - [ ] Require status checks to pass: `Plataforma (tipos y build)`,
-      `Sitio y STUDIO (sintaxis JS)`, `Migraciones`, `Secretos`
+      `Sitio y STUDIO (sintaxis JS)`, `Migraciones`, `Secretos`,
+      `Base (reconstrucción, seed y aislamiento)`
 - [ ] Require branches to be up to date before merging
 - [ ] Block force pushes · Restrict deletions
 - [ ] **Do not allow bypassing the above settings: desactivado.**
@@ -42,19 +43,24 @@ aprobación de SARK (CODEOWNERS sobre la raíz y `assets/`). Si hace falta que
 ni lo lea, hay que separar COMPANY en un repo privado (decisión pendiente,
 ver `docs/AUDITORIA.md` §11).
 
-### 3. Entorno de staging (decisión pendiente)
+### 3. Entorno de staging (10 minutos)
 
-Mientras no exista, Andrés no puede probar nada contra una base.
+Mientras no exista, Andrés no puede probar nada contra una base. El repo ya
+reconstruye el esquema de producción (ver `docs/MIGRACIONES.md`).
 
 - [ ] Crear un proyecto Supabase nuevo, por ejemplo `anima-staging` (plan gratuito).
-- [ ] Llevar el esquema. **Bloqueo actual:** las migraciones del repo no
-      reproducen producción tal cual (ver auditoría §5). Hay que reconciliarlas
-      antes, o partir de un volcado **solo de esquema** de producción
-      (`supabase db dump --db-url "<conexión de prod>" -f esquema.sql`: por
-      defecto no incluye datos). Lo hace SARK; el archivo no se versiona.
-- [ ] Cargar datos ficticios (`supabase/seed.sql`, se escribe junto con staging).
-- [ ] Crear los usuarios de prueba de Andrés allí.
-- [ ] Pasarle **solo** la URL y la clave publicable de staging.
+- [ ] En ese proyecto, Authentication → Users → crear `sarkgraff@gmail.com`
+      (las migraciones de datos 0069+ la buscan).
+- [ ] Desde la raíz del repo:
+      `STAGING_DB_URL='postgresql://…staging…' supabase/staging/preparar.sh`.
+      Aplica las migraciones, apaga los crons, carga el seed ficticio y prueba
+      el aislamiento. Se niega a correr si la URL es de producción.
+- [ ] Desplegar las Edge Functions en staging solo si hacen falta
+      (`supabase functions deploy <nombre> --project-ref <ref-staging>`).
+- [ ] Pasarle a Andrés **solo** la URL y la clave publicable de staging. Él
+      entra con `andres@anima.test` / `anima-staging` y es admin de
+      «Inmobiliaria Demo», que tiene encendido Real Estate Intelligence como
+      Casa Click.
 
 ### 4. Lo que Andrés NO recibe
 
@@ -114,8 +120,10 @@ Abrir el PR contra **`develop`**, ver CI en verde y pedir revisión a SARK.
 
 | Zona | Andrés | Revisión |
 |---|---|---|
-| `platform/src/components/inmobiliaria/`, `services/inmobiliaria.service.ts`, futuro `modules/casa-click/` | libre | SARK o Andrés |
-| `platform/src/components/` (resto), `services/`, `docs/` | libre | SARK |
+| `platform/src/modules/inmobiliaria/`, futuro `modules/casa-click/` | libre | SARK o Andrés |
+| `platform/src/ui/` (sistema de diseño compartido) | propone | **SARK obligatorio** |
+| `platform/src/modules/` (otros módulos), `services/`, `docs/` | libre | SARK |
+| `platform/src/espacio/`, `acceso/`, `consola/` (shell) | propone | **SARK obligatorio** |
 | `platform/src/core/`, `config/`, `lib/supabase.ts` | con cuidado | **SARK obligatorio** |
 | `supabase/` (migraciones, funciones) | propone | **SARK obligatorio** y SARK aplica |
 | `.github/`, `vite.config.ts`, `package.json` | propone | **SARK obligatorio** |
