@@ -29,7 +29,9 @@
     .fld{margin-bottom:14px}
     .fld label{display:block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--gold-deep);margin-bottom:6px}
     .fld input{width:100%;padding:13px 14px;border:1px solid var(--line-2);border-radius:13px;background:#fff;font-size:15px;color:var(--ink);outline:none;transition:.15s}
-    .fld input:focus{border-color:var(--gold)}
+    .fld input:focus,.fld textarea:focus{border-color:var(--gold)}
+    .fld textarea{width:100%;padding:13px 14px;border:1px solid var(--line-2);border-radius:13px;background:#fff;font-size:15px;color:var(--ink);outline:none;transition:.15s;font-family:inherit;resize:vertical;min-height:84px}
+    [hidden]{display:none!important}
     .row-between{display:flex;justify-content:flex-end;margin:-6px 0 16px}
     .link{background:none;border:0;color:var(--gold-deep);font-size:12.5px;cursor:pointer;text-decoration:none;font-weight:700;padding:0}
     .link:hover{text-decoration:underline}
@@ -40,7 +42,7 @@
     .topbrand{position:relative;z-index:2;text-align:center;margin:30px 0 22px;font-weight:850;letter-spacing:.04em}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/js/supabase.js?v=nucleo-v13"></script>
+  <script src="assets/js/supabase.js?v=nucleo-v14"></script>
 </head>
 <body class="rite" style="display:block;align-items:stretch;justify-content:flex-start">
   <div class="field"><div class="core"></div></div>
@@ -66,9 +68,36 @@
       <div class="auth-msg" id="msg"></div>
     </form>
 
-    <div class="auth-foot">
+    <!-- Crear cuenta: solo con una invitación válida (la valida check_invite en la base). -->
+    <form id="crearForm" autocomplete="on" hidden>
+      <div class="fld"><label>Tu nombre</label>
+        <input id="cNombre" type="text" autocomplete="name" required /></div>
+      <div class="fld"><label>Correo</label>
+        <input id="cEmail" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" required /></div>
+      <div class="fld"><label>Contraseña</label>
+        <input id="cPass" type="password" placeholder="Al menos 8 caracteres" autocomplete="new-password" minlength="8" required /></div>
+      <button class="cbtn block" id="crearBtn" type="submit">Despertar mi Alma ✦</button>
+      <div class="auth-msg" id="cMsg"></div>
+    </form>
+
+    <!-- Pedir acceso: no crea cuenta, deja la petición para que SARK la revise. -->
+    <form id="pedirForm" autocomplete="on" hidden>
+      <div class="fld"><label>Correo</label>
+        <input id="pEmail" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" required /></div>
+      <div class="fld"><label>Tu nombre</label>
+        <input id="pNombre" type="text" autocomplete="name" /></div>
+      <div class="fld"><label>¿Qué creas? <span style="text-transform:none;font-weight:600;color:var(--muted)">(opcional)</span></label>
+        <textarea id="pMensaje" maxlength="600"></textarea></div>
+      <button class="cbtn block" id="pedirBtn" type="submit">Pedir acceso</button>
+      <div class="auth-msg" id="pMsg"></div>
+    </form>
+
+    <div class="auth-foot" id="pieEntrar">
       ¿Aún no tienes cuenta?<br>
-      <a class="link" href="app/">Pedir acceso →</a>
+      <a class="link" href="#pedir" id="irPedir">Pedir acceso →</a>
+    </div>
+    <div class="auth-foot" id="pieVolver" hidden>
+      <a class="link" href="entrar.html" id="irEntrar">← Ya tengo cuenta</a>
     </div>
     <p class="seal" style="margin-top:22px">🔒 Tu Raíz, memorias y proyectos son privados.</p>
   </main>
@@ -118,6 +147,82 @@
       if(/invalid login/i.test(m)) m="Correo o contraseña incorrectos.";
       else if(/email not confirmed/i.test(m)) m="Confirma tu correo antes de entrar (revisa tu bandeja).";
       setMsg(m);
+    }
+  });
+
+  /* ---------------------------------------------------------------------------
+     Tres puertas en una pantalla: entrar, crear cuenta (con invitación) y pedir
+     acceso. Antes las dos últimas vivían en /app/, que es COMPANY: STUDIO y
+     COMPANY son plataformas separadas y una cuenta de STUDIO nunca pasa por allá.
+     --------------------------------------------------------------------------- */
+  var titulo = document.querySelector(".auth-card h1"), bajada = document.querySelector(".auth-card .sub");
+  function modo(m){
+    $("loginForm").hidden = m !== "entrar";
+    $("crearForm").hidden = m !== "crear";
+    $("pedirForm").hidden = m !== "pedir";
+    $("pieEntrar").hidden = m !== "entrar";
+    $("pieVolver").hidden = m === "entrar";
+    if (m === "crear") { titulo.textContent = "Despierta tu Alma"; bajada.textContent = "Tienes una invitación a ANIMA STUDIO."; }
+    else if (m === "pedir") { titulo.textContent = "Pide tu lugar"; bajada.textContent = "El acceso a ANIMA STUDIO es por invitación."; }
+    else { titulo.textContent = "Entra a tu Alma"; bajada.textContent = "Tu espacio privado, en la nube."; }
+  }
+
+  /* La invitación llega en ?invitacion=CÓDIGO (umbral.html la reenvía aquí). Se
+     valida en la base con check_invite: el código no vive en el navegador. */
+  var codigo = (function(){
+    var q = new URLSearchParams(location.search);
+    return (q.get("invitacion") || q.get("codigo") || q.get("code") || "").trim().toUpperCase();
+  })();
+  (async function(){
+    if (location.hash === "#pedir") { modo("pedir"); return; }
+    if (!codigo || typeof Cloud === "undefined" || !Cloud.enabled) return;
+    try { if (await Cloud.checkInvite(codigo)) modo("crear"); } catch(e) {}
+  })();
+  $("irPedir").addEventListener("click", function(e){ e.preventDefault(); history.replaceState(null, "", "#pedir"); modo("pedir"); });
+
+  $("crearForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+    var nombre = $("cNombre").value.trim(), email = $("cEmail").value.trim().toLowerCase(), pass = $("cPass").value;
+    var m = $("cMsg");
+    function msg(t, ok){ m.textContent = t || ""; m.className = "auth-msg" + (t ? (ok ? " ok" : " err") : ""); }
+    if (!nombre || !email || pass.length < 8) { msg("Completa tu nombre, correo y una contraseña de al menos 8 caracteres."); return; }
+    var btn = $("crearBtn"); btn.disabled = true; msg("Despertando tu Alma…", true);
+    try {
+      /* Se vuelve a validar justo antes: entre que abrió la página y ahora, una
+         invitación de un solo uso pudo haberse usado. */
+      if (!(await Cloud.checkInvite(codigo))) throw new Error("La invitación ya no es válida.");
+      var r = await Cloud.signUp(email, pass, nombre);
+      if (r.error) throw r.error;
+      if (r.data && r.data.session) {
+        try { await Cloud.redeemInvite(codigo); } catch(e) {}
+        try { await Cloud.completeAwakening(); } catch(e) {}
+        try { sessionStorage.setItem("anima_tab", "1"); } catch(e) {}
+        location.href = "home.html";
+      } else {
+        msg("✦ Revisa tu correo: te enviamos un enlace para confirmar la cuenta.", true);
+      }
+    } catch(err) {
+      btn.disabled = false;
+      var t = (err && err.message) || "No se pudo crear la cuenta.";
+      if (/already registered|already exists/i.test(t)) t = "Ese correo ya tiene cuenta. Entra con tu contraseña.";
+      msg(t);
+    }
+  });
+
+  $("pedirForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+    var m = $("pMsg");
+    function msg(t, ok){ m.textContent = t || ""; m.className = "auth-msg" + (t ? (ok ? " ok" : " err") : ""); }
+    var email = $("pEmail").value.trim();
+    if (!email) { msg("Escribe tu correo."); return; }
+    var btn = $("pedirBtn"); btn.disabled = true; msg("Enviando…", true);
+    try {
+      await Cloud.pedirAcceso({ email: email, nombre: $("pNombre").value, mensaje: $("pMensaje").value });
+      $("pedirForm").reset();
+      msg("✦ Listo. Te escribiremos cuando se abra tu lugar.", true);
+    } catch(err) {
+      btn.disabled = false;
+      msg((err && err.message) || "No se pudo enviar. Inténtalo de nuevo.");
     }
   });
   </script>

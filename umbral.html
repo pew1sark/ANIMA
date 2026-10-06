@@ -9,15 +9,16 @@
   <style>html,body{margin:0;height:100%;background:#0b0b0c;color:#f4f2ed;font:14px/1.5 Inter,system-ui,sans-serif}
     body{display:grid;place-items:center}a{color:inherit}</style>
   <script>
-    /* El Umbral de la Alpha ya no existe: crear cuenta vive en /app/, con la
-       estética de la plataforma. Esta página queda para que los enlaces de
-       invitación ya enviados (umbral.html?invitacion=CÓDIGO) sigan sirviendo. */
+    /* El Umbral de la Alpha ya no existe: crear cuenta vive en la entrada de
+       STUDIO (entrar.html), que es aparte de COMPANY. Esta página queda para
+       que los enlaces de invitación ya enviados (umbral.html?invitacion=CÓDIGO)
+       sigan sirviendo. */
     (function () {
       var q = new URLSearchParams(location.search), inv = q.get("invitacion") || q.get("codigo") || q.get("code");
       if (!inv) { try { inv = localStorage.getItem("anima_invitacion"); } catch (e) {} }
-      location.replace("app/" + (inv ? "?invitacion=" + encodeURIComponent(inv) : ""));
+      location.replace("entrar.html" + (inv ? "?invitacion=" + encodeURIComponent(inv) : ""));
     })();
   </script>
 </head>
-<body><a href="app/">Entrar a ANIMA →</a></body>
+<body><a href="entrar.html">Entrar a ANIMA STUDIO →</a></body>
 </html>
