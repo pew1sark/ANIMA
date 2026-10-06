@@ -17,5 +17,7 @@ export const env = {
   /** La portada pública. */
   sitio: SITIO,
   /** Donde SARK trabaja como artista: el ANIMA de siempre. */
-  studio: SITIO + 'home.html'
+  studio: SITIO + 'home.html',
+  /** ANIMA COMPANY vive en su propio sitio y su propia base (repo ANIMA-TSC/ANIMA-COMPANY). */
+  company: 'https://company.animatsc.com'
 } as const;
