@@ -1355,8 +1355,10 @@ function projectMetaLine(a,p){
 function projectLocation(p){
   return [p.city,p.comuna].map(x=>String(x||"").trim()).filter(Boolean).join(", ");
 }
-function openProjectRecord(context){
+let _projPreClient=null;      // cliente que ya viene elegido al crear un proyecto desde su ficha de Vínculo
+function openProjectRecord(context,preClient){
   state.projectContext=context||null;
+  _projPreClient=preClient||null;
   openRecord("proyecto");
 }
 /* TALLER — portada/resumen de la morada: un panel por sub-pestaña
@@ -1618,7 +1620,7 @@ function vProyectoDetalle(a, i){
       </div>
     </div>`;
   // Ficha — los datos del trabajo, sus fechas y su historia.
-  const pCli=(a.clients||[]).find(c=>(p.client_id&&c._id===p.client_id)||(p.client&&String(c.name||"").toLowerCase()===String(p.client).toLowerCase()));
+  const pCli=vinDeProyecto(a,p);
   const pLead=(typeof leadDeProyecto==="function")?leadDeProyecto(p):null;
   const pWa=(typeof waBoton==="function")?waBoton((pCli&&pCli.phone)||(pLead&&pLead.phone),p.client,"sm"):"";
   const side=`<div class="card proj-info">
@@ -1626,7 +1628,7 @@ function vProyectoDetalle(a, i){
       <div class="pd-sec">Ficha</div>
       <div class="pd-grid2">
         <div><span class="pd-k">Contexto</span><b>${projectContextBadge(a,p)}</b></div>
-        <div><span class="pd-k">Cliente</span><b>${esc(p.client||"—")}</b>${pWa?`<div style="margin-top:6px">${pWa}</div>`:""}</div>
+        <div><span class="pd-k">Cliente</span><b>${esc(p.client||"—")}</b>${pCli?`<div style="margin-top:6px"><button class="vin-go" data-projgovin="${(a.clients||[]).indexOf(pCli)}">Ver vínculo ›</button></div>`:""}${pWa?`<div style="margin-top:6px">${pWa}</div>`:""}</div>
         <div><span class="pd-k">Plantilla</span><b>${esc(tpl||"Sin plantilla")}</b></div>
         <div><span class="pd-k">Categoría</span><b>${esc(p.category||"—")}</b></div>
         <div><span class="pd-k">Responsable</span><b>${esc(p.responsible||"—")}</b></div>
@@ -2290,12 +2292,56 @@ async function consolaSave(almaId){
 
 /* --- Clientes --- */
 const vinIsColab=c=>String(c.kind||"").toLowerCase()==="colaborador";
-// Proyectos y cotizaciones enlazados a un vínculo (por nombre / id).
+/* Cómo se compara el nombre de un cliente: sin tildes ni mayúsculas, sin signos, sin
+   espacios y sin la forma legal del final. «Café Aurora SpA» y «cafe aurora» son el mismo
+   cliente: antes solo valía el nombre idéntico, y escribirlo un poco distinto creaba un
+   vínculo duplicado.
+   La forma legal solo se quita al FINAL y solo si está escrita como tal: «SpA», «S.A.» (en
+   mayúsculas) o «Ltda.», «EIRL», «Inc», «LLC». «Aurora Spa» (un spa) no es «Aurora SpA».
+   Valen las letras de cualquier alfabeto, y los dígitos separados no se pegan («Local 1 2» no
+   es «Local 12»). Se memoriza: vinLinks la pide miles de veces al dibujar Vínculos. */
+const VIN_LEGAL_MAYUS=/\s+(S\.?\s?[pP]\.?\s?A\.?|S\.?\s?A\.?)\s*$/;           // SpA, SPA, S.p.A., SA, S.A. (distingue mayúsculas)
+const VIN_LEGAL_SUFIJO=/\s+(ltda|limitada|e\.?\s?i\.?\s?r\.?\s?l|inc|llc)\.?\s*$/i;
+const _vinKeys=new Map();
+function vinKey(s){
+  const raw=String(s==null?"":s);
+  let k=_vinKeys.get(raw); if(k!==undefined) return k;
+  const sinLegal=raw.trim().replace(VIN_LEGAL_MAYUS,"").replace(VIN_LEGAL_SUFIJO,"");
+  /* Los puntos se quitan (no se vuelven espacio), salvo entre dígitos: «1.5» no es «15». */
+  const t=deburr(sinLegal.replace(/(\d)\.(?=\d)/g,"$1 ").replace(/\./g,"")).replace(/[^\p{L}\p{M}\p{N} ]/gu," ").replace(/\s+/g," ").trim();
+  const parts=t.split(" ");
+  k=parts[0]||"";
+  for(let i=1;i<parts.length;i++) k+=(/\d$/.test(parts[i-1])&&/^\d/.test(parts[i])?" ":"")+parts[i];
+  if(_vinKeys.size>5000) _vinKeys.clear();
+  _vinKeys.set(raw,k);
+  return k;
+}
+/* El vínculo que ya existe con ese nombre (idéntico primero, parecido después). */
+function vinFind(a,name){
+  const nm=String(name||"").trim().toLowerCase(); if(!nm) return null;
+  const L=a.clients||[], k=vinKey(name);
+  return L.find(c=>String(c.name||"").trim().toLowerCase()===nm)||(k?L.find(c=>vinKey(c.name)===k):null)||null;   // el idéntico vale aunque no tenga letras
+}
+/* Vínculos que se parecen a lo que se está escribiendo (para avisar antes de duplicar). */
+function vinSimilar(a,name){
+  const k=vinKey(name); if(k.length<3) return [];
+  return (a.clients||[]).map(c=>({c,x:vinKey(c.name)})).filter(o=>o.x.length>=3&&(o.x.includes(k)||k.includes(o.x)))
+    .sort((p,q)=>Math.abs(p.x.length-k.length)-Math.abs(q.x.length-k.length)).slice(0,3).map(o=>o.c);   // los más parecidos primero
+}
+/* El cliente de un proyecto: por id si lo trae y ese vínculo sigue existiendo; si no, por nombre. */
+function vinDeProyecto(a,p){
+  return ((p.client_id&&(a.clients||[]).find(c=>c._id===p.client_id))||vinFind(a,p.client))||null;
+}
+// Proyectos y cotizaciones enlazados a un vínculo (por id; sin id, por nombre).
 function vinLinks(a,c){
-  const nm=(c.name||"").toLowerCase();
-  const projs=(a.projects||[]).map((p,i)=>({p,i})).filter(o=>(o.p.client||"").toLowerCase()===nm);
-  const quotes=a.live?(state.cloudQuotes||[]).filter(q=>(c._id&&q.client_id===c._id)||((q.client_name||"").toLowerCase()===nm))
-    :(typeof loadQuotes==="function"?loadQuotes(a):[]).filter(q=>(q.client||"").toLowerCase()===nm);
+  const L=a.clients||[], key=vinKey(c.name), ids=new Set(L.map(x=>x._id).filter(Boolean));
+  const conId=id=>id&&ids.has(id), ex=s=>String(s||"").trim().toLowerCase();
+  /* Por nombre: equivalente al del vínculo, salvo que otro vínculo se llame exactamente así
+     (entonces ese es el dueño; así «Café Aurora» no se queda con lo de «Cafe Aurora SpA»). */
+  const porNombre=nm=>!!ex(nm)&&(ex(c.name)===ex(nm)||(!!key&&vinKey(nm)===key&&!L.some(x=>ex(x.name)===ex(nm))));
+  const projs=(a.projects||[]).map((p,i)=>({p,i})).filter(o=>conId(o.p.client_id)?o.p.client_id===c._id:porNombre(o.p.client));
+  const quotes=a.live?(state.cloudQuotes||[]).filter(q=>(c._id&&q.client_id===c._id)||(!conId(q.client_id)&&porNombre(q.client_name)))
+    :(typeof loadQuotes==="function"?loadQuotes(a):[]).filter(q=>porNombre(q.client));
   const billed=projs.reduce((t,o)=>t+(+o.p.budget||0),0);
   return {projs,quotes,billed};
 }
@@ -2354,7 +2400,7 @@ function vVinculoDetalle(a, i){
       ${c.notes?`<div class="pd-block" style="margin-top:6px"><span class="pd-k">Notas</span><p style="margin:4px 0 0;font-size:14px">${esc(c.notes)}</p></div>`:""}
     </div>
     <div class="card s7">
-      <div class="section-title"><h2 style="font-size:15px">Proyectos</h2><div class="spacer"></div><button class="btn ghost sm" data-add="proyecto">＋ Proyecto</button></div>
+      <div class="section-title"><h2 style="font-size:15px">Proyectos</h2><div class="spacer"></div><button class="btn ghost sm" data-addprojectfor="${i}">＋ Proyecto</button></div>
       ${projRows}
       <div class="section-title" style="margin-top:18px"><h2 style="font-size:15px">Cotizaciones</h2></div>
       ${qRows}
@@ -2600,21 +2646,29 @@ async function qSave(){
   else { const i=list.findIndex(x=>x.id===quoteDraft.id); if(i>=0) list[i]=JSON.parse(JSON.stringify(quoteDraft)); else list.unshift(JSON.parse(JSON.stringify(quoteDraft))); }
   saveQuotes(a,list); renderView(); alert("Cotización guardada.");
 }
+let _qSaving=false;
 async function qSaveCloud(a){
+  if(_qSaving) return;               // un doble toque en Guardar no crea dos cotizaciones ni dos vínculos
+  _qSaving=true;
+  try{ await qSaveCloudInner(a); } finally{ _qSaving=false; }
+}
+async function qSaveCloudInner(a){
   const t=quoteTotals();
   const wasNew=!quoteDraft.id;
   try{
     let clientId=quoteDraft.client_id||null;
     if(quoteDraft.client){
-      let c=(a.clients||[]).find(x=>(x.name||"").toLowerCase()===quoteDraft.client.toLowerCase());
+      /* Si ya viene con el vínculo de esa persona (p. ej. desde una solicitud) se respeta, aunque haya homónimos;
+         si no, el que ya existe con ese nombre, y solo si no hay ninguno se crea. */
+      let c=(clientId&&(a.clients||[]).find(x=>x._id===clientId&&vinKey(x.name)===vinKey(quoteDraft.client)))||vinFind(a,quoteDraft.client);
       if(!c){ const row=await Cloud.insertRow("clients",{alma_id:a.almaId,name:quoteDraft.client}); c={_id:row.id,name:row.name}; (a.clients||(a.clients=[])).unshift(c); }
-      clientId=c._id;
+      clientId=c._id; quoteDraft.client=c.name;      // el nombre queda como el del vínculo (el texto del proyecto no diverge)
     }
     let projectId=quoteDraft.project_id||null;
     if(!projectId && quoteDraft.title){
       const total=Math.round(t.total);
       const prow=await Cloud.insertRow("projects",{alma_id:a.almaId,title:quoteDraft.title,client:quoteDraft.client||null,status:"Planificado",pct:0,budget:total,paid:0,client_id:clientId});
-      projectId=prow.id; a.projects.unshift({_id:prow.id,t:quoteDraft.title,st:"Planificado",pct:0,budget:total,paid:0,client:quoteDraft.client||""});
+      projectId=prow.id; a.projects.unshift({_id:prow.id,t:quoteDraft.title,st:"Planificado",pct:0,budget:total,paid:0,client:quoteDraft.client||"",client_id:clientId});
     }
     const payload={ alma_id:a.almaId, client_id:clientId, project_id:projectId, title:quoteDraft.title, client_name:quoteDraft.client,
       discipline:quoteDraft.discipline, currency:quoteDraft.currency, tax_pct:quoteDraft.taxPct, notes:quoteDraft.notes,
@@ -4673,7 +4727,7 @@ function vRecordatorios(a){
 const EDITORS = {
   proyecto:{ title:"Trabajo", table:"projects", get:a=>a.projects, push:"unshift", xp:60,
     fields:[{k:"context",l:"Contexto",sel:["Personal","Clan","Santuario"]},{k:"template",l:"Plantilla",sel:PROJECT_TEMPLATE_OPTIONS},{k:"t",l:"Nombre"},{k:"category",l:"Categoría"},{k:"color",l:"Color de la tarjeta (para encontrarla rápido)",swatch:true},{k:"client",l:"Cliente / Vínculo opcional",clients:true},{k:"city",l:"Ciudad"},{k:"comuna",l:"Comuna"},{k:"responsible",l:"Responsable"},{k:"link",l:"Vínculo externo opcional"},{k:"st",l:"Estado",sel:["Cotizando","Aprobado","En producción","Revisión","Entregado","Cerrado"]},{k:"pct",l:"Avance %",num:true},{k:"budget",l:"Valor total",num:true},{k:"paid",l:"Abono inicial (los siguientes se registran dentro del trabajo)",num:true},{k:"start",l:"Inicio",date:true},{k:"due",l:"Entrega",date:true},{k:"desc",l:"Entregables / notas",ta:true}],
-    toRow:v=>({title:v.t,client:v.client,status:v.st,pct:clampPct(v.pct),budget:v.budget?+v.budget:null,paid:+v.paid||0,payments:Array.isArray(v.abonos)?v.abonos:undefined,started_at:v.start||null,due_at:v.due||null,description:v.desc,context:v.context,owner_type:v.owner_type,owner:v.owner,template:v.template,category:v.category,responsible:v.responsible,deliverables:v.desc,archive:v.archive||null,color:v.color||null,city:v.city||null,comuna:v.comuna||null}) },
+    toRow:v=>({title:v.t,client:v.client,client_id:v.client_id||null,status:v.st,pct:clampPct(v.pct),budget:v.budget?+v.budget:null,paid:+v.paid||0,payments:Array.isArray(v.abonos)?v.abonos:undefined,started_at:v.start||null,due_at:v.due||null,description:v.desc,context:v.context,owner_type:v.owner_type,owner:v.owner,template:v.template,category:v.category,responsible:v.responsible,deliverables:v.desc,archive:v.archive||null,color:v.color||null,city:v.city||null,comuna:v.comuna||null}) },
   memoria:{ title:"Memoria", table:"memories", get:a=>a.memories, push:"unshift", xp:40,
     fields:[{k:"t",l:"Título"},{k:"d",l:"Descripción",ta:true}], toRow:v=>({title:v.t,detail:v.d}) },
   ingreso:{ title:"Ingreso", table:"finance_entries", get:a=>a.finance.income, push:"unshift", xp:20,
@@ -4703,6 +4757,7 @@ function basicProjectRow(v){
   return {
     title:v.t,
     client:v.client||null,
+    client_id:v.client_id||null,
     status:v.st||"Cotizando",
     pct:clampPct(v.pct),
     budget:v.budget?+v.budget:null,
@@ -4756,18 +4811,52 @@ function openRecord(kind, idx=null){
         <div class="cat-tags">${kc.used.map(c=>chip(c,"")).join("")}${kc.sugg.map(c=>chip(c,"sugg")).join("")}</div>
         ${kc.used.length?`<small class="muted" style="font-size:11px;display:block;margin-top:6px">Sólidas: etiquetas que ya usas · punteadas: sugerencias.</small>`:""}</div>`; }
     if(f.img) return imgUpField("rec_"+f.k, f.l, val, f.folder||"obra");
-    if(f.clients){ const opts=(a.clients||[]).map(c=>`<option value="${esc(c.name)}"></option>`).join("");
-      return `<div class="field"><label>${f.l}</label><input id="rec_${f.k}" list="rec_clientlist" value="${esc(val)}" autocomplete="off" placeholder="Escribe un nombre nuevo o elige uno"><datalist id="rec_clientlist">${opts}</datalist></div>`; }
+    if(f.clients){
+      /* Se elige un vínculo que ya existe (queda enlazado por id) o se escribe uno nuevo. */
+      const L=(a.clients||[]).map(c=>({c,v:c._id||("n:"+c.name)})).sort((x,y)=>String(x.c.name).localeCompare(String(y.c.name),"es"));
+      const hit=(item.client_id&&L.find(o=>o.c._id===item.client_id))||(item.client&&L.find(o=>o.c===vinFind(a,item.client)))||(idx==null&&_projPreClient&&L.find(o=>o.v===_projPreClient))||null;
+      const nuevo=!hit&&!!String(item.client||"").trim(), cur=hit?hit.v:(nuevo?"__nuevo":"");
+      /* Con un vínculo duplicado hay dos «iguales» en la lista: cuántos proyectos tiene cada uno dice cuál es el original. */
+      const rep=new Map(); L.forEach(o=>{ const k=vinKey(o.c.name); rep.set(k,(rep.get(k)||0)+1); });
+      const marca=o=>rep.get(vinKey(o.c.name))>1?(n=>" · "+n+" proyecto"+(n===1?"":"s")+(o.c.created?" · creado "+tallerDate(o.c.created):""))(vinLinks(a,o.c).projs.length):"";
+      return `<div class="field"><label>${f.l}</label>
+        <select id="rec_client_sel"><option value="" ${cur===""?"selected":""}>Sin cliente</option>${L.map(o=>`<option value="${esc(o.v)}" ${o.v===cur?"selected":""}>${esc(o.c.name)}${vinIsColab(o.c)?" (colaborador)":""}${esc(marca(o))}</option>`).join("")}<option value="__nuevo" ${cur==="__nuevo"?"selected":""}>＋ Cliente nuevo…</option></select>
+        <input id="rec_${f.k}" value="${esc(nuevo?item.client:"")}" autocomplete="off" placeholder="Nombre del cliente nuevo" style="margin-top:8px" ${cur==="__nuevo"?"":"hidden"}>
+        <div id="rec_clientsug" class="rec-sug" aria-live="polite"></div>
+        <small class="muted" style="font-size:11px;display:block;margin-top:6px">Elige uno que ya tengas para no duplicarlo. Si es nuevo, se crea en Vínculos.</small></div>`; }
     if(f.date) return `<div class="field"><label>${f.l}</label><input id="rec_${f.k}" type="date" value="${esc(val)}"></div>`;
     return `<div class="field"><label>${f.l}</label><input id="rec_${f.k}" type="${f.num?'number':'text'}" value="${esc(val)}"></div>`;
   }).join("");
+  _projPreClient=null;
   document.getElementById("recDel").style.display=(idx!=null)?"inline-flex":"none";
   document.getElementById("recMsg").textContent="";
   document.getElementById("recordModal").classList.add("open");
 }
 function closeRecord(){ document.getElementById("recordModal").classList.remove("open"); recordCtx=null; }
+/* Proyecto → «＋ Cliente nuevo…» muestra el nombre; mientras se escribe, avisa si se parece a un
+   vínculo que ya existe y deja usarlo con un toque (así no se duplica). */
+function recClientSug(){
+  const box=document.getElementById("rec_clientsug"), inp=document.getElementById("rec_client"); if(!box||!inp) return;
+  const xs=inp.hidden?[]:vinSimilar(me(),inp.value);
+  box.innerHTML=xs.length?`<small class="muted" style="width:100%">¿Es alguno de estos?</small>`+xs.map(c=>`<button type="button" class="rec-sug-b" data-recclientuse="${esc(c._id||("n:"+c.name))}">${esc(c.name)} · usar este</button>`).join(""):"";
+}
+document.addEventListener("change",e=>{
+  const sl=e.target; if(!sl||sl.id!=="rec_client_sel") return;
+  const inp=document.getElementById("rec_client"); if(!inp) return;
+  inp.hidden=sl.value!=="__nuevo";
+  if(!inp.hidden) inp.focus();
+  recClientSug();
+});
+document.addEventListener("input",e=>{ if(e.target&&e.target.id==="rec_client") recClientSug(); });
+let _recSaving=false;
 async function saveRecord(){
+  if(_recSaving){ const m=document.getElementById("recMsg"); if(m) m.textContent="Guardando… espera un momento."; return; }   // un segundo toque en Guardar no repite el guardado (ni crea dos vínculos iguales)
+  _recSaving=true;
+  try{ await saveRecordInner(); } finally{ _recSaving=false; }
+}
+async function saveRecordInner(){
   if(!recordCtx) return; const {kind,idx}=recordCtx; const cfg=EDITORS[kind]; const a=me();
+  let rc=null;                      // cliente elegido (solo proyectos); local: el modal puede cerrarse mientras se guarda
   const v={}; cfg.fields.forEach(f=>{ const el=document.getElementById("rec_"+f.k); v[f.k]=f.num?(+el.value||0):el.value; });
   if(kind==="proyecto"){
     v.context=PROJECT_CONTEXTS.includes(v.context) ? v.context : "Personal";
@@ -4776,6 +4865,10 @@ async function saveRecord(){
     v.owner_type=v.context;
     v.owner=v.context==="Clan" ? (a.clan||"Clan") : v.context==="Santuario" ? (a.santuario||"Santuario") : "Mi Taller";
     v.template=v.template||"Vacío · Proyecto sin plantilla";
+    /* Cliente: uno que ya existe (por id), o uno nuevo. Un nombre parecido a uno existente
+       se enlaza a ese en vez de crear otro vínculo. */
+    rc=projectClientFromForm(a,(document.getElementById("rec_client_sel")||{}).value||"",v.client,idx!=null?cfg.get(a)[idx]:null);
+    v.client=rc.client; v.client_id=rc.client_id;
     if(idx==null){
       // Abono inicial → primer registro del historial de abonos.
       if(+v.paid>0) v.abonos=[{ a:Math.round(+v.paid), on:v.start||new Date().toISOString().slice(0,10), method:"", note:"Abono inicial" }];
@@ -4797,6 +4890,12 @@ async function saveRecord(){
     }
   }
   try{
+    /* El vínculo nuevo se crea recién ahora, con el formulario ya validado: así cancelar o
+       corregir un error no deja un cliente suelto. */
+    if(rc && rc.crear){
+      try{ const c=await vinCrear(a,rc.crear); v.client=c.name; v.client_id=c._id||null; rc.creado=true; }
+      catch(e){ console.warn("ANIMA: no se pudo crear el vínculo del proyecto.", e); rc.fallo=true; }
+    }
     if(idx==null){
       const item={...v};
       if(a.live){ const row=await insertRecordRow(cfg, v, a.almaId); item._id=row.id; }
@@ -4809,10 +4908,11 @@ async function saveRecord(){
       if(milestone) claimed=await rewardOnce(milestone[0],milestone[1],milestone[2]);
       if(!claimed && cfg.xp){ a.xp=(a.xp||0)+cfg.xp; if(a.live){ try{await Cloud.setXP(a.almaId,a.xp);}catch(e){} } }
       if(a.live) recordAlphaEvents(kind, v, arr);
-      if(kind==="proyecto") await interconnectProject(a, v);   // Proyecto ↔ Cliente ↔ Raíz ↔ Flujo
+      if(kind==="proyecto") await interconnectProject(a, v, rc);   // Proyecto ↔ Cliente ↔ Raíz ↔ Flujo
     }else{
       const item=arr[idx]; Object.assign(item,v);
       if(a.live && item._id){ await updateRecordRow(cfg,item._id,v); }
+      if(rc && (rc.creado||rc.via||rc.fallo)) animaToast(rc.fallo?"Proyecto guardado, pero no se pudo crear el vínculo «"+rc.crear+"»: créalo desde Vínculos":rc.creado?"Vínculo creado · proyecto enlazado":"Proyecto enlazado a «"+v.client+"» (ya existía)");
     }
     save(); closeRecord(); renderAll();
   }catch(e){ document.getElementById("recMsg").textContent="No se pudo guardar: "+(e.message||e); }
@@ -4856,19 +4956,39 @@ function recordAlphaEvents(kind, v, arr){
    · Flujo de trabajo: el proyecto entra a tu kanban (su estado).
    Reusa tablas existentes (clients, finance_entries). Sin tocar esquema.
    =========================================================== */
-async function interconnectProject(a, v){
-  const notes=[];
-  // 1 · Vínculo (cliente)
-  const cname=(v.client||"").trim();
-  if(cname){
-    a.clients=a.clients||[];
-    const exists=a.clients.some(c=>String(c.name||"").trim().toLowerCase()===cname.toLowerCase());
-    if(!exists){
-      const item={ name:cname };
-      if(a.live){ try{ const row=await Cloud.insertRow("clients",{ name:cname, alma_id:a.almaId }); item._id=row.id; }catch(e){} }
-      a.clients.unshift(item); notes.push("Vínculo creado");
-    } else { notes.push("Vínculo enlazado"); }
+/* Qué cliente queda en el proyecto según lo que se eligió en el formulario.
+   Devuelve {client, client_id, crear, via}: `crear` es el nombre de un vínculo nuevo por crear
+   (solo si no existe ya uno igual o parecido); `via:"nombre"` avisa que se enlazó a uno que
+   ya existía por parecerse al nombre escrito. */
+function projectClientFromForm(a,sel,typed,existing){
+  const L=a.clients||[];
+  if(sel&&sel!=="__nuevo"){
+    const c=L.find(x=>(x._id||("n:"+x.name))===sel);
+    if(c) return {client:c.name,client_id:c._id||null,crear:""};
   }
+  if(sel==="__nuevo"){
+    const nm=String(typed||"").trim();
+    if(!nm) return {client:"",client_id:null,crear:""};
+    const ya=vinFind(a,nm); if(ya) return {client:ya.name,client_id:ya._id||null,crear:"",via:"nombre"};
+    /* Editar sin tocar el nombre de un proyecto viejo: no se inventa un vínculo. */
+    if(existing&&nm===String(existing.client||"").trim()) return {client:String(existing.client),client_id:existing.client_id||null,crear:""};
+    return {client:nm,client_id:null,crear:nm};
+  }
+  return {client:"",client_id:null,crear:""};
+}
+async function vinCrear(a,name){
+  a.clients=a.clients||[];
+  const item={ name };
+  if(a.live){ const row=await Cloud.insertRow("clients",{ name, alma_id:a.almaId }); item._id=row.id; }
+  a.clients.unshift(item);
+  return item;
+}
+async function interconnectProject(a, v, rc){
+  const notes=[];
+  // 1 · Vínculo (cliente): ya se resolvió al guardar (projectClientFromForm / vinCrear).
+  if(rc && rc.creado) notes.push("Vínculo creado");
+  else if(rc && rc.fallo) notes.push("Vínculo no creado (créalo desde Vínculos)");
+  else if(v.client) notes.push("Vínculo enlazado"+(rc&&rc.via==="nombre"?" (ya existía)":""));
   // 2 · Raíz: no se crea ingreso estimado. El valor total no es pago recibido.
   // Raíz se alimenta desde Abono realizado (paid) y pagos manuales reales.
   // 3 · Flujo de trabajo: ya entró a tu kanban.
@@ -5734,6 +5854,11 @@ document.addEventListener("click", e=>{
     state.projDetailFilter=d; state.projOpen=null; save(); renderView(); return; }
   if(e.target.closest("[data-projqclear]")){ state.projQuery=""; state.projOpen=null; renderView(); return; }
   const pa=e.target.closest("[data-addproject]"); if(pa){ openProjectRecord(pa.dataset.addproject); return; }
+  const paf=e.target.closest("[data-addprojectfor]"); if(paf){ const c=(me().clients||[])[+paf.dataset.addprojectfor]; openProjectRecord(null,c&&(c._id||("n:"+c.name))); return; }
+  /* Sin go(): con la ficha del proyecto abierta, go() hace history.back() (asíncrono) y el popstate
+     cerraba la ficha del vínculo recién abierta. Se cambia el estado directo, como data-projgo. */
+  const pgv=e.target.closest("[data-projgovin]"); if(pgv){ state.view="clientes"; state.projOpen=null; state.vinOpen=+pgv.dataset.projgovin; save(); renderAll(); scrollTopNow(0); return; }
+  const rcu=e.target.closest("[data-recclientuse]"); if(rcu){ const sl=document.getElementById("rec_client_sel"); if(sl){ sl.value=rcu.dataset.recclientuse; sl.dispatchEvent(new Event("change",{bubbles:true})); } return; }
   if(e.target.closest("[data-finclear]")){ state.finPeriod="all"; state.finCat="all"; renderView(); return; }
   const po=e.target.closest("[data-projopen]"); if(po && !e.target.closest("select,option")){ openDetail("proj", +po.dataset.projopen); return; }
   if(e.target.closest("[data-projback]")){ closeDetail(); return; }
