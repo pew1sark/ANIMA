@@ -191,13 +191,20 @@ function adAnima(desde, hasta, id){
   const o = id ? adObj(id) : null;
   const adsDe = new Set(AD.objs.filter(x => x.level === "ad" && (!o || (o.level === "ad" ? x.object_id === id : o.level === "adset" ? x.adset_id === id : x.campaign_id === id))
     && (!AD.campana || x.campaign_id === AD.campana)).map(x => x.object_id));
-  const nombreCamp = o && o.level === "campaign" ? o.name : null;
+  /* Las solicitudes sin ad_id se cruzan por el nombre de la campaña. Con una
+     campaña elegida arriba también cuentan, aunque la fila sea de la cuenta entera. */
+  const campElegida = AD.campana ? adObj(AD.campana) : null;
+  const nombreCamp = String((o ? (o.level === "campaign" ? o.name : "") : (campElegida && campElegida.name)) || "").trim();
+  const campMeta = new Set(AD.objs.filter(x => x.level === "campaign").map(x => String(x.name || "").trim()));
   const L = (typeof leadsList === "function" ? leadsList() : []).filter(l => {
     const dia = adYmd(new Date(l.lead_created_at));
     if(dia < desde || dia > hasta) return false;
     if(l.ad_id) return adsDe.has(String(l.ad_id));
-    if(l.source === "manual") return false;                   // anotadas a mano: no vienen de un anuncio
-    return !o && !AD.campana ? !!l.campaign_name : (nombreCamp && l.campaign_name === nombreCamp);   // CSV sin ad_id
+    const camp = String(l.campaign_name || "").trim();
+    /* Anotadas a mano no vienen de un anuncio… salvo que nombren una campaña real
+       de Meta: así se atribuye un proyecto que ya existía (ficha del proyecto → «Ganado por anuncios»). */
+    if(l.source === "manual" && !campMeta.has(camp)) return false;
+    return !o && !AD.campana ? !!camp : (!!nombreCamp && camp === nombreCamp);   // CSV sin ad_id y atribuidas a mano
   });
   const etapa = l => (LEAD_ESTADOS[l.status] || { i: 0 }).i;
   const proyectos = me().projects || [];
@@ -208,6 +215,19 @@ function adAnima(desde, hasta, id){
     contactadas: L.filter(l => l.status !== "descartado" && etapa(l) >= LEAD_ESTADOS.contactado.i).length,
     cotizadas: cot.length, ganadas: won.length,
     valorCotizado: cot.reduce((s, l) => s + valor(l), 0), valorGanado: won.reduce((s, l) => s + valor(l), 0) };
+}
+
+/* Resumen de la cuenta entera entre dos días (sin la campaña que esté elegida en
+   el panel), para el Centro de clientes: lo que se invirtió, lo que se ganó y el ROAS.
+   Devuelve null si la cuenta publicitaria no está conectada o aún no cargó. */
+function adResumenCuenta(desde, hasta){
+  if(!AD.con) return null;
+  const campana = AD.campana; AD.campana = "";       // el filtro del panel no debe mover este número
+  try{
+    const t = adSuma(adFilas(desde, hasta)), an = adAnima(desde, hasta), fx = adFx();
+    return { spend: t.spend, fx, ganadas: an.ganadas, valorGanado: an.valorGanado, solicitudes: an.solicitudes,
+             roas: t.spend ? an.valorGanado / (t.spend * fx) : NaN };
+  }finally{ AD.campana = campana; }
 }
 
 /* Salud de cada anuncio: lo que conviene mirar hoy. Siempre ícono + texto. */

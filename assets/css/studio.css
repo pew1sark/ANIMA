@@ -2462,3 +2462,18 @@ a.ld-wa{text-decoration:none}
   .dsh-map-q{max-width:none;min-width:0;width:100%}
   .dsh-hero-acts{width:100%}
 }
+
+/* Centro de clientes: ROAS en el resumen, y «Ganado por anuncios» en la ficha del proyecto. */
+.ld-roas{margin:14px 0 4px}
+.ad-kpis.ad-kpis-r{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ld-roas-n{font-size:12px;margin:8px 2px 0}
+.lead-f select{font:inherit;font-size:14px;font-weight:400;color:var(--text,#15151a);padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;width:100%;box-sizing:border-box}
+.la-box{border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 0 4px}
+.la-box.is-ok{border-color:rgba(184,150,90,.35);background:rgba(184,150,90,.08)}
+.la-ok{display:flex;align-items:center;gap:11px}
+.la-ok>span:last-child{display:flex;flex-direction:column;min-width:0}
+.la-ok small{font-size:11px;color:var(--muted)}
+.la-ok b{font-size:13.5px;overflow-wrap:anywhere}
+.la-nota{font-size:12.5px;line-height:1.5;color:var(--muted);margin:8px 0}
+.la-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+@media (max-width:720px){ .ad-kpis.ad-kpis-r{grid-template-columns:repeat(2,minmax(0,1fr))} }
