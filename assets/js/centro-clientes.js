@@ -794,7 +794,8 @@ function leadAnunciosHTML(a, p, l){
   const titulo = `<div class="pd-sec">Anuncios</div>`;
 
   if(f){
-    const dia = f.fecha || (l && l.lead_created_at ? adYmd(new Date(l.lead_created_at)) : (p.created && !isNaN(new Date(p.created)) ? adYmd(new Date(p.created)) : adYmd(new Date())));
+    /* Por defecto llegó cuando nació el proyecto (su «Creación» en Fechas); si ya estaba marcado, la fecha que se eligió. */
+    const dia = f.fecha || (atrib && l.lead_created_at ? adYmd(new Date(l.lead_created_at)) : (projectDate(p, "created") || adYmd(new Date())));
     const camp = f.camp || (atrib ? String(l.campaign_name).trim() : "");
     if(!listo) return `${titulo}<div class="la-box"><span class="muted">Cargando campañas de Meta…</span></div>`;
     if(!camps.length) return `${titulo}<div class="la-box"><p class="la-nota">No hay campañas de Meta para elegir. Conecta tu cuenta publicitaria y vuelve.</p>
@@ -804,7 +805,7 @@ function leadAnunciosHTML(a, p, l){
         <select id="laCamp" data-leadatribf="camp"><option value="">Elige la campaña…</option>${camps.map(k => `<option value="${esc(k)}" ${k === camp ? "selected" : ""}>${esc(CC.alias.get(k) || k)}</option>`).join("")}</select></label>
       <label class="lead-f">Cuándo llegó el cliente
         <input id="laFecha" type="date" value="${esc(dia)}" max="${esc(adYmd(new Date()))}" data-leadatribf="fecha"></label>
-      <p class="la-nota">La fecha decide en qué periodo del ROAS cuenta (el de esa campaña). ${+p.budget > 0 ? "Aporta " + esc(money(p.budget)) + " de valor ganado." : "<b>Este proyecto no tiene valor total</b>: pon su valor en «Editar» para que sume al ROAS."}</p>
+      <p class="la-nota">Propongo la creación del proyecto; cámbiala si el cliente llegó antes. La fecha decide en qué periodo del ROAS cuenta. ${+p.budget > 0 ? "Aporta " + esc(money(p.budget)) + " de valor ganado." : "<b>Este proyecto no tiene valor total</b>: pon su valor en «Editar» para que sume al ROAS."}</p>
       <div class="la-acts"><button class="btn sm" data-leadatribsave="${esc(p._id)}" ${CC.busy === "atrib" ? "disabled" : ""}>${CC.busy === "atrib" ? "Guardando…" : "Guardar"}</button>
       <button class="btn ghost sm" data-leadatribcancel>Cancelar</button></div></div>`;
   }
