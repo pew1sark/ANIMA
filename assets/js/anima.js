@@ -1628,7 +1628,7 @@ function vProyectoDetalle(a, i){
       <div class="pd-sec">Ficha</div>
       <div class="pd-grid2">
         <div><span class="pd-k">Contexto</span><b>${projectContextBadge(a,p)}</b></div>
-        <div><span class="pd-k">Cliente</span><b>${esc(p.client||"—")}</b>${pCli?`<div style="margin-top:6px"><button class="ld-mini" data-projgovin="${(a.clients||[]).indexOf(pCli)}">Ver vínculo ›</button></div>`:""}${pWa?`<div style="margin-top:6px">${pWa}</div>`:""}</div>
+        <div><span class="pd-k">Cliente</span><b>${esc(p.client||"—")}</b>${pCli?`<div style="margin-top:6px"><button class="vin-go" data-projgovin="${(a.clients||[]).indexOf(pCli)}">Ver vínculo ›</button></div>`:""}${pWa?`<div style="margin-top:6px">${pWa}</div>`:""}</div>
         <div><span class="pd-k">Plantilla</span><b>${esc(tpl||"Sin plantilla")}</b></div>
         <div><span class="pd-k">Categoría</span><b>${esc(p.category||"—")}</b></div>
         <div><span class="pd-k">Responsable</span><b>${esc(p.responsible||"—")}</b></div>
@@ -2293,19 +2293,25 @@ async function consolaSave(almaId){
 /* --- Clientes --- */
 const vinIsColab=c=>String(c.kind||"").toLowerCase()==="colaborador";
 /* Cómo se compara el nombre de un cliente: sin tildes ni mayúsculas, sin signos, sin
-   espacios y sin la forma legal del final («SpA», «Ltda.», «S.A.»…). «Dino Completos SpA» y
-   «dinocompletos» son el mismo cliente: antes solo valía el nombre idéntico, y escribirlo un
-   poco distinto creaba un vínculo duplicado. La forma legal solo se quita al FINAL («Spa Luna»
-   no es «Luna»), y las letras de cualquier alfabeto cuentan (un nombre sin letras latinas no
-   queda con clave vacía). Se memoriza: vinLinks la pide miles de veces al dibujar Vínculos. */
-const VIN_LEGAL=/ (spa|ltda|limitada|eirl|sa|inc|llc)$/;
+   espacios y sin la forma legal del final. «Café Aurora SpA» y «cafe aurora» son el mismo
+   cliente: antes solo valía el nombre idéntico, y escribirlo un poco distinto creaba un
+   vínculo duplicado.
+   La forma legal solo se quita al FINAL y solo si está escrita como tal: «SpA», «S.A.» (en
+   mayúsculas) o «Ltda.», «EIRL», «Inc», «LLC». «Aurora Spa» (un spa) no es «Aurora SpA».
+   Valen las letras de cualquier alfabeto, y los dígitos separados no se pegan («Local 1 2» no
+   es «Local 12»). Se memoriza: vinLinks la pide miles de veces al dibujar Vínculos. */
+const VIN_LEGAL_MAYUS=/\s+(S\.?\s?[pP]\.?\s?A\.?|S\.?\s?A\.?)\s*$/;           // SpA, SPA, S.p.A., SA, S.A. (distingue mayúsculas)
+const VIN_LEGAL_SUFIJO=/\s+(ltda|limitada|e\.?\s?i\.?\s?r\.?\s?l|inc|llc)\.?\s*$/i;
 const _vinKeys=new Map();
 function vinKey(s){
   const raw=String(s==null?"":s);
   let k=_vinKeys.get(raw); if(k!==undefined) return k;
-  /* Los puntos se quitan (no se vuelven espacio): «S.A.» es «sa», no «s a». */
-  const t=deburr(raw.replace(/\./g,"")).replace(/[^\p{L}\p{N} ]/gu," ").replace(/\s+/g," ").trim();
-  k=t.replace(VIN_LEGAL,"").replace(/\s+/g,"")||t.replace(/\s+/g,"");     // un nombre que fuera solo «SA» no queda vacío
+  const sinLegal=raw.trim().replace(VIN_LEGAL_MAYUS,"").replace(VIN_LEGAL_SUFIJO,"");
+  /* Los puntos se quitan (no se vuelven espacio), salvo entre dígitos: «1.5» no es «15». */
+  const t=deburr(sinLegal.replace(/(\d)\.(?=\d)/g,"$1 ").replace(/\./g,"")).replace(/[^\p{L}\p{M}\p{N} ]/gu," ").replace(/\s+/g," ").trim();
+  const parts=t.split(" ");
+  k=parts[0]||"";
+  for(let i=1;i<parts.length;i++) k+=(/\d$/.test(parts[i-1])&&/^\d/.test(parts[i])?" ":"")+parts[i];
   if(_vinKeys.size>5000) _vinKeys.clear();
   _vinKeys.set(raw,k);
   return k;
@@ -2331,7 +2337,7 @@ function vinLinks(a,c){
   const L=a.clients||[], key=vinKey(c.name), ids=new Set(L.map(x=>x._id).filter(Boolean));
   const conId=id=>id&&ids.has(id), ex=s=>String(s||"").trim().toLowerCase();
   /* Por nombre: equivalente al del vínculo, salvo que otro vínculo se llame exactamente así
-     (entonces ese es el dueño; así «Dinocompletos» no se queda con lo de «Dino Completos SpA»). */
+     (entonces ese es el dueño; así «Café Aurora» no se queda con lo de «Cafe Aurora SpA»). */
   const porNombre=nm=>!!ex(nm)&&(ex(c.name)===ex(nm)||(!!key&&vinKey(nm)===key&&!L.some(x=>ex(x.name)===ex(nm))));
   const projs=(a.projects||[]).map((p,i)=>({p,i})).filter(o=>conId(o.p.client_id)?o.p.client_id===c._id:porNombre(o.p.client));
   const quotes=a.live?(state.cloudQuotes||[]).filter(q=>(c._id&&q.client_id===c._id)||(!conId(q.client_id)&&porNombre(q.client_name)))
@@ -2640,21 +2646,29 @@ async function qSave(){
   else { const i=list.findIndex(x=>x.id===quoteDraft.id); if(i>=0) list[i]=JSON.parse(JSON.stringify(quoteDraft)); else list.unshift(JSON.parse(JSON.stringify(quoteDraft))); }
   saveQuotes(a,list); renderView(); alert("Cotización guardada.");
 }
+let _qSaving=false;
 async function qSaveCloud(a){
+  if(_qSaving) return;               // un doble toque en Guardar no crea dos cotizaciones ni dos vínculos
+  _qSaving=true;
+  try{ await qSaveCloudInner(a); } finally{ _qSaving=false; }
+}
+async function qSaveCloudInner(a){
   const t=quoteTotals();
   const wasNew=!quoteDraft.id;
   try{
     let clientId=quoteDraft.client_id||null;
     if(quoteDraft.client){
-      let c=vinFind(a,quoteDraft.client);
+      /* Si ya viene con el vínculo de esa persona (p. ej. desde una solicitud) se respeta, aunque haya homónimos;
+         si no, el que ya existe con ese nombre, y solo si no hay ninguno se crea. */
+      let c=(clientId&&(a.clients||[]).find(x=>x._id===clientId&&vinKey(x.name)===vinKey(quoteDraft.client)))||vinFind(a,quoteDraft.client);
       if(!c){ const row=await Cloud.insertRow("clients",{alma_id:a.almaId,name:quoteDraft.client}); c={_id:row.id,name:row.name}; (a.clients||(a.clients=[])).unshift(c); }
-      clientId=c._id;
+      clientId=c._id; quoteDraft.client=c.name;      // el nombre queda como el del vínculo (el texto del proyecto no diverge)
     }
     let projectId=quoteDraft.project_id||null;
     if(!projectId && quoteDraft.title){
       const total=Math.round(t.total);
       const prow=await Cloud.insertRow("projects",{alma_id:a.almaId,title:quoteDraft.title,client:quoteDraft.client||null,status:"Planificado",pct:0,budget:total,paid:0,client_id:clientId});
-      projectId=prow.id; a.projects.unshift({_id:prow.id,t:quoteDraft.title,st:"Planificado",pct:0,budget:total,paid:0,client:quoteDraft.client||""});
+      projectId=prow.id; a.projects.unshift({_id:prow.id,t:quoteDraft.title,st:"Planificado",pct:0,budget:total,paid:0,client:quoteDraft.client||"",client_id:clientId});
     }
     const payload={ alma_id:a.almaId, client_id:clientId, project_id:projectId, title:quoteDraft.title, client_name:quoteDraft.client,
       discipline:quoteDraft.discipline, currency:quoteDraft.currency, tax_pct:quoteDraft.taxPct, notes:quoteDraft.notes,
@@ -4804,7 +4818,7 @@ function openRecord(kind, idx=null){
       const nuevo=!hit&&!!String(item.client||"").trim(), cur=hit?hit.v:(nuevo?"__nuevo":"");
       /* Con un vínculo duplicado hay dos «iguales» en la lista: cuántos proyectos tiene cada uno dice cuál es el original. */
       const rep=new Map(); L.forEach(o=>{ const k=vinKey(o.c.name); rep.set(k,(rep.get(k)||0)+1); });
-      const marca=o=>rep.get(vinKey(o.c.name))>1?(n=>" · "+n+" proyecto"+(n===1?"":"s"))(vinLinks(a,o.c).projs.length):"";
+      const marca=o=>rep.get(vinKey(o.c.name))>1?(n=>" · "+n+" proyecto"+(n===1?"":"s")+(o.c.created?" · creado "+tallerDate(o.c.created):""))(vinLinks(a,o.c).projs.length):"";
       return `<div class="field"><label>${f.l}</label>
         <select id="rec_client_sel"><option value="" ${cur===""?"selected":""}>Sin cliente</option>${L.map(o=>`<option value="${esc(o.v)}" ${o.v===cur?"selected":""}>${esc(o.c.name)}${vinIsColab(o.c)?" (colaborador)":""}${esc(marca(o))}</option>`).join("")}<option value="__nuevo" ${cur==="__nuevo"?"selected":""}>＋ Cliente nuevo…</option></select>
         <input id="rec_${f.k}" value="${esc(nuevo?item.client:"")}" autocomplete="off" placeholder="Nombre del cliente nuevo" style="margin-top:8px" ${cur==="__nuevo"?"":"hidden"}>
@@ -4836,7 +4850,7 @@ document.addEventListener("change",e=>{
 document.addEventListener("input",e=>{ if(e.target&&e.target.id==="rec_client") recClientSug(); });
 let _recSaving=false;
 async function saveRecord(){
-  if(_recSaving) return;            // un segundo toque en Guardar no repite el guardado (ni crea dos vínculos iguales)
+  if(_recSaving){ const m=document.getElementById("recMsg"); if(m) m.textContent="Guardando… espera un momento."; return; }   // un segundo toque en Guardar no repite el guardado (ni crea dos vínculos iguales)
   _recSaving=true;
   try{ await saveRecordInner(); } finally{ _recSaving=false; }
 }
@@ -4957,7 +4971,7 @@ function projectClientFromForm(a,sel,typed,existing){
     if(!nm) return {client:"",client_id:null,crear:""};
     const ya=vinFind(a,nm); if(ya) return {client:ya.name,client_id:ya._id||null,crear:"",via:"nombre"};
     /* Editar sin tocar el nombre de un proyecto viejo: no se inventa un vínculo. */
-    if(existing&&nm===String(existing.client||"")) return {client:nm,client_id:existing.client_id||null,crear:""};
+    if(existing&&nm===String(existing.client||"").trim()) return {client:String(existing.client),client_id:existing.client_id||null,crear:""};
     return {client:nm,client_id:null,crear:nm};
   }
   return {client:"",client_id:null,crear:""};
@@ -5841,7 +5855,9 @@ document.addEventListener("click", e=>{
   if(e.target.closest("[data-projqclear]")){ state.projQuery=""; state.projOpen=null; renderView(); return; }
   const pa=e.target.closest("[data-addproject]"); if(pa){ openProjectRecord(pa.dataset.addproject); return; }
   const paf=e.target.closest("[data-addprojectfor]"); if(paf){ const c=(me().clients||[])[+paf.dataset.addprojectfor]; openProjectRecord(null,c&&(c._id||("n:"+c.name))); return; }
-  const pgv=e.target.closest("[data-projgovin]"); if(pgv){ go("clientes"); openDetail("vin",+pgv.dataset.projgovin); return; }
+  /* Sin go(): con la ficha del proyecto abierta, go() hace history.back() (asíncrono) y el popstate
+     cerraba la ficha del vínculo recién abierta. Se cambia el estado directo, como data-projgo. */
+  const pgv=e.target.closest("[data-projgovin]"); if(pgv){ state.view="clientes"; state.projOpen=null; state.vinOpen=+pgv.dataset.projgovin; save(); renderAll(); scrollTopNow(0); return; }
   const rcu=e.target.closest("[data-recclientuse]"); if(rcu){ const sl=document.getElementById("rec_client_sel"); if(sl){ sl.value=rcu.dataset.recclientuse; sl.dispatchEvent(new Event("change",{bubbles:true})); } return; }
   if(e.target.closest("[data-finclear]")){ state.finPeriod="all"; state.finCat="all"; renderView(); return; }
   const po=e.target.closest("[data-projopen]"); if(po && !e.target.closest("select,option")){ openDetail("proj", +po.dataset.projopen); return; }
