@@ -1635,6 +1635,7 @@ function vProyectoDetalle(a, i){
         <div><span class="pd-k">Comuna</span><b>${esc(p.comuna||"—")}</b></div>
       </div>
 
+      ${typeof leadAnunciosHTML==="function"?leadAnunciosHTML(a,p,pLead):""}
       ${typeof avRecordatoriosHTML==="function"?avRecordatoriosHTML(p):""}
       <div class="pd-sec">Fechas</div>
       <div class="pd-dates">

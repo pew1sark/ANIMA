@@ -28,6 +28,6 @@ después se repasan los últimos 7 (Meta corrige la atribución).
 ## Qué número es cuál
 
 - **Alcance y frecuencia** se piden a Meta en vivo para el periodo (no se pueden sumar día a día).
-- **Formularios** = lo que cuenta Meta. **Solicitudes / contactadas / cotizadas / ganadas** = `client_leads` con ese `ad_id` (las CSV sin `ad_id` se cruzan por nombre de campaña; las manuales no cuentan).
-- **Valor ganado** = presupuesto de los proyectos enlazados a solicitudes ganadas. **ROAS** = valor ganado / (inversión × tipo de cambio). El tipo de cambio (1 USD = 950 CLP por defecto) se ajusta tocándolo y se guarda en el dispositivo.
+- **Formularios** = lo que cuenta Meta. **Solicitudes / contactadas / cotizadas / ganadas** = `client_leads` con ese `ad_id` (las CSV sin `ad_id` se cruzan por nombre de campaña; las manuales no cuentan, salvo las que nombran una campaña real de Meta: así se atribuye un proyecto que ya existía, ver `docs/centro-de-clientes.md`).
+- **Valor ganado** = presupuesto de los proyectos enlazados a solicitudes ganadas. **ROAS** = valor ganado / (inversión × tipo de cambio). El tipo de cambio (1 USD = 950 CLP por defecto) se ajusta tocándolo y se guarda en el dispositivo. El Centro de clientes muestra el mismo cálculo (`adResumenCuenta`) en su resumen, así que los dos números no pueden diferir.
 - **Salud**: rechazos/problemas de entrega, fatiga (frecuencia ≥ 3,5), CTR < 0,5 %, costo por formulario > 1,5× el promedio y gasto > 2 formularios sin ninguno (solo en campañas que buscan formularios), video que no engancha (< 20 % se queda 3 s), solicitudes sin responder y formularios que no llegaron al Centro.

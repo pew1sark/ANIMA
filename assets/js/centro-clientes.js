@@ -29,7 +29,7 @@
 const CC = { leads: undefined, conn: undefined, loading: false, busy: "", pick: null, draft: null, connectOpen: false, tplOpen: false,
              q: "", ciudad: "", origen: "", fecha: "", campana: "", desde: "", hasta: "",
              edit: false, nuevo: false, propios: new Set(),
-             sel: new Set(), alias: new Map(), campEdit: null };
+             sel: new Set(), alias: new Map(), campEdit: null, atrib: null };
 
 /* Rango de días: se mide en días del calendario local, no en horas. */
 const LEAD_FECHAS = [
@@ -355,6 +355,32 @@ function leadRespuestaMedia(){
   return m < 60 ? Math.round(m) + " min" : m < 1440 ? (m / 60).toFixed(1).replace(".0", "") + " h" : (m / 1440).toFixed(1).replace(".0", "") + " d";
 }
 
+/* ROAS en el resumen del Centro de clientes: lo que dejaron las solicitudes que vienen de
+   anuncios (incluidos los proyectos que ya existían y se marcaron «Ganado por anuncios»)
+   frente a lo invertido en Meta, en el mismo tramo de fechas que el filtro de la lista.
+   Es el mismo cálculo del panel Anuncios (adResumenCuenta), así no pueden diferir. */
+function leadResumenRoasHTML(){
+  if(!leadAnunciosPedir() || !AD.con) return "";
+  const f = CC.fecha; let ini = "0000-01-01", fin = "9999-12-31";
+  if(f === "hoy") ini = fin = adDia(0);
+  else if(f === "ayer") ini = fin = adDia(-1);
+  else if(f === "rango"){ if(CC.desde) ini = CC.desde; if(CC.hasta) fin = CC.hasta; }
+  else if(f) ini = adDia(1 - Number(f));
+  const r = adResumenCuenta(ini, fin);
+  if(!r || (!r.spend && !r.ganadas)) return "";
+  const tile = (k, v, d, ayuda) => `<div class="ad-kpi" ${ayuda ? `title="${esc(ayuda)}"` : ""}><span>${esc(k)}</span><b>${v}</b>${d || ""}</div>`;
+  const cur = adCur(), ANIMA = typeof ANIMA_CUR !== "undefined" ? ANIMA_CUR : "CLP";
+  return `<div class="ld-roas" aria-label="Retorno de los anuncios">
+    <div class="ad-kpis ad-kpis-r">
+      ${tile("Ganadas por anuncios", adNum(r.ganadas), r.solicitudes ? `<small class="ad-d">de ${adNum(r.solicitudes)} solicitud${r.solicitudes === 1 ? "" : "es"}</small>` : "")}
+      ${tile("Valor ganado", money(r.valorGanado), "", "Presupuesto de los proyectos ganados por anuncios")}
+      ${tile("Inversión en Meta", adMoney(r.spend), r.fx !== 1 ? `<small class="ad-d">1 ${esc(cur)} = ${esc(adNum(r.fx))} ${esc(ANIMA)}</small>` : "")}
+      ${tile("Retorno (ROAS)", isFinite(r.roas) && r.spend ? adDec(r.roas, 1) + "×" : "—", "", "Valor ganado / inversión")}
+    </div>
+    <p class="ld-roas-n muted">Periodo: ${esc(f === "rango" ? "fechas elegidas" : ((LEAD_FECHAS.find(x => x[0] === f) || [])[1] || "todo el tiempo"))}. Un cliente que ya tenías se suma desde la ficha de su proyecto → «Ganado por anuncios». <button class="ld-mini" data-go="anuncios">Ver Anuncios →</button></p>
+  </div>`;
+}
+
 function leadEtapaSelect(l, extra){
   const est = LEAD_ESTADOS[l.status] || LEAD_ESTADOS.nuevo;
   return `<select class="ld-stage ${est.cls} ${extra||""}" data-leadstage="${esc(l.id)}" aria-label="Etapa de ${esc(l.full_name || "la solicitud")}">` +
@@ -454,6 +480,7 @@ function vCentro(a){
         </div>
       </div>
       ${leadConexionHTML()}
+      ${leadResumenRoasHTML()}
       <nav class="ld-tabs" aria-label="Etapas">${tabs}</nav>
       ${filtros}
       ${camps}
@@ -722,6 +749,125 @@ function leadIrA(id){
   go("centro"); setTimeout(() => CC_open(id), 0);
 }
 
+/* ---------- proyectos que ya existían, ganados por anuncios ----------
+   Un cliente que llegó por un anuncio pero nunca pasó por el formulario (le escribió
+   por WhatsApp, o es anterior a conectar Meta) no tiene solicitud. Desde la ficha del
+   proyecto se le crea una solicitud manual enlazada a ese proyecto y a una campaña de
+   Meta; el panel Anuncios la cuenta porque nombra una campaña real (adAnima) y su valor
+   ganado es el presupuesto del proyecto. Sin cambios en la base: usa las columnas de siempre. */
+
+/* Campañas de Meta que ANIMA conoce (panel Anuncios): solo una de estas entra al ROAS. */
+function leadCampanasReales(){
+  if(typeof AD === "undefined" || !AD.con) return [];
+  return [...new Set(AD.objs.filter(o => o.level === "campaign" && o.name).map(o => String(o.name).trim()))]
+    .sort((x, y) => x.localeCompare(y, "es"));
+}
+/* Una solicitud anotada a mano cuenta como «de anuncios» si nombra una campaña real. */
+function leadAtribuida(l){ return !!l && l.source === "manual" && leadCampanasReales().includes(String(l.campaign_name || "").trim()); }
+
+/* Las campañas se cargan una vez, la primera vez que hacen falta (ficha de un
+   proyecto o resumen del Centro). Devuelve true si ya se sabe si hay cuenta conectada. */
+function leadAnunciosPedir(){
+  if(typeof AD === "undefined" || !Cloud.enabled || !me().live || !me().almaId) return false;
+  if(AD.con === undefined && !AD.loading && !leadAnunciosPedir._pedido){
+    leadAnunciosPedir._pedido = true;
+    setTimeout(() => { Promise.resolve(loadAds()).catch(() => {}).then(() => leadVistaAlDia()); }, 0);
+  }
+  return AD.con !== undefined;
+}
+/* Redibuja lo que dependía de los anuncios, salvo que estés escribiendo. */
+function leadVistaAlDia(){
+  if(!["centro", "proyectos"].includes(state.view)) return;
+  const f = document.activeElement;
+  if(f && f.closest && f.closest("#view") && /^(INPUT|TEXTAREA|SELECT)$/.test(f.tagName)) return;
+  renderView();
+}
+
+/* Tarjeta de la ficha del proyecto: marcar de qué campaña vino, o ver y quitar la marca. */
+function leadAnunciosHTML(a, p, l){
+  if(!Cloud.enabled || !a.live || !a.almaId || !p._id) return "";
+  if(l && l.source !== "manual") return "";                  // ya llegó por un formulario: el origen se ve arriba
+  const listo = leadAnunciosPedir();
+  const camps = leadCampanasReales();
+  const atrib = leadAtribuida(l);
+  const f = CC.atrib && CC.atrib.pid === p._id ? CC.atrib : null;
+  const titulo = `<div class="pd-sec">Anuncios</div>`;
+
+  if(f){
+    /* Por defecto llegó cuando nació el proyecto (su «Creación» en Fechas); si ya estaba marcado, la fecha que se eligió. */
+    const dia = f.fecha || (atrib && l.lead_created_at ? adYmd(new Date(l.lead_created_at)) : (projectDate(p, "created") || adYmd(new Date())));
+    const camp = f.camp || (atrib ? String(l.campaign_name).trim() : "");
+    if(!listo) return `${titulo}<div class="la-box"><span class="muted">Cargando campañas de Meta…</span></div>`;
+    if(!camps.length) return `${titulo}<div class="la-box"><p class="la-nota">No hay campañas de Meta para elegir. Conecta tu cuenta publicitaria y vuelve.</p>
+      <button class="btn secondary sm" data-go="anuncios">Ir a Anuncios →</button> <button class="btn ghost sm" data-leadatribcancel>Cancelar</button></div>`;
+    return `${titulo}<div class="la-box">
+      <label class="lead-f">Campaña de Meta
+        <select id="laCamp" data-leadatribf="camp"><option value="">Elige la campaña…</option>${camps.map(k => `<option value="${esc(k)}" ${k === camp ? "selected" : ""}>${esc(CC.alias.get(k) || k)}</option>`).join("")}</select></label>
+      <label class="lead-f">Cuándo llegó el cliente
+        <input id="laFecha" type="date" value="${esc(dia)}" max="${esc(adYmd(new Date()))}" data-leadatribf="fecha"></label>
+      <p class="la-nota">Propongo la creación del proyecto; cámbiala si el cliente llegó antes. La fecha decide en qué periodo del ROAS cuenta. ${+p.budget > 0 ? "Aporta " + esc(money(p.budget)) + " de valor ganado." : "<b>Este proyecto no tiene valor total</b>: pon su valor en «Editar» para que sume al ROAS."}</p>
+      <div class="la-acts"><button class="btn sm" data-leadatribsave="${esc(p._id)}" ${CC.busy === "atrib" ? "disabled" : ""}>${CC.busy === "atrib" ? "Guardando…" : "Guardar"}</button>
+      <button class="btn ghost sm" data-leadatribcancel>Cancelar</button></div></div>`;
+  }
+
+  if(atrib){
+    const ganada = l.status === "ganado";
+    return `${titulo}<div class="la-box is-ok">
+      <div class="la-ok"><span class="ld-origen-i" aria-hidden="true">◎</span><span><small>Ganado por anuncios · llegó ${esc(postDate(l.lead_created_at))}</small><b>${esc(leadCampana(l))}</b></span></div>
+      <p class="la-nota">${ganada ? (+p.budget > 0 ? "Suma " + esc(money(p.budget)) + " al valor ganado y al ROAS." : "No tiene valor total: no suma al ROAS todavía.") : "Contará como ganado cuando el proyecto pase a «Aprobado»."}</p>
+      <div class="la-acts"><button class="btn secondary sm" data-leadatrib="${esc(p._id)}">Cambiar</button>
+      <button class="btn ghost sm" data-leadatribquitar="${esc(p._id)}">Quitar</button></div></div>`;
+  }
+
+  const hoyFigura = l && l.campaign_name ? ` Hoy figura como «${esc(leadCampana(l))}» y no cuenta en el ROAS.` : "";
+  return `${titulo}<div class="la-box">
+    <p class="la-nota" style="margin-top:0">¿Este cliente llegó por un anuncio de Meta? Márcalo y su valor suma al ROAS de Anuncios y del Centro de clientes.${hoyFigura}</p>
+    <button class="btn secondary sm" data-leadatrib="${esc(p._id)}">◎ Ganado por anuncios</button></div>`;
+}
+
+function leadProyectoPorId(id){ return (me().projects || []).find(p => p._id === id); }
+
+async function leadAtribuirProyecto(pid, campana, dia){
+  const a = me(), p = leadProyectoPorId(pid); if(!p) return;
+  if(!campana || !leadCampanasReales().includes(campana)){ toast("Elige una campaña de Meta de la lista."); return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(dia || "")){ toast("Pon la fecha en que llegó el cliente."); return; }
+  if(dia > adYmd(new Date())){ toast("La fecha en que llegó no puede ser futura."); return; }
+  const l = leadDeProyecto(p);
+  if(l && l.source !== "manual"){ toast("Este proyecto ya viene de un formulario de Meta."); return; }
+  /* Mediodía local: así la fecha no cambia de día según el huso al leerla. */
+  const llegada = new Date(dia + "T12:00:00").toISOString();
+  const aprobado = projectAprobado(p);
+  CC.busy = "atrib"; renderView();
+  try{
+    if(l){
+      const patch = { campaign_name: campana, lead_created_at: llegada };
+      if(aprobado && l.status !== "ganado") patch.status = "ganado";    // marcarlo «ganado por anuncios» es decir que se ganó
+      await leadPatch(l.id, patch);
+    } else {
+      const cli = (a.clients || []).find(c => (p.client_id && c._id === p.client_id) || (p.client && String(c.name || "").toLowerCase() === String(p.client).toLowerCase()));
+      const nid = crypto.randomUUID(); CC.propios.add(nid);
+      const row = { id: nid, alma_id: a.almaId, source: "manual", status: aprobado ? "ganado" : "cotizado",
+        lead_created_at: llegada, campaign_name: campana, project_id: p._id, client_id: (cli && cli._id) || p.client_id || null,
+        full_name: p.client || (cli && cli.name) || p.t || "Cliente", phone: (cli && cli.phone) || null, email: (cli && cli.email) || null,
+        city: p.city || null, notes: "Atribuido a anuncios desde la ficha del proyecto." };
+      const { data, error } = await Cloud.client.from("client_leads").insert(row).select().single();
+      if(error) throw error;
+      if(!leadById(nid)) (CC.leads || (CC.leads = [])).unshift(data);
+    }
+    CC.atrib = null;
+    toast("✓ " + (p.client || p.t) + " cuenta como ganado por anuncios" + (+p.budget > 0 ? "" : " (sin valor total aún)"));
+  }catch(e){ console.error("ANIMA · atribuir a anuncios", e); toast("No se pudo guardar: " + (e.message || e)); }
+  CC.busy = ""; renderView(); try{ renderNav(); }catch(e){}
+}
+
+/* Quitar la marca: la solicitud queda (sigue siendo del Taller) pero ya no nombra una campaña. */
+async function leadQuitarAtribucion(pid){
+  const p = leadProyectoPorId(pid), l = p && leadDeProyecto(p); if(!l || l.source !== "manual") return;
+  try{ await leadPatch(l.id, { campaign_name: null }); toast("Ya no cuenta como ganado por anuncios"); }
+  catch(e){ toast("No se pudo quitar: " + (e.message || e)); }
+  renderView();
+}
+
 /* Crea la Unidad de Trabajo de la solicitud (en «Cotizando») y la enlaza. */
 async function leadAProyecto(l){
   const a = me();
@@ -984,6 +1130,11 @@ document.addEventListener("click", e => {
   const lvi = t.closest("[data-leadvinculo]"); if(lvi){ const l = leadById(lvi.dataset.leadvinculo); if(!l) return;
     leadAVinculo(l).then(cid => leadPatch(l.id, { client_id: cid })).then(() => { toast("✓ Guardado en Vínculos"); leadsRefresh(true); })
       .catch(err => toast("No se pudo guardar el vínculo: " + (err.message || err))); return; }
+  /* Ficha del proyecto → «Ganado por anuncios» (proyectos que ya existían). */
+  const at = t.closest("[data-leadatrib]"); if(at){ CC.atrib = { pid: at.dataset.leadatrib, camp: "", fecha: "" }; leadAnunciosPedir(); renderView(); return; }
+  if(t.closest("[data-leadatribcancel]")){ CC.atrib = null; renderView(); return; }
+  const ats = t.closest("[data-leadatribsave]"); if(ats){ leadAtribuirProyecto(ats.dataset.leadatribsave, (document.getElementById("laCamp") || {}).value, (document.getElementById("laFecha") || {}).value); return; }
+  const atq = t.closest("[data-leadatribquitar]"); if(atq){ leadQuitarAtribucion(atq.dataset.leadatribquitar); return; }
   const gv = t.closest("[data-leadgovin]"); if(gv){ state.leadOpen = null; go("clientes"); openDetail("vin", +gv.dataset.leadgovin); return; }
   const gp = t.closest("[data-leadgoproj]"); if(gp){ state.leadOpen = null; go("proyectos"); openDetail("proj", +gp.dataset.leadgoproj); return; }
   const gq = t.closest("[data-leadgoquote]"); if(gq){ state.leadOpen = null; go("cotizador"); qLoad(gq.dataset.leadgoquote); return; }
@@ -1006,6 +1157,7 @@ document.addEventListener("click", e => {
 document.addEventListener("change", e => {
   const el = e.target; if(!el || !el.closest) return;
   const st = el.closest("[data-leadstage]"); if(st){ leadCambiarEtapa(st.dataset.leadstage, st.value); return; }
+  const af = el.closest("[data-leadatribf]"); if(af){ if(CC.atrib) CC.atrib[af.dataset.leadatribf] = af.value; return; }
   const cs = el.closest("[data-leadsel]"); if(cs){ cs.checked ? CC.sel.add(cs.dataset.leadsel) : CC.sel.delete(cs.dataset.leadsel); leadSelPintar(); return; }
   if(el.closest("[data-leadselall]")){ const vis = leadFilasVisibles(); el.checked ? vis.forEach(id => CC.sel.add(id)) : vis.forEach(id => CC.sel.delete(id)); leadSelPintar(); return; }
   const sst = el.closest("[data-leadselstage]"); if(sst){ const v = sst.value; sst.value = ""; if(v) leadEtapaVarias([...CC.sel], v); return; }

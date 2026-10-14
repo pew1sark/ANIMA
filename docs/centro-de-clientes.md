@@ -41,6 +41,31 @@ recomendado…) con el mismo formulario de edición. Filtros: campaña de Meta (
 tarjetas de rendimiento por campaña: llegadas, cotizadas, ganadas), días (hoy,
 ayer, 3/7/14/30/90 días) o un rango de fechas.
 
+## Proyectos que ya existían, ganados por anuncios
+
+Un cliente que llegó por un anuncio pero nunca pasó por el formulario (escribió por
+WhatsApp, o es anterior a conectar Meta) no tiene solicitud, y su proyecto no sumaba al
+ROAS. Desde la ficha del proyecto (**Proyectos → el proyecto → Anuncios → ◎ Ganado por
+anuncios**) se elige la **campaña de Meta** de la lista y la **fecha en que llegó el cliente**.
+
+| Qué pasa | Detalle |
+|---|---|
+| Se crea (o se reutiliza) una solicitud `source='manual'` | Enlazada al proyecto y al Vínculo, con `campaign_name` = la campaña elegida y `lead_created_at` = la fecha. Proyecto aprobado → «Ganada»; en «Cotizando» → «Cotizada» y pasa a «Ganada» sola al aprobarse. |
+| Cuenta en el ROAS | `adAnima` acepta las solicitudes manuales que nombran una campaña real de Meta. **Valor ganado** = presupuesto del proyecto. |
+| Periodo | Cuenta en el periodo de la **fecha de llegada**, no en el de hoy: así el retorno cae donde estaba la inversión. |
+| **Quitar** | Borra la campaña de la solicitud: sigue en el Taller pero deja de contar. |
+
+Sin migración: usa columnas que ya existían. Una solicitud manual cuyo origen es texto
+libre («Instagram», «recomendado») sigue sin contar; solo cuenta si nombra una campaña
+sincronizada. Un proyecto sin valor total suma 0 al valor ganado: la ficha lo avisa.
+
+## ROAS en el resumen
+
+Bajo el encabezado del Centro de clientes: **ganadas por anuncios, valor ganado,
+inversión en Meta y ROAS**, en el mismo tramo de fechas que el filtro «Días» de la lista
+(sin filtro, todo el historial sincronizado). Aparece solo con la cuenta publicitaria
+conectada. Es el mismo número del panel Anuncios, sin su filtro de campaña.
+
 ## Conectar la página (una vez)
 
 1. developers.facebook.com → Mis apps → crear app tipo **Negocios**.
