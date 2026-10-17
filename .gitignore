@@ -46,3 +46,8 @@ supabase/datos-clientes/
 
 # Build de comprobación local (npm run build:check); el publicado va en app/
 platform/.build-check/
+
+# iOS
+ios/Config.xcconfig
+*.xcuserstate
+xcuserdata/
