@@ -14,6 +14,20 @@ struct Cifra: Codable, Identifiable {
     var nota: String?
     var tono: Tono?
     var id: String { etiqueta }
+
+    /// Tolerante: un valor nulo o raro no debe tumbar el resumen entero.
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        etiqueta = (try? c.decode(String.self, forKey: .etiqueta)) ?? ""
+        valor = (try? c.decode(Double.self, forKey: .valor)) ?? 0
+        formato = try? c.decode(Formato.self, forKey: .formato)
+        nota = try? c.decode(String.self, forKey: .nota)
+        tono = try? c.decode(Tono.self, forKey: .tono)
+    }
+    init(etiqueta: String, valor: Double, formato: Formato? = nil, nota: String? = nil, tono: Tono? = nil) {
+        self.etiqueta = etiqueta; self.valor = valor; self.formato = formato; self.nota = nota; self.tono = tono
+    }
+    enum K: String, CodingKey { case etiqueta, valor, formato, nota, tono }
 }
 
 struct ColumnaLista: Codable { var k: String; var t: String; var formato: Formato?; var tono: Tono? }

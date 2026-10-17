@@ -2,4 +2,8 @@
 // En .xcconfig "//" abre un comentario: por eso el host va sin esquema.
 ANIMA_SUPABASE_HOST = TU-PROYECTO-STAGING.supabase.co
 ANIMA_SUPABASE_ANON_KEY = clave-anonima-de-staging
-ANIMA_APP_GROUP = group.cl.animatsc.anima
+// Tu Team ID de Apple (Xcode → Settings → Accounts → tu equipo). Sirve el gratuito.
+ANIMA_TEAM_ID = XXXXXXXXXX
+// Tiene que ser único en el mundo: cambia "tunombre".
+ANIMA_BUNDLE_PREFIX = cl.animatsc.tunombre.anima
+ANIMA_APP_GROUP = group.cl.animatsc.tunombre.anima

@@ -51,3 +51,6 @@ platform/.build-check/
 ios/Config.xcconfig
 *.xcuserstate
 xcuserdata/
+ios/ANIMA.xcodeproj
+ios/AnimaApp/Info.plist
+ios/AnimaWidget/Info.plist

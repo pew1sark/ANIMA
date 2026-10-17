@@ -22,7 +22,9 @@ struct VistaAnima: View {
 
     var body: some View {
         Group {
-            if let aviso = e.aviso { avisoView(aviso) } else if let r = e.resumen { contenido(r) }
+            if let aviso = e.aviso { avisoView(aviso) }
+            else if e.config.vista == .panel { panelView }
+            else if let r = e.resumen { contenido(r) }
         }
         .containerBackground(.background, for: .widget)
         .widgetURL(Configuracion.plataforma)
@@ -44,6 +46,29 @@ struct VistaAnima: View {
             if familia != .systemSmall, let n = e.empresa {
                 Text(n).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
             }
+        }
+    }
+
+    /* Una fila por módulo: nombre, qué mide y la cifra. En el widget pequeño
+       solo el nombre y la cifra, que es lo que cabe. */
+    private var panelView: some View {
+        VStack(alignment: .leading, spacing: familia == .systemSmall ? 7 : 11) {
+            cabecera
+            ForEach(e.panel.prefix(4)) { f in
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(f.titulo).font(familia == .systemSmall ? .caption : .subheadline.weight(.medium))
+                        if familia != .systemSmall {
+                            Text(f.cifra.etiqueta).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                    }
+                    Spacer(minLength: 6)
+                    Text(Escribir.compacto(f.cifra.valor, f.cifra.formato))
+                        .font(.system(familia == .systemSmall ? .callout : .title3, design: .rounded).weight(.semibold))
+                        .foregroundStyle(f.cifra.tono?.color ?? .primary).lineLimit(1).minimumScaleFactor(0.7)
+                }
+            }
+            Spacer(minLength: 0)
         }
     }
 

@@ -1,0 +1,54 @@
+# Proyecto Xcode generado con XcodeGen: `./instalar.sh` lo crea; el .xcodeproj
+# no se versiona. Todo lo que varía por persona/ambiente sale de Config.xcconfig.
+name: ANIMA
+options:
+  bundleIdPrefix: cl.animatsc
+  deploymentTarget: { iOS: "17.0" }
+configFiles:
+  Debug: Config.xcconfig
+  Release: Config.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: $(ANIMA_TEAM_ID)
+    CODE_SIGN_STYLE: Automatic
+targets:
+  ANIMA:
+    type: application
+    platform: iOS
+    sources:
+      - { path: AnimaApp, excludes: ["*.entitlements", Info.plist] }
+      - Shared
+    info:
+      path: AnimaApp/Info.plist
+      properties:
+        CFBundleDisplayName: ANIMA
+        UILaunchScreen: {}
+        ANIMA_SUPABASE_HOST: $(ANIMA_SUPABASE_HOST)
+        ANIMA_SUPABASE_ANON_KEY: $(ANIMA_SUPABASE_ANON_KEY)
+        ANIMA_APP_GROUP: $(ANIMA_APP_GROUP)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(ANIMA_BUNDLE_PREFIX)
+        CODE_SIGN_ENTITLEMENTS: AnimaApp/AnimaApp.entitlements
+    dependencies:
+      - target: AnimaWidget
+  AnimaWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - { path: AnimaWidget, excludes: ["*.entitlements", Info.plist] }
+      - Shared
+    info:
+      path: AnimaWidget/Info.plist
+      properties:
+        CFBundleDisplayName: ANIMA
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        ANIMA_SUPABASE_HOST: $(ANIMA_SUPABASE_HOST)
+        ANIMA_SUPABASE_ANON_KEY: $(ANIMA_SUPABASE_ANON_KEY)
+        ANIMA_APP_GROUP: $(ANIMA_APP_GROUP)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(ANIMA_BUNDLE_PREFIX).widget
+        CODE_SIGN_ENTITLEMENTS: AnimaWidget/AnimaWidget.entitlements

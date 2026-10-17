@@ -9,9 +9,12 @@ Mantén presionado el widget → **Editar widget**:
 
 | Opción | Valores |
 |---|---|
-| Qué mostrar | Clientes · Ventas · Proyectos · Actividades |
+| Qué mostrar | **Panel general** · Clientes · Ventas · Proyectos · Actividades |
 | Acento | Grafito · Ámbar · Salvia · Cielo |
 | Mostrar lista | sí / no (solo tamaño grande) |
+
+El **Panel general** es el monitoreo: de cada módulo sube la cifra que pide
+atención (deuda, tareas vencidas) o, si no hay, la principal.
 
 Tamaños: pequeño (una cifra + una nota), mediano (cifra principal + 3 secundarias),
 grande (+ lista: quién compra más, tareas por vencer, proyectos en curso…).
@@ -26,20 +29,24 @@ decide RLS y el nivel de rol (`has_company_level(…, 40)`), como en la web. La 
 solo inicia sesión y elige la empresa; la sesión vive en el Keychain compartido y
 el widget la renueva solo. Refresca cada ~30 min (iOS decide el momento exacto).
 
-## Armarlo en Xcode (15+)
+## Instalarlo en tu iPhone
 
-No hay `.xcodeproj` versionado: se crea una vez y se apunta a estas carpetas.
+Necesitas un **Mac con Xcode 15+**, tu iPhone (iOS 17+) y un Apple ID. Con el
+ID gratuito la app dura 7 días y hay que reinstalarla; con Apple Developer
+(US$99/año) dura un año y se puede repartir por TestFlight.
 
-1. Nuevo proyecto **App** (SwiftUI) `AnimaApp`, y un target **Widget Extension**
-   `AnimaWidget` (sin Live Activity ni Control).
-2. Arrastra `Shared/` a **ambos** targets, `AnimaApp/` a la app y `AnimaWidget/` al widget.
-3. Signing & Capabilities en **ambos**: **App Groups** (`group.cl.animatsc.anima`) y
-   **Keychain Sharing** (mismo grupo). Sin esto el widget no ve la sesión.
-4. `cp Config.example.xcconfig Config.xcconfig`, complétalo con **staging**, y
-   asígnalo a ambas configuraciones del proyecto. En el Info.plist de los dos
-   targets agrega las claves `ANIMA_SUPABASE_HOST`, `ANIMA_SUPABASE_ANON_KEY` y
-   `ANIMA_APP_GROUP` con valor `$(ANIMA_SUPABASE_HOST)` etc.
-5. Ejecuta la app, inicia sesión, elige empresa; añade el widget desde la galería.
+1. `cd ios && ./instalar.sh` — la primera vez crea `Config.xcconfig` y se detiene.
+2. Complétalo: host y clave anónima de **staging** (Supabase → Settings → API),
+   tu Team ID y un identificador propio (`ANIMA_BUNDLE_PREFIX`, `ANIMA_APP_GROUP`).
+3. `./instalar.sh` otra vez: instala XcodeGen si falta, genera `ANIMA.xcodeproj` y lo abre.
+4. En Xcode elige tu iPhone, ▶. En el teléfono: Ajustes → General → VPN y gestión
+   de dispositivos → confiar en tu perfil.
+5. Abre ANIMA, inicia sesión, elige la empresa. Pantalla de inicio → mantén
+   presionado → **+** → ANIMA → tamaño. Mantenla sobre el widget → Editar widget
+   para cambiar qué muestra.
+
+Si Xcode se queja de las capacidades, entra al target → Signing & Capabilities y
+confirma que **App Groups** y **Keychain Sharing** están en ambos targets.
 
 ## Reglas
 
