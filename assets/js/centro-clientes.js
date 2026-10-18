@@ -844,7 +844,7 @@ async function leadAtribuirProyecto(pid, campana, dia){
       if(aprobado && l.status !== "ganado") patch.status = "ganado";    // marcarlo «ganado por anuncios» es decir que se ganó
       await leadPatch(l.id, patch);
     } else {
-      const cli = (a.clients || []).find(c => (p.client_id && c._id === p.client_id) || (p.client && String(c.name || "").toLowerCase() === String(p.client).toLowerCase()));
+      const cli = vinDeProyecto(a, p);       // por id primero: con vínculos homónimos, por nombre se tomaba el primero
       const nid = crypto.randomUUID(); CC.propios.add(nid);
       const row = { id: nid, alma_id: a.almaId, source: "manual", status: aprobado ? "ganado" : "cotizado",
         lead_created_at: llegada, campaign_name: campana, project_id: p._id, client_id: (cli && cli._id) || p.client_id || null,
