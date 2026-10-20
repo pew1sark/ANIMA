@@ -21,7 +21,7 @@
    =========================================================== */
 
 const AD = { con: undefined, objs: [], daily: [], loading: false, busy: "",
-             rango: "7", desde: "", hasta: "", campana: "", nivel: "campaign", orden: "spend", dir: -1, soloActivos: false,
+             rango: "7", desde: "", hasta: "", campana: "", nivel: "campaign", orden: "spend", dir: -1, vista: "marcha",
              reach: {}, desglose: {}, porDesglose: "edad", open: null, pick: null, draft: null, connectOpen: false };
 
 const AD_RANGOS = [
@@ -160,6 +160,39 @@ function adAlcanceDe(level, id){
 
 /* ---------- métricas ---------- */
 function adObj(id){ return AD.objs.find(o => o.object_id === id); }
+
+/* ¿Funciona de verdad? Meta deja «Activo» (status/effective_status ACTIVE) una
+   campaña cuyo término ya pasó: sigue «prendida» pero no entrega. La vida real
+   mira el estado Y las fechas de toda la cadena anuncio → conjunto → campaña.
+     marcha · programado · revision · problema  = vigentes (lo que importa hoy)
+     terminado · pausado                        = el historial                 */
+const AD_VIDA = {
+  marcha: ["En marcha", "ad-on"], programado: ["Programado", "ad-rev"], revision: ["En revisión", "ad-rev"],
+  problema: ["Con problemas", "ad-bad"], terminado: ["Terminado", "ad-off"], pausado: ["Pausado", "ad-off"]
+};
+const AD_VIGENTES = ["marcha", "programado", "revision", "problema"];
+function adCadena(o){ return [o, o.adset_id && o.adset_id !== o.object_id ? adObj(o.adset_id) : null, o.campaign_id && o.campaign_id !== o.object_id ? adObj(o.campaign_id) : null].filter(Boolean); }
+function adVida(o){
+  const est = o.effective_status || "", ahora = Date.now();
+  if(["DISAPPROVED", "WITH_ISSUES", "PENDING_BILLING_INFO"].includes(est)) return "problema";
+  if(["IN_PROCESS", "PENDING_REVIEW", "PREAPPROVED"].includes(est)) return "revision";
+  if(["ARCHIVED", "DELETED"].includes(est)) return "terminado";
+  if(est !== "ACTIVE") return "pausado";
+  const fines = adCadena(o).map(x => x.stop_time && new Date(x.stop_time).getTime()).filter(Boolean);
+  if(fines.length && Math.min(...fines) < ahora) return "terminado";
+  const inicios = adCadena(o).map(x => x.start_time && new Date(x.start_time).getTime()).filter(Boolean);
+  if(inicios.length && Math.max(...inicios) > ahora) return "programado";
+  /* Una campaña «activa» sin un solo conjunto vivo tampoco funciona. */
+  if(o.level === "campaign"){
+    const hijos = AD.objs.filter(x => x.level === "adset" && x.campaign_id === o.object_id);
+    if(hijos.length){
+      const v = hijos.map(adVida);
+      if(!v.some(x => AD_VIGENTES.includes(x))) return v.includes("terminado") ? "terminado" : "pausado";
+    }
+  }
+  return "marcha";
+}
+const adVigente = o => AD_VIGENTES.includes(adVida(o));
 function adSuma(filas){
   const t = { spend: 0, impressions: 0, clicks: 0, link_clicks: 0, landing_views: 0, leads: 0, messages: 0, engagement: 0,
               video_3s: 0, thruplays: 0, video_p25: 0, video_p50: 0, video_p75: 0, video_p100: 0, reachDia: 0, dias: new Set() };
@@ -238,6 +271,7 @@ function adAlertas(p){
     const t = adSuma(adFilas(p.desde, p.hasta, o.object_id));
     const est = o.effective_status || "";
     const nombre = o.name || "Anuncio";
+    if(adVida(o) !== "marcha" && adVida(o) !== "problema") continue;   // lo terminado o pausado ya no se vigila
     if(["DISAPPROVED", "WITH_ISSUES", "PENDING_BILLING_INFO"].includes(est)){
       const motivo = Array.isArray(o.issues) && o.issues[0] ? (o.issues[0].error_summary || o.issues[0].error_message || "") : "";
       out.push({ nivel: "critico", id: o.object_id, t: nombre + ": " + (AD_ESTADO[est] || [est])[0].toLowerCase(), d: motivo || "Revísalo en el Administrador de anuncios: no se está mostrando." });
@@ -269,6 +303,8 @@ function vAnuncios(a){
   if(AD.almaId && AD.almaId !== a.almaId){ AD.con = undefined; AD.objs = []; AD.daily = []; AD.reach = {}; AD.open = null; }
   if(AD.con === undefined){ setTimeout(loadAds, 0); return `<div class="grid"><div class="card s12 ld-cargando"><span class="ld-spin"></span>Cargando anuncios…</div></div>`; }
   if(!AD.con) return `<div class="grid ad">${adConectarHTML(true)}</div>`;
+  /* Marketing Machine comparte los anuncios: se cargan sus ideas para mostrar el enlace. */
+  if(typeof MM !== "undefined" && MM.ideas === undefined && !MM.loading && typeof mmCargar === "function") setTimeout(mmCargar, 0);
 
   const p = adPeriodo();
   const t = adSuma(adFilas(p.desde, p.hasta)), t0 = adSuma(adFilas(p.prevDesde, p.prevHasta));
@@ -276,14 +312,14 @@ function vAnuncios(a){
   const alc = adAlcanceDe("account", "account");
   const fx = adFx();
   const roas = t.spend ? an.valorGanado / (t.spend * fx) : NaN;
-  const campanas = AD.objs.filter(o => o.level === "campaign").sort((x, y) => String(x.name).localeCompare(String(y.name), "es"));
+  const campanas = AD.objs.filter(o => o.level === "campaign").sort((x, y) => (adVigente(y) - adVigente(x)) || String(x.name).localeCompare(String(y.name), "es"));
   const opt = (v, txt, cur) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(txt)}</option>`;
 
   const filtros = `<div class="ad-filtros">
       <select class="ld-sel on" data-adrango aria-label="Periodo">${AD_RANGOS.map(([k, x]) => opt(k, x, AD.rango)).join("")}</select>
       ${AD.rango === "rango" ? `<span class="ld-rango"><input type="date" data-adfecha="desde" value="${esc(AD.desde || p.desde)}" aria-label="Desde"><span>→</span><input type="date" data-adfecha="hasta" value="${esc(AD.hasta || p.hasta)}" aria-label="Hasta"></span>` : ""}
-      <select class="ld-sel ${AD.campana ? "on" : ""}" data-adcampana aria-label="Campaña">${opt("", "Todas las campañas", AD.campana)}${campanas.map(c => opt(c.object_id, c.name, AD.campana)).join("")}</select>
-      <label class="ad-check"><input type="checkbox" data-adactivos ${AD.soloActivos ? "checked" : ""}> Solo activos</label>
+      <select class="ld-sel ${AD.campana ? "on" : ""}" data-adcampana aria-label="Campaña">${opt("", "Todas las campañas", AD.campana)}${campanas.map(c => opt(c.object_id, (c.name || "") + (adVigente(c) ? "" : " · " + AD_VIDA[adVida(c)][0].toLowerCase()), AD.campana)).join("")}</select>
+      <span class="ad-vista" role="group" aria-label="Qué mostrar">${adVistaBotones()}</span>
       <span class="ad-per muted">${esc(adFechaCorta(p.desde))} – ${esc(adFechaCorta(p.hasta))} · vs. ${esc(adFechaCorta(p.prevDesde))} – ${esc(adFechaCorta(p.prevHasta))}</span>
     </div>`;
 
@@ -396,10 +432,24 @@ const AD_COLS = [
   ["link_clicks", "Clics"], ["ctr", "CTR"], ["cpc", "CPC"], ["leads", "Form."], ["cpl", "Costo/form."],
   ["solicitudes", "Solic."], ["cotizadas", "Cotiz."], ["ganadas", "Ganadas"], ["roas", "ROAS"]
 ];
+/* Lo que Marketing Machine sabe de este anuncio (etapa y veredicto). */
+function adIdeaDe(id){ return (typeof MM !== "undefined" && MM.ideas || []).find(i => i.ad_id === id); }
+function adChipMachine(id){
+  const i = adIdeaDe(id); if(!i) return "";
+  const e = (typeof MM_ETAPAS !== "undefined" && MM_ETAPAS.find(x => x.k === i.stage)) || { t: i.stage };
+  const v = i.verdict && typeof MM_VEREDICTO !== "undefined" ? MM_VEREDICTO[i.verdict] : null;
+  return ` · <span class="ad-mm">⚙ ${esc(e.t)}${v ? " · " + esc(v[0]) : ""}</span>`;
+}
+function adVistaBotones(){
+  const lista = AD.objs.filter(o => o.level === AD.nivel && (!AD.campana || o.campaign_id === AD.campana));
+  const n = { marcha: lista.filter(adVigente).length, fin: lista.filter(o => !adVigente(o)).length, todos: lista.length };
+  return [["marcha", "En marcha"], ["fin", "Terminados y pausados"], ["todos", "Todos"]]
+    .map(([k, t]) => `<button class="ld-camp ad-vb ${AD.vista === k ? "on" : ""}" data-advista="${k}" aria-pressed="${AD.vista === k}">${t} <span>${n[k]}</span></button>`).join("");
+}
 function adFilasTabla(p){
   const fx = adFx();
   return AD.objs.filter(o => o.level === AD.nivel && (!AD.campana || o.campaign_id === AD.campana)
-      && (!AD.soloActivos || o.effective_status === "ACTIVE"))
+      && (AD.vista === "todos" || (AD.vista === "fin" ? !adVigente(o) : adVigente(o))))
     .map(o => {
       const t = adSuma(adFilas(p.desde, p.hasta, o.object_id)), an = adAnima(p.desde, p.hasta, o.object_id);
       const r = adAlcanceDe(AD.nivel, o.object_id);
@@ -408,7 +458,7 @@ function adFilasTabla(p){
         leads: t.leads, cpl: t.cpl, solicitudes: an.solicitudes, cotizadas: an.cotizadas, ganadas: an.ganadas,
         roas: t.spend ? an.valorGanado / (t.spend * fx) : NaN };
     })
-    .filter(x => x.spend || x.impressions || x.o.effective_status === "ACTIVE" || x.solicitudes)
+    .filter(x => x.spend || x.impressions || adVigente(x.o) || x.solicitudes)
     .sort((x, y) => {
       const a = x[AD.orden], b = y[AD.orden];
       if(typeof a === "string") return String(a).localeCompare(String(b), "es") * AD.dir;
@@ -416,7 +466,7 @@ function adFilasTabla(p){
     });
 }
 function adEstadoBadge(o){
-  const [t, cls] = AD_ESTADO[o.effective_status] || [o.effective_status || "—", "ad-off"];
+  const [t, cls] = AD_VIDA[adVida(o)] || ["—", "ad-off"];
   return `<span class="ad-st ${cls}">${esc(t)}</span>`;
 }
 function adTablaHTML(p){
@@ -424,7 +474,7 @@ function adTablaHTML(p){
   const th = AD_COLS.map(([k, t]) => `<button class="ad-th ${AD.orden === k ? "on" : ""}" data-adorden="${k}" role="columnheader" aria-sort="${AD.orden === k ? (AD.dir < 0 ? "descending" : "ascending") : "none"}">${esc(t)}${AD.orden === k ? (AD.dir < 0 ? " ↓" : " ↑") : ""}</button>`).join("");
   const miniatura = o => { const c = o.creative || {}; const u = c.thumbnail_url || c.image_url; return u ? `<img class="ad-thumb" src="${esc(u)}" alt="" loading="lazy">` : `<span class="ad-thumb ad-thumb-v" aria-hidden="true">▣</span>`; };
   const cuerpo = filas.map(x => `<div class="ad-tr" role="row" tabindex="0" data-adopen="${esc(x.o.object_id)}">
-      <span class="ad-td ad-td-n" role="cell">${AD.nivel === "ad" ? miniatura(x.o) : ""}<span><b>${esc(x.name || "Sin nombre")}</b>${AD.nivel !== "campaign" ? `<small>${esc((adObj(x.o.campaign_id) || {}).name || "")}</small>` : `<small>${esc(AD_OBJETIVO[x.o.objective] || x.o.objective || "")}</small>`}</span></span>
+      <span class="ad-td ad-td-n" role="cell">${AD.nivel === "ad" ? miniatura(x.o) : ""}<span><b>${esc(x.name || "Sin nombre")}</b>${AD.nivel !== "campaign" ? `<small>${esc((adObj(x.o.campaign_id) || {}).name || "")}${AD.nivel === "ad" ? adChipMachine(x.o.object_id) : ""}</small>` : `<small>${esc(AD_OBJETIVO[x.o.objective] || x.o.objective || "")}</small>`}</span></span>
       <span class="ad-td" role="cell">${adEstadoBadge(x.o)}</span>
       <span class="ad-td" role="cell">${adMoney(x.spend)}</span>
       <span class="ad-td" role="cell">${adNum(x.impressions)}</span>
@@ -443,7 +493,7 @@ function adTablaHTML(p){
   return `<div class="ad-h"><nav class="ld-tabs ad-tabs" aria-label="Nivel">${AD_NIVELES.map(([k, t]) => `<button class="ld-tab ${AD.nivel === k ? "on" : ""}" data-adnivel="${k}">${t}<span>${AD.objs.filter(o => o.level === k && (!AD.campana || o.campaign_id === AD.campana)).length}</span></button>`).join("")}</nav></div>
     ${filas.length ? `<div class="ad-tabla" role="table" aria-label="${esc((AD_NIVELES.find(n => n[0] === AD.nivel) || [])[1] || "")}"><div class="ad-tr ad-thr" role="row">${th}</div>${cuerpo}</div>
       <p class="muted ad-nota">Formularios = lo que cuenta Meta. Solicitudes, cotizadas y ganadas = lo que pasó en ANIMA con las personas de ese anuncio. Toca una fila para ver el detalle.</p>`
-      : `<div class="ld-empty"><b>Nada que mostrar en este periodo.</b><span>${AD.objs.length ? "Prueba otro periodo o quita «Solo activos»." : "Aún no se sincronizó nada: toca «Actualizar»."}</span></div>`}`;
+      : `<div class="ld-empty"><b>Nada que mostrar en este periodo.</b><span>${AD.objs.length ? "Prueba otro periodo o cambia a «Terminados» o «Todos»." : "Aún no se sincronizó nada: toca «Actualizar»."}</span></div>`}`;
 }
 
 /* Detalle de una campaña, conjunto o anuncio. */
@@ -494,6 +544,7 @@ function adPanelHTML(a, o, p){
       </div>
     </div>
     <div class="ld-dsec"><span class="ld-lbl">Día a día</span><div class="ad-charts ad-charts-1">${adGraficoDe(p, o.object_id, "spend", "Inversión", v => adMoney(v))}${adGraficoDe(p, o.object_id, "leads", "Formularios", v => adNum(v))}</div></div>
+    ${o.level === "ad" ? adSeccionMachine(o) : ""}
     ${video}
     <div class="ld-dsec"><span class="ld-lbl">En tu negocio</span>${adEmbudo(t, an)}
       ${an.lista.length ? `<ul class="ad-leads">${an.lista.slice(0, 12).map(l => { const e = LEAD_ESTADOS[l.status] || LEAD_ESTADOS.nuevo;
@@ -512,6 +563,18 @@ function adPanelHTML(a, o, p){
       ${Array.isArray(o.issues) && o.issues.length ? kv("Problemas", esc(o.issues.map(x => x.error_summary || x.error_message).join(" · "))) : ""}
     </div>
   </aside>`;
+}
+function adSeccionMachine(o){
+  const i = adIdeaDe(o.object_id);
+  if(typeof MM === "undefined") return "";
+  const v = i && i.verdict && MM_VEREDICTO[i.verdict], e = i && MM_ETAPAS.find(x => x.k === i.stage);
+  return `<div class="ld-dsec"><span class="ld-lbl">Marketing Machine</span>
+    ${i ? `<p style="margin:0 0 8px;font-size:13.5px"><b>${esc(i.title)}</b> · etapa <b>${esc(e ? e.t : i.stage)}</b>${v ? ` · <span class="mm-v ${v[1]}">${v[0]}</span>` : ""}</p>
+        ${i.hypothesis ? `<p class="muted" style="margin:0 0 8px;font-size:12.5px">Hipótesis: ${esc(i.hypothesis)}</p>` : ""}
+        <button class="btn ghost sm" data-admm="ver">Abrir en Marketing Machine</button>`
+      : `<p class="muted" style="margin:0 0 8px;font-size:12.5px">Este anuncio aún no está en el ciclo diario.</p>
+        <button class="btn sm" data-admm="seguir">Seguir en Marketing Machine</button>`}
+  </div>`;
 }
 function adGraficoDe(p, id, campo, titulo, fmt){
   const o = adObj(id);
@@ -627,6 +690,13 @@ document.addEventListener("click", e => {
       .catch(err => toast("No se pudo desconectar: " + err.message));
     return;
   }
+  const vb = t.closest("[data-advista]"); if(vb){ AD.vista = vb.dataset.advista; renderView(); return; }
+  const mmb = t.closest("[data-admm]"); if(mmb){
+    const id = AD.open; if(!id || typeof mmSeguirAnuncio !== "function") return;
+    if(mmb.dataset.admm === "seguir"){ mmSeguirAnuncio(id).then(() => renderView()); }
+    else { AD.open = null; go("marketing"); }
+    return;
+  }
   const nv = t.closest("[data-adnivel]"); if(nv){ AD.nivel = nv.dataset.adnivel; renderView(); adPedirAlcanceNivel(AD.nivel); return; }
   const od = t.closest("[data-adorden]"); if(od){ const k = od.dataset.adorden; if(AD.orden === k) AD.dir *= -1; else { AD.orden = k; AD.dir = k === "name" ? 1 : -1; } renderView(); return; }
   const lg = t.closest("[data-adlead]"); if(lg){ AD.open = null; if(typeof leadIrA === "function") leadIrA(lg.dataset.adlead); return; }
@@ -647,7 +717,6 @@ document.addEventListener("change", e => {
   if(el.matches("[data-adrango]")){ AD.rango = el.value; if(AD.rango === "rango" && !AD.desde){ const p = adPeriodo(); AD.desde = p.desde; AD.hasta = p.hasta; } adCambioPeriodo(); return; }
   if(el.matches("[data-adfecha]")){ AD[el.dataset.adfecha] = el.value; adCambioPeriodo(); return; }
   if(el.matches("[data-adcampana]")){ AD.campana = el.value; renderView(); return; }
-  if(el.matches("[data-adactivos]")){ AD.soloActivos = el.checked; renderView(); }
 });
 document.addEventListener("keydown", e => {
   if(state.view !== "anuncios") return;

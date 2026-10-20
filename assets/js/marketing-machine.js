@@ -54,6 +54,7 @@ async function mmCargar(){
   mmRefresh();
 }
 function mmRefresh(){
+  if(state.view === "anuncios" && typeof adRefresh === "function"){ adRefresh(); return; }   // Anuncios muestra el enlace con las ideas
   if(state.view !== "marketing") return;
   const f = document.activeElement;
   if(f && f.closest && f.closest("#view") && /^(INPUT|TEXTAREA|SELECT)$/.test(f.tagName)) return;
@@ -105,8 +106,40 @@ function mmAnuncios(){
   return AD.objs.filter(o => o.level === "ad").map(o => {
     const t = adSuma(adFilas(p.desde, p.hasta, o.object_id));
     const idea = (MM.ideas || []).find(i => i.ad_id === o.object_id);
-    return { o, t, idea, auto: mmVeredictoAuto(t), activo: o.effective_status === "ACTIVE" };
-  }).filter(x => x.t.spend || x.activo).sort((a, b) => b.t.spend - a.t.spend);
+    const vida = adVida(o);
+    return { o, t, idea, vida, auto: mmVeredictoAuto(t), activo: vida === "marcha" };
+  }).filter(x => x.activo || adVigente(x.o) || x.t.spend).sort((a, b) => (b.activo - a.activo) || (b.t.spend - a.t.spend));
+}
+/* Región de un anuncio según el nombre de su campaña o conjunto. */
+function mmRegionDe(o){
+  const n = [o.name, (adObj(o.adset_id) || {}).name, (adObj(o.campaign_id) || {}).name].join(" ").toUpperCase();
+  const sa = /SANTIAGO/.test(n), co = /CONCEPCI/.test(n);
+  return sa && co ? "Otra" : sa ? "Santiago" : co ? "Concepción" : "";
+}
+/* Un anuncio de Meta pasa al tablero (en «Calificar») para seguirlo cada día. */
+async function mmSeguirAnuncio(adId){
+  const o = adObj(adId); if(!o || (MM.ideas || []).some(i => i.ad_id === adId)) return;
+  const a = me();
+  const c = o.creative || {};
+  const { data, error } = await Cloud.client.from("mm_ideas").insert({ alma_id: a.almaId, title: o.name || "Anuncio de Meta", stage: "calificar",
+    ad_id: adId, region: mmRegionDe(o) || null, format: c.video_id ? "Video" : (c.image_url || c.thumbnail_url ? "Imagen" : null),
+    angle: c.title || null, source: "Meta" }).select().single();
+  if(error){ toast("No se pudo agregar: " + error.message); return; }
+  MM.ideas.unshift(data);
+}
+async function mmTraerActivos(){
+  const faltan = mmAnuncios().filter(x => x.activo && !x.idea);
+  if(!faltan.length) return;
+  MM.busy = true; renderView();
+  for(const x of faltan) await mmSeguirAnuncio(x.o.object_id);
+  MM.busy = false; renderView(); toast("✓ " + faltan.length + " anuncio" + (faltan.length === 1 ? "" : "s") + " en el tablero.");
+}
+function mmVerAnuncio(id){ go("anuncios"); setTimeout(() => adAbrir(id), 0); }
+/* Números de 7 días de un anuncio enlazado a una idea. */
+function mmNumeros(adId){
+  const o = adObj(adId); if(!o) return null;
+  const t = adSuma(adFilas(adDia(-6), adDia(0), adId));
+  return { vida: adVida(o), t };
 }
 
 function mmRacha(){
@@ -142,6 +175,10 @@ function vMarketing(a){
     escalar: AD && AD.con ? ganadores + " ganador" + (ganadores === 1 ? "" : "es") + " para escalar" : "—"
   };
 
+  const sinSeg = anuncios.filter(x => x.activo && !x.idea).length;
+  const enMarcha = anuncios.filter(x => x.activo).length;
+  const sinSegHTML = AD && AD.con && sinSeg ? `<div class="card s12 mm-card mm-aviso"><span><b>${sinSeg} anuncio${sinSeg === 1 ? "" : "s"} en marcha ${sinSeg === 1 ? "no está" : "no están"} en el tablero.</b> Súmalos para calificarlos cada día.</span>
+      <button class="btn sm" data-mmtraertodos ${MM.busy ? "disabled" : ""}>${MM.busy ? "Agregando…" : "Agregar al tablero"}</button></div>` : "";
   const ritual = `<div class="card s12 mm-card">
       <div class="ad-h"><h3>Ritual de hoy</h3><small class="muted">${hechas} de 5 hechas${mmRacha() ? " · racha de " + mmRacha() + " día" + (mmRacha() === 1 ? "" : "s") : ""}</small></div>
       <div class="mm-ritual">${MM_ETAPAS.map((e, n) => { const ok = !!(fila.done && fila.done[e.k]);
@@ -168,10 +205,12 @@ function vMarketing(a){
     const abierta = MM.open === i.id, v = i.verdict && MM_VEREDICTO[i.verdict];
     const k = idx(i.stage);
     const dias = Math.max(0, Math.floor((Date.now() - new Date(i.stage_at)) / 86400000));
-    const adSel = (typeof AD !== "undefined" && AD.objs ? AD.objs.filter(o => o.level === "ad") : []);
+    const adSel = (typeof AD !== "undefined" && AD.objs ? AD.objs.filter(o => o.level === "ad" && (adVigente(o) || o.object_id === i.ad_id)) : []);
+    const num = i.ad_id && AD && AD.con ? mmNumeros(i.ad_id) : null;
     return `<div class="mm-it ${abierta ? "open" : ""}">
       <button type="button" class="mm-it-h" data-mmabrir="${esc(i.id)}"><b>${esc(i.title)}</b>
         <small>${esc([i.format, i.region].filter(Boolean).join(" · "))}${dias ? " · hace " + dias + " d" : ""}</small>
+        ${num ? `<small class="mm-live">${esc(AD_VIDA[num.vida][0])} · ${adMoney(num.t.spend)} · ${adNum(num.t.leads)} form.${isFinite(num.t.cpl) ? " · " + adMoney(num.t.cpl) : ""}</small>` : ""}
         ${v ? `<span class="mm-v ${v[1]}">${v[0]}</span>` : ""}</button>
       ${abierta ? `<div class="mm-it-b">
         <label class="lead-f">Título<input data-mmf="title" value="${esc(i.title)}"></label>
@@ -183,6 +222,7 @@ function vMarketing(a){
           <label class="lead-f">Veredicto<select data-mmf="verdict" class="ld-sel on"><option value="">Sin veredicto</option>${Object.entries(MM_VEREDICTO).map(([k2, x]) => `<option value="${k2}" ${k2 === i.verdict ? "selected" : ""}>${x[0]}</option>`).join("")}</select></label>
         </div>
         <div class="mm-acts">
+          ${i.ad_id && AD && AD.con ? `<button class="btn ghost sm" data-mmver="${esc(i.ad_id)}">Ver en Anuncios</button>` : ""}
           ${k > 0 ? `<button class="btn ghost sm" data-mmmover="${esc(i.id)}" data-dir="-1">‹ ${MM_ETAPAS[k - 1].t}</button>` : ""}
           ${k < 4 ? `<button class="btn sm" data-mmmover="${esc(i.id)}" data-dir="1">${MM_ETAPAS[k + 1].t} ›</button>` : ""}
           <button class="btn ghost sm" data-mmarchivar="${esc(i.id)}">Archivar</button>
@@ -200,12 +240,13 @@ function vMarketing(a){
       ${anuncios.length ? `<div class="mm-tabla">${anuncios.slice(0, 15).map(x => {
         const v = MM_VEREDICTO[x.auto.v];
         return `<div class="mm-tr" title="${esc(x.auto.why)}">
-          <span class="mm-nom"><b>${esc(x.o.name || x.o.object_id)}</b><small>${x.activo ? "Activo" : "Pausado"} · ${x.t.dias.size} día${x.t.dias.size === 1 ? "" : "s"}${x.idea ? " · " + esc(x.idea.title) : ""}</small></span>
+          <span class="mm-nom"><b>${esc(x.o.name || x.o.object_id)}</b><small>${esc(AD_VIDA[x.vida][0])} · ${x.t.dias.size} día${x.t.dias.size === 1 ? "" : "s"}${x.idea ? " · " + esc(x.idea.title) : ""}</small></span>
           <span class="mm-num"><b>${adMoney(x.t.spend)}</b><small>gasto</small></span>
           <span class="mm-num"><b>${adNum(x.t.leads)}</b><small>formularios</small></span>
           <span class="mm-num"><b>${isFinite(x.t.cpl) ? adMoney(x.t.cpl) : "—"}</b><small>costo/form.</small></span>
           <span class="mm-num"><b>${adPct(x.t.ctr, 2)}</b><small>CTR</small></span>
           <span class="mm-v ${v[1]}">${v[0]}</span>
+          <button class="btn ghost sm" data-mmver="${esc(x.o.object_id)}">Ver</button>
           ${x.idea ? `<button class="btn ghost sm" data-mmaplicar="${esc(x.idea.id)}" data-v="${x.auto.v}">Guardar veredicto</button>` : `<button class="btn ghost sm" data-mmtraer="${esc(x.o.object_id)}">Seguir en el tablero</button>`}
         </div>`; }).join("")}</div>` : `<p class="muted" style="font-size:13px;margin:6px 0 0">Sin anuncios con gasto en los últimos 7 días.</p>`}
     </div>` : `<div class="card s12 mm-card"><div class="ad-h"><h3>Calificar</h3></div><p class="muted" style="font-size:13px;margin:0">Conecta tu cuenta de Meta en <button class="btn ghost sm" data-view="anuncios">Anuncios</button> para calificar con números reales.</p></div>`;
@@ -224,7 +265,7 @@ function vMarketing(a){
       <div class="ld-selects">${regiones}<button class="btn sm" data-mmnueva>+ Nueva idea</button></div></div>
       ${MM.error ? `<p class="muted" style="font-size:12.5px;margin:8px 0 0">⚠ ${esc(MM.error)}</p>` : ""}
     </div>
-    ${ritual}${form}
+    ${ritual}${sinSegHTML}${form}
     <div class="card s12 mm-card"><div class="ad-h"><h3>Tablero</h3><small class="muted">${ideas.length} en el ciclo</small></div>${tablero}</div>
     ${califica}${escalar}
   </div>`;
@@ -260,10 +301,11 @@ document.addEventListener("click", e => {
     });
     return;
   }
+  if(t.closest("[data-mmtraertodos]")){ mmTraerActivos(); return; }
+  const vr = t.closest("[data-mmver]"); if(vr){ mmVerAnuncio(vr.dataset.mmver); return; }
   const ap = t.closest("[data-mmaplicar]"); if(ap){ mmGuardarIdea(ap.dataset.mmaplicar, { verdict: ap.dataset.v }); toast("✓ Veredicto guardado."); return; }
   const tr = t.closest("[data-mmtraer]"); if(tr){
-    const o = adObj(tr.dataset.mmtraer); if(!o) return;
-    mmCrearIdea({ title: o.name || "Anuncio de Meta", stage: "calificar", ad_id: o.object_id });
+    mmSeguirAnuncio(tr.dataset.mmtraer).then(() => renderView());
     return;
   }
   if(t.closest("[data-mmmeta]")){
