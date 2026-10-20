@@ -242,6 +242,7 @@ const NAV_TREE = [
       {v:"tareas",     ico:"✓",ic:"obra",t:"Tareas"},
       {v:"clientes",   ico:"☺",ic:"constelacion",t:"Vínculos"},
       {v:"cotizador",  ico:"₵",ic:"documento",t:"Cotizador"},
+      {v:"facturas",   ico:"▤",ic:"documento",t:"Facturas"},
       {v:"finanzas",   ico:"🌱",ic:"raiz",t:"Raíz"},
       {v:"agenda",     ico:"☰",ic:"agenda",t:"Calendario"}
   ]},
@@ -294,7 +295,7 @@ function sectionOfView(v){
   // Mi Plan vive DENTRO de Mi Alma. Clan y Santuario son moradas propias del menú,
   // visibles SOLO si el Alma tiene acceso a esa Forma. No viven dentro de Mundo.
   if(["mialma","trayectoria","portafolio","cronologia","insignias","estadisticas","visibilidad","memoria","biblioteca","miplan"].includes(v)) return "mialma";
-  if(["taller","centro","anuncios","proyectos","tareas","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
+  if(["taller","centro","anuncios","proyectos","tareas","clientes","cotizador","facturas","finanzas","agenda"].includes(v)) return "taller";
   if(["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "clan";
   if(SANT_VIEWS.includes(v)) return "santuario";
   if(["mundo","comunidad","consejo","cronica","world_wandering_traces"].includes(v)) return "mundo";
@@ -413,6 +414,7 @@ const TITLES = {
   tareas:["Tareas","Lo que hay que hacer, por prioridad."],
   finanzas:["Raíz","Abonos, pagos realizados, egresos y ganancia — privado. El sustento del Alma."],
   clientes:["Vínculos","Tu cartera de vínculos y contactos."],
+  facturas:["Facturas","Factura, boleta y nota de crédito electrónicas, enviadas directo al SII."],
   cotizador:["Centro documental","Cotizaciones, propuestas y documentos profesionales · exporta en PDF."],
   agenda:["Calendario","Citas, entregas, recordatorios y tu iPhone o Google en un solo lugar."],
   memoria:["Memorias","Ideas, frases y referencias que no quieres perder."],
@@ -622,7 +624,7 @@ function renderView(){
   // Consejo) lleva al aviso de próxima apertura.
   if(sectionOfView(state.view)==="mundo" && !mundoAbierto()) state.view="mundo";
   const fn = (state.view==="mundo" && !mundoAbierto()) ? vMundoPronto : { mialma:vMiAlma, taller:vTaller, mundo:vMundo, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
-    finanzas:vFinanzas, clientes:vClientes, centro:(typeof vCentro==="function"?vCentro:vMiAlma), anuncios:(typeof vAnuncios==="function"?vAnuncios:vMiAlma), cotizador:vCotizador, agenda:(typeof vCalTaller==="function"?vCalTaller:vAgenda), tareas:vTareas, memoria:vMemoria, biblioteca:vBiblioteca,
+    finanzas:vFinanzas, clientes:vClientes, centro:(typeof vCentro==="function"?vCentro:vMiAlma), anuncios:(typeof vAnuncios==="function"?vAnuncios:vMiAlma), cotizador:vCotizador, facturas:(typeof vFacturas==="function"?vFacturas:vMiAlma), agenda:(typeof vCalTaller==="function"?vCalTaller:vAgenda), tareas:vTareas, memoria:vMemoria, biblioteca:vBiblioteca,
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, world_wandering_traces:vWanderingTraces, santuario:vSantuario,
