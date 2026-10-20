@@ -2509,3 +2509,12 @@ a.ld-wa{text-decoration:none}
 .mm-nom small,.mm-num small{font-size:11px;color:var(--muted)}
 .mm-num{display:flex;flex-direction:column;min-width:64px;font-variant-numeric:tabular-nums}
 @media(max-width:760px){.mm-ritual{grid-template-columns:1fr 1fr}.mm-card{padding:18px 16px}.mm-board{grid-template-columns:repeat(5,230px)}}
+
+/* Anuncios ↔ Marketing Machine: vistas «En marcha / Terminados» y enlaces entre ambos. */
+.ad-vista{display:inline-flex;gap:6px;flex-wrap:wrap}
+.ad-vb{flex-direction:row;align-items:center;gap:6px;padding:7px 12px}
+.ad-vb span{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ad-vb.on span{color:#15151a}
+.ad-mm{color:#6b4fbb;font-weight:700}
+.mm-aviso{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:13.5px}
+.mm-live{font-variant-numeric:tabular-nums}
