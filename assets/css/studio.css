@@ -2477,3 +2477,35 @@ a.ld-wa{text-decoration:none}
 .la-nota{font-size:12.5px;line-height:1.5;color:var(--muted);margin:8px 0}
 .la-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 @media (max-width:720px){ .ad-kpis.ad-kpis-r{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
+/* Marketing Machine (Taller): ritual diario, tablero por etapa y calificación. */
+.mm-card{padding:22px 24px}
+.mm-ritual{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:12px}
+.mm-paso{font:inherit;text-align:left;display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;color:#15151a}
+.mm-paso b{font-size:15px}
+.mm-paso small{font-size:11.5px;color:var(--muted)}
+.mm-paso .mm-n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:rgba(21,21,26,.07);margin-bottom:4px}
+.mm-paso.on{border-color:#1f7a4d;background:rgba(31,122,77,.07)}
+.mm-paso.on .mm-n{background:#1f7a4d;color:#fff}
+.mm-form .lead-f{margin-bottom:10px}
+.mm-board{display:grid;grid-template-columns:repeat(5,minmax(190px,1fr));gap:10px;margin-top:12px;overflow-x:auto;padding-bottom:6px}
+.mm-col{background:rgba(21,21,26,.03);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.mm-col header{display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:2px 4px}
+.mm-vacio{font-size:12px;color:var(--muted);text-align:center;margin:8px 0}
+.mm-it{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.mm-it-h{font:inherit;width:100%;text-align:left;display:flex;flex-direction:column;gap:3px;padding:10px 12px;background:none;border:0;cursor:pointer;color:#15151a}
+.mm-it-h b{font-size:13.5px;line-height:1.3}
+.mm-it-h small{font-size:11.5px;color:var(--muted)}
+.mm-it-b{padding:4px 12px 12px;border-top:1px solid var(--line)}
+.mm-it-b .lead-f{margin:8px 0 0}
+.mm-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.mm-v{align-self:flex-start;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.mm-v-g{background:rgba(31,122,77,.14);color:#1f7a4d}
+.mm-v-p{background:rgba(180,130,20,.15);color:#8a6410}
+.mm-v-a{background:rgba(190,50,50,.13);color:#b03030}
+.mm-tabla{display:flex;flex-direction:column;margin-top:8px}
+.mm-tr{display:flex;align-items:center;gap:14px;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.mm-nom{flex:1 1 200px;min-width:0;display:flex;flex-direction:column}
+.mm-nom small,.mm-num small{font-size:11px;color:var(--muted)}
+.mm-num{display:flex;flex-direction:column;min-width:64px;font-variant-numeric:tabular-nums}
+@media(max-width:760px){.mm-ritual{grid-template-columns:1fr 1fr}.mm-card{padding:18px 16px}.mm-board{grid-template-columns:repeat(5,230px)}}
