@@ -2518,3 +2518,49 @@ a.ld-wa{text-decoration:none}
 .ad-mm{color:#6b4fbb;font-weight:700}
 .mm-aviso{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:13.5px}
 .mm-live{font-variant-numeric:tabular-nums}
+/* ---------- Facturas (Taller) ---------- */
+.fa-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.fa-top .ld-tabs{margin:0 0 0 -4px;padding:0;border-bottom:0;flex:1;min-width:0}
+.fa-amb{font-size:11.5px;font-weight:750;padding:5px 11px;border-radius:999px;background:rgba(184,134,47,.14);color:var(--gold-deep,#7b5920)}
+.fa-amb-prod{background:rgba(58,138,95,.14);color:var(--ok)}
+.fa-msg{margin:14px 0 0;padding:11px 14px;border-radius:12px;background:rgba(208,170,99,.14);font-size:13.5px}
+.fa-h{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:22px 0 10px}
+.fa-ayuda{font-size:12.5px;margin:-4px 0 12px}
+.fa-form,.fa-conf{margin-top:16px}
+.fa-tipos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.fa-tipo{position:relative;text-align:left;font:inherit;display:flex;flex-direction:column;gap:3px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.6);cursor:pointer;transition:border-color .15s,background .15s}
+.fa-tipo b{font-size:13.5px}.fa-tipo small{font-size:11.5px;color:var(--muted);padding-right:26px}
+.fa-tipo i{position:absolute;top:10px;right:12px;font-style:normal;font-size:11px;font-weight:800;color:var(--muted)}
+.fa-tipo.on{border-color:var(--gold);background:#fff;box-shadow:0 0 0 2px rgba(208,170,99,.25)}
+.fa-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 14px}
+.fa-cols-3{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:14px}
+.fa-full{grid-column:1/-1}
+.fa-item{display:grid;grid-template-columns:minmax(0,1fr) 84px 130px auto 38px;gap:0 10px;align-items:end}
+.fa-item .field{margin-bottom:10px}
+.fa-i-ex{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);height:44px;margin-bottom:10px;cursor:pointer}
+.fa-i-ex input{accent-color:var(--gold)}
+.fa-i-del{margin-bottom:10px;height:44px}
+.fa-tot{margin:18px 0 0 auto;max-width:300px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.fa-tot div{display:flex;justify-content:space-between;gap:20px}
+.fa-tot-fuerte{border-top:1px solid var(--line);padding-top:8px;font-size:17px}
+.fa-acc{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:18px}
+.fa-aviso,.fa-ok{margin-top:14px;padding:11px 14px;border-radius:12px;font-size:13.5px;background:rgba(178,59,59,.08);color:var(--danger)}
+.fa-ok{background:rgba(58,138,95,.1);color:var(--ok);margin:0 0 12px}
+.fa-vacio{text-align:center;padding:36px 12px}.fa-vacio p{color:var(--muted);margin:0 0 14px}
+.fa-lista{margin-top:12px}
+.fa-doc{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px 14px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.fa-doc-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fa-doc-main span{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fa-glosa{color:var(--danger);font-size:12px}
+.fa-doc-monto{font-weight:800;font-size:15px;text-align:right}
+.fa-doc-acc{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
+.fa-st{font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.fa-st-pend{background:rgba(0,0,0,.06);color:#5b574f}.fa-st-ok{background:rgba(58,138,95,.14);color:var(--ok)}
+.fa-st-warn{background:rgba(184,134,47,.16);color:var(--gold-deep,#7b5920)}.fa-st-mal{background:rgba(178,59,59,.13);color:var(--danger)}
+.fa-folios{display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bottom:14px}
+.fa-n{font-style:normal;font-weight:800;margin-left:6px}
+@media (max-width:640px){
+  .fa-item{grid-template-columns:1fr 1fr;} .fa-i-nom{grid-column:1/-1}
+  .fa-i-ex{height:auto;margin-bottom:10px}.fa-i-del{height:auto;justify-self:end}
+  .fa-tot{max-width:none}
+}
