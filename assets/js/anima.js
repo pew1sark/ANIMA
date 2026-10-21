@@ -239,6 +239,7 @@ const NAV_TREE = [
       {v:"centro",     ico:"✉",ic:"enlace",t:"Centro de clientes"},
       {v:"anuncios",   ico:"◎",ic:"grafico",t:"Anuncios"},
       {v:"marketing",  ico:"⚙",ic:"proceso",t:"Marketing Machine"},
+      {v:"tienda",     ico:"▤",ic:"panel",t:"Tienda web"},
       {v:"proyectos",  ico:"◷",ic:"proceso",t:"Proyectos"},
       {v:"tareas",     ico:"✓",ic:"obra",t:"Tareas"},
       {v:"clientes",   ico:"☺",ic:"constelacion",t:"Vínculos"},
@@ -295,7 +296,7 @@ function sectionOfView(v){
   // Mi Plan vive DENTRO de Mi Alma. Clan y Santuario son moradas propias del menú,
   // visibles SOLO si el Alma tiene acceso a esa Forma. No viven dentro de Mundo.
   if(["mialma","trayectoria","portafolio","cronologia","insignias","estadisticas","visibilidad","memoria","biblioteca","miplan"].includes(v)) return "mialma";
-  if(["taller","centro","anuncios","marketing","proyectos","tareas","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
+  if(["taller","centro","anuncios","marketing","tienda","proyectos","tareas","clientes","cotizador","finanzas","agenda"].includes(v)) return "taller";
   if(["clanpanel","equipo","calendario","proyectos_clan","recordatorios"].includes(v)) return "clan";
   if(SANT_VIEWS.includes(v)) return "santuario";
   if(["mundo","comunidad","consejo","cronica","world_wandering_traces"].includes(v)) return "mundo";
@@ -410,6 +411,7 @@ const TITLES = {
   taller:["Taller","Proyectos, vínculos, dinero y agenda de un vistazo."],
   anuncios:["Anuncios","Cada anuncio de Meta, de la inversión al trabajo ganado."],
   marketing:["Marketing Machine","El ciclo diario: investigar, producir, subir, calificar y escalar anuncios."],
+  tienda:["Tienda web","Tu tienda de Shopify en vivo, cruzada con tus anuncios: quién entra, quién compra y cuánto vuelve."],
   centro:["Centro de clientes","Las solicitudes de tus anuncios llegan aquí: léelas, confírmalas y conversa por WhatsApp."],
   proyectos:["Proyectos","Lo que está vivo ahora mismo."],
   tareas:["Tareas","Lo que hay que hacer, por prioridad."],
@@ -624,7 +626,7 @@ function renderView(){
   // Consejo) lleva al aviso de próxima apertura.
   if(sectionOfView(state.view)==="mundo" && !mundoAbierto()) state.view="mundo";
   const fn = (state.view==="mundo" && !mundoAbierto()) ? vMundoPronto : { mialma:vMiAlma, taller:vTaller, mundo:vMundo, miplan:vMiPlan, trayectoria:vTrayectoria, portafolio:vPortafolio, proyectos:vProyectos,
-    finanzas:vFinanzas, clientes:vClientes, centro:(typeof vCentro==="function"?vCentro:vMiAlma), anuncios:(typeof vAnuncios==="function"?vAnuncios:vMiAlma), marketing:(typeof vMarketing==="function"?vMarketing:vMiAlma), cotizador:vCotizador, agenda:(typeof vCalTaller==="function"?vCalTaller:vAgenda), tareas:vTareas, memoria:vMemoria, biblioteca:vBiblioteca,
+    finanzas:vFinanzas, clientes:vClientes, centro:(typeof vCentro==="function"?vCentro:vMiAlma), anuncios:(typeof vAnuncios==="function"?vAnuncios:vMiAlma), marketing:(typeof vMarketing==="function"?vMarketing:vMiAlma), tienda:(typeof vTienda==="function"?vTienda:vMiAlma), cotizador:vCotizador, agenda:(typeof vCalTaller==="function"?vCalTaller:vAgenda), tareas:vTareas, memoria:vMemoria, biblioteca:vBiblioteca,
     cronologia:vCronologia, insignias:vInsignias, estadisticas:vEstadisticas, visibilidad:vVisibilidad, consejo:vConsejo,
     config:vConfig, consola:vConsola, clanpanel:vClanPanel, equipo:vEquipo, calendario:vCalendario, proyectos_clan:vProyectosClan,
     recordatorios:vRecordatorios, comunidad:vComunidad, world_wandering_traces:vWanderingTraces, santuario:vSantuario,
