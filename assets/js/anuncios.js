@@ -43,15 +43,16 @@ function adYmd(d){ return d.getFullYear() + "-" + String(d.getMonth() + 1).padSt
 function adDia(off){ const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + off); return adYmd(d); }
 function adSumar(ymd, n){ const [y, m, d] = ymd.split("-").map(Number); const x = new Date(y, m - 1, d, 12); x.setDate(x.getDate() + n); return adYmd(x); }
 function adDias(a, b){ const f = s => { const [y, m, d] = s.split("-").map(Number); return Date.UTC(y, m - 1, d); }; return Math.round((f(b) - f(a)) / 86400000) + 1; }
-/* [desde, hasta] inclusive, y el periodo anterior del mismo largo para comparar. */
-function adPeriodo(){
-  const r = AD.rango, hoy = adDia(0);
+/* [desde, hasta] inclusive, y el periodo anterior del mismo largo para comparar.
+   `st` es el estado que guarda el periodo elegido (Anuncios o Tienda web). */
+function adPeriodo(st){
+  const S = st || AD, r = S.rango, hoy = adDia(0);
   let d, h = hoy;
   if(r === "hoy") d = hoy;
   else if(r === "ayer") d = h = adDia(-1);
   else if(r === "mes"){ const x = new Date(); d = adYmd(new Date(x.getFullYear(), x.getMonth(), 1, 12)); }
   else if(r === "mesant"){ const x = new Date(); d = adYmd(new Date(x.getFullYear(), x.getMonth() - 1, 1, 12)); h = adYmd(new Date(x.getFullYear(), x.getMonth(), 0, 12)); }
-  else if(r === "rango"){ d = AD.desde || adDia(-6); h = AD.hasta || hoy; if(d > h){ const t = d; d = h; h = t; } }
+  else if(r === "rango"){ d = S.desde || adDia(-6); h = S.hasta || hoy; if(d > h){ const t = d; d = h; h = t; } }
   else d = adDia(1 - Number(r));
   const n = adDias(d, h);
   return { desde: d, hasta: h, n, prevDesde: adSumar(d, -n), prevHasta: adSumar(d, -1) };
@@ -59,9 +60,10 @@ function adPeriodo(){
 
 /* ---------- formato ---------- */
 function adCur(){ return (AD.con && AD.con.currency) || "USD"; }
-function adMoney(n, dec){
+/* `moneda` deja formatear en otra moneda (Tienda web: la de la tienda). */
+function adMoney(n, dec, moneda){
   if(typeof ANIMA_DISCREET !== "undefined" && ANIMA_DISCREET) return "••••";
-  const c = adCur(), sinDec = ["CLP", "COP", "JPY", "KRW", "PYG", "VND"].includes(c);
+  const c = moneda || adCur(), sinDec = ["CLP", "COP", "JPY", "KRW", "PYG", "VND"].includes(c);
   try{ return new Intl.NumberFormat("es-CL", { style: "currency", currency: c, currencyDisplay: "narrowSymbol",
     minimumFractionDigits: sinDec ? 0 : (dec == null ? 2 : dec), maximumFractionDigits: sinDec ? 0 : (dec == null ? 2 : dec) }).format(n || 0).replace(/^\$/, c === "USD" ? "US$" : "$"); }
   catch(e){ return c + " " + Number(n || 0).toFixed(2); }
