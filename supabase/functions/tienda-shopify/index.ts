@@ -103,13 +103,20 @@ async function pedirToken(shop: string, id: string, secret: string) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ grant_type: "client_credentials", client_id: id, client_secret: secret }),
   });
-  const j = await r.json().catch(() => ({}));
+  // Shopify a veces responde el error en HTML o en error_description: se lee
+  // el texto entero para no perder el motivo.
+  const texto = await r.text().catch(() => "");
+  let j: any = {};
+  try { j = JSON.parse(texto); } catch (_) { /* no era JSON */ }
   if (!r.ok || !j.access_token) {
-    const e = String(j.error || j.errors || "");
-    if (/shop_not_permitted/.test(e)) throw new ShopError("La app y la tienda no están en la misma organización de Shopify. Crea la app en el Dev Dashboard de la misma cuenta dueña de la tienda e instálala ahí.");
-    if (/invalid_client|unauthorized/i.test(e) || r.status === 401) throw new ShopError("Shopify no reconoce ese Client ID o Client secret. Cópialos de nuevo desde App settings en el Dev Dashboard.");
+    const detalle = [j.error, j.error_description, typeof j.errors === "string" ? j.errors : j.errors ? JSON.stringify(j.errors) : ""]
+      .filter(Boolean).join(": ") || texto.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
+    console.error("tienda-shopify token", r.status, detalle);
+    if (/shop_not_permitted/i.test(detalle)) throw new ShopError("La app y la tienda no están en la misma organización de Shopify. Crea la app en el Dev Dashboard de la misma cuenta dueña de la tienda e instálala ahí.");
+    if (/not[ _-]?installed/i.test(detalle)) throw new ShopError("La app no está instalada en la tienda. En dev.shopify.com abre la app, toca «Instalar app» y elige la tienda.");
+    if (/invalid_client|unauthorized|client.?secret/i.test(detalle) || r.status === 401) throw new ShopError("Shopify no reconoce ese Client ID o Client secret. Cópialos de nuevo desde la configuración de la app en el Dev Dashboard.");
     if (r.status === 404) throw new ShopError("No existe una tienda con ese dominio. Revisa el «.myshopify.com».");
-    throw new ShopError(`Shopify no entregó la llave (${r.status}). ¿La app está instalada en la tienda?`);
+    throw new ShopError(`Shopify no entregó la llave (${r.status}${detalle ? ": " + detalle : ""}). Revisa que la app esté instalada en la tienda.`);
   }
   return { t: String(j.access_token), exp: Date.now() + (Number(j.expires_in) || 86399) * 1000, scope: String(j.scope || "") };
 }
