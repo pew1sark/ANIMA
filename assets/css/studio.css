@@ -2428,7 +2428,81 @@ a.ld-wa{text-decoration:none}
 .dsh-pop button b{display:block;font-size:13px;color:#15151a}
 .dsh-pop button small{display:block;font-size:11.5px;color:var(--muted)}
 .leaflet-container{font-family:Inter,system-ui,sans-serif}
-.dsh-map .leaflet-tile-pane{filter:grayscale(1) brightness(1.06) contrast(.88)}
+/* Mapa claro y suave: el color queda para los proyectos. */
+.dsh-map .leaflet-tile-pane{filter:grayscale(1) sepia(.08) brightness(1.08) contrast(.78) saturate(.6)}
+.dsh-map-box::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:400;border-radius:inherit;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4),inset 0 -40px 60px -40px rgba(21,21,26,.12)}
+.dsh-map .leaflet-control-zoom{border:0;border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.dsh-map .leaflet-control-zoom a{width:32px;height:32px;line-height:32px;color:#15151a;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-bottom-color:var(--line)}
+.dsh-map .leaflet-control-zoom a:hover{background:#fff}
+.dsh-map-fit{position:absolute;top:10px;right:10px;z-index:500;width:32px;height:32px;border-radius:10px;border:0;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(0,0,0,.12);font-size:15px;cursor:pointer;color:#15151a}
+.dsh-map-fit:hover{background:#fff}
+.dsh-map-hint{color:var(--muted);font-size:11px}
+.dsh-map-hint::before{content:"·";margin-right:6px}
+/* Marcadores: dona con un color por grupo y el total al centro */
+.dsh-mk-w{background:none;border:0}
+.dsh-mk{position:relative;width:var(--s);height:var(--s);border-radius:50%;background:var(--ring);padding:4px;box-sizing:border-box;box-shadow:0 6px 16px rgba(20,20,30,.28),0 0 0 2px #fff;transition:transform .18s ease}
+.dsh-mk b{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:#fff;font-size:12px;font-weight:820;letter-spacing:-.02em;color:#15151a;font-family:Inter,system-ui,sans-serif}
+.dsh-mk em{position:absolute;top:calc(100% + 5px);left:50%;transform:translateX(-50%);white-space:nowrap;font-style:normal;font-size:11px;font-weight:700;background:rgba(21,21,26,.86);color:#fff;border-radius:999px;padding:2px 8px;pointer-events:none;font-family:Inter,system-ui,sans-serif}
+.dsh-mk.is-g{padding:5px;cursor:zoom-in}
+.dsh-mk.is-g::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(235,104,52,.35);animation:dshLatido 2.4s ease-out infinite}
+.leaflet-marker-icon:hover .dsh-mk,.leaflet-marker-icon:focus .dsh-mk{transform:scale(1.12)}
+@keyframes dshLatido{0%{transform:scale(.85);opacity:1}100%{transform:scale(1.35);opacity:0}}
+@media (prefers-reduced-motion:reduce){.dsh-mk.is-g::before{animation:none}.dsh-mk{transition:none}}
+/* Lista de ciudades: Santiago se abre en comunas */
+.dsh-place-bar{display:flex;gap:2px;height:4px;margin-top:6px;border-radius:2px;overflow:hidden}
+.dsh-place-bar i{display:block;height:100%;min-width:3px}
+.dsh-place-bar i.is-lead{background:#fff;box-shadow:inset 0 0 0 1px #52514e}
+.dsh-place-g>summary{list-style:none;cursor:pointer}
+.dsh-place-g>summary::-webkit-details-marker{display:none}
+.dsh-place.is-g{display:grid;width:100%;box-sizing:border-box}
+.dsh-place.is-g b::after{content:"▸";display:inline-block;margin-left:6px;font-size:10px;color:var(--muted);transition:transform .15s}
+.dsh-place-g[open] .dsh-place.is-g b::after{transform:rotate(90deg)}
+.dsh-place-g>summary:hover .dsh-place{background:rgba(0,0,0,.04)}
+.dsh-place-kids{margin:0 0 6px 10px;padding-left:8px;border-left:2px solid rgba(235,104,52,.25);display:flex;flex-direction:column;gap:1px}
+.dsh-place.is-sub{padding:7px 8px}
+.dsh-place.is-sub b{font-size:13px;font-weight:600}
+.dsh-place-ver{font-size:12px;text-align:left;padding:6px 8px;text-decoration:none}
+.dsh-place-ver:hover{text-decoration:underline}
+
+/* Resumen del Taller por secciones */
+.dsh-sec{display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap;margin:14px 2px -6px;padding-top:10px;border-top:1px solid var(--line)}
+.dsh-sec h3{margin:0;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-family:ui-monospace,"SF Mono",monospace;color:#7b5920;font-weight:700}
+.dsh-sec small{font-size:12.5px;color:var(--muted)}
+/* Tarjetas de las pestañas (Anuncios, Tienda web, Marketing Machine) */
+.dsh-tab{gap:12px}
+.dsh-tab .section-title{margin-bottom:0}
+.dsh-sts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.dsh-sts-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.dsh-st{background:rgba(0,0,0,.035);border-radius:12px;padding:10px 11px 9px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.dsh-st span{font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dsh-st b{font-size:17px;letter-spacing:-.035em;line-height:1.15;color:#15151a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dsh-st small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dsh-st.is-ok{background:rgba(27,175,122,.1)}.dsh-st.is-ok b{color:#1f7a4c}
+.dsh-st.is-warn{background:rgba(237,161,0,.13)}.dsh-st.is-warn b{color:#9a5b00}
+.dsh-var{font-style:normal;font-weight:750;color:#3f3c37}
+.dsh-var.up{color:#1f7a4c}.dsh-var.down{color:var(--danger)}
+.dsh-neg{color:var(--danger);font-weight:650}
+.dsh-trend{position:relative;height:56px;border-radius:12px;background:rgba(0,0,0,.025);overflow:hidden;display:flex;align-items:center;padding:0 12px;font-size:12px}
+.dsh-trend>small{position:absolute;top:7px;left:11px;font-size:10.5px;color:var(--muted);z-index:1}
+.dsh-trend .dsh-spark{height:40px}
+.dsh-trend .muted{margin-top:10px}
+.dsh-alerta{display:flex;flex-direction:column;gap:2px;border-radius:12px;padding:9px 12px;background:rgba(237,161,0,.12);font-size:12.5px}
+.dsh-alerta b{color:#7a4a00;font-size:12.5px}
+.dsh-alerta small{color:#6b5a3a;font-size:11.5px;line-height:1.4}
+.dsh-alerta.is-crit{background:rgba(178,59,59,.1)}.dsh-alerta.is-crit b{color:var(--danger)}
+.dsh-alerta-mas{font-weight:650}
+.dsh-ok{font-size:12.5px;color:#1f7a4c;background:rgba(27,175,122,.09);border-radius:12px;padding:9px 12px}
+.dsh-pills{display:flex;gap:6px;flex-wrap:wrap}
+.dsh-pill{font:inherit;font-size:12px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;color:#3f3c37;border-radius:999px;padding:5px 11px;cursor:pointer}
+.dsh-pill b{font-size:12.5px;color:#15151a}
+.dsh-pill.is-warn{background:rgba(237,161,0,.13);border-color:transparent}.dsh-pill.is-warn b{color:#9a5b00}
+.dsh-loading{display:flex;align-items:center;gap:10px}
+.dsh-ritual{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.dsh-ritual span{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.dsh-ritual i{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:800;background:rgba(0,0,0,.06);color:var(--muted)}
+.dsh-ritual span.on i{background:#4a3aa7;color:#fff}
+.dsh-ritual small{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.dsh-etapas.dsh-mm .dsh-etapa{grid-template-columns:minmax(96px,auto) 1fr 26px}
 .leaflet-control-attribution{font-size:9.5px}
 
 /* Ancho: la grilla de 12 se reparte sola en pantallas medianas y chicas */
@@ -2445,6 +2519,8 @@ a.ld-wa{text-decoration:none}
   .dsh-act{grid-template-columns:1fr}
 }
 @media (max-width:720px){
+  .dsh-sts,.dsh-sts-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dsh-sec{margin-top:8px}
   .dsh .s3{grid-column:span 6}
   .dsh-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .dsh-kpi{min-height:118px;padding:14px 14px 12px}
