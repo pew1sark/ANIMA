@@ -226,6 +226,21 @@ const DSH_LUGARES = {
   "castro":[-42.48,-73.7622],"ancud":[-41.8697,-73.8203],"coyhaique":[-45.5712,-72.0685],"punta arenas":[-53.1638,-70.9171],"puerto natales":[-51.7236,-72.4875]
 };
 const DSH_ALIAS = { "stgo":"santiago", "stgo centro":"santiago", "santiago centro":"santiago", "conce":"concepcion", "vina":"vina del mar", "pac":"pedro aguirre cerda" };
+/* Gran Santiago: las 32 comunas de la provincia más Puente Alto y San Bernardo
+   (como lo cuenta el INE). En el mapa de Chile se ven juntas como «Santiago» y
+   se separan por comuna al acercarse; en la lista, Santiago se abre en comunas. */
+const DSH_STGO = {
+  "santiago":"Santiago Centro","providencia":"Providencia","las condes":"Las Condes","vitacura":"Vitacura","lo barnechea":"Lo Barnechea",
+  "nunoa":"Ñuñoa","la reina":"La Reina","penalolen":"Peñalolén","macul":"Macul","la florida":"La Florida","puente alto":"Puente Alto",
+  "san joaquin":"San Joaquín","san miguel":"San Miguel","la cisterna":"La Cisterna","el bosque":"El Bosque","la granja":"La Granja",
+  "la pintana":"La Pintana","san ramon":"San Ramón","lo espejo":"Lo Espejo","pedro aguirre cerda":"Pedro Aguirre Cerda",
+  "estacion central":"Estación Central","cerrillos":"Cerrillos","maipu":"Maipú","pudahuel":"Pudahuel","cerro navia":"Cerro Navia",
+  "lo prado":"Lo Prado","quinta normal":"Quinta Normal","renca":"Renca","independencia":"Independencia","recoleta":"Recoleta",
+  "conchali":"Conchalí","huechuraba":"Huechuraba","quilicura":"Quilicura","san bernardo":"San Bernardo"
+};
+const DSH_STGO_CENTRO = [-33.4489, -70.6693];
+/* Desde este zoom el mapa deja de juntar las comunas de Santiago. */
+const DSH_ZOOM_COMUNAS = 11;
 const DSH_RUIDO = /\b(rm|region|metropolitana|de chile|chile|comuna|ciudad|sector|provincia)\b/g;
 function dshLugarClave(txt){
   return deburr(String(txt || "")).replace(/[,;/()·]/g, " ").replace(DSH_RUIDO, " ").replace(/\s+/g, " ").trim();
@@ -255,6 +270,31 @@ function dshLugarTexto(comuna, city){ return [comuna, city].map(x => dshTitulo(S
 /* Un texto muy largo no es un lugar («Quiero un mural para mi empresa»). */
 const DSH_NO_LUGAR = /\b(quiero|quisiera|necesito|hola|mural|murales|para|empresa|cotiza\w*|precio|gracias|casa|pared|muro)\b/;
 function dshPareceLugar(t){ const s = String(t || "").trim(); return s.length > 1 && s.length <= 48 && s.split(/\s+/).length <= 5 && !/[?¿!¡@]/.test(s) && !DSH_NO_LUGAR.test(deburr(s)); }
+/* ¿En qué comuna del Gran Santiago cae este lugar? Devuelve la clave de
+   DSH_STGO, «otro» si está dentro de Santiago pero no se reconoce la comuna
+   (un barrio que ubicó OpenStreetMap), o null si queda fuera. */
+function dshDistKm(a, b){
+  const r = Math.PI / 180, x = (b[1] - a[1]) * r * Math.cos((a[0] + b[0]) / 2 * r), y = (b[0] - a[0]) * r;
+  return Math.sqrt(x * x + y * y) * 6371;
+}
+function dshComunaStgo(texto, pos){
+  const w = dshLugarClave(texto).split(" ").filter(Boolean);
+  let general = false;
+  for(let n = Math.min(4, w.length); n >= 1; n--){
+    for(let i = 0; i + n <= w.length; i++){
+      let k = w.slice(i, i + n).join(" "); k = DSH_ALIAS[k] || k;
+      if(k === "santiago"){ general = true; continue; }
+      if(DSH_STGO[k]) return k;
+      /* Otra ciudad con nombre propio («Colina», «Talca») no es Santiago. */
+      if(DSH_LUGARES[k]) return null;
+    }
+  }
+  /* «Stgo Centro» cae justo en el centro; un barrio que ubicó OpenStreetMap, cerca. */
+  const km = pos ? dshDistKm(pos, DSH_STGO_CENTRO) : Infinity;
+  if(km < 0.5) return "santiago";
+  if(km <= 15) return "otro";
+  return general && !pos ? "santiago" : null;
+}
 /* [lat,lng] | null (no se encontró) | undefined (todavía se está buscando) */
 function dshCoords(texto){
   if(!dshPareceLugar(texto)) return null;
@@ -307,11 +347,14 @@ function dshMapaDatos(a){
   const proys = (a.projects || []).map((p, i) => ({ p, i })).filter(({ p }) =>
     (!f.grupo || dshGrupo(p) === f.grupo) && (!f.cliente || String(p.client || "").trim() === f.cliente) &&
     (!q.length || q.every(w => projectSearchText(p).includes(w))));
+  /* Un lugar = un punto del mapa. «Concepción» y «Concepción, Biobío» caen en
+     las mismas coordenadas: se juntan y queda el nombre más corto. */
   const lugares = new Map(), sin = [], buscando = [];
   const meter = (texto, pos, item) => {
-    const k = dshLugarClave(texto) + "@" + pos[0].toFixed(3) + "," + pos[1].toFixed(3);
+    const k = "@" + pos[0].toFixed(3) + "," + pos[1].toFixed(3);
     if(!lugares.has(k)) lugares.set(k, { k, texto, pos, proys: [], leads: [] });
-    (item.lead ? lugares.get(k).leads : lugares.get(k).proys).push(item);
+    const l = lugares.get(k); if(texto.length < l.texto.length) l.texto = texto;
+    (item.lead ? l.leads : l.proys).push(item);
   };
   if(f.capa !== "leads") proys.forEach(x => {
     const texto = dshLugarTexto(x.p.comuna, x.p.city);
@@ -324,7 +367,23 @@ function dshMapaDatos(a){
       (!q.length || q.every(w => leadTexto(l).includes(w)))).forEach(l => {
     const pos = dshCoords(l.city); if(pos){ leadsN++; meter(l.city, pos, { lead: l }); }
   });
-  return { proys, lugares: [...lugares.values()].sort((x, y) => (y.proys.length + y.leads.length) - (x.proys.length + x.leads.length)), sin, buscando, leadsN };
+  const peso = l => l.proys.length + l.leads.length, orden = (x, y) => peso(y) - peso(x) || x.texto.localeCompare(y.texto, "es");
+  /* Las comunas del Gran Santiago se juntan en una sola ciudad; cada comuna
+     reúne lo que se escribió de distintas formas («Ñuñoa», «Nunoa, Stgo»). */
+  const comunas = new Map(), ciudades = [];
+  [...lugares.values()].forEach(l => {
+    const c = dshComunaStgo(l.texto, l.pos);
+    if(!c){ ciudades.push(l); return; }
+    const k = c === "otro" ? "stgo" + l.k : "stgo:" + c;
+    if(!comunas.has(k)) comunas.set(k, { k, texto: c === "otro" ? l.texto : DSH_STGO[c], pos: c === "otro" ? l.pos : (DSH_LUGARES[c] || l.pos), proys: [], leads: [] });
+    const x = comunas.get(k); x.proys.push(...l.proys); x.leads.push(...l.leads);
+  });
+  const hijos = [...comunas.values()].sort(orden);
+  if(hijos.length > 1) ciudades.push({ k: "stgo", texto: "Santiago", pos: DSH_STGO_CENTRO, grupo: true, hijos,
+    proys: hijos.flatMap(h => h.proys), leads: hijos.flatMap(h => h.leads) });
+  else if(hijos.length) ciudades.push(hijos[0]);
+  ciudades.sort(orden);
+  return { proys, base: lugares.size, ciudades, sin, buscando, leadsN };
 }
 function dshMapaFiltrosHTML(a, compacto){
   const f = MAPA.f, ps = a.projects || [];
@@ -349,7 +408,8 @@ function dshMapaHTML(a, opts){
     <div id="dshMapF" class="dsh-map-f">${dshMapaFiltrosHTML(a, compacto)}</div>
     <div class="dsh-map-wrap">
       <div class="dsh-map-box"><div id="dshMap" class="dsh-map" aria-label="Mapa de Chile con tus proyectos"><div class="dsh-map-load"><span class="ld-spin"></span>Cargando mapa…</div></div>
-        <div class="dsh-map-legend">${DSH_GRUPOS.map(g => `<span><i style="background:${g[2]}"></i>${g[1]}</span>`).join("")}${MAPA.f.capa !== "proyectos" ? `<span><i class="is-lead"></i>Clientes potenciales</span>` : ""}</div></div>
+        <button class="dsh-map-fit" data-dshencuadrar title="Encuadrar todo" aria-label="Encuadrar todo">⤢</button>
+        <div class="dsh-map-legend">${DSH_GRUPOS.map(g => `<span><i style="background:${g[2]}"></i>${g[1]}</span>`).join("")}${MAPA.f.capa !== "proyectos" ? `<span><i class="is-lead"></i>Clientes potenciales</span>` : ""}<span class="dsh-map-hint">Acércate a Santiago para verlo por comuna</span></div></div>
       ${compacto ? "" : `<aside class="dsh-map-side" id="dshMapSide"></aside>`}
     </div>
   </div>`;
@@ -382,6 +442,7 @@ function dshMapaMontar(){
       attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' }).addTo(m);
     m.on("click focus", () => m.scrollWheelZoom.enable());
     m.on("mouseout", () => m.scrollWheelZoom.disable());
+    m.on("zoomend", () => { if(MAPA.inst !== m) return; if((m.getZoom() < DSH_ZOOM_COMUNAS) !== MAPA.agrupado) dshMapaPintar(); else dshEtiquetas(); });
     MAPA.inst = m; MAPA.capa = L.layerGroup().addTo(m); MAPA.ajustado = "";
     m.fitBounds([[-41.8, -74.2], [-18.3, -68.9]]);
     dshMapaPintar(true);
@@ -391,61 +452,106 @@ function dshMapaMontar(){
     dshGeoCargar().then(() => dshMapaPintar());
   }).catch(err => { el.innerHTML = `<div class="dsh-map-load">${esc(err.message || "No se pudo cargar el mapa")}. <button class="btn ghost sm" data-dshmapretry>Reintentar</button></div>`; });
 }
+/* Marcador: una dona con un color por grupo (proporcional) y el total al centro. */
+function dshIcono(L, capas, total, etiqueta, grupo){
+  const s = Math.round(26 + Math.min(28, Math.sqrt(total) * 5.5));
+  let acc = 0;
+  const seg = capas.map(c => { const a = acc / total * 360; acc += c.n; return `${c.col} ${a.toFixed(1)}deg ${(acc / total * 360).toFixed(1)}deg`; }).join(",");
+  return L.divIcon({ className: "dsh-mk-w", iconSize: [s, s], iconAnchor: [s / 2, s / 2],
+    html: `<div class="dsh-mk ${grupo ? "is-g" : ""}" style="--s:${s}px;--ring:conic-gradient(${seg})"><b>${total}</b>${etiqueta ? `<em>${esc(etiqueta)}</em>` : ""}</div>` });
+}
+function dshPopup(l){
+  const max = 10, ps = l.proys.slice(0, max);
+  return `<div class="dsh-pop"><b>${esc(l.texto)}</b>
+    ${ps.map(x => `<button data-projgo="${x.i}"><span class="dsh-dot" style="background:${DSH_ETAPA[flowOf(x.p.st)]}"></span><span><b>${esc(x.p.t)}</b><small>${esc([flowOf(x.p.st), x.p.client, +x.p.budget ? money(+x.p.budget) : ""].filter(Boolean).join(" · "))}</small></span></button>`).join("")}
+    ${l.proys.length > max ? `<small class="muted">y ${l.proys.length - max} proyecto${l.proys.length - max === 1 ? "" : "s"} más</small>` : ""}
+    ${l.leads.slice(0, 6).map(x => `<button data-dshlead="${esc(x.lead.id)}"><span class="dsh-dot is-lead"></span><span><b>${esc(typeof leadNombre === "function" ? leadNombre(x.lead) : x.lead.full_name || "Solicitud")}</b><small>Cliente potencial · ${esc((LEAD_ESTADOS[x.lead.status] || {}).t || "")}</small></span></button>`).join("")}
+    ${l.leads.length > 6 ? `<small class="muted">y ${l.leads.length - 6} potencial${l.leads.length - 6 === 1 ? "" : "es"} más</small>` : ""}</div>`;
+}
+const dshCuenta = (n, uno, varios) => n + " " + (n === 1 ? uno : varios);
 /* Dibuja marcadores, lista y contadores sin rehacer la pantalla. */
 function dshMapaPintar(ajustar){
   const a = me(), d = dshMapaDatos(a);
+  MAPA.datos = d;
+  const nProys = d.ciudades.reduce((t, l) => t + l.proys.length, 0);
   const cnt = document.getElementById("dshMapCount");
   if(cnt){
-    const n = d.lugares.reduce((t, l) => t + l.proys.length, 0);
-    cnt.textContent = [MAPA.f.capa !== "leads" ? `${n} proyecto${n === 1 ? "" : "s"} en ${d.lugares.filter(l => l.proys.length).length} lugar${d.lugares.filter(l => l.proys.length).length === 1 ? "" : "es"}` : "",
-                       d.leadsN ? `${d.leadsN} cliente${d.leadsN === 1 ? "" : "s"} potencial${d.leadsN === 1 ? "" : "es"}` : "",
+    const conProys = d.ciudades.filter(l => l.proys.length).length;
+    cnt.textContent = [MAPA.f.capa !== "leads" ? `${dshCuenta(nProys, "proyecto", "proyectos")} en ${dshCuenta(conProys, "ciudad", "ciudades")}` : "",
+                       d.leadsN ? dshCuenta(d.leadsN, "cliente potencial", "clientes potenciales") : "",
                        d.buscando.length ? `ubicando ${d.buscando.length}…` : ""].filter(Boolean).join(" · ");
   }
   const side = document.getElementById("dshMapSide");
   if(side){
-    const fila = l => {
+    const max = Math.max(1, ...d.ciudades.map(l => l.proys.length + l.leads.length));
+    const fila = (l, hijo) => {
       const g = {}; l.proys.forEach(x => { const k = dshGrupo(x.p); g[k] = (g[k] || 0) + 1; });
-      const monto = l.proys.reduce((t, x) => t + (+x.p.budget || 0), 0);
-      return `<button class="dsh-place" data-dshlugar="${esc(l.k)}"><span class="dsh-place-dots">${DSH_GRUPOS.filter(x => g[x[0]]).map(x => `<i style="background:${x[2]}" title="${esc(x[1])}"></i>`).join("")}${l.leads.length ? `<i class="is-lead" title="Clientes potenciales"></i>` : ""}</span>
-        <span class="grow"><b>${esc(l.texto)}</b><small>${[l.proys.length ? l.proys.length + " proyecto" + (l.proys.length === 1 ? "" : "s") : "", l.leads.length ? l.leads.length + " potencial" + (l.leads.length === 1 ? "" : "es") : ""].filter(Boolean).join(" · ")}</small></span>
+      const monto = l.proys.reduce((t, x) => t + (+x.p.budget || 0), 0), n = l.proys.length + l.leads.length;
+      const barra = DSH_GRUPOS.filter(x => g[x[0]]).map(x => `<i style="flex:${g[x[0]]};background:${x[2]}" title="${esc(x[1] + ": " + g[x[0]])}"></i>`).join("") + (l.leads.length ? `<i class="is-lead" style="flex:${l.leads.length}" title="Clientes potenciales: ${l.leads.length}"></i>` : "");
+      return `<button class="dsh-place ${hijo ? "is-sub" : ""}" data-dshlugar="${esc(l.k)}">
+        <span class="grow"><b>${esc(l.texto)}</b><small>${[l.proys.length ? dshCuenta(l.proys.length, "proyecto", "proyectos") : "", l.leads.length ? dshCuenta(l.leads.length, "potencial", "potenciales") : "", l.grupo ? dshCuenta(l.hijos.length, "comuna", "comunas") : ""].filter(Boolean).join(" · ")}</small>
+          <span class="dsh-place-bar" style="width:${Math.max(8, n / max * 100)}%">${barra}</span></span>
         ${monto ? `<span class="dsh-place-m">${dshCorto(monto)}</span>` : ""}</button>`;
     };
-    side.innerHTML = `<div class="dsh-side-h">Lugares <span>${d.lugares.length}</span></div>
-      <div class="dsh-places">${d.lugares.map(fila).join("") || `<p class="muted" style="font-size:13px;margin:6px 4px">${d.buscando.length ? "Ubicando tus proyectos en el mapa…" : "Nada con estos filtros."}</p>`}</div>
+    const abierto = MAPA.stgoAbierto !== false;
+    side.innerHTML = `<div class="dsh-side-h">Ciudades <span>${d.ciudades.length}</span></div>
+      <div class="dsh-places">${d.ciudades.map(l => l.grupo
+        ? `<details class="dsh-place-g" ${abierto ? "open" : ""} data-dshstgo><summary>${fila(l).replace(/^<button class="dsh-place /, '<span class="dsh-place is-g ').replace(/data-dshlugar=/, "data-k=").replace(/<\/button>$/, "</span>")}</summary>
+            <div class="dsh-place-kids">${l.hijos.map(h => fila(h, true)).join("")}<button class="dsh-link dsh-place-ver" data-dshlugar="stgo">Ver Santiago por comuna en el mapa →</button></div></details>`
+        : fila(l)).join("") || `<p class="muted" style="font-size:13px;margin:6px 4px">${d.buscando.length ? "Ubicando tus proyectos en el mapa…" : "Nada con estos filtros."}</p>`}</div>
       ${d.sin.length ? `<details class="dsh-sin"><summary>${d.sin.length} sin ubicación</summary><p>Escribe la comuna y la ciudad en el proyecto para verlo en el mapa.</p>
         ${d.sin.slice(0, 12).map(x => `<button class="dsh-sin-row" data-projgo="${x.i}"><b>${esc(x.p.t)}</b><small>${esc(dshLugarTexto(x.p.comuna, x.p.city) || "Sin comuna ni ciudad")}</small></button>`).join("")}</details>` : ""}`;
   }
   if(!MAPA.inst || !window.L) return;
   const L = window.L, m = MAPA.inst; MAPA.capa.clearLayers(); MAPA.marcas = new Map();
-  const todos = [];
-  d.lugares.forEach(l => {
-    const grupos = DSH_GRUPOS.map(g => [g, l.proys.filter(x => dshGrupo(x.p) === g[0])]).filter(x => x[1].length);
-    const capas = grupos.map(([g, xs]) => ({ col: g[2], n: xs.length, t: g[1] }));
-    if(l.leads.length) capas.push({ col: DSH_LEAD_COLOR, n: l.leads.length, t: "Clientes potenciales", lead: true });
-    const popup = `<div class="dsh-pop"><b>${esc(l.texto)}</b>
-      ${l.proys.map(x => `<button data-projgo="${x.i}"><span class="dsh-dot" style="background:${DSH_ETAPA[flowOf(x.p.st)]}"></span><span><b>${esc(x.p.t)}</b><small>${esc([flowOf(x.p.st), x.p.client, +x.p.budget ? money(+x.p.budget) : ""].filter(Boolean).join(" · "))}</small></span></button>`).join("")}
-      ${l.leads.slice(0, 8).map(x => `<button data-dshlead="${esc(x.lead.id)}"><span class="dsh-dot is-lead"></span><span><b>${esc(typeof leadNombre === "function" ? leadNombre(x.lead) : x.lead.full_name || "Solicitud")}</b><small>Cliente potencial · ${esc((LEAD_ESTADOS[x.lead.status] || {}).t || "")}</small></span></button>`).join("")}
-      ${l.leads.length > 8 ? `<small class="muted">y ${l.leads.length - 8} más</small>` : ""}</div>`;
-    const marcas = capas.map((c, i) => {
-      /* Varios grupos en el mismo lugar se separan apenas para verse todos. */
-      const off = capas.length > 1 ? 0.012 * Math.pow(2, Math.max(0, 9 - m.getZoom()) / 2) : 0, ang = i / capas.length * Math.PI * 2;
-      const pos = [l.pos[0] + off * Math.sin(ang), l.pos[1] + off * Math.cos(ang)];
-      todos.push(pos);
-      const mk = L.circleMarker(pos, c.lead
-        ? { radius: 6 + Math.sqrt(c.n) * 2.4, color: DSH_LEAD_COLOR, weight: 2, fillColor: "#ffffff", fillOpacity: .9, dashArray: "3 2" }
-        : { radius: 6 + Math.sqrt(c.n) * 3, color: "#ffffff", weight: 2, fillColor: c.col, fillOpacity: .92 });
-      mk.bindTooltip(`<b>${esc(l.texto)}</b><br>${c.n} · ${esc(c.t)}`, { direction: "top", offset: [0, -6], className: "dsh-ltip" });
-      mk.bindPopup(popup, { maxWidth: 300, className: "dsh-lpop" });
-      mk.addTo(MAPA.capa);
-      return mk;
-    });
-    MAPA.marcas.set(l.k, marcas);
+  /* Lejos, Santiago es un solo punto; desde DSH_ZOOM_COMUNAS se ve cada comuna. */
+  MAPA.agrupado = m.getZoom() < DSH_ZOOM_COMUNAS;
+  const puntos = MAPA.agrupado ? d.ciudades : d.ciudades.flatMap(l => l.grupo ? l.hijos : [l]);
+  puntos.forEach(l => {
+    const capas = DSH_GRUPOS.map(g => ({ col: g[2], n: l.proys.filter(x => dshGrupo(x.p) === g[0]).length, t: g[1] })).filter(c => c.n);
+    if(l.leads.length) capas.push({ col: DSH_LEAD_COLOR, n: l.leads.length, t: "Clientes potenciales" });
+    const total = l.proys.length + l.leads.length;
+    /* Lo chico queda encima de lo grande, para que se pueda tocar. */
+    const mk = L.marker(l.pos, { icon: dshIcono(L, capas, total, l.texto, l.grupo), riseOnHover: true, keyboard: true, title: l.texto, zIndexOffset: -total * 10 });
+    const det = capas.map(c => `${c.n} ${esc(c.t.toLowerCase())}`).join("<br>");
+    mk.bindTooltip(`<b>${esc(l.texto)}</b><br>${det}${l.grupo ? `<br><small>${dshCuenta(l.hijos.length, "comuna", "comunas")} · toca para separarlas</small>` : ""}`, { direction: "top", offset: [0, -14], className: "dsh-ltip" });
+    if(l.grupo) mk.on("click", () => dshIrLugar(l.k));
+    else mk.bindPopup(dshPopup(l), { maxWidth: 300, className: "dsh-lpop" });
+    mk.addTo(MAPA.capa);
+    MAPA.marcas.set(l.k, mk);
   });
-  const firma = JSON.stringify(MAPA.f) + "|" + d.lugares.length;
+  /* Se encuadra cuando cambian los filtros o lo que hay, no al acercarse. */
+  const firma = JSON.stringify(MAPA.f) + "|" + d.base;
+  const todos = d.ciudades.flatMap(l => l.grupo ? l.hijos.map(h => h.pos) : [l.pos]);
   if((ajustar || MAPA.ajustado !== firma) && todos.length){
     m.fitBounds(L.latLngBounds(todos).pad(0.15), { maxZoom: 11, animate: !ajustar });
   }
   MAPA.ajustado = firma;
+  dshEtiquetas();
+}
+/* Nombres sobre el mapa sin encimarse: primero los lugares con más trabajo;
+   el que choca con uno ya puesto se calla (se ve al pasar el dedo). */
+function dshEtiquetas(){
+  const m = MAPA.inst; if(!m) return;
+  const puestas = [], choca = r => puestas.some(o => r.x < o.x + o.w && o.x < r.x + r.w && r.y < o.y + o.h && o.y < r.y + r.h);
+  const ms = [...MAPA.marcas.values()];
+  ms.forEach(mk => { const p = m.latLngToContainerPoint(mk.getLatLng()), s = mk.options.icon.options.iconSize[0]; puestas.push({ x: p.x - s / 2, y: p.y - s / 2, w: s, h: s }); });
+  ms.forEach(mk => {
+    const el = mk.getElement(), em = el && el.querySelector("em"); if(!em) return;
+    const p = m.latLngToContainerPoint(mk.getLatLng()), s = mk.options.icon.options.iconSize[0];
+    const w = em.offsetWidth || em.textContent.length * 6.5 + 16, r = { x: p.x - w / 2, y: p.y + s / 2 + 3, w, h: 19 };
+    const ok = !choca(r); em.hidden = !ok; if(ok) puestas.push(r);
+  });
+}
+/* Lleva el mapa a un lugar de la lista (o a Santiago, para verlo por comuna). */
+function dshIrLugar(k){
+  const m = MAPA.inst, d = MAPA.datos; if(!m || !d) return;
+  let l = d.ciudades.find(x => x.k === k), hijo = false;
+  if(!l) d.ciudades.forEach(x => { if(x.grupo){ const h = x.hijos.find(y => y.k === k); if(h){ l = h; hijo = true; } } });
+  if(!l) return;
+  m.once("moveend", () => { const mk = MAPA.marcas.get(k); if(mk && !l.grupo) mk.openPopup(); });
+  m.flyTo(l.pos, l.grupo ? Math.max(m.getZoom(), DSH_ZOOM_COMUNAS + 0.25) : Math.max(m.getZoom(), hijo ? 13 : 11), { duration: .7 });
+  const box = document.getElementById("dshMap"); if(box) box.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
 function dshMapaRefrescarFiltros(){
   const box = document.getElementById("dshMapF"); if(!box) return;
@@ -460,13 +566,13 @@ document.addEventListener("click", e => {
   const c = t.closest("[data-dshcapa]"); if(c){ MAPA.f.capa = c.dataset.dshcapa; renderView(); return; }
   if(t.closest("[data-dshlimpiar]")){ MAPA.f = { capa: "proyectos", grupo: "", cliente: "", q: "" }; renderView(); return; }
   if(t.closest("[data-dshmapretry]")){ dshMapaMontar(); return; }
-  const lg = t.closest("[data-dshlugar]"); if(lg){ const ms = MAPA.marcas.get(lg.dataset.dshlugar); if(ms && ms[0] && MAPA.inst){
-      MAPA.inst.flyTo(ms[0].getLatLng(), Math.max(MAPA.inst.getZoom(), 11), { duration: .6 }); setTimeout(() => ms[0].openPopup(), 650);
-      document.getElementById("dshMap").scrollIntoView({ block: "nearest", behavior: "smooth" }); } return; }
+  const lg = t.closest("[data-dshlugar]"); if(lg){ dshIrLugar(lg.dataset.dshlugar); return; }
+  if(t.closest("[data-dshencuadrar]")){ MAPA.ajustado = ""; dshMapaPintar(); return; }
   const ld = t.closest("[data-dshlead]"); if(ld){ go("centro"); setTimeout(() => CC_open(ld.dataset.dshlead), 0); return; }
   const cg = t.closest("[data-dshcliente-go]"); if(cg){ MAPA.f.cliente = cg.dataset.dshclienteGo; MAPA.f.capa = "proyectos"; renderView();
     requestAnimationFrame(() => { const el = document.querySelector(".dsh-map-card"); if(el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }); return; }
 });
+document.addEventListener("toggle", e => { if(e.target.matches && e.target.matches("[data-dshstgo]")) MAPA.stgoAbierto = e.target.open; }, true);
 document.addEventListener("change", e => { const s = e.target.closest && e.target.closest("[data-dshcliente]"); if(s){ MAPA.f.cliente = s.value; dshMapaRefrescarFiltros(); } });
 document.addEventListener("input", e => { const s = e.target.closest && e.target.closest("[data-dshq]"); if(s){ MAPA.f.q = s.value; clearTimeout(dshMapaRefrescarFiltros._t); dshMapaRefrescarFiltros._t = setTimeout(dshMapaPintar, 160); } });
 
@@ -563,6 +669,130 @@ function vAlmaResumen(a){
 }
 
 /* ===========================================================
+   RESÚMENES DE LAS PESTAÑAS (Anuncios, Tienda web, Marketing Machine)
+   Cada tarjeta lee lo que su pestaña ya tiene en memoria (AD, TW, MM).
+   Si aún no se ha cargado, se pide una sola vez y el Resumen se vuelve a
+   dibujar cuando llega: abrir el Taller no obliga a pasar por cada pestaña.
+   =========================================================== */
+function dshModulo(v){ return planAllows(v) && getCfg(me()).modules[v] !== false; }
+const DSH_PEDIDOS = new Set();
+function dshPedir(clave, fn){
+  if(DSH_PEDIDOS.has(clave)) return;
+  DSH_PEDIDOS.add(clave);
+  setTimeout(() => { Promise.resolve().then(fn).catch(() => {}).finally(dshRedibujar); }, 0);
+}
+/* Varias cargas llegan casi juntas: se redibuja una vez, y nunca encima de lo que se está escribiendo. */
+function dshRedibujar(){
+  clearTimeout(dshRedibujar._t);
+  dshRedibujar._t = setTimeout(() => {
+    if(!dshEnPanel()) return;
+    const f = document.activeElement;
+    if(f && f.closest && f.closest("#view") && /^(INPUT|TEXTAREA|SELECT)$/.test(f.tagName)) return;
+    renderView();
+  }, 180);
+}
+/* Con tramo, el del Taller; sin tramo, los últimos 30 días (contra los 30 anteriores). */
+function dshPeriodoTab(D, H){
+  return (D || H) ? adPeriodo({ rango: "rango", desde: D || adSumar(H, -29), hasta: H || adDia(0) }) : adPeriodo({ rango: "30" });
+}
+function dshVar(x, y, menosEsMejor){
+  if(!isFinite(x) || !isFinite(y) || !y) return "";
+  const v = Math.round((x - y) / Math.abs(y) * 100);
+  if(!v) return `<em class="dsh-var">= igual</em>`;
+  const bien = menosEsMejor ? v < 0 : v > 0;
+  return `<em class="dsh-var ${bien ? "up" : "down"}">${v > 0 ? "▲" : "▼"} ${Math.abs(v) > 999 ? "+999" : Math.abs(v)}%</em>`;
+}
+function dshStat(lbl, val, sub, cls){ return `<div class="dsh-st ${cls || ""}"><span>${esc(lbl)}</span><b>${val}</b>${sub ? `<small>${sub}</small>` : ""}</div>`; }
+function dshTabCard(v, titulo, cuerpo, nota){
+  return `<div class="card dsh-card dsh-tab"><div class="section-title"><h2>${esc(titulo)}</h2><div class="spacer"></div>${nota ? `<span class="dsh-badge">${nota}</span>` : ""}<button class="btn ghost sm" data-go="${v}">Abrir →</button></div>${cuerpo}</div>`;
+}
+const dshCargando = t => `<div class="dsh-empty dsh-loading"><span class="ld-spin"></span>${esc(t)}</div>`;
+const dshConectar = (v, t, b) => `<div class="dsh-empty">${esc(t)}<div style="margin-top:10px"><button class="btn sm" data-go="${v}">${esc(b)}</button></div></div>`;
+/* Línea de días del periodo, para dibujar la tendencia. */
+function dshDiasDe(p){ const out = []; for(let d = p.desde; d <= p.hasta && out.length < 400; d = adSumar(d, 1)) out.push(d); return out; }
+function dshAlerta(xs){
+  if(!xs.length) return `<div class="dsh-ok">✓ Nada urgente que revisar.</div>`;
+  return `<div class="dsh-alerta ${xs[0].nivel === "critico" ? "is-crit" : ""}"><b>⚠ ${esc(xs[0].t)}</b><small>${esc(xs[0].d || "")}</small>${xs.length > 1 ? `<small class="dsh-alerta-mas">y ${dshCuenta(xs.length - 1, "aviso más", "avisos más")}</small>` : ""}</div>`;
+}
+
+/* Anuncios de Meta: lo invertido y lo que volvió en trabajos ganados. */
+function dshAnuncios(a, D, H){
+  if(AD.almaId && AD.almaId !== a.almaId){ AD.con = undefined; AD.objs = []; AD.daily = []; AD.reach = {}; AD.open = null; }
+  if(AD.con === undefined){ dshPedir("ads:" + a.almaId, loadAds); return dshCargando("Cargando anuncios…"); }
+  if(!AD.con) return dshConectar("anuncios", "Conecta tu cuenta publicitaria de Meta y aquí verás cuánto inviertes, cuántas solicitudes llegan y cuánto vuelve en trabajos.", "Conectar Meta →");
+  const p = dshPeriodoTab(D, H), campana = AD.campana;
+  AD.campana = "";                       // el filtro de la pestaña no mueve el resumen
+  try{
+    const t = adSuma(adFilas(p.desde, p.hasta)), t0 = adSuma(adFilas(p.prevDesde, p.prevHasta));
+    const an = adAnima(p.desde, p.hasta), an0 = adAnima(p.prevDesde, p.prevHasta), fx = adFx();
+    const roas = t.spend ? an.valorGanado / (t.spend * fx) : NaN;
+    const ads = AD.objs.filter(o => o.level === "ad"), vivos = ads.filter(o => adVida(o) === "marcha").length, mal = ads.filter(o => adVida(o) === "problema").length;
+    const porDia = {}; AD.daily.forEach(r => { if(r.day >= p.desde && r.day <= p.hasta) porDia[r.day] = (porDia[r.day] || 0) + Number(r.spend || 0); });
+    const avisos = adAlertas(p).filter(x => x.nivel === "critico" || x.nivel === "alto");
+    return `<div class="dsh-sts">
+        ${dshStat("Inversión", adMoney(t.spend, 0), dshVar(t.spend, t0.spend))}
+        ${dshStat("Solicitudes", adNum(an.solicitudes), dshVar(an.solicitudes, an0.solicitudes) || (t.leads ? adNum(t.leads) + " según Meta" : ""))}
+        ${dshStat("Costo por solicitud", an.solicitudes && t.spend ? adMoney(t.spend / an.solicitudes, 0) : "—", isFinite(t.cpl) ? "Meta: " + adMoney(t.cpl, 0) : "")}
+        ${dshStat("Trabajos ganados", adNum(an.ganadas), an.valorGanado ? dshCorto(an.valorGanado) : an.cotizadas ? dshCuenta(an.cotizadas, "cotizada", "cotizadas") : "")}
+        ${dshStat("Retorno (ROAS)", isFinite(roas) && t.spend ? adDec(roas, 1) + "×" : "—", "ganado / invertido", isFinite(roas) && t.spend ? (roas >= 1 ? "is-ok" : "is-warn") : "")}
+        ${dshStat("En marcha", adNum(vivos), mal ? `<span class="dsh-neg">${dshCuenta(mal, "con problemas", "con problemas")}</span>` : dshCuenta(ads.length, "anuncio en total", "anuncios en total"), mal ? "is-warn" : "")}
+      </div>
+      <div class="dsh-trend"><small>Inversión por día</small>${dshSpark(dshDiasDe(p).map(d => porDia[d] || 0), "#2a78d6") || `<span class="muted">Sin gasto en el periodo.</span>`}</div>
+      ${dshAlerta(avisos)}`;
+  }finally{ AD.campana = campana; }
+}
+
+/* Tienda web (Shopify): ventas, lo que espera despacho o pago, y lo que trajo Meta. */
+function dshTienda(a, D, H){
+  if(TW.almaId && TW.almaId !== a.almaId) Object.assign(TW, { con: undefined, orders: [], sessions: [], products: [], acts: [], actsKey: "", actsListo: "", visitas: {}, open: null, autoSync: false, campana: "" });
+  if(TW.con === undefined){ dshPedir("tw:" + a.almaId, twCargar); return dshCargando("Cargando la tienda…"); }
+  if(!TW.con) return dshConectar("tienda", "Conecta tu tienda de Shopify y aquí verás ventas, pedidos por preparar, stock y cuánto vende cada anuncio.", "Conectar tienda →");
+  if(AD.con === undefined && dshModulo("anuncios")) dshPedir("ads:" + a.almaId, loadAds);
+  const p = dshPeriodoTab(D, H), campana = TW.campana;
+  TW.campana = ""; TW._camps = twCampanas();
+  try{
+    const r = twResumen(p.desde, p.hasta), r0 = twResumen(p.prevDesde, p.prevHasta), fx = twFx();
+    const spend = r.m ? r.m.spend : 0, roas = spend ? r.ventasMeta / (spend * fx) : NaN, sesOk = TW.con.sessions_ok !== false;
+    const ped = TW.orders.filter(o => !o.cancelled_at);
+    const preparar = ped.filter(o => o.financial_status === "PAID" && TW_POR_PREPARAR.includes(o.fulfillment_status)).length;
+    const cobrar = ped.filter(o => TW_POR_COBRAR.includes(o.financial_status)).length;
+    const agotados = TW.products.filter(x => x.tracks_inventory && x.inventory != null && x.inventory <= 0).length;
+    const porDia = {}; r.ped.forEach(o => { const d = twDia(o); porDia[d] = (porDia[d] || 0) + Number(o.total || 0); });
+    const pill = (t, n, ir) => `<button class="dsh-pill ${n ? "is-warn" : ""}" data-go="tienda" ${ir ? `title="${esc(ir)}"` : ""}><b>${adNum(n)}</b>${esc(t)}</button>`;
+    return `<div class="dsh-sts">
+        ${dshStat("Ventas", twMoney(r.ventas), dshVar(r.ventas, r0.ventas))}
+        ${dshStat("Pedidos", adNum(r.pedidos), dshVar(r.pedidos, r0.pedidos) || (r.nuevos ? dshCuenta(r.nuevos, "cliente nuevo", "clientes nuevos") : ""))}
+        ${dshStat("Ticket promedio", r.pedidos ? twMoney(r.ventas / r.pedidos) : "—", dshVar(r.pedidos ? r.ventas / r.pedidos : NaN, r0.pedidos ? r0.ventas / r0.pedidos : NaN))}
+        ${dshStat("Conversión", sesOk && r.visitas ? adPct(r.completadas / r.visitas, 1) : "—", sesOk ? adNum(r.visitas) + " visitas" : "sin datos de visitas")}
+        ${dshStat("Desde anuncios", twMoney(r.ventasMeta), dshCuenta(r.pedidosMeta, "pedido", "pedidos"))}
+        ${dshStat("Retorno (ROAS)", isFinite(roas) ? adDec(roas, 1) + "×" : "—", spend ? "invertido " + adMoney(spend, 0) : AD.con ? "sin inversión en el periodo" : "conecta Meta en Anuncios", isFinite(roas) ? (roas >= 1 ? "is-ok" : "is-warn") : "")}
+      </div>
+      <div class="dsh-trend"><small>Ventas por día</small>${dshSpark(dshDiasDe(p).map(d => porDia[d] || 0), "#1baf7a") || `<span class="muted">Sin ventas en el periodo.</span>`}</div>
+      <div class="dsh-pills">${pill("por preparar", preparar, "Pagados, sin despachar")}${pill("por cobrar", cobrar, "Esperan el pago")}${pill(agotados === 1 ? "producto agotado" : "productos agotados", agotados)}</div>`;
+  }finally{ TW.campana = campana; }
+}
+
+/* Marketing Machine: el ritual del día y en qué etapa están las ideas. */
+function dshMarketing(a){
+  if(MM.almaId && MM.almaId !== a.almaId){ MM.ideas = undefined; MM.daily = {}; MM.open = null; }
+  if(MM.ideas === undefined){ dshPedir("mm:" + a.almaId, mmCargar); return dshCargando("Cargando Marketing Machine…"); }
+  const hoy = mmHoy(), fila = MM.daily[hoy] || { done: {} }, done = fila.done || {};
+  const hechas = MM_ETAPAS.filter(e => done[e.k]).length, racha = mmRacha();
+  const ideas = MM.ideas.filter(i => i.stage !== "archivo");
+  const nEt = MM_ETAPAS.map(e => ({ e, n: ideas.filter(i => i.stage === e.k).length })), max = Math.max(1, ...nEt.map(x => x.n));
+  const ganadores = ideas.filter(i => i.verdict === "ganador").length, apagar = ideas.filter(i => i.verdict === "apagar").length;
+  const sig = MM_ETAPAS.find(e => !done[e.k]);
+  return `<div class="dsh-ritual" role="list" aria-label="Ritual de hoy">${MM_ETAPAS.map((e, i) => `<span role="listitem" class="${done[e.k] ? "on" : ""}" title="${esc(e.t)}${done[e.k] ? " · hecho" : ""}"><i>${done[e.k] ? "✓" : i + 1}</i><small>${esc(e.t)}</small></span>`).join("")}</div>
+    <div class="dsh-sts dsh-sts-4">
+      ${dshStat("Ritual de hoy", hechas + " de 5", sig ? "sigue: " + esc(sig.t.toLowerCase()) : "¡completo!", hechas === 5 ? "is-ok" : "")}
+      ${dshStat("Racha", racha ? dshCuenta(racha, "día", "días") : "—", racha ? "seguidos" : "completa el ritual hoy")}
+      ${dshStat("Ideas en curso", adNum(ideas.length), "")}
+      ${dshStat("Ganadoras", adNum(ganadores), apagar ? dshCuenta(apagar, "por apagar", "por apagar") : "", ganadores ? "is-ok" : "")}
+    </div>
+    <div class="dsh-etapas dsh-mm">${nEt.map(({ e, n }) => `<div class="dsh-etapa ${n ? "" : "is-zero"}" data-go="marketing"><span class="dsh-etapa-n">${e.ico} ${esc(e.t)}</span><span class="dsh-etapa-bar"><span style="width:${n / max * 100}%;background:#4a3aa7"></span></span><b>${n}</b></div>`).join("")}</div>`;
+}
+
+/* ===========================================================
    TALLER → Resumen
    =========================================================== */
 function vTaller(a){
@@ -626,19 +856,30 @@ function vTaller(a){
   const mapa = dshMapaHTML(a, {});
   const prox = `<div class="card s6 dsh-card"><div class="section-title"><h2>Entregas ${ranged ? "en el tramo" : "próximas"}</h2><div class="spacer"></div><span class="dsh-badge">${upcoming.length}</span></div>${dshEntregas(a, upcoming, 6)}</div>`;
   const top = `<div class="card s6 dsh-card"><div class="section-title"><h2>Clientes que más encargan</h2><div class="spacer"></div><button class="btn ghost sm" data-go="clientes">Vínculos →</button></div>${dshTopClientes(projects)}</div>`;
-  const leads = (typeof vCentro === "function" && planAllows("centro")) ? `<div class="card s4 dsh-card"><div class="section-title"><h2>Clientes potenciales</h2><div class="spacer"></div><button class="btn ghost sm" data-go="centro">Ver →</button></div>${dshEmbudoLeads(D, H)}</div>` : "";
+
+  /* VENTAS Y MARKETING: una tarjeta por pestaña que el Alma tiene. */
+  const nube = a.live && Cloud.enabled, perTxt = ranged ? "en el tramo" : "30 días";
+  const ventas = [
+    typeof vCentro === "function" && dshModulo("centro") ? `<div class="card dsh-card dsh-tab"><div class="section-title"><h2>Clientes potenciales</h2><div class="spacer"></div><button class="btn ghost sm" data-go="centro">Abrir →</button></div>${dshEmbudoLeads(D, H)}</div>` : "",
+    nube && typeof vAnuncios === "function" && dshModulo("anuncios") ? dshTabCard("anuncios", "Anuncios", dshAnuncios(a, D, H), perTxt) : "",
+    nube && typeof vTienda === "function" && dshModulo("tienda") ? dshTabCard("tienda", "Tienda web", dshTienda(a, D, H), perTxt) : "",
+    nube && typeof vMarketing === "function" && dshModulo("marketing") ? dshTabCard("marketing", "Marketing Machine", dshMarketing(a), "hoy") : ""
+  ].filter(Boolean);
+  /* 1 → ancho completo, 2 y 4 → de a dos, 3 → de a tres. */
+  const ancho = ventas.length === 1 ? "s12" : ventas.length === 3 ? "s4" : "s6";
+  const ventasHTML = ventas.map(h => h.replace('class="card dsh-card dsh-tab"', `class="card ${ancho} dsh-card dsh-tab"`)).join("");
 
   // AGENDA y TAREAS
   const todayKey = isoDay(new Date()), agAll = a.agenda || [], ag = ranged ? agAll.filter(x => inPer(x.date)) : agAll;
   const agProx = ag.filter(x => !x.date || x.date >= todayKey).sort((x, y) => String(x.date || todayKey).localeCompare(String(y.date || todayKey)) || String(x.h || "").localeCompare(String(y.h || ""))).slice(0, 4);
-  const agenda = `<div class="card ${leads ? "s4" : "s6"} dsh-card"><div class="section-title"><h2>Agenda</h2><div class="spacer"></div><button class="btn ghost sm" data-go="agenda">Calendario →</button></div>
+  const agenda = `<div class="card s6 dsh-card"><div class="section-title"><h2>Agenda</h2><div class="spacer"></div><button class="btn ghost sm" data-go="agenda">Calendario →</button></div>
       ${agProx.map(x => { const n = x.date ? dshDias(x.date) : 0; return `<div class="dsh-ag"><span class="dsh-ag-d">${x.date ? esc(tallerDate(x.date)) : "Hoy"}</span><div class="grow"><b>${esc(x.t)}</b><small>${esc([x.h, dshCuando(n)].filter(Boolean).join(" · "))}</small></div></div>`; }).join("") || `<div class="dsh-empty">Agenda libre${ranged ? " en el tramo" : ""}.</div>`}
       <button class="btn secondary sm tl-cta" data-add="cita">＋ Nueva cita</button></div>`;
   const tasksAll = a.tasks || [], tasks = ranged ? tasksAll.filter(t => inPer(t.due)) : tasksAll;
   const tPend = tasks.filter(t => ["Pendiente", "En proceso", "Bloqueada"].includes(t.st || "Pendiente")).length;
   const tUrg = tasks.filter(t => (t.pr === "Urgente" || t.pr === "Alta") && t.st !== "Finalizada" && t.st !== "Archivada").length;
   const tDone = tasks.filter(t => t.st === "Finalizada").length, tTot = tPend + tDone;
-  const tareas = `<div class="card ${leads ? "s4" : "s6"} dsh-card"><div class="section-title"><h2>Tareas</h2><div class="spacer"></div><button class="btn ghost sm" data-go="tareas">Ver →</button></div>
+  const tareas = `<div class="card s6 dsh-card"><div class="section-title"><h2>Tareas</h2><div class="spacer"></div><button class="btn ghost sm" data-go="tareas">Ver →</button></div>
       <div class="dsh-mini-stats"><div><b>${tPend}</b><span>pendientes</span></div><div class="${tUrg ? "is-warn" : ""}"><b>${tUrg}</b><span>urgentes</span></div><div><b>${tDone}</b><span>completadas</span></div></div>
       <div class="dsh-progress" title="${dshPct(tDone, tTot)}% completadas"><span style="width:${dshPct(tDone, tTot)}%"></span></div><small class="muted">${tTot ? dshPct(tDone, tTot) + "% del total completado" : "Sin tareas" + (ranged ? " en el tramo" : "")}</small>
       <button class="btn secondary sm tl-cta" data-add="tarea">＋ Nueva tarea</button></div>`;
@@ -652,5 +893,12 @@ function vTaller(a){
   const activity = `<div class="card s12 dsh-card"><div class="section-title"><h2>Actividad reciente</h2></div>
       ${acts.length ? `<div class="dsh-act">${acts.slice(0, 8).map(x => `<div class="tl-act-row"><span class="tl-act-ico">${x[0]}</span><div class="grow"><b>${esc(x[1])}</b><br><small class="muted">${esc(x[2])}</small></div>${x[3] ? `<span class="amt in">${esc(x[3])}</span>` : ""}</div>`).join("")}</div>` : `<div class="dsh-empty">${ranged ? "Sin actividad registrada en el tramo." : "Tu actividad aparecerá aquí cuando empieces a crear."}</div>`}</div>`;
 
-  return `<div class="grid dsh">${hero}${kpis}${graf}${etapas}${mapa}${prox}${top}${leads}${agenda}${tareas}${activity}</div>`;
+  const sec = (t, sub, go) => `<div class="s12 dsh-sec"><h3>${esc(t)}</h3>${sub ? `<small>${esc(sub)}</small>` : ""}${go ? `<span class="spacer"></span>${go}` : ""}</div>`;
+  return `<div class="grid dsh">${hero}${kpis}
+    ${sec("Plata y trabajos", ranged ? "Lo que entró, lo que salió y en qué etapa va cada proyecto, en el tramo." : "Lo que entró, lo que salió y en qué etapa va cada proyecto.")}${graf}${etapas}
+    ${ventas.length ? sec("Ventas y marketing", "De dónde llegan los clientes: solicitudes, anuncios, tienda y el ritual diario" + (ranged ? ", en el tramo." : " (últimos 30 días contra los 30 anteriores).")) + ventasHTML : ""}
+    ${sec("Dónde trabajas", "Proyectos y clientes potenciales por ciudad. Santiago se agrupa; acércate para verlo por comuna.")}${mapa}
+    ${sec("Clientes y entregas", "")}${prox}${top}
+    ${sec("Agenda y tareas", "")}${agenda}${tareas}
+    ${activity}</div>`;
 }
