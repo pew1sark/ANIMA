@@ -30,7 +30,7 @@
 
 const TW = { con: undefined, orders: [], sessions: [], products: [], loading: false, busy: "", almaId: null, error: "",
              rango: "7", desde: "", hasta: "", campana: "", open: null, connectOpen: false, autoSync: false,
-             acts: [], actsKey: "", visitas: {}, porVisitas: "region", soloMeta: true, metaEspera: false, verTodos: false };
+             acts: [], actsKey: "", actsListo: "", visitas: {}, porVisitas: "region", soloMeta: true, metaEspera: false, verTodos: false };
 
 /* Lo que deja un anuncio de Facebook, Instagram, Messenger o Audience Network. */
 const TW_META_FUENTES = ["facebook", "fb", "ig", "instagram", "meta", "messenger", "msg", "an", "audience_network", "threads"];
@@ -154,6 +154,7 @@ async function twCargarPixel(ids){
   try{
     TW.acts = await adTodo(q => q.from("meta_ads_daily").select("ad_id,day,campaign_id,actions")
       .eq("alma_id", me().almaId).in("campaign_id", [...ids]).gte("day", adDia(-400)));
+    TW.actsListo = key;   // solo con los eventos ya leídos se puede decir que el píxel no reporta nada
   }catch(e){ TW.acts = []; }
   twRefresh();
 }
@@ -263,7 +264,7 @@ function twResumen(desde, hasta){
 /* ---------- vista ---------- */
 function vTienda(a){
   if(!a.live || !Cloud.enabled) return `<div class="grid"><div class="card s12"><p class="muted">La tienda web necesita tu sesión en la nube de ANIMA.</p></div></div>`;
-  if(TW.almaId && TW.almaId !== a.almaId){ Object.assign(TW, { con: undefined, orders: [], sessions: [], products: [], acts: [], actsKey: "", visitas: {}, open: null, autoSync: false, campana: "" }); }
+  if(TW.almaId && TW.almaId !== a.almaId){ Object.assign(TW, { con: undefined, orders: [], sessions: [], products: [], acts: [], actsKey: "", actsListo: "", visitas: {}, open: null, autoSync: false, campana: "" }); }
   if(TW.con === undefined){ setTimeout(twCargar, 0); return `<div class="grid"><div class="card s12 ld-cargando"><span class="ld-spin"></span>Cargando la tienda…</div></div>`; }
   if(!TW.con) return `<div class="grid ad tw">${twConectarHTML(true)}</div>`;
   twCargarMeta();
@@ -419,8 +420,11 @@ function twAlertas(p, r, t){
   }
   if(sesOk && r.visitasMeta >= 40 && !r.carritosMeta)
     out.push({ nivel: "alto", t: adNum(r.visitasMeta) + " visitas desde el anuncio y nadie agregó al carrito", d: "La página de destino tiene que mostrar el producto del anuncio con su precio, fotos y el botón a la vista." });
-  if(sesOk && r.carritosMeta >= 3 && !r.pedidosMeta)
-    out.push({ nivel: "medio", t: adNum(r.carritosMeta) + " agregaron al carrito desde el anuncio y nadie compró", d: "Revisa el costo de envío y los medios de pago, y que el correo de carrito abandonado esté activo en Shopify." });
+  /* Dónde se frenan: sin llegar al pago, el envío y los medios de pago ni se ven. */
+  if(sesOk && r.carritosMeta >= 3 && !r.pedidosMeta){
+    if(!r.pagoMeta) out.push({ nivel: "alto", t: adNum(r.carritosMeta) + " agregaron al carrito desde el anuncio y nadie pasó al pago", d: "Se frenan en el carrito, antes de ver el envío y los medios de pago. Lleva el anuncio directo al producto (no a todo el catálogo), muestra el costo de envío en la ficha y prueba el botón de pagar dentro de Facebook e Instagram." });
+    else out.push({ nivel: "medio", t: adNum(r.pagoMeta) + " llegaron al pago desde el anuncio y nadie compró", d: "Se caen en el checkout: revisa el costo de envío y que estén Mercado Pago y Webpay. Shopify les escribe solo si dejaron su correo y el aviso de pago abandonado está activo." });
+  }
   const viejo = Date.now() - 48 * 3600000;
   const atrasados = TW.orders.filter(o => !o.cancelled_at && o.financial_status === "PAID" && ["UNFULFILLED", "OPEN", "PENDING_FULFILLMENT"].includes(o.fulfillment_status) && new Date(o.created_at).getTime() < viejo);
   if(atrasados.length) out.push({ nivel: "alto", t: atrasados.length + " pedido" + (atrasados.length === 1 ? "" : "s") + " pagado" + (atrasados.length === 1 ? "" : "s") + " esperando despacho hace más de 2 días", d: atrasados.slice(0, 4).map(o => o.name).join(", ") + ". Cada día de espera baja la nota y la recompra.", pedido: atrasados[0].order_id });
@@ -430,6 +434,14 @@ function twAlertas(p, r, t){
   if(agotados.length) out.push({ nivel: "medio", t: agotados.length + " producto" + (agotados.length === 1 ? "" : "s") + " activo" + (agotados.length === 1 ? "" : "s") + " sin stock", d: agotados.slice(0, 4).map(x => x.title).join(", ") + ". Siguen visibles pero no se pueden comprar: repón o escóndelos, sobre todo si salen en un anuncio." });
   if(meta){
     const px = twPixel(p.desde, p.hasta);
+    /* El píxel no ve la tienda: Shopify registra visitas y carritos del anuncio, Meta ningún evento. */
+    const sinPixel = !!TW.actsListo && TW.actsListo === TW.actsKey && !px.ver && !px.carrito && !px.pago && !px.compra;
+    if(sinPixel && sesOk && r.visitasMeta >= 20)
+      out.push({ nivel: "alto", t: "Meta no recibe lo que pasa en tu tienda", d: "Shopify ve " + adNum(r.visitasMeta) + " visitas" + (r.carritosMeta ? " y " + adNum(r.carritosMeta) + " carritos" : "") + " del anuncio, pero el píxel de Meta no reporta ninguno. Conecta la app «Facebook e Instagram» de Meta en Shopify (píxel y API de conversiones): sin eso Meta solo puede buscar gente que hace clic, no gente que compra." });
+    /* Una campaña de Tráfico busca clics baratos, no compradores. */
+    const trafico = (TW._camps || []).filter(x => ids.has(x.object_id) && adVigente(x) && /OUTCOME_TRAFFIC|LINK_CLICKS/.test(x.objective || ""));
+    if(trafico.length && sesOk && r.visitasMeta >= 20 && !r.pedidosMeta)
+      out.push({ nivel: "medio", t: (trafico.length === 1 ? (trafico[0].name || "La campaña") + " busca" : trafico.length + " campañas buscan") + " visitas, no compras", d: (sinPixel ? "Primero conecta el píxel; después cambia" : "Cambia") + " el objetivo a Ventas (agregar al carrito o compra) para que Meta le muestre el anuncio a quien suele comprar, no a quien hace clic barato." });
     if(px.compra > r.pedidosMeta) out.push({ nivel: "bajo", t: "Meta se atribuye " + adNum(px.compra) + " compra" + (px.compra === 1 ? "" : "s") + " y Shopify ve " + adNum(r.pedidosMeta) + " desde el anuncio", d: "Meta cuenta a quien vio el anuncio y compró después (hasta 1 día) o hizo clic (hasta 7 días); Shopify, el último clic. Las ventas reales son las de Shopify." });
     const sinId = r.sesMeta.filter(x => !x._ad).reduce((s, x) => s + x.sessions, 0);
     if(sinId >= 5) out.push({ nivel: "bajo", t: adNum(sinId) + " visitas de anuncios sin anuncio identificado", d: "Agrega utm_content={{ad.id}} a los parámetros de URL para saber qué anuncio las trajo.", ir: "ajustes" });
