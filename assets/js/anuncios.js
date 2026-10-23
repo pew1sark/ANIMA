@@ -232,6 +232,7 @@ function adAnima(desde, hasta, id){
   const nombreCamp = String((o ? (o.level === "campaign" ? o.name : "") : (campElegida && campElegida.name)) || "").trim();
   const campMeta = new Set(AD.objs.filter(x => x.level === "campaign").map(x => String(x.name || "").trim()));
   const L = (typeof leadsList === "function" ? leadsList() : []).filter(l => {
+    if(l.source === "tiktok") return false;          // los formularios de TikTok los cuenta su pestaña
     const dia = adYmd(new Date(l.lead_created_at));
     if(dia < desde || dia > hasta) return false;
     if(l.ad_id) return adsDe.has(String(l.ad_id));
