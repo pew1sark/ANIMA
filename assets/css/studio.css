@@ -2695,3 +2695,36 @@ a.tw-prod:hover{border-color:rgba(21,21,26,.3)}
   /* En el teléfono .ad-step-bar toma un área de la grilla del embudo que esta fila no tiene. */
   .tw .ad-des-r .ad-step-bar{grid-area:auto}
 }
+
+/* ===========================================================
+   TIKTOK (Taller) — anuncios, comentarios y formularios.
+   Reusa el panel de Anuncios (.ad-*); aquí solo lo propio.
+   =========================================================== */
+.tt .ad-h .ad-vista{margin-left:auto}
+.tt .ad-vb{font-size:12.5px;padding:6px 11px}
+.tt-msg{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:28px;align-items:start}
+.tt-tabs{margin:0 0 10px!important;padding:0!important}
+.tt-coms{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-height:620px;overflow-y:auto;overscroll-behavior:contain}
+.tt-com{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff}
+.tt-com.tt-pend{border-left:3px solid #b8965a}
+.tt-com-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.tt-com-h b{font-size:13.5px}
+.tt-com-h small{font-size:11.5px;color:var(--muted)}
+.tt-com>p{margin:6px 0 0;font-size:13.5px;line-height:1.5;white-space:pre-line;overflow-wrap:anywhere}
+.tt-resp{background:rgba(0,0,0,.035);border-radius:10px;padding:7px 10px;font-size:13px!important}
+.tt-resp span{display:block;font-size:10.5px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.tt-com-a{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tt-com-a .btn{font-size:12px;padding:5px 10px}
+.tt-resp-f{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.tt-resp-f textarea{font:inherit;font-size:13.5px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;resize:vertical;width:100%;box-sizing:border-box}
+.tt-resp-f div{display:flex;gap:6px;flex-wrap:wrap}
+.tt-aviso{font-size:12.5px;margin:0 0 10px}
+.tt-num{margin:0 0 10px;font-size:13px;color:var(--muted)}
+.tt-num b{font-size:22px;color:var(--text,#15151a);letter-spacing:-.02em;margin-right:4px}
+.tt-mini{margin:0 0 6px;font-size:13px;line-height:1.45;overflow-wrap:anywhere}
+.tt-mas{margin-top:10px;font-size:13px}
+.tt-mas summary{cursor:pointer;color:var(--muted);font-weight:650;margin-bottom:8px}
+@media (max-width:900px){
+  .tt-msg{grid-template-columns:1fr;gap:20px}
+  .tt .ad-h .ad-vista{margin-left:0}
+}

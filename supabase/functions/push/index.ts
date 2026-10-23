@@ -161,6 +161,9 @@ const primerNombre = (n: any) => String(n || "").trim().split(/\s+/)[0] || "";
 async function avisoLead(id: string) {
   const { data: l } = await admin.from("client_leads").select("*").eq("id", id).maybeSingle();
   if (!l) return { ok: false };
+  // La primera importación de una conexión nueva (TikTok, CSV) trae solicitudes
+  // de semanas atrás: avisar de cada una sería ruido, ya están en el Centro.
+  if (Date.now() - new Date(l.lead_created_at).getTime() > 2 * 86400000) return { ok: true, omitido: "antigua" };
   const p = await prefs(l.alma_id);
   if (!p.leads) return { ok: true, omitido: "apagado" };
   const quien = l.full_name || "Alguien";

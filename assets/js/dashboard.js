@@ -669,8 +669,8 @@ function vAlmaResumen(a){
 }
 
 /* ===========================================================
-   RESÚMENES DE LAS PESTAÑAS (Anuncios, Tienda web, Marketing Machine)
-   Cada tarjeta lee lo que su pestaña ya tiene en memoria (AD, TW, MM).
+   RESÚMENES DE LAS PESTAÑAS (Anuncios, TikTok, Tienda web, Marketing Machine)
+   Cada tarjeta lee lo que su pestaña ya tiene en memoria (AD, TT, TW, MM).
    Si aún no se ha cargado, se pide una sola vez y el Resumen se vuelve a
    dibujar cuando llega: abrir el Taller no obliga a pasar por cada pestaña.
    =========================================================== */
@@ -740,6 +740,33 @@ function dshAnuncios(a, D, H){
       <div class="dsh-trend"><small>Inversión por día</small>${dshSpark(dshDiasDe(p).map(d => porDia[d] || 0), "#2a78d6") || `<span class="muted">Sin gasto en el periodo.</span>`}</div>
       ${dshAlerta(avisos)}`;
   }finally{ AD.campana = campana; }
+}
+
+/* TikTok: lo invertido, cuánto ven el video, comentarios por responder y lo que volvió. */
+function dshTiktok(a, D, H){
+  if(TT.almaId && TT.almaId !== a.almaId){ Object.assign(TT, { con: undefined, objs: [], daily: [], comments: [], reach: {}, open: null, autoSync: false }); }
+  if(TT.con === undefined){ dshPedir("tt:" + a.almaId, ttCargar); return dshCargando("Cargando TikTok…"); }
+  if(!TT.con) return dshConectar("tiktok", "Conecta tu cuenta de TikTok Ads y aquí verás cuánto inviertes, cuánto ven tus videos, los comentarios por responder y los formularios que llegan.", "Conectar TikTok →");
+  const p = dshPeriodoTab(D, H), campana = TT.campana;
+  TT.campana = "";                       // el filtro de la pestaña no mueve el resumen
+  try{
+    const t = ttSuma(ttFilas(p.desde, p.hasta)), t0 = ttSuma(ttFilas(p.prevDesde, p.prevHasta));
+    const an = ttAnima(p.desde, p.hasta), an0 = ttAnima(p.prevDesde, p.prevHasta), fx = ttFx();
+    const roas = t.spend ? an.valorGanado / (t.spend * fx) : NaN;
+    const pend = ttComentarios().pendientes.length;
+    const porDia = {}; TT.daily.forEach(r => { if(r.day >= p.desde && r.day <= p.hasta) porDia[r.day] = (porDia[r.day] || 0) + Number(r.spend || 0); });
+    const avisos = ttAlertas(p).filter(x => x.nivel === "critico" || x.nivel === "alto");
+    return `<div class="dsh-sts">
+        ${dshStat("Inversión", ttMoney(t.spend, 0), dshVar(t.spend, t0.spend))}
+        ${dshStat("Reproducciones", adNum(t.video_plays), dshVar(t.video_plays, t0.video_plays) || (isFinite(t.hook) ? adPct(t.hook, 0) + " pasa de 2 s" : ""))}
+        ${dshStat("Resultados", adNum(t.results), isFinite(t.cpr) ? ttMoney(t.cpr, 0) + " c/u" : "")}
+        ${dshStat("Formularios", adNum(an.solicitudes), dshVar(an.solicitudes, an0.solicitudes) || (an.ganadas ? dshCuenta(an.ganadas, "ganado", "ganados") : ""))}
+        ${dshStat("Retorno (ROAS)", isFinite(roas) && t.spend ? adDec(roas, 1) + "×" : "—", "ganado / invertido", isFinite(roas) && t.spend ? (roas >= 1 ? "is-ok" : "is-warn") : "")}
+        ${dshStat("Comentarios", adNum(pend), pend ? `<span class="dsh-neg">por responder</span>` : "todo respondido", pend ? "is-warn" : "")}
+      </div>
+      <div class="dsh-trend"><small>Inversión por día</small>${dshSpark(dshDiasDe(p).map(d => porDia[d] || 0), "#2a78d6") || `<span class="muted">Sin gasto en el periodo.</span>`}</div>
+      ${dshAlerta(avisos)}`;
+  }finally{ TT.campana = campana; }
 }
 
 /* Tienda web (Shopify): ventas, lo que espera despacho o pago, y lo que trajo Meta. */
@@ -862,6 +889,7 @@ function vTaller(a){
   const ventas = [
     typeof vCentro === "function" && dshModulo("centro") ? `<div class="card dsh-card dsh-tab"><div class="section-title"><h2>Clientes potenciales</h2><div class="spacer"></div><button class="btn ghost sm" data-go="centro">Abrir →</button></div>${dshEmbudoLeads(D, H)}</div>` : "",
     nube && typeof vAnuncios === "function" && dshModulo("anuncios") ? dshTabCard("anuncios", "Anuncios", dshAnuncios(a, D, H), perTxt) : "",
+    nube && typeof vTiktok === "function" && dshModulo("tiktok") ? dshTabCard("tiktok", "TikTok", dshTiktok(a, D, H), perTxt) : "",
     nube && typeof vTienda === "function" && dshModulo("tienda") ? dshTabCard("tienda", "Tienda web", dshTienda(a, D, H), perTxt) : "",
     nube && typeof vMarketing === "function" && dshModulo("marketing") ? dshTabCard("marketing", "Marketing Machine", dshMarketing(a), "hoy") : ""
   ].filter(Boolean);

@@ -212,8 +212,8 @@ async function leadTraerVinculos(){
     kind:(String(c.kind || "cliente").toLowerCase() === "colaborador" ? "Colaborador" : "Cliente"), role:c.role || "", created:c.created_at });
   if(data && data.length) leadsRefresh();
 }
-function leadOrigen(l){ return l.source === "csv" ? "csv" : l.source === "manual" ? "manual" : (l.platform === "ig" ? "ig" : "fb"); }
-const LEAD_ORIGEN_T = { ig:"Instagram", fb:"Facebook", csv:"CSV de Meta", manual:"Manual" };
+function leadOrigen(l){ return l.source === "csv" ? "csv" : l.source === "manual" ? "manual" : l.source === "tiktok" ? "tiktok" : (l.platform === "ig" ? "ig" : "fb"); }
+const LEAD_ORIGEN_T = { ig:"Instagram", fb:"Facebook", tiktok:"TikTok", csv:"CSV de Meta", manual:"Manual" };
 function leadTexto(l){ return deburr([l.full_name, l.phone, l.email, l.city, l.idea, l.measures, l.campaign_name, leadCampana(l), l.ad_name].filter(Boolean).join(" ")); }
 /* La campaña tal como llega de Meta, y el nombre propio que le puso el Alma.
    Todo lo que se muestra o se filtra usa el propio: dos campañas con el
