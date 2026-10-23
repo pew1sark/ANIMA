@@ -198,7 +198,7 @@ document.addEventListener("scroll", () => dshTip(null), true);
    MAPA DE CHILE
    =========================================================== */
 const MAPA = { cargando: null, inst: null, capa: null, geo: new Map(), geoAlma: null, cola: [], trabajando: false, pedidas: 0,
-               f: { capa: "proyectos", grupo: "", cliente: "", q: "" }, ajustado: "", marcas: new Map() };
+               f: { capa: "proyectos", grupo: "", cliente: "", q: "" }, ajustado: "", marcas: new Map(), full: false };
 
 /* Lugares de Chile que más aparecen (comunas de Santiago y ciudades de
    regiones). Lo demás se pregunta a OpenStreetMap. */
@@ -402,15 +402,17 @@ function dshMapaFiltrosHTML(a, compacto){
 }
 function dshMapaHTML(a, opts){
   const compacto = !!(opts && opts.compacto);
-  return `<div class="card s12 dsh-map-card ${compacto ? "is-compact" : ""}">
+  return `<div class="card s12 dsh-map-card ${compacto ? "is-compact" : ""} ${MAPA.full ? "is-full" : ""}" tabindex="-1">
     <div class="section-title"><h2>Mapa de proyectos</h2><span class="dsh-map-count" id="dshMapCount"></span><div class="spacer"></div>
-      ${compacto ? `<button class="btn ghost sm" data-go="taller">Mapa completo →</button>` : ""}</div>
-    <div id="dshMapF" class="dsh-map-f">${dshMapaFiltrosHTML(a, compacto)}</div>
+      ${compacto ? `<button class="btn ghost sm dsh-map-go" data-go="taller">Mapa completo →</button>` : ""}
+      <button class="btn ghost sm dsh-map-fs" data-dshfull aria-pressed="${MAPA.full}">${MAPA.full ? "✕ Cerrar" : "⛶ Pantalla completa"}</button></div>
+    <div id="dshMapRes" class="dsh-map-res"></div>
+    <div id="dshMapF" class="dsh-map-f">${dshMapaFiltrosHTML(a, compacto && !MAPA.full)}</div>
     <div class="dsh-map-wrap">
       <div class="dsh-map-box"><div id="dshMap" class="dsh-map" aria-label="Mapa de Chile con tus proyectos"><div class="dsh-map-load"><span class="ld-spin"></span>Cargando mapa…</div></div>
         <button class="dsh-map-fit" data-dshencuadrar title="Encuadrar todo" aria-label="Encuadrar todo">⤢</button>
         <div class="dsh-map-legend">${DSH_GRUPOS.map(g => `<span><i style="background:${g[2]}"></i>${g[1]}</span>`).join("")}${MAPA.f.capa !== "proyectos" ? `<span><i class="is-lead"></i>Clientes potenciales</span>` : ""}<span class="dsh-map-hint">Acércate a Santiago para verlo por comuna</span></div></div>
-      ${compacto ? "" : `<aside class="dsh-map-side" id="dshMapSide"></aside>`}
+      <aside class="dsh-map-side" id="dshMapSide"></aside>
     </div>
   </div>`;
 }
@@ -430,7 +432,8 @@ function dshLeaflet(){
 function dshEnPanel(){ return state.view === "taller" || (state.view === "mialma" && (state.almaTab || "resumen") === "resumen"); }
 /* Se llama después de cada dibujo de la pantalla. */
 function dshMapaMontar(){
-  const el = document.getElementById("dshMap"); if(!el) return;
+  const el = document.getElementById("dshMap");
+  if(!el){ if(MAPA.full){ MAPA.full = false; document.body.classList.remove("dsh-map-noscroll"); } return; }
   if(MAPA.inst && MAPA.inst.getContainer() === el) return;
   dshLeaflet().then(L => {
     if(!el.isConnected) return;
@@ -481,6 +484,15 @@ function dshMapaPintar(ajustar){
                        d.leadsN ? dshCuenta(d.leadsN, "cliente potencial", "clientes potenciales") : "",
                        d.buscando.length ? `ubicando ${d.buscando.length}…` : ""].filter(Boolean).join(" · ");
   }
+  const res = document.getElementById("dshMapRes");
+  if(res && MAPA.full){
+    const monto = d.ciudades.reduce((t, l) => t + l.proys.reduce((u, x) => u + (+x.p.budget || 0), 0), 0);
+    const top = d.ciudades[0], conProys = d.ciudades.filter(l => l.proys.length).length;
+    const t = (v, l) => `<div class="dsh-res-t"><b>${v}</b><span>${l}</span></div>`;
+    res.innerHTML = t(nProys, nProys === 1 ? "proyecto" : "proyectos") + t(conProys, conProys === 1 ? "ciudad" : "ciudades") +
+      (monto ? t(dshCorto(monto), "presupuesto") : "") + (d.leadsN ? t(d.leadsN, d.leadsN === 1 ? "cliente potencial" : "clientes potenciales") : "") +
+      (top ? t(esc(top.texto), "más trabajo · " + (top.proys.length + top.leads.length)) : "") + (d.sin.length ? t(d.sin.length, "sin ubicación") : "");
+  } else if(res) res.innerHTML = "";
   const side = document.getElementById("dshMapSide");
   if(side){
     const max = Math.max(1, ...d.ciudades.map(l => l.proys.length + l.leads.length));
@@ -555,13 +567,30 @@ function dshIrLugar(k){
 }
 function dshMapaRefrescarFiltros(){
   const box = document.getElementById("dshMapF"); if(!box) return;
-  const compacto = !!document.querySelector(".dsh-map-card.is-compact");
+  const compacto = !!document.querySelector(".dsh-map-card.is-compact:not(.is-full)");
   const foco = document.activeElement && document.activeElement.matches && document.activeElement.matches("[data-dshq]");
   if(!foco) box.innerHTML = dshMapaFiltrosHTML(me(), compacto);
   dshMapaPintar();
 }
+/* Pantalla completa: la misma tarjeta se estira sobre toda la ventana (con
+   filtros, resumen y lista de ciudades), así el mapa no se vuelve a montar. */
+function dshFullPonerar(on){
+  MAPA.full = on;
+  document.body.classList.toggle("dsh-map-noscroll", on);
+  const card = document.querySelector(".dsh-map-card"); if(!card) return;
+  card.classList.toggle("is-full", on);
+  const b = card.querySelector("[data-dshfull]"); if(b){ b.textContent = on ? "✕ Cerrar" : "⛶ Pantalla completa"; b.setAttribute("aria-pressed", on); }
+  const box = document.getElementById("dshMapF"); if(box) box.innerHTML = dshMapaFiltrosHTML(me(), card.classList.contains("is-compact") && !on);
+  if(on) card.focus({ preventScroll: true });
+  dshMapaPintar();
+  setTimeout(() => { if(MAPA.inst){ MAPA.inst.invalidateSize(); MAPA.ajustado = ""; dshMapaPintar(); } }, 60);
+}
+/* Al abrir un proyecto o cliente desde el mapa grande se sale de él primero. */
+document.addEventListener("click", e => { if(MAPA.full && e.target.closest && e.target.closest("[data-projgo],[data-dshlead]")){ MAPA.full = false; document.body.classList.remove("dsh-map-noscroll"); } }, true);
+document.addEventListener("keydown", e => { if(e.key === "Escape" && MAPA.full) dshFullPonerar(false); });
 document.addEventListener("click", e => {
   const t = e.target; if(!t.closest) return;
+  if(t.closest("[data-dshfull]")){ dshFullPonerar(!MAPA.full); return; }
   const g = t.closest("[data-dshgrupo]"); if(g){ MAPA.f.grupo = MAPA.f.grupo === g.dataset.dshgrupo ? "" : g.dataset.dshgrupo; dshMapaRefrescarFiltros(); return; }
   const c = t.closest("[data-dshcapa]"); if(c){ MAPA.f.capa = c.dataset.dshcapa; renderView(); return; }
   if(t.closest("[data-dshlimpiar]")){ MAPA.f = { capa: "proyectos", grupo: "", cliente: "", q: "" }; renderView(); return; }

@@ -2728,3 +2728,24 @@ a.tw-prod:hover{border-color:rgba(21,21,26,.3)}
   .tt-msg{grid-template-columns:1fr;gap:20px}
   .tt .ad-h .ad-vista{margin-left:0}
 }
+
+/* Mapa en pantalla completa: la tarjeta cubre la ventana; resumen arriba,
+   mapa al centro y lista de ciudades al lado. */
+.dsh-map-res{display:none}
+.dsh-map-card.is-compact:not(.is-full) .dsh-map-side{display:none}
+body.dsh-map-noscroll{overflow:hidden}
+.dsh-map-card.is-full{position:fixed;inset:0;z-index:300;margin:0;border-radius:0;display:flex;flex-direction:column;overflow:hidden;animation:none;transform:none;backdrop-filter:none;-webkit-backdrop-filter:none;background:#f7f6f3;padding:14px 16px;box-sizing:border-box;outline:0}
+.dsh-map-card.is-full .dsh-map-go{display:none}
+.dsh-map-card.is-full .dsh-map-res{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.dsh-res-t{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px 14px;min-width:96px;display:flex;flex-direction:column}
+.dsh-res-t b{font-size:18px;color:#15151a;line-height:1.2}
+.dsh-res-t span{font-size:11.5px;color:var(--muted)}
+.dsh-map-card.is-full .dsh-map-wrap{flex:1;min-height:0}
+.dsh-map-card.is-full .dsh-map-box{height:100%}
+.dsh-map-card.is-full .dsh-map{height:100%}
+.dsh-map-card.is-full .dsh-map-side{max-height:none;min-height:0}
+@media (max-width:960px){
+  .dsh-map-card.is-full .dsh-map-wrap{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 34%}
+  .dsh-map-card.is-full .dsh-map-side{max-height:none}
+  .dsh-res-t{min-width:0;flex:1 1 40%;padding:6px 10px}
+}
