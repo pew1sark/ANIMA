@@ -107,14 +107,17 @@ async function loadLeads(){
    antiguas desaparecían de la lista, de los contadores y del filtro de fechas.
    El orden incluye el id para que ninguna se repita ni se salte entre páginas. */
 async function leadTraerTodas(almaId){
+  /* Se avanza por lo que llegó, no por lo pedido, y se para solo con una página
+     vacía: si el servidor tiene un tope por consulta menor que LEAD_PAGINA,
+     una página «corta» no significa que no queden más. */
   const out = [];
-  for(let desde = 0; desde < LEAD_MAX; desde += LEAD_PAGINA){
+  while(out.length < LEAD_MAX){
     const { data, error } = await Cloud.client.from("client_leads").select("*").eq("alma_id", almaId)
       .order("lead_created_at", { ascending:false }).order("id", { ascending:false })
-      .range(desde, desde + LEAD_PAGINA - 1);
+      .range(out.length, out.length + LEAD_PAGINA - 1);
     if(error) throw error;
-    out.push(...(data || []));
-    if(!data || data.length < LEAD_PAGINA) break;
+    if(!data || !data.length) break;
+    out.push(...data);
   }
   return out;
 }
