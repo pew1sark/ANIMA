@@ -42,6 +42,12 @@ const LEAD_FECHAS = [
 const LEAD_TRAMO = 200;
 /* La base entrega como mucho 1000 filas por consulta: se piden por páginas. */
 const LEAD_PAGINA = 1000, LEAD_MAX = 50000;
+/* Los periodos que se ven como botones, siempre a la vista (los demás siguen
+   funcionando si quedaron guardados). */
+const LEAD_FECHAS_BOTONES = [
+  ["", "Todo"], ["hoy", "Hoy"], ["ayer", "Ayer"], ["7", "7 días"], ["30", "30 días"],
+  ["mes", "Este mes"], ["mesant", "Mes pasado"], ["anio", "Este año"], ["rango", "📅 Elegir fechas"]
+];
 const LEAD_SIN_CAMPANA = "__sin";
 
 /* Etapas como en el Centro de clientes potenciales de Meta (migración 0135). */
@@ -242,6 +248,14 @@ async function leadTraerVinculos(){
 }
 function leadOrigen(l){ return l.source === "csv" ? "csv" : l.source === "manual" ? "manual" : l.source === "tiktok" ? "tiktok" : (l.platform === "ig" ? "ig" : "fb"); }
 const LEAD_ORIGEN_T = { ig:"Instagram", fb:"Facebook", tiktok:"TikTok", csv:"CSV de Meta", manual:"Manual" };
+/* «Solo de anuncios»: lo mismo que cuenta el Administrador de anuncios de Meta,
+   formularios que llegaron desde un anuncio pagado. Quedan fuera los
+   orgánicos (sin anuncio), los chats de Messenger, TikTok y los creados a mano. */
+const LEAD_ANUNCIOS = "anuncios";
+function leadDeAnuncio(l){
+  const o = leadOrigen(l);
+  return (o === "fb" || o === "ig" || o === "csv") && !leadEsChat(l) && !!(l.ad_id || l.campaign_name);
+}
 function leadTexto(l){ return deburr([l.full_name, l.phone, l.email, l.city, l.idea, l.measures, l.campaign_name, leadCampana(l), l.ad_name].filter(Boolean).join(" ")); }
 /* La campaña tal como llega de Meta, y el nombre propio que le puso el Alma.
    Todo lo que se muestra o se filtra usa el propio: dos campañas con el
@@ -250,6 +264,13 @@ function leadCampanaMeta(l){ return String(l.campaign_name || "").trim(); }
 function leadCampana(l){ const k = leadCampanaMeta(l); return k ? (CC.alias.get(k) || k) : ""; }
 function leadCampanasMeta(nombre){ return [...new Set(leadsList().map(leadCampanaMeta).filter(k => k && (CC.alias.get(k) || k) === nombre))]; }
 
+function leadElegirFecha(k){
+  CC.fecha = k; CC.ver = 0;
+  /* «Elegir fechas» abre con el último mes puesto, para no partir de cero. */
+  if(k === "rango" && !CC.desde && !CC.hasta){
+    const d = new Date(); CC.hasta = leadYmd(d); d.setDate(d.getDate() - 29); CC.desde = leadYmd(d); }
+  renderView();
+}
 /* Primer y último día (AAAA-MM-DD, calendario local) del filtro de fecha elegido;
    null si no hay filtro. Una sola definición para la lista y para el ROAS. */
 const leadYmd = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
@@ -288,7 +309,7 @@ function leadRangoTexto(){
 function leadsSinPestana(){
   let L = leadsList();
   if(CC.ciudad) L = L.filter(l => deburr(leadCiudad(l)) === CC.ciudad);
-  if(CC.origen) L = L.filter(l => leadOrigen(l) === CC.origen);
+  if(CC.origen) L = L.filter(l => CC.origen === LEAD_ANUNCIOS ? leadDeAnuncio(l) : leadOrigen(l) === CC.origen);
   if(CC.campana) L = L.filter(l => CC.campana === LEAD_SIN_CAMPANA ? !leadCampana(l) : leadCampana(l) === CC.campana);
   const w = leadVentana();
   if(w) L = L.filter(l => { const t = new Date(l.lead_created_at).getTime(); return t >= w[0] && t < w[1]; });
@@ -483,23 +504,35 @@ function vCentro(a){
   const resp = leadRespuestaMedia();
   const resumen = [`${L.length.toLocaleString("es")} solicitud${L.length===1?"":"es"}`, nHoy ? `${nHoy} hoy` : "", resp ? `respondes en ${resp} en promedio` : ""].filter(Boolean).join(" · ");
 
-  const ciudades = [...new Map(L.map(l => [deburr(leadCiudad(l)), leadCiudad(l)]).filter(([k]) => k)).entries()].sort((x, y) => x[1].localeCompare(y[1], "es"));
+  /* Ciudades sin importar mayúsculas ni tildes, las con más solicitudes primero. */
+  const porCiudad = new Map();
+  L.forEach(l => { const t = leadCiudad(l), k = deburr(t); if(!k) return;
+    const c = porCiudad.get(k) || { t, n: 0 }; c.n++; porCiudad.set(k, c); });
+  const ciudades = [...porCiudad.entries()].sort((x, y) => y[1].n - x[1].n || x[1].t.localeCompare(y[1].t, "es"));
+  const nAnuncios = L.filter(leadDeAnuncio).length;
   const opt = (v, t, cur) => `<option value="${esc(v)}" ${v===cur?"selected":""}>${esc(t)}</option>`;
   const porCampana = new Map();
   L.forEach(l => { const k = leadCampana(l); if(k){ if(!porCampana.has(k)) porCampana.set(k, []); porCampana.get(k).push(l); } });
   const campanas = [...porCampana.entries()].sort((x, y) => y[1].length - x[1].length);
   const sinCampana = L.some(l => !leadCampana(l));
+  const hayFiltro = CC.ciudad || CC.origen || CC.fecha || CC.campana;
+  const fechaBtn = ([k, t]) => `<button class="ld-chip ${CC.fecha===k?'on':''}" data-leadfecha="${k}" ${CC.fecha===k?'aria-pressed="true"':'aria-pressed="false"'}>${esc(t)}</button>`;
   const filtros = `<div class="ld-filters">
       <label class="ld-search"><span aria-hidden="true">⌕</span><input id="leadQ" type="search" placeholder="Buscar por nombre, teléfono o ciudad" value="${esc(CC.q)}" autocomplete="off" enterkeyhint="search"></label>
-      <div class="ld-selects">
-        <select class="ld-sel ${CC.ciudad?'on':''}" data-leadfiltro="ciudad" aria-label="Ciudad">${opt("", "Todas las ciudades", CC.ciudad)}${ciudades.map(([k, t]) => opt(k, t, CC.ciudad)).join("")}</select>
-        <select class="ld-sel ${CC.origen?'on':''}" data-leadfiltro="origen" aria-label="Origen">${opt("", "Todo origen", CC.origen)}${Object.entries(LEAD_ORIGEN_T).map(([k, t]) => opt(k, t, CC.origen)).join("")}</select>
-        ${campanas.length ? `<select class="ld-sel ${CC.campana?'on':''}" data-leadfiltro="campana" aria-label="Campaña de Meta">${opt("", "Todas las campañas", CC.campana)}${campanas.map(([k]) => opt(k, k, CC.campana)).join("")}${sinCampana ? opt(LEAD_SIN_CAMPANA, "Sin campaña", CC.campana) : ""}</select>` : ""}
-        <select class="ld-sel ${CC.fecha?'on':''}" data-leadfiltro="fecha" aria-label="Días">${opt("", "Cualquier fecha", CC.fecha)}${LEAD_FECHAS.map(([k, t]) => opt(k, t, CC.fecha)).join("")}</select>
-        ${CC.fecha === "rango" ? `<span class="ld-rango"><input type="date" data-leadrango="desde" value="${esc(CC.desde)}" aria-label="Desde" max="${esc(CC.hasta || leadYmd(new Date()))}"><span>→</span><input type="date" data-leadrango="hasta" value="${esc(CC.hasta)}" aria-label="Hasta" min="${esc(CC.desde || "")}" max="${esc(leadYmd(new Date()))}"></span>` : ""}
-        <select class="ld-sel" data-leadorden aria-label="Ordenar">${LEAD_ORDEN.map(([k, t]) => opt(k, "↕ " + t, state.leadOrden || "recientes")).join("")}</select>
-        ${(CC.ciudad||CC.origen||CC.fecha||CC.campana) ? `<button class="ld-clear" data-leadlimpiar>Quitar filtros</button>` : ""}
+      <div class="ld-fechas" role="group" aria-label="Periodo">
+        <span class="ld-flabel">Periodo</span>
+        ${LEAD_FECHAS_BOTONES.map(fechaBtn).join("")}
+        ${CC.fecha && !LEAD_FECHAS_BOTONES.some(([k]) => k === CC.fecha) ? `<button class="ld-chip on" data-leadfecha="${esc(CC.fecha)}">${esc((LEAD_FECHAS.find(x => x[0] === CC.fecha) || [])[1] || "")}</button>` : ""}
+        ${CC.fecha === "rango" ? `<span class="ld-rango"><label>Desde <input type="date" data-leadrango="desde" value="${esc(CC.desde)}" max="${esc(CC.hasta || leadYmd(new Date()))}"></label><label>Hasta <input type="date" data-leadrango="hasta" value="${esc(CC.hasta)}" min="${esc(CC.desde || "")}" max="${esc(leadYmd(new Date()))}"></label></span>` : ""}
       </div>
+      <div class="ld-selects">
+        <label class="ld-fsel"><span>📍 Ciudad</span><select class="ld-sel ${CC.ciudad?'on':''}" data-leadfiltro="ciudad">${opt("", "Todas (" + ciudades.length + ")", CC.ciudad)}${ciudades.map(([k, c]) => opt(k, c.t + " · " + c.n, CC.ciudad)).join("")}</select></label>
+        <label class="ld-fsel"><span>Origen</span><select class="ld-sel ${CC.origen?'on':''}" data-leadfiltro="origen">${opt("", "Todo", CC.origen)}${opt(LEAD_ANUNCIOS, "Solo de anuncios de Meta · " + nAnuncios, CC.origen)}${Object.entries(LEAD_ORIGEN_T).map(([k, t]) => opt(k, t, CC.origen)).join("")}</select></label>
+        ${campanas.length ? `<label class="ld-fsel"><span>Campaña</span><select class="ld-sel ${CC.campana?'on':''}" data-leadfiltro="campana">${opt("", "Todas", CC.campana)}${campanas.map(([k]) => opt(k, k, CC.campana)).join("")}${sinCampana ? opt(LEAD_SIN_CAMPANA, "Sin campaña", CC.campana) : ""}</select></label>` : ""}
+        <label class="ld-fsel"><span>Orden</span><select class="ld-sel" data-leadorden>${LEAD_ORDEN.map(([k, t]) => opt(k, t, state.leadOrden || "recientes")).join("")}</select></label>
+        ${hayFiltro ? `<button class="ld-clear" data-leadlimpiar>Quitar filtros</button>` : ""}
+      </div>
+      ${CC.origen === LEAD_ANUNCIOS ? `<p class="ld-fnota muted">Solo formularios que llegaron desde un anuncio pagado, como los cuenta el Administrador de anuncios de Meta. Para comparar, elige el mismo periodo que tienes allá.</p>` : ""}
     </div>`;
   /* Rendimiento por campaña: cuántas llegaron, cuántas se cotizaron y ganaron.
      Tocar una la deja como filtro. */
@@ -1176,6 +1209,7 @@ document.addEventListener("click", e => {
   if(t.closest("[data-leadcampcancel]")){ CC.campEdit = null; renderView(); return; }
   const co = t.closest("[data-leadcamporig]"); if(co){ leadCampRenombrar(co.dataset.leadcamporig, ""); return; }
   if(t.closest("[data-leadreload]")){ CC.leads = undefined; renderView(); return; }
+  const lf = t.closest("[data-leadfecha]"); if(lf){ leadElegirFecha(lf.dataset.leadfecha); return; }
   if(t.closest("[data-leadmas]")){ CC.ver = Math.max(CC.ver || 0, LEAD_TRAMO) + LEAD_TRAMO; leadsRefresh(true); return; }
   if(t.closest("[data-leadtodas]")){ CC.ver = Infinity; leadsRefresh(true); return; }
   const lt = t.closest("[data-leadtab]"); if(lt){ state.leadTab = lt.dataset.leadtab; CC.sel.clear(); CC.ver = 0; renderView(); return; }
@@ -1233,11 +1267,7 @@ document.addEventListener("change", e => {
   const cs = el.closest("[data-leadsel]"); if(cs){ cs.checked ? CC.sel.add(cs.dataset.leadsel) : CC.sel.delete(cs.dataset.leadsel); leadSelPintar(); return; }
   if(el.closest("[data-leadselall]")){ const vis = leadFilasVisibles(); el.checked ? vis.forEach(id => CC.sel.add(id)) : vis.forEach(id => CC.sel.delete(id)); leadSelPintar(); return; }
   const sst = el.closest("[data-leadselstage]"); if(sst){ const v = sst.value; sst.value = ""; if(v) leadEtapaVarias([...CC.sel], v); return; }
-  const fi = el.closest("[data-leadfiltro]"); if(fi){ CC[fi.dataset.leadfiltro] = fi.value; CC.ver = 0;
-    /* «Elegir fechas…» abre con el último mes puesto, para no partir de cero. */
-    if(fi.dataset.leadfiltro === "fecha" && fi.value === "rango" && !CC.desde && !CC.hasta){
-      const d = new Date(); CC.hasta = leadYmd(d); d.setDate(d.getDate() - 29); CC.desde = leadYmd(d); }
-    renderView(); return; }
+  const fi = el.closest("[data-leadfiltro]"); if(fi){ CC[fi.dataset.leadfiltro] = fi.value; CC.ver = 0; renderView(); return; }
   const fr = el.closest("[data-leadrango]"); if(fr){ CC[fr.dataset.leadrango] = fr.value;
     if(CC.desde && CC.hasta && CC.desde > CC.hasta){ if(fr.dataset.leadrango === "desde") CC.hasta = CC.desde; else CC.desde = CC.hasta; }
     CC.ver = 0; renderView(); return; }
