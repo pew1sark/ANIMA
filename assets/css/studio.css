@@ -1181,8 +1181,16 @@ a.nav-item{text-decoration:none;color:inherit}
 .ld-search:focus-within{border-color:rgba(21,21,26,.35);box-shadow:0 0 0 3px rgba(21,21,26,.06)}
 .ld-search span{color:var(--muted);font-size:16px}
 .ld-search input{flex:1;min-width:0;border:0;outline:0;background:none;font:inherit;font-size:14px;padding:10px 0;color:var(--text,#15151a)}
-.ld-selects{display:flex;gap:8px;align-items:center;overflow-x:auto;scrollbar-width:none;max-width:100%}
-.ld-selects::-webkit-scrollbar{display:none}
+.ld-selects{display:flex;gap:8px 10px;align-items:center;flex-wrap:wrap;flex:1 1 100%;max-width:100%}
+.ld-fsel{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%}
+.ld-fsel>span{font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--muted);white-space:nowrap}
+.ld-fsel .ld-sel{max-width:220px;text-overflow:ellipsis}
+.ld-fechas{display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1 1 100%}
+.ld-flabel{font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--muted);margin-right:2px}
+.ld-chip{flex:none;font:inherit;font-size:12.5px;font-weight:600;color:#3f3c37;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;transition:background .15s,border-color .15s}
+.ld-chip:hover{border-color:rgba(21,21,26,.3)}
+.ld-chip.on{background:#15151a;border-color:#15151a;color:#fff}
+.ld-fnota{flex:1 1 100%;margin:0;font-size:12.5px}
 .ld-sel{flex:none;appearance:none;-webkit-appearance:none;font:inherit;font-size:13px;font-weight:600;color:#3f3c37;border:1px solid var(--line);border-radius:999px;padding:8px 30px 8px 13px;cursor:pointer;
   background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236e6e73' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center}
 .ld-sel.on{border-color:rgba(21,21,26,.45);background-color:rgba(21,21,26,.05);color:#15151a}
@@ -1310,6 +1318,14 @@ body:has(.ld-drawer){overflow:hidden}
   .ld-card{padding:18px 16px 8px}
   .ld-tabs{margin:14px -16px 0;padding:0 10px}
   .ld-table{margin:0 -16px}
+  .ld-fechas{gap:6px 5px}
+  .ld-chip{padding:6px 10px;font-size:12px}
+  .ld-fechas .ld-rango{flex:1 1 100%;flex-wrap:wrap}
+  .ld-fechas .ld-rango label{flex:1 1 100%;min-width:0}
+  .ld-fechas .ld-rango input{flex:1;min-width:0;width:100%;box-sizing:border-box}
+  .ld-fsel{flex:1 1 100%}
+  .ld-fsel>span{min-width:64px}
+  .ld-fsel .ld-sel{flex:1;max-width:none;min-width:0}
 }
 /* Campañas de Meta: rendimiento y filtro rápido */
 .ld-camps{display:flex;gap:8px;overflow-x:auto;padding:0 0 12px;scrollbar-width:none}
@@ -1322,6 +1338,7 @@ body:has(.ld-drawer){overflow:hidden}
 .ld-rango{display:inline-flex;align-items:center;gap:6px;flex:none}
 .ld-rango input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:999px;padding:7px 11px;background:#fff;color:var(--text,#15151a)}
 .ld-rango span{color:var(--muted);font-size:12px}
+.ld-rango label{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted)}
 /* WhatsApp: también como enlace y como «agregar» */
 a.ld-wa{text-decoration:none}
 .ld-wa.sm{font-size:12px;padding:6px 11px 6px 8px}
