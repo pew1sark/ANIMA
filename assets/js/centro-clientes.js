@@ -29,13 +29,19 @@
 const CC = { leads: undefined, conn: undefined, loading: false, busy: "", pick: null, draft: null, connectOpen: false, tplOpen: false,
              q: "", ciudad: "", origen: "", fecha: "", campana: "", desde: "", hasta: "",
              edit: false, nuevo: false, propios: new Set(),
-             sel: new Set(), alias: new Map(), campEdit: null, atrib: null };
+             sel: new Set(), alias: new Map(), campEdit: null, atrib: null, ver: 0 };
 
 /* Rango de días: se mide en días del calendario local, no en horas. */
 const LEAD_FECHAS = [
   ["hoy", "Hoy"], ["ayer", "Ayer"], ["3", "Últimos 3 días"], ["7", "Últimos 7 días"], ["14", "Últimos 14 días"],
-  ["30", "Últimos 30 días"], ["90", "Últimos 90 días"], ["rango", "Elegir fechas…"]
+  ["30", "Últimos 30 días"], ["90", "Últimos 90 días"], ["mes", "Este mes"], ["mesant", "Mes pasado"],
+  ["anio", "Este año"], ["rango", "Elegir fechas…"]
 ];
+/* Cuántas filas se dibujan de una vez: con miles de solicitudes la lista entera
+   haría lenta la pantalla en el teléfono. «Ver más» suma otro tramo. */
+const LEAD_TRAMO = 200;
+/* La base entrega como mucho 1000 filas por consulta: se piden por páginas. */
+const LEAD_PAGINA = 1000, LEAD_MAX = 50000;
 const LEAD_SIN_CAMPANA = "__sin";
 
 /* Etapas como en el Centro de clientes potenciales de Meta (migración 0135). */
@@ -83,12 +89,11 @@ async function loadLeads(){
   CC.loading = true;
   try{
     const [l, c, n] = await Promise.all([
-      Cloud.client.from("client_leads").select("*").eq("alma_id", a.almaId).order("lead_created_at", { ascending:false }).limit(300),
+      leadTraerTodas(a.almaId),
       Cloud.client.from("meta_lead_connections").select("*").eq("alma_id", a.almaId).maybeSingle(),
       Cloud.client.from("lead_campaign_names").select("campaign_name,alias").eq("alma_id", a.almaId)
     ]);
-    if(l.error) throw l.error;
-    CC.leads = l.data || [];
+    CC.leads = l;
     CC.conn = c.data || null;
     CC.alias = new Map((n && !n.error && n.data || []).map(r => [r.campaign_name, r.alias]));
     CC.almaId = a.almaId;
@@ -97,6 +102,24 @@ async function loadLeads(){
   leadsRefresh();
   ensureLeadsRealtime();
   leadTraerVinculos();
+}
+/* Todas las solicitudes, no solo las últimas: antes se pedían 300 y las más
+   antiguas desaparecían de la lista, de los contadores y del filtro de fechas.
+   El orden incluye el id para que ninguna se repita ni se salte entre páginas. */
+async function leadTraerTodas(almaId){
+  /* Se avanza por lo que llegó, no por lo pedido, y se para solo con una página
+     vacía: si el servidor tiene un tope por consulta menor que LEAD_PAGINA,
+     una página «corta» no significa que no queden más. */
+  const out = [];
+  while(out.length < LEAD_MAX){
+    const { data, error } = await Cloud.client.from("client_leads").select("*").eq("alma_id", almaId)
+      .order("lead_created_at", { ascending:false }).order("id", { ascending:false })
+      .range(out.length, out.length + LEAD_PAGINA - 1);
+    if(error) throw error;
+    if(!data || !data.length) break;
+    out.push(...data);
+  }
+  return out;
 }
 /* Redibuja la pantalla, salvo que estés escribiendo en ella: Realtime puede
    traer una solicitud nueva a mitad de una nota y no hay que borrártela. */
@@ -207,10 +230,15 @@ async function leadTraerVinculos(){
   const a = me(); if(!a || !a.live || !Cloud.client) return;
   const faltan = [...new Set(leadsList().map(l => l.client_id).filter(id => id && !(a.clients || []).some(c => c._id === id)))];
   if(!faltan.length) return;
-  const { data } = await Cloud.client.from("clients").select("id,name,email,phone,notes,kind,role,created_at").in("id", faltan.slice(0, 200));
-  for(const c of data || []) (a.clients || (a.clients = [])).push({ _id:c.id, name:c.name, email:c.email, phone:c.phone, notes:c.notes,
-    kind:(String(c.kind || "cliente").toLowerCase() === "colaborador" ? "Colaborador" : "Cliente"), role:c.role || "", created:c.created_at });
-  if(data && data.length) leadsRefresh();
+  /* De a 200 ids: la lista va en la URL de la consulta y no puede ser enorme. */
+  let nuevos = 0;
+  for(let i = 0; i < faltan.length; i += 200){
+    const { data } = await Cloud.client.from("clients").select("id,name,email,phone,notes,kind,role,created_at").in("id", faltan.slice(i, i + 200));
+    for(const c of data || []){ if((a.clients || []).some(x => x._id === c.id)) continue; nuevos++;
+      (a.clients || (a.clients = [])).push({ _id:c.id, name:c.name, email:c.email, phone:c.phone, notes:c.notes,
+        kind:(String(c.kind || "cliente").toLowerCase() === "colaborador" ? "Colaborador" : "Cliente"), role:c.role || "", created:c.created_at }); }
+  }
+  if(nuevos) leadsRefresh();
 }
 function leadOrigen(l){ return l.source === "csv" ? "csv" : l.source === "manual" ? "manual" : l.source === "tiktok" ? "tiktok" : (l.platform === "ig" ? "ig" : "fb"); }
 const LEAD_ORIGEN_T = { ig:"Instagram", fb:"Facebook", tiktok:"TikTok", csv:"CSV de Meta", manual:"Manual" };
@@ -222,27 +250,53 @@ function leadCampanaMeta(l){ return String(l.campaign_name || "").trim(); }
 function leadCampana(l){ const k = leadCampanaMeta(l); return k ? (CC.alias.get(k) || k) : ""; }
 function leadCampanasMeta(nombre){ return [...new Set(leadsList().map(leadCampanaMeta).filter(k => k && (CC.alias.get(k) || k) === nombre))]; }
 
-/* [desde, hasta) en milisegundos para el filtro de fecha elegido. */
-function leadVentana(){
+/* Primer y último día (AAAA-MM-DD, calendario local) del filtro de fecha elegido;
+   null si no hay filtro. Una sola definición para la lista y para el ROAS. */
+const leadYmd = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+function leadRangoDias(){
   const f = CC.fecha; if(!f) return null;
-  const d0 = (off) => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + off); return d.getTime(); };
-  if(f === "hoy")  return [d0(0), Infinity];
-  if(f === "ayer") return [d0(-1), d0(0)];
-  if(f === "rango"){
-    const dia = s => { const [y, m, d] = String(s).split("-").map(Number); return new Date(y, m - 1, d).getTime(); };
-    return [CC.desde ? dia(CC.desde) : -Infinity, CC.hasta ? dia(CC.hasta) + 86400000 : Infinity];
-  }
-  return [d0(1 - Number(f)), Infinity];   // «últimos 7 días» = hoy y los 6 anteriores
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const off = n => { const d = new Date(hoy); d.setDate(d.getDate() + n); return leadYmd(d); };
+  if(f === "hoy")    return [off(0), off(0)];
+  if(f === "ayer")   return [off(-1), off(-1)];
+  if(f === "mes")    return [leadYmd(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), off(0)];
+  if(f === "mesant") return [leadYmd(new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)), leadYmd(new Date(hoy.getFullYear(), hoy.getMonth(), 0))];
+  if(f === "anio")   return [hoy.getFullYear() + "-01-01", off(0)];
+  if(f === "rango")  return [CC.desde || "", CC.hasta || ""];
+  return [off(1 - Number(f)), off(0)];   // «últimos 7 días» = hoy y los 6 anteriores
+}
+/* [desde, hasta) en milisegundos. «Hasta» incluye el día entero. */
+function leadVentana(){
+  const r = leadRangoDias(); if(!r) return null;
+  const dia = s => { const [y, m, d] = String(s).split("-").map(Number); return new Date(y, m - 1, d).getTime(); };
+  const fin = r[1] ? (() => { const [y, m, d] = r[1].split("-").map(Number); return new Date(y, m - 1, d + 1).getTime(); })() : Infinity;
+  return [r[0] ? dia(r[0]) : -Infinity, fin];
+}
+/* «del 3 mar al 9 mar 2026», para que se lea qué tramo está mirando. */
+function leadRangoTexto(){
+  const r = leadRangoDias(); if(!r) return "";
+  const fmt = (s, anio) => { const [y, m, d] = s.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("es", anio ? { day:"numeric", month:"short", year:"numeric" } : { day:"numeric", month:"short" }); };
+  if(!r[0] && !r[1]) return "";
+  if(!r[0]) return "hasta el " + fmt(r[1], true);
+  if(!r[1]) return "desde el " + fmt(r[0], true);
+  if(r[0] === r[1]) return "el " + fmt(r[0], true);
+  return "del " + fmt(r[0], r[0].slice(0, 4) !== r[1].slice(0, 4)) + " al " + fmt(r[1], true);
 }
 
-function leadsFiltrados(){
-  const tab = LEAD_TABS.find(t => t[0] === (state.leadTab || "activas")) || LEAD_TABS[0];
-  let L = leadsList().filter(tab[2]);
+/* Todos los filtros menos la pestaña: así las pestañas cuentan lo del periodo elegido. */
+function leadsSinPestana(){
+  let L = leadsList();
   if(CC.ciudad) L = L.filter(l => deburr(leadCiudad(l)) === CC.ciudad);
   if(CC.origen) L = L.filter(l => leadOrigen(l) === CC.origen);
   if(CC.campana) L = L.filter(l => CC.campana === LEAD_SIN_CAMPANA ? !leadCampana(l) : leadCampana(l) === CC.campana);
   const w = leadVentana();
   if(w) L = L.filter(l => { const t = new Date(l.lead_created_at).getTime(); return t >= w[0] && t < w[1]; });
+  return L;
+}
+function leadsFiltrados(){
+  const tab = LEAD_TABS.find(t => t[0] === (state.leadTab || "activas")) || LEAD_TABS[0];
+  const L = leadsSinPestana().filter(tab[2]);
   const t = l => new Date(l.lead_created_at).getTime();
   const cmp = {
     recientes: (a, b) => t(b) - t(a),
@@ -256,10 +310,19 @@ function leadsFiltrados(){
 /* Buscar filtra en el sitio: el campo y el teclado no se mueven. */
 function leadAplicarBusqueda(){
   const q = deburr(CC.q || "").split(" ").filter(Boolean); let n = 0;
+  if(q.length) leadDibujarResto();
   document.querySelectorAll(".ld-row[data-q]").forEach(el => { const ok = q.every(w => el.dataset.q.includes(w)); el.hidden = !ok; if(ok) n++; });
-  const c = document.getElementById("ldCount"); if(c) c.textContent = n + (n === 1 ? " solicitud" : " solicitudes");
+  const c = document.getElementById("ldCount"); if(c) { const per = CC.fecha ? leadRangoTexto() : ""; c.textContent = n.toLocaleString("es") + (n === 1 ? " solicitud" : " solicitudes") + (per ? " " + per : ""); }
   const v = document.getElementById("ldNone"); if(v) v.hidden = n > 0;
   leadSelPintar();
+}
+
+/* Buscar mira todas las de la lista, no solo el tramo dibujado. */
+function leadDibujarResto(){
+  const tabla = document.querySelector(".ld-table"); if(!tabla || !CC.resto || !CC.resto.length) return;
+  tabla.insertAdjacentHTML("beforeend", CC.resto.map(leadFilaHTML).join(""));
+  CC.resto = [];
+  const m = document.getElementById("ldMas"); if(m) m.remove();
 }
 
 /* ---------- selección de varias ---------- */
@@ -361,12 +424,8 @@ function leadRespuestaMedia(){
    Es el mismo cálculo del panel Anuncios (adResumenCuenta), así no pueden diferir. */
 function leadResumenRoasHTML(){
   if(!leadAnunciosPedir() || !AD.con) return "";
-  const f = CC.fecha; let ini = "0000-01-01", fin = "9999-12-31";
-  if(f === "hoy") ini = fin = adDia(0);
-  else if(f === "ayer") ini = fin = adDia(-1);
-  else if(f === "rango"){ if(CC.desde) ini = CC.desde; if(CC.hasta) fin = CC.hasta; }
-  else if(f) ini = adDia(1 - Number(f));
-  const r = adResumenCuenta(ini, fin);
+  const f = CC.fecha, rd = leadRangoDias() || ["", ""];
+  const r = adResumenCuenta(rd[0] || "0000-01-01", rd[1] || "9999-12-31");
   if(!r || (!r.spend && !r.ganadas)) return "";
   const tile = (k, v, d, ayuda) => `<div class="ad-kpi" ${ayuda ? `title="${esc(ayuda)}"` : ""}><span>${esc(k)}</span><b>${v}</b>${d || ""}</div>`;
   const cur = adCur(), ANIMA = typeof ANIMA_CUR !== "undefined" ? ANIMA_CUR : "CLP";
@@ -377,7 +436,7 @@ function leadResumenRoasHTML(){
       ${tile("Inversión en Meta", adMoney(r.spend), r.fx !== 1 ? `<small class="ad-d">1 ${esc(cur)} = ${esc(adNum(r.fx))} ${esc(ANIMA)}</small>` : "")}
       ${tile("Retorno (ROAS)", isFinite(r.roas) && r.spend ? adDec(r.roas, 1) + "×" : "—", "", "Valor ganado / inversión")}
     </div>
-    <p class="ld-roas-n muted">Periodo: ${esc(f === "rango" ? "fechas elegidas" : ((LEAD_FECHAS.find(x => x[0] === f) || [])[1] || "todo el tiempo"))}. Un cliente que ya tenías se suma desde la ficha de su proyecto → «Ganado por anuncios». <button class="ld-mini" data-go="anuncios">Ver Anuncios →</button></p>
+    <p class="ld-roas-n muted">Periodo: ${esc(f ? (leadRangoTexto() || "fechas elegidas") : "todo el tiempo")}. Un cliente que ya tenías se suma desde la ficha de su proyecto → «Ganado por anuncios». <button class="ld-mini" data-go="anuncios">Ver Anuncios →</button></p>
   </div>`;
 }
 
@@ -385,6 +444,22 @@ function leadEtapaSelect(l, extra){
   const est = LEAD_ESTADOS[l.status] || LEAD_ESTADOS.nuevo;
   return `<select class="ld-stage ${est.cls} ${extra||""}" data-leadstage="${esc(l.id)}" aria-label="Etapa de ${esc(l.full_name || "la solicitud")}">` +
     LEAD_ETAPAS.map(([k, t]) => `<option value="${k}" ${k===l.status?"selected":""}>${t}</option>`).join("") + `</select>`;
+}
+
+/* Una fila de la lista (también la usa «Ver más» y la búsqueda, sin redibujar todo). */
+function leadFilaHTML(l){
+  const wa = leadWaNumero(l.phone);
+  const sel = CC.sel.has(String(l.id));
+  return `<div class="ld-row ${l.status==='nuevo'?'is-new':''} ${String(state.leadOpen)===String(l.id)?'is-open':''} ${sel?'is-sel':''}" role="row" tabindex="0" data-leadopen="${esc(l.id)}" data-q="${esc(leadTexto(l))}">
+      <div class="ld-c ld-name" role="cell"><label class="ld-chk" data-leadchk title="Seleccionar"><input type="checkbox" data-leadsel="${esc(l.id)}" ${sel?"checked":""} aria-label="Seleccionar a ${esc(leadNombre(l))}"></label><span class="ld-av ${leadEsChat(l) ? "is-chat" : ""}">${leadEsChat(l) ? "💬" : initials(l.full_name || "?")}</span><div><b>${esc(leadNombre(l))}</b><small>${esc(l.phone || l.email || (leadEsChat(l) ? "Responde en el chat de Meta" : "Sin contacto"))}</small></div></div>
+      <div class="ld-c ld-etapa" role="cell">${leadEtapaSelect(l)}</div>
+      <div class="ld-c ld-city" role="cell" data-med="${l.measures ? " · " + esc(l.measures) : ""}">${esc(l.city || "—")}</div>
+      <div class="ld-c ld-med" role="cell">${esc(l.measures || "—")}</div>
+      <div class="ld-c ld-idea" role="cell">${esc(l.idea || "")}</div>
+      <div class="ld-c ld-when" role="cell"><b>${esc(postDate(l.lead_created_at))}</b><small title="${esc(leadCampana(l))}">${esc(leadCampana(l) || LEAD_ORIGEN_T[leadOrigen(l)])}</small></div>
+      <div class="ld-c ld-acts" role="cell">${wa ? `<button class="ld-wa" data-leadwago="${esc(l.id)}" title="Escribir a ${esc(leadPrimerNombre(l.full_name) || "este cliente")} por WhatsApp">${WA_SVG}<span>WhatsApp</span></button>` : leadEsChat(l) ? `<a class="ld-wa is-chat" href="${LEAD_INBOX}" target="_blank" rel="noopener" title="Responder en la bandeja de Meta">💬<span>Messenger</span></a>`
+         : `<button class="ld-wa is-add" data-leadedit="${esc(l.id)}" title="Agregar el teléfono">${WA_SVG}<span>＋ Teléfono</span></button>`}</div>
+    </div>`;
 }
 
 /* ---------- vistas ---------- */
@@ -399,13 +474,14 @@ function vCentro(a){
   }
   const L = leadsList();
   const tabActual = state.leadTab || "activas";
-  const tabs = LEAD_TABS.map(([k, t, f]) => { const n = L.filter(f).length;
+  const enFiltro = leadsSinPestana();
+  const tabs = LEAD_TABS.map(([k, t, f]) => { const n = enFiltro.filter(f).length;
     return `<button class="ld-tab ${tabActual===k?'on':''}" data-leadtab="${k}" ${tabActual===k?'aria-current="true"':''}>${t}<span>${n}</span></button>`; }).join("");
 
   const hoy0 = new Date(); hoy0.setHours(0,0,0,0);
   const nHoy = L.filter(l => new Date(l.lead_created_at) >= hoy0).length;
   const resp = leadRespuestaMedia();
-  const resumen = [`${L.length} solicitud${L.length===1?"":"es"}`, nHoy ? `${nHoy} hoy` : "", resp ? `respondes en ${resp} en promedio` : ""].filter(Boolean).join(" · ");
+  const resumen = [`${L.length.toLocaleString("es")} solicitud${L.length===1?"":"es"}`, nHoy ? `${nHoy} hoy` : "", resp ? `respondes en ${resp} en promedio` : ""].filter(Boolean).join(" · ");
 
   const ciudades = [...new Map(L.map(l => [deburr(leadCiudad(l)), leadCiudad(l)]).filter(([k]) => k)).entries()].sort((x, y) => x[1].localeCompare(y[1], "es"));
   const opt = (v, t, cur) => `<option value="${esc(v)}" ${v===cur?"selected":""}>${esc(t)}</option>`;
@@ -420,7 +496,7 @@ function vCentro(a){
         <select class="ld-sel ${CC.origen?'on':''}" data-leadfiltro="origen" aria-label="Origen">${opt("", "Todo origen", CC.origen)}${Object.entries(LEAD_ORIGEN_T).map(([k, t]) => opt(k, t, CC.origen)).join("")}</select>
         ${campanas.length ? `<select class="ld-sel ${CC.campana?'on':''}" data-leadfiltro="campana" aria-label="Campaña de Meta">${opt("", "Todas las campañas", CC.campana)}${campanas.map(([k]) => opt(k, k, CC.campana)).join("")}${sinCampana ? opt(LEAD_SIN_CAMPANA, "Sin campaña", CC.campana) : ""}</select>` : ""}
         <select class="ld-sel ${CC.fecha?'on':''}" data-leadfiltro="fecha" aria-label="Días">${opt("", "Cualquier fecha", CC.fecha)}${LEAD_FECHAS.map(([k, t]) => opt(k, t, CC.fecha)).join("")}</select>
-        ${CC.fecha === "rango" ? `<span class="ld-rango"><input type="date" data-leadrango="desde" value="${esc(CC.desde)}" aria-label="Desde" max="${esc(CC.hasta || "")}"><span>→</span><input type="date" data-leadrango="hasta" value="${esc(CC.hasta)}" aria-label="Hasta" min="${esc(CC.desde || "")}"></span>` : ""}
+        ${CC.fecha === "rango" ? `<span class="ld-rango"><input type="date" data-leadrango="desde" value="${esc(CC.desde)}" aria-label="Desde" max="${esc(CC.hasta || leadYmd(new Date()))}"><span>→</span><input type="date" data-leadrango="hasta" value="${esc(CC.hasta)}" aria-label="Hasta" min="${esc(CC.desde || "")}" max="${esc(leadYmd(new Date()))}"></span>` : ""}
         <select class="ld-sel" data-leadorden aria-label="Ordenar">${LEAD_ORDEN.map(([k, t]) => opt(k, "↕ " + t, state.leadOrden || "recientes")).join("")}</select>
         ${(CC.ciudad||CC.origen||CC.fecha||CC.campana) ? `<button class="ld-clear" data-leadlimpiar>Quitar filtros</button>` : ""}
       </div>
@@ -444,21 +520,14 @@ function vCentro(a){
   const enLista = new Set(lista.map(l => String(l.id)));
   CC.sel.forEach(id => { if(!enLista.has(id)) CC.sel.delete(id); });
   requestAnimationFrame(() => { if(CC.q) leadAplicarBusqueda(); leadSelPintar(); });
-  const filas = lista.map(l => {
-    const est = LEAD_ESTADOS[l.status] || LEAD_ESTADOS.nuevo;
-    const wa = leadWaNumero(l.phone);
-    const sel = CC.sel.has(String(l.id));
-    return `<div class="ld-row ${l.status==='nuevo'?'is-new':''} ${String(state.leadOpen)===String(l.id)?'is-open':''} ${sel?'is-sel':''}" role="row" tabindex="0" data-leadopen="${esc(l.id)}" data-q="${esc(leadTexto(l))}">
-      <div class="ld-c ld-name" role="cell"><label class="ld-chk" data-leadchk title="Seleccionar"><input type="checkbox" data-leadsel="${esc(l.id)}" ${sel?"checked":""} aria-label="Seleccionar a ${esc(leadNombre(l))}"></label><span class="ld-av ${leadEsChat(l) ? "is-chat" : ""}">${leadEsChat(l) ? "💬" : initials(l.full_name || "?")}</span><div><b>${esc(leadNombre(l))}</b><small>${esc(l.phone || l.email || (leadEsChat(l) ? "Responde en el chat de Meta" : "Sin contacto"))}</small></div></div>
-      <div class="ld-c ld-etapa" role="cell">${leadEtapaSelect(l)}</div>
-      <div class="ld-c ld-city" role="cell" data-med="${l.measures ? " · " + esc(l.measures) : ""}">${esc(l.city || "—")}</div>
-      <div class="ld-c ld-med" role="cell">${esc(l.measures || "—")}</div>
-      <div class="ld-c ld-idea" role="cell">${esc(l.idea || "")}</div>
-      <div class="ld-c ld-when" role="cell"><b>${esc(postDate(l.lead_created_at))}</b><small title="${esc(leadCampana(l))}">${esc(leadCampana(l) || LEAD_ORIGEN_T[leadOrigen(l)])}</small></div>
-      <div class="ld-c ld-acts" role="cell">${wa ? `<button class="ld-wa" data-leadwago="${esc(l.id)}" title="Escribir a ${esc(leadPrimerNombre(l.full_name) || "este cliente")} por WhatsApp">${WA_SVG}<span>WhatsApp</span></button>` : leadEsChat(l) ? `<a class="ld-wa is-chat" href="${LEAD_INBOX}" target="_blank" rel="noopener" title="Responder en la bandeja de Meta">💬<span>Messenger</span></a>`
-         : `<button class="ld-wa is-add" data-leadedit="${esc(l.id)}" title="Agregar el teléfono">${WA_SVG}<span>＋ Teléfono</span></button>`}</div>
-    </div>`;
-  }).join("");
+  /* Se dibuja un tramo; el resto queda en CC.resto para «Ver más» y para buscar. */
+  const ver = Math.max(CC.ver || 0, LEAD_TRAMO);
+  const dibujar = CC.q ? lista : lista.slice(0, ver);
+  CC.resto = CC.q ? [] : lista.slice(ver);
+  const filas = dibujar.map(leadFilaHTML).join("");
+  const quedan = CC.resto.length;
+  const periodo = CC.fecha ? leadRangoTexto() : "";
+  const total = lista.length.toLocaleString("es") + " solicitud" + (lista.length===1?"":"es") + (periodo ? " " + periodo : "");;
 
   const vacio = !L.length
     ? `<div class="ld-empty"><b>Todavía no llega ninguna solicitud.</b><span>${CC.conn ? "Cuando alguien llene el formulario de tu anuncio aparecerá aquí, sola." : "Conecta tu página de Facebook o importa el CSV de Meta."}</span></div>`
@@ -490,7 +559,8 @@ function vCentro(a){
         <div class="ld-row ld-th" role="row"><span role="columnheader" class="ld-th-name"><label class="ld-chk" data-leadchk title="Seleccionar todas las que se ven"><input type="checkbox" data-leadselall aria-label="Seleccionar todas las que se ven"></label>Nombre</span><span role="columnheader">Etapa</span><span role="columnheader">Ubicación</span><span role="columnheader">Medidas</span><span role="columnheader">Idea</span><span role="columnheader">Llegó</span><span role="columnheader"></span></div>
         ${filas}</div>
         <div class="ld-selbar" id="ldSelBar" hidden></div>
-        <div class="ld-foot"><span id="ldCount">${lista.length} solicitud${lista.length===1?"":"es"}</span><span id="ldNone" class="muted" hidden>· ninguna coincide con la búsqueda</span></div>` : vacio}
+        ${quedan ? `<div class="ld-mas" id="ldMas"><button class="btn ghost sm" data-leadmas>Ver ${Math.min(quedan, LEAD_TRAMO).toLocaleString("es")} más</button><button class="ld-clear" data-leadtodas>Ver todas</button><span class="muted">Quedan ${quedan.toLocaleString("es")}</span></div>` : ""}
+        <div class="ld-foot"><span id="ldCount">${esc(total)}</span><span id="ldNone" class="muted" hidden>· ninguna coincide con la búsqueda</span></div>` : vacio}
     </div>
   </div>
   ${CC.nuevo ? vLeadPanel(a, null) : (state.leadOpen && leadById(state.leadOpen) ? vLeadPanel(a, leadById(state.leadOpen)) : "")}
@@ -1106,7 +1176,9 @@ document.addEventListener("click", e => {
   if(t.closest("[data-leadcampcancel]")){ CC.campEdit = null; renderView(); return; }
   const co = t.closest("[data-leadcamporig]"); if(co){ leadCampRenombrar(co.dataset.leadcamporig, ""); return; }
   if(t.closest("[data-leadreload]")){ CC.leads = undefined; renderView(); return; }
-  const lt = t.closest("[data-leadtab]"); if(lt){ state.leadTab = lt.dataset.leadtab; CC.sel.clear(); renderView(); return; }
+  if(t.closest("[data-leadmas]")){ CC.ver = Math.max(CC.ver || 0, LEAD_TRAMO) + LEAD_TRAMO; leadsRefresh(true); return; }
+  if(t.closest("[data-leadtodas]")){ CC.ver = Infinity; leadsRefresh(true); return; }
+  const lt = t.closest("[data-leadtab]"); if(lt){ state.leadTab = lt.dataset.leadtab; CC.sel.clear(); CC.ver = 0; renderView(); return; }
   const lwg = t.closest("[data-leadwago]"); if(lwg){ leadWhatsappRapido(lwg.dataset.leadwago); return; }
   const lw = t.closest("[data-leadwa]"); if(lw){ leadConfirmar(lw.dataset.leadwa); return; }
   const le = t.closest("[data-leadedit]"); if(le){
@@ -1116,8 +1188,8 @@ document.addEventListener("click", e => {
     return; }
   const lo = t.closest("[data-leadopen]"); if(lo){ CC_open(lo.dataset.leadopen); return; }
   if(t.closest("[data-leadback]")){ CC_close(); return; }
-  if(t.closest("[data-leadlimpiar]")){ CC.ciudad = CC.origen = CC.fecha = CC.campana = CC.desde = CC.hasta = ""; renderView(); return; }
-  const lc = t.closest("[data-leadcamp]"); if(lc){ CC.campana = CC.campana === lc.dataset.leadcamp ? "" : lc.dataset.leadcamp; renderView(); return; }
+  if(t.closest("[data-leadlimpiar]")){ CC.ciudad = CC.origen = CC.fecha = CC.campana = CC.desde = CC.hasta = ""; CC.ver = 0; renderView(); return; }
+  const lc = t.closest("[data-leadcamp]"); if(lc){ CC.campana = CC.campana === lc.dataset.leadcamp ? "" : lc.dataset.leadcamp; CC.ver = 0; renderView(); return; }
   if(t.closest("[data-leadnuevo]")){ state.leadOpen = null; CC.edit = false; CC.nuevo = true; CC.anim = true; leadsRefresh(true); CC.anim = false;
     setTimeout(() => { const i = document.getElementById("ldf_full_name"); if(i) i.focus(); }, 60); return; }
   if(t.closest("[data-leadeditcancel]")){ if(CC.nuevo){ CC_close(); return; } CC.edit = false; leadsRefresh(true); return; }
@@ -1161,8 +1233,14 @@ document.addEventListener("change", e => {
   const cs = el.closest("[data-leadsel]"); if(cs){ cs.checked ? CC.sel.add(cs.dataset.leadsel) : CC.sel.delete(cs.dataset.leadsel); leadSelPintar(); return; }
   if(el.closest("[data-leadselall]")){ const vis = leadFilasVisibles(); el.checked ? vis.forEach(id => CC.sel.add(id)) : vis.forEach(id => CC.sel.delete(id)); leadSelPintar(); return; }
   const sst = el.closest("[data-leadselstage]"); if(sst){ const v = sst.value; sst.value = ""; if(v) leadEtapaVarias([...CC.sel], v); return; }
-  const fi = el.closest("[data-leadfiltro]"); if(fi){ CC[fi.dataset.leadfiltro] = fi.value; renderView(); return; }
-  const fr = el.closest("[data-leadrango]"); if(fr){ CC[fr.dataset.leadrango] = fr.value; renderView(); return; }
+  const fi = el.closest("[data-leadfiltro]"); if(fi){ CC[fi.dataset.leadfiltro] = fi.value; CC.ver = 0;
+    /* «Elegir fechas…» abre con el último mes puesto, para no partir de cero. */
+    if(fi.dataset.leadfiltro === "fecha" && fi.value === "rango" && !CC.desde && !CC.hasta){
+      const d = new Date(); CC.hasta = leadYmd(d); d.setDate(d.getDate() - 29); CC.desde = leadYmd(d); }
+    renderView(); return; }
+  const fr = el.closest("[data-leadrango]"); if(fr){ CC[fr.dataset.leadrango] = fr.value;
+    if(CC.desde && CC.hasta && CC.desde > CC.hasta){ if(fr.dataset.leadrango === "desde") CC.hasta = CC.desde; else CC.desde = CC.hasta; }
+    CC.ver = 0; renderView(); return; }
   if(el.closest("[data-leadorden]")){ state.leadOrden = el.value; save(); renderView(); return; }
   const nt = el.closest("[data-leadnotes]"); if(nt){
     leadPatch(nt.dataset.leadnotes, { notes: nt.value.trim() || null }).then(() => toast("✓ Nota guardada")).catch(err => toast("No se pudo guardar la nota: " + (err.message || err)));
